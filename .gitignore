@@ -1,2 +1,5 @@
+*.creator.user
 *.pkg.tar.*
+.cache/
+.qtc_clangd/
 pkg/

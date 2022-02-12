@@ -1,0 +1,14 @@
+/usr/include/cairo
+/usr/include/glib-2.0
+/usr/include/harfbuzz
+/usr/include/libdrm
+/usr/include/libxml2
+/usr/include/pango-1.0
+/usr/include/pixman-1
+/usr/lib/glib-2.0/include
+../wlroots/build/protocol
+../wlroots/include
+build/include
+build/protocols/libserver_protos.a.p
+include
+../wlroots/render
