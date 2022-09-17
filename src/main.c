@@ -11,6 +11,55 @@
 #include "theme.h"
 #include "menu/menu.h"
 
+#include <dlfcn.h>
+
+static void *(*real_malloc)(size_t);
+static void *(*real_calloc)(size_t, size_t);
+static void *(*real_realloc)(void *, size_t);
+
+static uint64_t num_allocs;
+static uint64_t max_allocs;
+
+static bool out_of_memory()
+{
+	if (!max_allocs) {
+		srand(time(NULL));
+		max_allocs = rand() % 200000;
+	}
+	if (++num_allocs >= max_allocs) {
+		errno = ENOMEM;
+		return true;
+	}
+	return false;
+}
+
+void *malloc(size_t size)
+{
+	if (!real_malloc) {
+		real_malloc = dlsym(RTLD_NEXT, "malloc");
+	}
+	return out_of_memory() ? NULL :
+		real_malloc(size);
+}
+
+void *calloc(size_t nmemb, size_t size)
+{
+	if (!real_calloc) {
+		real_calloc = dlsym(RTLD_NEXT, "calloc");
+	}
+	return out_of_memory() ? NULL :
+		real_calloc(nmemb, size);
+}
+
+void *realloc(void *ptr, size_t size)
+{
+	if (!real_realloc) {
+		real_realloc = dlsym(RTLD_NEXT, "realloc");
+	}
+	return out_of_memory() ? NULL :
+		real_realloc(ptr, size);
+}
+
 struct rcxml rc = { 0 };
 
 static const char labwc_usage[] =
