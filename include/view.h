@@ -37,6 +37,8 @@ enum view_edge {
 };
 
 struct view;
+struct wlr_output;
+struct wlr_output_layout;
 
 /* Common to struct view and struct xwayland_unmanaged */
 struct mappable {
