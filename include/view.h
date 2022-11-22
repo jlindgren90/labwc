@@ -55,6 +55,8 @@ enum view_wants_focus {
 };
 
 struct view;
+struct wlr_output;
+struct wlr_output_layout;
 struct wlr_surface;
 
 /* Common to struct view and struct xwayland_unmanaged */
