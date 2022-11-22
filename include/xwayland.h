@@ -36,6 +36,7 @@ struct xwayland_view {
 	struct wl_listener request_configure;
 	struct wl_listener set_app_id;		/* TODO: s/set_app_id/class/ */
 	struct wl_listener set_decorations;
+	struct wl_listener set_strut_partial;
 	struct wl_listener override_redirect;
 
 	/* Not (yet) implemented */
@@ -51,6 +52,10 @@ void xwayland_view_create(struct server *server,
 	struct wlr_xwayland_surface *xsurface, bool mapped);
 
 struct wlr_xwayland_surface *xwayland_surface_from_view(struct view *view);
+
+void xwayland_adjust_usable_area(struct view *view,
+	struct wlr_output_layout *layout, struct wlr_output *output,
+	struct wlr_box *usable);
 
 void xwayland_server_init(struct server *server,
 	struct wlr_compositor *compositor);
