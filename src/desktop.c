@@ -383,7 +383,7 @@ get_cursor_context(struct server *server)
 		if (node->type == WLR_SCENE_NODE_BUFFER) {
 			struct wlr_surface *surface = lab_wlr_surface_from_node(node);
 			if (surface) {
-				if (wlr_surface_is_layer_surface(surface)) {
+				if (wlr_layer_surface_v1_try_from_wlr_surface(surface)) {
 					ret.type = LAB_SSD_LAYER_SURFACE;
 				}
 				if (is_layer_descendant(node)) {
