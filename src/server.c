@@ -30,6 +30,7 @@
 #include "workspaces.h"
 #include "xwayland.h"
 
+#define LAB_WLR_COMPOSITOR_VERSION (5)
 #define LAB_XDG_SHELL_VERSION (2)
 
 static struct wlr_compositor *compositor;
@@ -332,8 +333,8 @@ server_init(struct server *server)
 	 * room for you to dig your fingers in and play with their behavior if
 	 * you want.
 	 */
-	compositor =
-		wlr_compositor_create(server->wl_display, server->renderer);
+	compositor = wlr_compositor_create(server->wl_display,
+		LAB_WLR_COMPOSITOR_VERSION, server->renderer);
 	if (!compositor) {
 		wlr_log(WLR_ERROR, "unable to create the wlroots compositor");
 		exit(EXIT_FAILURE);
