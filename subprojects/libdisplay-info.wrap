@@ -1,0 +1,6 @@
+[wrap-git]
+url = https://gitlab.freedesktop.org/emersion/libdisplay-info.git
+revision = main
+
+[provide]
+dependency_names = libdisplay-info
