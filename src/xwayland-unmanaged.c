@@ -36,7 +36,7 @@ static void
 unmanaged_handle_map(struct wl_listener *listener, void *data)
 {
 	struct xwayland_unmanaged *unmanaged =
-		wl_container_of(listener, unmanaged, map);
+		wl_container_of(listener, unmanaged, mappable.map);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	assert(!unmanaged->node);
 
@@ -95,7 +95,7 @@ static void
 unmanaged_handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct xwayland_unmanaged *unmanaged =
-		wl_container_of(listener, unmanaged, unmap);
+		wl_container_of(listener, unmanaged, mappable.unmap);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	struct seat *seat = &unmanaged->server->seat;
 	assert(unmanaged->node);
@@ -117,15 +117,42 @@ unmanaged_handle_unmap(struct wl_listener *listener, void *data)
 }
 
 static void
+unmanaged_handle_associate(struct wl_listener *listener, void *data)
+{
+	struct xwayland_unmanaged *unmanaged =
+		wl_container_of(listener, unmanaged, associate);
+	assert(unmanaged->xwayland_surface &&
+		unmanaged->xwayland_surface->surface);
+
+	mappable_connect(&unmanaged->mappable,
+		unmanaged->xwayland_surface->surface,
+		unmanaged_handle_map, unmanaged_handle_unmap);
+}
+
+static void
+unmanaged_handle_dissociate(struct wl_listener *listener, void *data)
+{
+	struct xwayland_unmanaged *unmanaged =
+		wl_container_of(listener, unmanaged, dissociate);
+
+	mappable_disconnect(&unmanaged->mappable);
+}
+
+static void
 unmanaged_handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct xwayland_unmanaged *unmanaged =
 		wl_container_of(listener, unmanaged, destroy);
+
+	if (unmanaged->mappable.connected) {
+		mappable_disconnect(&unmanaged->mappable);
+	}
+
+	wl_list_remove(&unmanaged->associate.link);
+	wl_list_remove(&unmanaged->dissociate.link);
 	wl_list_remove(&unmanaged->request_configure.link);
 	wl_list_remove(&unmanaged->override_redirect.link);
 	wl_list_remove(&unmanaged->request_activate.link);
-	wl_list_remove(&unmanaged->map.link);
-	wl_list_remove(&unmanaged->unmap.link);
 	wl_list_remove(&unmanaged->destroy.link);
 	free(unmanaged);
 }
@@ -139,9 +166,9 @@ unmanaged_handle_override_redirect(struct wl_listener *listener, void *data)
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	struct server *server = unmanaged->server;
 
-	bool mapped = xsurface->mapped;
+	bool mapped = xsurface->surface && xsurface->surface->mapped;
 	if (mapped) {
-		unmanaged_handle_unmap(&unmanaged->unmap, NULL);
+		unmanaged_handle_unmap(&unmanaged->mappable.unmap, NULL);
 	}
 	unmanaged_handle_destroy(&unmanaged->destroy, NULL);
 
@@ -155,7 +182,7 @@ unmanaged_handle_request_activate(struct wl_listener *listener, void *data)
 	struct xwayland_unmanaged *unmanaged =
 		wl_container_of(listener, unmanaged, request_activate);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
-	if (!xsurface->mapped) {
+	if (!xsurface->surface || !xsurface->surface->mapped) {
 		return;
 	}
 	struct server *server = unmanaged->server;
@@ -191,16 +218,16 @@ xwayland_unmanaged_create(struct server *server,
 	 */
 	assert(!xsurface->data);
 
+	unmanaged->associate.notify = unmanaged_handle_associate;
+	wl_signal_add(&xsurface->events.associate, &unmanaged->associate);
+
+	unmanaged->dissociate.notify = unmanaged_handle_dissociate;
+	wl_signal_add(&xsurface->events.dissociate, &unmanaged->dissociate);
+
 	wl_signal_add(&xsurface->events.request_configure,
 		&unmanaged->request_configure);
 	unmanaged->request_configure.notify =
 		unmanaged_handle_request_configure;
-
-	wl_signal_add(&xsurface->events.map, &unmanaged->map);
-	unmanaged->map.notify = unmanaged_handle_map;
-
-	wl_signal_add(&xsurface->events.unmap, &unmanaged->unmap);
-	unmanaged->unmap.notify = unmanaged_handle_unmap;
 
 	wl_signal_add(&xsurface->events.destroy, &unmanaged->destroy);
 	unmanaged->destroy.notify = unmanaged_handle_destroy;
@@ -214,6 +241,6 @@ xwayland_unmanaged_create(struct server *server,
 	unmanaged->request_activate.notify = unmanaged_handle_request_activate;
 
 	if (mapped) {
-		unmanaged_handle_map(&unmanaged->map, xsurface);
+		unmanaged_handle_map(&unmanaged->mappable.map, NULL);
 	}
 }
