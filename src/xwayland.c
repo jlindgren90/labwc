@@ -13,6 +13,8 @@
 #include "workspaces.h"
 #include "xwayland.h"
 
+static void xwayland_view_unmap(struct view *view, bool client_request);
+
 static struct view_size_hints
 xwayland_view_get_size_hints(struct view *view)
 {
@@ -179,17 +181,24 @@ handle_request_resize(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_map(struct wl_listener *listener, void *data)
+handle_associate(struct wl_listener *listener, void *data)
 {
-	struct view *view = wl_container_of(listener, view, map);
-	view->impl->map(view);
+	struct xwayland_view *xwayland_view =
+		wl_container_of(listener, xwayland_view, associate);
+	assert(xwayland_view->xwayland_surface &&
+		xwayland_view->xwayland_surface->surface);
+
+	view_connect_map(&xwayland_view->base,
+		xwayland_view->xwayland_surface->surface);
 }
 
 static void
-handle_unmap(struct wl_listener *listener, void *data)
+handle_dissociate(struct wl_listener *listener, void *data)
 {
-	struct view *view = wl_container_of(listener, view, unmap);
-	view->impl->unmap(view, /* client_request */ true);
+	struct xwayland_view *xwayland_view =
+		wl_container_of(listener, xwayland_view, dissociate);
+
+	mappable_disconnect(&xwayland_view->base.mappable);
 }
 
 static void
@@ -229,6 +238,8 @@ handle_destroy(struct wl_listener *listener, void *data)
 	xwayland_view->xwayland_surface = NULL;
 
 	/* Remove XWayland view specific listeners */
+	wl_list_remove(&xwayland_view->associate.link);
+	wl_list_remove(&xwayland_view->dissociate.link);
 	wl_list_remove(&xwayland_view->request_activate.link);
 	wl_list_remove(&xwayland_view->request_configure.link);
 	wl_list_remove(&xwayland_view->set_app_id.link);
@@ -388,9 +399,9 @@ handle_override_redirect(struct wl_listener *listener, void *data)
 	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
 
 	struct server *server = view->server;
-	bool mapped = xsurface->mapped;
+	bool mapped = xsurface->surface && xsurface->surface->mapped;
 	if (mapped) {
-		handle_unmap(&view->unmap, xsurface);
+		xwayland_view_unmap(view, /* client_request */ true);
 	}
 	handle_destroy(&view->destroy, xsurface);
 	/* view is invalid after this point */
@@ -688,10 +699,6 @@ xwayland_view_create(struct server *server,
 	view->scene_tree = wlr_scene_tree_create(view->workspace->tree);
 	node_descriptor_create(&view->scene_tree->node, LAB_NODE_DESC_VIEW, view);
 
-	view->map.notify = handle_map;
-	wl_signal_add(&xsurface->events.map, &view->map);
-	view->unmap.notify = handle_unmap;
-	wl_signal_add(&xsurface->events.unmap, &view->unmap);
 	view->destroy.notify = handle_destroy;
 	wl_signal_add(&xsurface->events.destroy, &view->destroy);
 	view->request_minimize.notify = handle_request_minimize;
@@ -709,6 +716,12 @@ xwayland_view_create(struct server *server,
 	wl_signal_add(&xsurface->events.set_title, &view->set_title);
 
 	/* Events specific to XWayland views */
+	xwayland_view->associate.notify = handle_associate;
+	wl_signal_add(&xsurface->events.associate, &xwayland_view->associate);
+
+	xwayland_view->dissociate.notify = handle_dissociate;
+	wl_signal_add(&xsurface->events.dissociate, &xwayland_view->dissociate);
+
 	xwayland_view->request_activate.notify = handle_request_activate;
 	wl_signal_add(&xsurface->events.request_activate, &xwayland_view->request_activate);
 
