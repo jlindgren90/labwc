@@ -141,20 +141,6 @@ set_pending_configure_serial(struct view *view, uint32_t serial)
 }
 
 static void
-handle_map(struct wl_listener *listener, void *data)
-{
-	struct view *view = wl_container_of(listener, view, map);
-	view->impl->map(view);
-}
-
-static void
-handle_unmap(struct wl_listener *listener, void *data)
-{
-	struct view *view = wl_container_of(listener, view, unmap);
-	view->impl->unmap(view, /* client_request */ true);
-}
-
-static void
 handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, destroy);
@@ -688,10 +674,8 @@ xdg_surface_new(struct wl_listener *listener, void *data)
 	/* In support of xdg popups */
 	xdg_surface->surface->data = tree;
 
-	view->map.notify = handle_map;
-	wl_signal_add(&xdg_surface->events.map, &view->map);
-	view->unmap.notify = handle_unmap;
-	wl_signal_add(&xdg_surface->events.unmap, &view->unmap);
+	view_connect_map(view, xdg_surface->surface);
+
 	view->destroy.notify = handle_destroy;
 	wl_signal_add(&xdg_surface->events.destroy, &view->destroy);
 
