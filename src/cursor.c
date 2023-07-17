@@ -250,8 +250,8 @@ cursor_set(struct seat *seat, enum lab_cursors cursor)
 		return;
 	}
 
-	wlr_xcursor_manager_set_cursor_image(
-		seat->xcursor_manager, cursor_names[cursor], seat->cursor);
+	wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager,
+		cursor_names[cursor]);
 	seat->server_cursor = cursor;
 }
 
@@ -272,8 +272,8 @@ cursor_update_image(struct seat *seat)
 		}
 		return;
 	}
-	wlr_xcursor_manager_set_cursor_image(
-		seat->xcursor_manager, cursor_names[cursor], seat->cursor);
+	wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager,
+		cursor_names[cursor]);
 }
 
 bool
