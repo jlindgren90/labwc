@@ -10,7 +10,6 @@
 #include "view.h"
 #include "window-rules.h"
 #include "workspaces.h"
-#include "xwayland.h"
 
 #if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
