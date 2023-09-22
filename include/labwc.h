@@ -231,6 +231,7 @@ struct server {
 
 	struct seat seat;
 	struct wlr_scene *scene;
+	struct wlr_scene_output_layout *scene_layout;
 
 	/* cursor interactive */
 	enum input_mode input_mode;
