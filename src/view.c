@@ -2,6 +2,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <strings.h>
+
+#define _LABWC_VIEW_INTERNAL
 #include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "labwc.h"
