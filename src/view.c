@@ -2,6 +2,8 @@
 #include <assert.h>
 #include <stdio.h>
 #include <strings.h>
+
+#define _LABWC_VIEW_INTERNAL
 #include "common/macros.h"
 #include "common/match.h"
 #include "common/mem.h"
