@@ -1,5 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <assert.h>
+
+#define _LABWC_VIEW_INTERNAL
 #include "common/macros.h"
 #include "common/mem.h"
 #include "decorations.h"
