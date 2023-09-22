@@ -11,7 +11,6 @@
 #include "view.h"
 #include "window-rules.h"
 #include "workspaces.h"
-#include "xwayland.h"
 
 void
 desktop_arrange_all_views(struct server *server)

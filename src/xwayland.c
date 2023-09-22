@@ -3,6 +3,8 @@
 #include <assert.h>
 #include <stdlib.h>
 #include <wlr/xwayland.h>
+
+#define _LABWC_VIEW_INTERNAL
 #include "common/macros.h"
 #include "common/mem.h"
 #include "labwc.h"
