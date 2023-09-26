@@ -37,14 +37,14 @@ void
 desktop_focus_view(struct view *view, bool raise)
 {
 	assert(view);
-	if (!view_isfocusable(view)) {
+	if (!view_is_focusable(view)) {
 		return;
 	}
 
 	/*
 	 * Guard against views with no mapped surfaces when handling
 	 * 'request_activate' and 'request_minimize'.
-	 * view_isfocusable() should return false for those views.
+	 * view_is_focusable() should return false for those views.
 	 */
 	assert(view->surface);
 
@@ -64,7 +64,7 @@ desktop_focus_view(struct view *view, bool raise)
 	}
 
 	/*
-	 * view_isfocusable() should return false for any views that are
+	 * view_is_focusable() should return false for any views that are
 	 * neither mapped nor minimized.
 	 */
 	assert(view->mapped);
@@ -111,7 +111,7 @@ first_view(struct server *server)
 			continue;
 		}
 		struct view *view = node_view_from_node(node);
-		if (view_isfocusable(view)) {
+		if (view_is_focusable(view)) {
 			return view;
 		}
 	}
@@ -183,7 +183,7 @@ desktop_cycle_view(struct server *server, struct view *start_view,
 		view = node_view_from_node(node);
 
 		enum property skip = window_rules_get_property(view, "skipWindowSwitcher");
-		if (view_isfocusable(view) && skip != LAB_PROP_TRUE) {
+		if (view_is_focusable(view) && skip != LAB_PROP_TRUE) {
 			return view;
 		}
 	} while (view != start_view);
@@ -205,7 +205,7 @@ desktop_topmost_focusable_view(struct server *server)
 			continue;
 		}
 		view = node_view_from_node(node);
-		if (view->mapped && view_isfocusable(view)) {
+		if (view->mapped && view_is_focusable(view)) {
 			return view;
 		}
 	}
@@ -244,7 +244,7 @@ desktop_focus_output(struct output *output)
 			continue;
 		}
 		view = node_view_from_node(node);
-		if (!view_isfocusable(view)) {
+		if (!view_is_focusable(view)) {
 			continue;
 		}
 		if (wlr_output_layout_intersects(layout,
