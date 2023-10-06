@@ -199,6 +199,39 @@ new_pointer(struct seat *seat, struct wlr_input_device *dev)
 	return input;
 }
 
+static void
+set_numlock(struct wlr_keyboard *kb)
+{
+	/* TODO: set from rc.xml */
+	bool numlock_on = true;
+
+	/* Set wlr_keyboard copy of modifiers */
+	xkb_mod_index_t num_idx =
+		xkb_map_mod_get_index(kb->keymap, XKB_MOD_NAME_NUM);
+	if (num_idx != XKB_MOD_INVALID) {
+		if (numlock_on) {
+			kb->modifiers.locked |= (uint32_t)1 << num_idx;
+		} else {
+			kb->modifiers.locked &= ~((uint32_t)1 << num_idx);
+		}
+	}
+
+	/* Sync wlr_keyboard copy of modifiers to xkb state */
+	xkb_state_update_mask(kb->xkb_state, kb->modifiers.depressed,
+		kb->modifiers.latched, kb->modifiers.locked, 0, 0,
+		kb->modifiers.group);
+
+	/* Update LEDs */
+	uint32_t leds = 0;
+	for (uint32_t i = 0; i < WLR_LED_COUNT; ++i) {
+		if (xkb_state_led_index_is_active(kb->xkb_state,
+				kb->led_indexes[i])) {
+			leds |= (1 << i);
+		}
+	}
+	wlr_keyboard_led_update(kb, leds);
+}
+
 static struct input *
 new_keyboard(struct seat *seat, struct wlr_input_device *device, bool virtual)
 {
@@ -210,6 +243,14 @@ new_keyboard(struct seat *seat, struct wlr_input_device *device, bool virtual)
 	keyboard->is_virtual = virtual;
 
 	wlr_keyboard_set_keymap(kb, seat->keyboard_group->keyboard.keymap);
+
+	/*
+	 * This needs to be before wlr_keyboard_group_add_keyboard().
+	 * For some reason, wlroots takes the modifier state from the
+	 * new keyboard and syncs it to the others in the group, rather
+	 * than the other way around.
+	 */
+	set_numlock(kb);
 
 	if (!virtual) {
 		wlr_keyboard_group_add_keyboard(seat->keyboard_group, kb);
