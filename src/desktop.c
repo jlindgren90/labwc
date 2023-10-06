@@ -72,16 +72,24 @@ desktop_focus_view(struct view *view, bool raise)
 		workspaces_switch_to(view->workspace, /*update_focus*/ false);
 	}
 
-	/*
-	 * Give input focus, even if the view claims not to want it (see
-	 * view->impl->wants_focus). This is a workaround for so-called
-	 * "globally active" X11 views (MATLAB known to be one such)
-	 * that expect to be able to control focus themselves, but can't
-	 * under labwc since it's disallowed at the wlroots level.
-	 */
-	struct seat *seat = &server->seat;
-	if (view->surface != seat->seat->keyboard_state.focused_surface) {
-		seat_focus_surface(seat, view->surface);
+	switch (view_get_focus_type(view)) {
+	case VIEW_FOCUS_SIMPLE:
+		wlr_log(WLR_ERROR, "setting focus to view [%s]",
+			view_get_string_prop(view, "title"));
+		struct seat *seat = &server->seat;
+		if (view->surface != seat->seat->keyboard_state.focused_surface) {
+			seat_focus_surface(seat, view->surface);
+		}
+		break;
+	case VIEW_FOCUS_OFFER:
+		wlr_log(WLR_ERROR, "offering focus to view [%s]",
+			view_get_string_prop(view, "title"));
+		view_offer_focus(view);
+		break;
+	default: /* VIEW_FOCUS_NONE */
+		wlr_log(WLR_ERROR, "not focusing view [%s]",
+			view_get_string_prop(view, "title"));
+		break;
 	}
 
 	if (raise) {

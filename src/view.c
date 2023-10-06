@@ -141,6 +141,16 @@ view_array_append(struct server *server, struct wl_array *views,
 	}
 }
 
+enum view_focus_type
+view_get_focus_type(struct view *view)
+{
+	assert(view);
+	if (view->impl->get_focus_type) {
+		return view->impl->get_focus_type(view);
+	}
+	return VIEW_FOCUS_SIMPLE;
+}
+
 bool
 view_is_focusable(struct view *view)
 {
@@ -148,10 +158,19 @@ view_is_focusable(struct view *view)
 	if (!view->surface) {
 		return false;
 	}
-	if (view->impl->wants_focus && !view->impl->wants_focus(view)) {
+	if (view_get_focus_type(view) != VIEW_FOCUS_SIMPLE) {
 		return false;
 	}
 	return (view->mapped || view->minimized);
+}
+
+void
+view_offer_focus(struct view *view)
+{
+	assert(view);
+	if (view->impl->offer_focus) {
+		view->impl->offer_focus(view);
+	}
 }
 
 /**
