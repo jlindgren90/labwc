@@ -521,10 +521,6 @@ handle_focus_in(struct wl_listener *listener, void *data)
 	struct xwayland_view *xwayland_view =
 		wl_container_of(listener, xwayland_view, focus_in);
 	struct view *view = &xwayland_view->base;
-
-	wlr_log(WLR_ERROR, "received focus_in for view [%s]",
-		view_get_string_prop(view, "title"));
-
 	struct seat *seat = &view->server->seat;
 	if (view->surface != seat->seat->keyboard_state.focused_surface) {
 		seat_focus_surface(seat, view->surface);

@@ -74,21 +74,16 @@ desktop_focus_view(struct view *view, bool raise)
 
 	switch (view_get_focus_type(view)) {
 	case VIEW_FOCUS_SIMPLE:
-		wlr_log(WLR_ERROR, "setting focus to view [%s]",
-			view_get_string_prop(view, "title"));
+		; /* works around "a label can only be part of a statement" */
 		struct seat *seat = &server->seat;
 		if (view->surface != seat->seat->keyboard_state.focused_surface) {
 			seat_focus_surface(seat, view->surface);
 		}
 		break;
 	case VIEW_FOCUS_OFFER:
-		wlr_log(WLR_ERROR, "offering focus to view [%s]",
-			view_get_string_prop(view, "title"));
 		view_offer_focus(view);
 		break;
 	default: /* VIEW_FOCUS_NONE */
-		wlr_log(WLR_ERROR, "not focusing view [%s]",
-			view_get_string_prop(view, "title"));
 		break;
 	}
 
