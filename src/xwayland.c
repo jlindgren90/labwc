@@ -103,6 +103,12 @@ xwayland_view_wants_focus(struct view *view)
 	return VIEW_WANTS_FOCUS_NEVER;
 }
 
+static void
+xwayland_view_offer_focus(struct view *view)
+{
+	wlr_xwayland_surface_offer_focus(xwayland_surface_from_view(view));
+}
+
 static struct wlr_xwayland_surface *
 top_parent_of(struct view *view)
 {
@@ -380,6 +386,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xwayland_view->set_decorations.link);
 	wl_list_remove(&xwayland_view->set_strut_partial.link);
 	wl_list_remove(&xwayland_view->override_redirect.link);
+	wl_list_remove(&xwayland_view->focus_in.link);
 
 	view_destroy(view);
 }
@@ -565,6 +572,18 @@ handle_override_redirect(struct wl_listener *listener, void *data)
 	handle_destroy(&view->destroy, xsurface);
 	/* view is invalid after this point */
 	xwayland_unmanaged_create(server, xsurface, mapped);
+}
+
+static void
+handle_focus_in(struct wl_listener *listener, void *data)
+{
+	struct xwayland_view *xwayland_view =
+		wl_container_of(listener, xwayland_view, focus_in);
+	struct view *view = &xwayland_view->base;
+	struct seat *seat = &view->server->seat;
+	if (view->surface != seat->seat->keyboard_state.focused_surface) {
+		seat_focus_surface(seat, view->surface);
+	}
 }
 
 static void
@@ -890,6 +909,7 @@ static const struct view_impl xwayland_view_impl = {
 	.is_related = xwayland_view_is_related,
 	.get_size_hints = xwayland_view_get_size_hints,
 	.wants_focus = xwayland_view_wants_focus,
+	.offer_focus = xwayland_view_offer_focus,
 };
 
 void
@@ -958,6 +978,9 @@ xwayland_view_create(struct server *server,
 
 	xwayland_view->override_redirect.notify = handle_override_redirect;
 	wl_signal_add(&xsurface->events.set_override_redirect, &xwayland_view->override_redirect);
+
+	xwayland_view->focus_in.notify = handle_focus_in;
+	wl_signal_add(&xsurface->events.focus_in, &xwayland_view->focus_in);
 
 	wl_list_insert(&view->server->views, &view->link);
 
