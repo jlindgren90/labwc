@@ -34,29 +34,27 @@ xwayland_view_get_size_hints(struct view *view)
 	};
 }
 
-static bool
-xwayland_view_wants_focus(struct view *view)
+static enum view_focus_type
+xwayland_view_get_focus_type(struct view *view)
 {
-	xcb_icccm_wm_hints_t *hints = xwayland_surface_from_view(view)->hints;
-	if (!hints) {
-		return true;
+	switch (wlr_xwayland_icccm_input_model(
+			xwayland_surface_from_view(view))) {
+	case WLR_ICCCM_INPUT_MODEL_PASSIVE:
+	case WLR_ICCCM_INPUT_MODEL_LOCAL:
+		return VIEW_FOCUS_SIMPLE;
+
+	case WLR_ICCCM_INPUT_MODEL_GLOBAL:
+		return VIEW_FOCUS_OFFER;
+
+	default:
+		return VIEW_FOCUS_NONE;
 	}
-	/*
-	 * Paraphrased from ICCCM section 4.1.7 (Input Focus):
-	 *
-	 * Clients set the input field of WM_HINTS to True to indicate
-	 * that they require window manager assistance in acquiring the
-	 * input focus. Clients set the input field to False to request
-	 * that the window manager not set the input focus to their
-	 * top-level window.
-	 *
-	 * Clients that use XSetInputFocus() to explicitly set the input
-	 * focus should set the WM_TAKE_FOCUS atom in WM_PROTOCOLS.
-	 * Currently, labwc does not support this method of taking focus
-	 * and thus ignores WM_TAKE_FOCUS. These views can still be
-	 * focused by explicit user action (e.g. clicking in them).
-	 */
-	return (bool)hints->input;
+}
+
+static void
+xwayland_view_offer_focus(struct view *view)
+{
+	wlr_xwayland_surface_offer_focus(xwayland_surface_from_view(view));
 }
 
 static struct wlr_xwayland_surface *
@@ -328,6 +326,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xwayland_view->set_decorations.link);
 	wl_list_remove(&xwayland_view->set_strut_partial.link);
 	wl_list_remove(&xwayland_view->override_redirect.link);
+	wl_list_remove(&xwayland_view->focus_in.link);
 
 	view_destroy(view);
 }
@@ -513,6 +512,18 @@ handle_override_redirect(struct wl_listener *listener, void *data)
 	handle_destroy(&view->destroy, xsurface);
 	/* view is invalid after this point */
 	xwayland_unmanaged_create(server, xsurface, mapped);
+}
+
+static void
+handle_focus_in(struct wl_listener *listener, void *data)
+{
+	struct xwayland_view *xwayland_view =
+		wl_container_of(listener, xwayland_view, focus_in);
+	struct view *view = &xwayland_view->base;
+	struct seat *seat = &view->server->seat;
+	if (view->surface != seat->seat->keyboard_state.focused_surface) {
+		seat_focus_surface(seat, view->surface);
+	}
 }
 
 static void
@@ -788,7 +799,8 @@ static const struct view_impl xwayland_view_impl = {
 	.get_root = xwayland_view_get_root,
 	.append_children = xwayland_view_append_children,
 	.get_size_hints = xwayland_view_get_size_hints,
-	.wants_focus = xwayland_view_wants_focus,
+	.get_focus_type = xwayland_view_get_focus_type,
+	.offer_focus = xwayland_view_offer_focus,
 };
 
 void
@@ -857,6 +869,9 @@ xwayland_view_create(struct server *server,
 
 	xwayland_view->override_redirect.notify = handle_override_redirect;
 	wl_signal_add(&xsurface->events.set_override_redirect, &xwayland_view->override_redirect);
+
+	xwayland_view->focus_in.notify = handle_focus_in;
+	wl_signal_add(&xsurface->events.focus_in, &xwayland_view->focus_in);
 
 	wl_list_insert(&view->server->views, &view->link);
 

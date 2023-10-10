@@ -36,6 +36,20 @@ enum view_edge {
 	VIEW_EDGE_CENTER,
 };
 
+enum view_focus_type {
+	/* View does not want focus */
+	VIEW_FOCUS_NONE = 0,
+	/* View wants focus */
+	VIEW_FOCUS_SIMPLE,
+	/*
+	 * View uses "Globally Active" input model and will accept or
+	 * ignore focus offers (via WM_TAKE_FOCUS), its choice. There is
+	 * no good way to know in advance whether the view wants focus,
+	 * so labwc will not focus it automatically.
+	 */
+	VIEW_FOCUS_OFFER,
+};
+
 struct view;
 struct wlr_output;
 struct wlr_output_layout;
@@ -78,8 +92,9 @@ struct view_impl {
 	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
 	struct view_size_hints (*get_size_hints)(struct view *self);
-	/* if not implemented, view is assumed to want focus */
-	bool (*wants_focus)(struct view *self);
+	/* if not implemented, VIEW_FOCUS_SIMPLE is assumed */
+	enum view_focus_type (*get_focus_type)(struct view *self);
+	void (*offer_focus)(struct view *self);
 };
 
 #ifdef _LABWC_VIEW_INTERNAL
@@ -296,6 +311,8 @@ struct view *view_next(struct wl_list *head, struct view *view,
 void view_array_append(struct server *server, struct wl_array *views,
 	enum lab_view_criteria criteria);
 
+enum view_focus_type view_get_focus_type(struct view *view);
+
 /**
  * view_is_focusable() - Check whether or not a view can be focused
  * @view: view to be checked
@@ -309,6 +326,7 @@ void view_array_append(struct server *server, struct wl_array *views,
  * and have been mapped at some point since creation.
  */
 bool view_is_focusable(struct view *view);
+void view_offer_focus(struct view *view);
 
 void mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
 	wl_notify_func_t notify_map, wl_notify_func_t notify_unmap);
