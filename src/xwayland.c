@@ -104,14 +104,22 @@ xwayland_adjust_usable_area(struct view *view, struct wlr_output_layout *layout,
 	}
 
 	/* these are layout coordinates */
+	struct wlr_box lb = { 0 };
+	wlr_output_layout_get_box(layout, NULL, &lb);
 	struct wlr_box ob = { 0 };
 	wlr_output_layout_get_box(layout, output, &ob);
 
-	/* these are output coordinates */
+	/*
+	 * strut->right/bottom are offsets from the lower right corner
+	 * of the X11 screen, which should generally correspond with the
+	 * lower right corner of the output layout
+	 */
 	double strut_left = strut->left;
-	double strut_right = strut->right;
+	double strut_right = (lb.x + lb.width) - strut->right;
 	double strut_top = strut->top;
-	double strut_bottom = strut->bottom;
+	double strut_bottom = (lb.y + lb.height) - strut->bottom;
+
+	/* convert layout to output coordinates */
 	wlr_output_layout_output_coords(layout, output,
 		&strut_left, &strut_top);
 	wlr_output_layout_output_coords(layout, output,
