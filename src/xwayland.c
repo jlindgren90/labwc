@@ -382,10 +382,10 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&xwayland_view->dissociate.link);
 	wl_list_remove(&xwayland_view->request_activate.link);
 	wl_list_remove(&xwayland_view->request_configure.link);
-	wl_list_remove(&xwayland_view->set_app_id.link);
+	wl_list_remove(&xwayland_view->set_class.link);
 	wl_list_remove(&xwayland_view->set_decorations.link);
 	wl_list_remove(&xwayland_view->set_strut_partial.link);
-	wl_list_remove(&xwayland_view->override_redirect.link);
+	wl_list_remove(&xwayland_view->set_override_redirect.link);
 	wl_list_remove(&xwayland_view->focus_in.link);
 
 	view_destroy(view);
@@ -496,7 +496,7 @@ static void
 handle_set_class(struct wl_listener *listener, void *data)
 {
 	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, set_app_id);
+		wl_container_of(listener, xwayland_view, set_class);
 	struct view *view = &xwayland_view->base;
 	view_update_app_id(view);
 }
@@ -557,10 +557,10 @@ handle_set_strut_partial(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_override_redirect(struct wl_listener *listener, void *data)
+handle_set_override_redirect(struct wl_listener *listener, void *data)
 {
 	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, override_redirect);
+		wl_container_of(listener, xwayland_view, set_override_redirect);
 	struct view *view = &xwayland_view->base;
 	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
 
@@ -937,50 +937,30 @@ xwayland_view_create(struct server *server,
 	view->scene_tree = wlr_scene_tree_create(view->workspace->tree);
 	node_descriptor_create(&view->scene_tree->node, LAB_NODE_DESC_VIEW, view);
 
-	view->destroy.notify = handle_destroy;
-	wl_signal_add(&xsurface->events.destroy, &view->destroy);
-	view->request_minimize.notify = handle_request_minimize;
-	wl_signal_add(&xsurface->events.request_minimize, &view->request_minimize);
-	view->request_maximize.notify = handle_request_maximize;
-	wl_signal_add(&xsurface->events.request_maximize, &view->request_maximize);
-	view->request_fullscreen.notify = handle_request_fullscreen;
-	wl_signal_add(&xsurface->events.request_fullscreen, &view->request_fullscreen);
-	view->request_move.notify = handle_request_move;
-	wl_signal_add(&xsurface->events.request_move, &view->request_move);
-	view->request_resize.notify = handle_request_resize;
-	wl_signal_add(&xsurface->events.request_resize, &view->request_resize);
+#define CONNECT(src, dest, name) \
+	dest->name.notify = handle_##name; \
+	wl_signal_add(&src->events.name, &dest->name)
 
-	view->set_title.notify = handle_set_title;
-	wl_signal_add(&xsurface->events.set_title, &view->set_title);
+	CONNECT(xsurface, view, destroy);
+	CONNECT(xsurface, view, request_minimize);
+	CONNECT(xsurface, view, request_maximize);
+	CONNECT(xsurface, view, request_fullscreen);
+	CONNECT(xsurface, view, request_move);
+	CONNECT(xsurface, view, request_resize);
+	CONNECT(xsurface, view, set_title);
 
 	/* Events specific to XWayland views */
-	xwayland_view->associate.notify = handle_associate;
-	wl_signal_add(&xsurface->events.associate, &xwayland_view->associate);
+	CONNECT(xsurface, xwayland_view, associate);
+	CONNECT(xsurface, xwayland_view, dissociate);
+	CONNECT(xsurface, xwayland_view, request_activate);
+	CONNECT(xsurface, xwayland_view, request_configure);
+	CONNECT(xsurface, xwayland_view, set_class);
+	CONNECT(xsurface, xwayland_view, set_decorations);
+	CONNECT(xsurface, xwayland_view, set_strut_partial);
+	CONNECT(xsurface, xwayland_view, set_override_redirect);
+	CONNECT(xsurface, xwayland_view, focus_in);
 
-	xwayland_view->dissociate.notify = handle_dissociate;
-	wl_signal_add(&xsurface->events.dissociate, &xwayland_view->dissociate);
-
-	xwayland_view->request_activate.notify = handle_request_activate;
-	wl_signal_add(&xsurface->events.request_activate, &xwayland_view->request_activate);
-
-	xwayland_view->request_configure.notify = handle_request_configure;
-	wl_signal_add(&xsurface->events.request_configure, &xwayland_view->request_configure);
-
-	xwayland_view->set_app_id.notify = handle_set_class;
-	wl_signal_add(&xsurface->events.set_class, &xwayland_view->set_app_id);
-
-	xwayland_view->set_decorations.notify = handle_set_decorations;
-	wl_signal_add(&xsurface->events.set_decorations, &xwayland_view->set_decorations);
-
-	xwayland_view->set_strut_partial.notify = handle_set_strut_partial;
-	wl_signal_add(&xsurface->events.set_strut_partial,
-		&xwayland_view->set_strut_partial);
-
-	xwayland_view->override_redirect.notify = handle_override_redirect;
-	wl_signal_add(&xsurface->events.set_override_redirect, &xwayland_view->override_redirect);
-
-	xwayland_view->focus_in.notify = handle_focus_in;
-	wl_signal_add(&xsurface->events.focus_in, &xwayland_view->focus_in);
+#undef CONNECT
 
 	wl_list_insert(&view->server->views, &view->link);
 

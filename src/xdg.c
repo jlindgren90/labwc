@@ -40,7 +40,7 @@ xdg_toplevel_from_view(struct view *view)
 }
 
 static void
-handle_new_xdg_popup(struct wl_listener *listener, void *data)
+handle_new_popup(struct wl_listener *listener, void *data)
 {
 	struct xdg_toplevel_view *xdg_toplevel_view =
 		wl_container_of(listener, xdg_toplevel_view, new_popup);
@@ -684,30 +684,24 @@ xdg_surface_new(struct wl_listener *listener, void *data)
 
 	view_connect_map(view, xdg_surface->surface);
 
-	view->destroy.notify = handle_destroy;
-	wl_signal_add(&xdg_surface->events.destroy, &view->destroy);
+#define CONNECT(src, dest, name) \
+	dest->name.notify = handle_##name; \
+	wl_signal_add(&src->events.name, &dest->name)
 
+	CONNECT(xdg_surface, view, destroy);
 	struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
-	view->request_move.notify = handle_request_move;
-	wl_signal_add(&toplevel->events.request_move, &view->request_move);
-	view->request_resize.notify = handle_request_resize;
-	wl_signal_add(&toplevel->events.request_resize, &view->request_resize);
-	view->request_minimize.notify = handle_request_minimize;
-	wl_signal_add(&toplevel->events.request_minimize, &view->request_minimize);
-	view->request_maximize.notify = handle_request_maximize;
-	wl_signal_add(&toplevel->events.request_maximize, &view->request_maximize);
-	view->request_fullscreen.notify = handle_request_fullscreen;
-	wl_signal_add(&toplevel->events.request_fullscreen, &view->request_fullscreen);
-
-	view->set_title.notify = handle_set_title;
-	wl_signal_add(&toplevel->events.set_title, &view->set_title);
+	CONNECT(toplevel, view, request_move);
+	CONNECT(toplevel, view, request_resize);
+	CONNECT(toplevel, view, request_minimize);
+	CONNECT(toplevel, view, request_maximize);
+	CONNECT(toplevel, view, request_fullscreen);
+	CONNECT(toplevel, view, set_title);
 
 	/* Events specific to XDG toplevel views */
-	xdg_toplevel_view->set_app_id.notify = handle_set_app_id;
-	wl_signal_add(&toplevel->events.set_app_id, &xdg_toplevel_view->set_app_id);
+	CONNECT(toplevel, xdg_toplevel_view, set_app_id);
+	CONNECT(xdg_surface, xdg_toplevel_view, new_popup);
 
-	xdg_toplevel_view->new_popup.notify = handle_new_xdg_popup;
-	wl_signal_add(&xdg_surface->events.new_popup, &xdg_toplevel_view->new_popup);
+#undef CONNECT
 
 	wl_list_insert(&server->views, &view->link);
 }

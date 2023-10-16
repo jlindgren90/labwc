@@ -151,18 +151,18 @@ unmanaged_handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&unmanaged->associate.link);
 	wl_list_remove(&unmanaged->dissociate.link);
 	wl_list_remove(&unmanaged->request_configure.link);
-	wl_list_remove(&unmanaged->override_redirect.link);
+	wl_list_remove(&unmanaged->set_override_redirect.link);
 	wl_list_remove(&unmanaged->request_activate.link);
 	wl_list_remove(&unmanaged->destroy.link);
 	free(unmanaged);
 }
 
 static void
-unmanaged_handle_override_redirect(struct wl_listener *listener, void *data)
+unmanaged_handle_set_override_redirect(struct wl_listener *listener, void *data)
 {
 	wlr_log(WLR_DEBUG, "handle unmanaged override_redirect");
 	struct xwayland_unmanaged *unmanaged =
-		wl_container_of(listener, unmanaged, override_redirect);
+		wl_container_of(listener, unmanaged, set_override_redirect);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	struct server *server = unmanaged->server;
 
@@ -218,27 +218,18 @@ xwayland_unmanaged_create(struct server *server,
 	 */
 	assert(!xsurface->data);
 
-	unmanaged->associate.notify = unmanaged_handle_associate;
-	wl_signal_add(&xsurface->events.associate, &unmanaged->associate);
+#define CONNECT(src, dest, name) \
+	dest->name.notify = unmanaged_handle_##name; \
+	wl_signal_add(&src->events.name, &dest->name)
 
-	unmanaged->dissociate.notify = unmanaged_handle_dissociate;
-	wl_signal_add(&xsurface->events.dissociate, &unmanaged->dissociate);
+	CONNECT(xsurface, unmanaged, destroy);
+	CONNECT(xsurface, unmanaged, associate);
+	CONNECT(xsurface, unmanaged, dissociate);
+	CONNECT(xsurface, unmanaged, request_activate);
+	CONNECT(xsurface, unmanaged, request_configure);
+	CONNECT(xsurface, unmanaged, set_override_redirect);
 
-	wl_signal_add(&xsurface->events.request_configure,
-		&unmanaged->request_configure);
-	unmanaged->request_configure.notify =
-		unmanaged_handle_request_configure;
-
-	wl_signal_add(&xsurface->events.destroy, &unmanaged->destroy);
-	unmanaged->destroy.notify = unmanaged_handle_destroy;
-
-	wl_signal_add(&xsurface->events.set_override_redirect,
-		&unmanaged->override_redirect);
-	unmanaged->override_redirect.notify = unmanaged_handle_override_redirect;
-
-	wl_signal_add(&xsurface->events.request_activate,
-		&unmanaged->request_activate);
-	unmanaged->request_activate.notify = unmanaged_handle_request_activate;
+#undef CONNECT
 
 	if (mapped) {
 		unmanaged_handle_map(&unmanaged->mappable.map, NULL);

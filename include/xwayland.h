@@ -22,7 +22,7 @@ struct xwayland_unmanaged {
 /*	struct wl_listener request_fullscreen; */
 	struct wl_listener set_geometry;
 	struct wl_listener destroy;
-	struct wl_listener override_redirect;
+	struct wl_listener set_override_redirect;
 };
 
 struct xwayland_view {
@@ -34,10 +34,10 @@ struct xwayland_view {
 	struct wl_listener dissociate;
 	struct wl_listener request_activate;
 	struct wl_listener request_configure;
-	struct wl_listener set_app_id;		/* TODO: s/set_app_id/class/ */
+	struct wl_listener set_class;
 	struct wl_listener set_decorations;
 	struct wl_listener set_strut_partial;
-	struct wl_listener override_redirect;
+	struct wl_listener set_override_redirect;
 	struct wl_listener focus_in;
 
 	/* Not (yet) implemented */
