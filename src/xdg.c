@@ -92,6 +92,21 @@ handle_commit(struct wl_listener *listener, void *data)
 	struct wlr_box size;
 	wlr_xdg_surface_get_geometry(xdg_surface, &size);
 
+	/* Detect bug that occurs with Qt applications */
+	if (size.width != view->pending.width
+			|| size.height != view->pending.height) {
+		struct wlr_box extent;
+		wlr_surface_get_extends(xdg_surface->surface, &extent);
+		if (extent.width == view->pending.width
+				&& extent.height == view->pending.height) {
+			wlr_log(WLR_ERROR, "broken client (%s): "
+				"surface extent matches configure but "
+				"window geometry does not",
+				view_get_string_prop(view, "app_id"));
+			size = extent; /* Use surface extent instead */
+		}
+	}
+
 	struct wlr_box *current = &view->current;
 	bool update_required = current->width != size.width
 		|| current->height != size.height;
