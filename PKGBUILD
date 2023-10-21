@@ -7,8 +7,30 @@ pkgdesc='stacking wayland compositor with look and feel from openbox'
 url="https://github.com/labwc/labwc"
 arch=('x86_64')
 license=('GPL-2.0-only')
-depends=('libpng' 'librsvg' 'pango' 'seatd' 'wayland' 'xorg-xwayland')
-makedepends=('meson' 'scdoc' 'wayland-protocols')
+depends=('libpng' 'librsvg' 'pango' 'seatd' 'wayland' 'xorg-xwayland'
+  # wlroots
+  'libdisplay-info.so'
+  'libglvnd'
+  'libinput'
+  'libpixman-1.so'
+  'libseat.so'
+  'libudev.so'
+  'libvulkan.so'
+  'libwayland-client.so'
+  'libwayland-server.so'
+  'libxcb'
+  'libxkbcommon.so'
+  'opengl-driver'
+  'xcb-util-errors'
+  'xcb-util-renderutil'
+  'xcb-util-wm'
+)
+makedepends=('meson' 'scdoc' 'wayland-protocols'
+  # wlroots
+  'glslang'
+  'systemd'
+  'vulkan-headers'
+)
 optdepends=("bemenu: default launcher via Alt+F3")
 
 prepare() {
