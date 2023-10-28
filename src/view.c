@@ -1214,6 +1214,7 @@ void
 view_grow_to_edge(struct view *view, enum view_edge direction)
 {
 	assert(view);
+	/* TODO: allow grow to edge if maximized along the other axis */
 	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
@@ -1231,6 +1232,7 @@ void
 view_shrink_to_edge(struct view *view, enum view_edge direction)
 {
 	assert(view);
+	/* TODO: allow shrink to edge if maximized along the other axis */
 	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
