@@ -355,9 +355,11 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 	 * avoids false positive matches where 'other' keys were pressed at the
 	 * same time.
 	 */
+#if 0 // jlindgren: disabled due to stuck WakeUp key
 	if (key_state_nr_pressed_keys() > 1) {
 		return false;
 	}
+#endif
 
 	/*
 	 * Handle compositor keybinds
