@@ -375,8 +375,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 	struct keyinfo keyinfo = get_keyinfo(wlr_keyboard, event->keycode);
 
 	key_state_set_pressed(event->keycode,
-		event->state == WL_KEYBOARD_KEY_STATE_PRESSED,
-		keyinfo.is_modifier);
+		event->state == WL_KEYBOARD_KEY_STATE_PRESSED);
 
 	if (event->state == WL_KEYBOARD_KEY_STATE_RELEASED) {
 		return handle_key_release(server, event->keycode);
