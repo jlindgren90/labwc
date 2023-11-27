@@ -6,6 +6,8 @@
 #include "view.h"
 
 struct wlr_compositor;
+struct wlr_output;
+struct wlr_output_layout;
 
 struct xwayland_unmanaged {
 	struct server *server;
