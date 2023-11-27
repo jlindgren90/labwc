@@ -14,7 +14,7 @@ struct key_array {
 	int nr_keys;
 };
 
-static struct key_array pressed, pressed_mods, bound, pressed_sent;
+static struct key_array pressed, bound, pressed_sent;
 
 static void
 report(struct key_array *array, const char *msg)
@@ -96,16 +96,12 @@ key_state_nr_pressed_sent_keycodes(void)
 }
 
 void
-key_state_set_pressed(uint32_t keycode, bool is_pressed, bool is_modifier)
+key_state_set_pressed(uint32_t keycode, bool ispressed)
 {
-	if (is_pressed) {
+	if (ispressed) {
 		add_key(&pressed, keycode);
-		if (is_modifier) {
-			add_key(&pressed_mods, keycode);
-		}
 	} else {
 		remove_key(&pressed, keycode);
-		remove_key(&pressed_mods, keycode);
 	}
 }
 
@@ -113,15 +109,6 @@ void
 key_state_store_pressed_key_as_bound(uint32_t keycode)
 {
 	add_key(&bound, keycode);
-	/*
-	 * Also store any pressed modifiers as bound. This prevents
-	 * applications from seeing and handling the release event for
-	 * a modifier key that was part of a keybinding (e.g. Firefox
-	 * displays its menu bar for a lone Alt press + release).
-	 */
-	for (int i = 0; i < pressed_mods.nr_keys; ++i) {
-		add_key(&bound, pressed_mods.keys[i]);
-	}
 }
 
 bool
