@@ -1556,7 +1556,8 @@ view_is_related(struct view *view, struct wlr_surface *surface)
 	return false;
 }
 
-bool view_has_panel_strut(struct view *view)
+bool
+view_has_panel_strut(struct view *view)
 {
 	assert(view);
 	return view->impl->has_panel_strut &&
