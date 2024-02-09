@@ -118,11 +118,19 @@ struct view_impl {
 	bool (*has_strut_partial)(struct view *self);
 };
 
+#ifdef _LABWC_VIEW_INTERNAL
+#define HIDE(x) x
+#define RO(x) x
+#else
+/* restrict access outside view.c and friends */
+#define HIDE(x) _HIDDEN_##x
+#define RO(x) const x
+#endif
 struct view {
-	struct server *server;
-	enum view_type type;
-	const struct view_impl *impl;
-	struct wl_list link;
+	struct server *RO(server);
+	struct wl_list link; /* server::views */
+
+	enum view_type RO(type);
 
 	/*
 	 * The primary output that the view is displayed on. Specifically:
@@ -139,7 +147,7 @@ struct view {
 	 * view_maximize(), etc.) allow specifying a particular output
 	 * by calling view_set_output() beforehand.
 	 */
-	struct output *output;
+	struct output *RO(output);
 
 	/*
 	 * The outputs that the view is displayed on.
@@ -148,65 +156,73 @@ struct view {
 	 * resize area.
 	 * It is a bitset of output->scene_output->index.
 	 */
-	uint64_t outputs;
+	uint64_t RO(outputs);
 
-	struct workspace *workspace;
-	struct wlr_surface *surface;
-	struct wlr_scene_tree *scene_tree;
-	struct wlr_scene_node *scene_node;
+	struct workspace *RO(workspace);
+	struct wlr_surface *RO(surface);
+	struct wlr_scene_tree *RO(scene_tree);
+	struct wlr_scene_node *RO(scene_node);
 
-	bool mapped;
-	bool been_mapped;
-	bool ssd_enabled;
-	bool ssd_titlebar_hidden;
+	bool RO(mapped);
+	bool RO(been_mapped);
+	bool RO(ssd_enabled);
+	bool RO(ssd_titlebar_hidden);
+	/* FIXME: make RO */
 	enum ssd_preference ssd_preference;
-	bool shaded;
-	bool minimized;
-	enum view_axis maximized;
-	bool fullscreen;
+	bool RO(shaded);
+	bool RO(minimized);
+	enum view_axis RO(maximized);
+	bool RO(fullscreen);
+	/* FIXME: make RO */
 	bool tearing_hint;
-	bool visible_on_all_workspaces;
-	enum view_edge tiled;
-	bool inhibits_keybinds;
+	bool RO(visible_on_all_workspaces);
+	enum view_edge RO(tiled);
+	bool RO(inhibits_keybinds);
+	/* FIXME: make RO */
 	xkb_layout_index_t keyboard_layout;
 
 	/* Pointer to an output owned struct region, may be NULL */
-	struct region *tiled_region;
+	struct region *RO(tiled_region);
 	/* Set to region->name when tiled_region is free'd by a destroying output */
-	char *tiled_region_evacuate;
+	char *RO(tiled_region_evacuate);
 
 	/*
 	 * Geometry of the wlr_surface contained within the view, as
 	 * currently displayed. Should be kept in sync with the
 	 * scene-graph at all times.
 	 */
-	struct wlr_box current;
+	struct wlr_box RO(current);
 	/*
 	 * Expected geometry after any pending move/resize requests
 	 * have been processed. Should match current geometry when no
 	 * move/resize requests are pending.
 	 */
-	struct wlr_box pending;
+	struct wlr_box RO(pending);
 	/*
 	 * Saved geometry which will be restored when the view returns
 	 * to normal/floating state after being maximized/fullscreen/
 	 * tiled. Values are undefined/out-of-date when the view is not
 	 * maximized/fullscreen/tiled.
 	 */
-	struct wlr_box natural_geometry;
+	struct wlr_box RO(natural_geometry);
 	/*
 	 * Whenever an output layout change triggers a view relocation, the
 	 * last pending position (or natural geometry) will be saved so the
 	 * view may be restored to its original location on a subsequent layout
 	 * change.
 	 */
-	struct wlr_box last_layout_geometry;
+	struct wlr_box HIDE(last_layout_geometry);
+
+	struct ssd *RO(ssd);
+
+	/* implementation details */
+	const struct view_impl *HIDE(impl);
 
 	/* used by xdg-shell views */
-	uint32_t pending_configure_serial;
-	struct wl_event_source *pending_configure_timeout;
+	uint32_t HIDE(pending_configure_serial);
+	struct wl_event_source *HIDE(pending_configure_timeout);
 
-	struct ssd *ssd;
+	/* used in resize_indicator.c */
 	struct resize_indicator {
 		int width, height;
 		struct wlr_scene_tree *tree;
@@ -215,6 +231,7 @@ struct view {
 		struct scaled_font_buffer *text;
 	} resize_indicator;
 
+	/* used in foreign.c */
 	struct foreign_toplevel {
 		struct wlr_foreign_toplevel_handle_v1 *handle;
 		struct wl_listener maximize;
@@ -225,18 +242,20 @@ struct view {
 		struct wl_listener destroy;
 	} toplevel;
 
-	struct mappable mappable;
+	struct mappable HIDE(mappable);
 
-	struct wl_listener destroy;
-	struct wl_listener surface_destroy;
-	struct wl_listener commit;
-	struct wl_listener request_move;
-	struct wl_listener request_resize;
-	struct wl_listener request_minimize;
-	struct wl_listener request_maximize;
-	struct wl_listener request_fullscreen;
-	struct wl_listener set_title;
+	struct wl_listener HIDE(destroy);
+	struct wl_listener HIDE(surface_destroy);
+	struct wl_listener HIDE(commit);
+	struct wl_listener HIDE(request_move);
+	struct wl_listener HIDE(request_resize);
+	struct wl_listener HIDE(request_minimize);
+	struct wl_listener HIDE(request_maximize);
+	struct wl_listener HIDE(request_fullscreen);
+	struct wl_listener HIDE(set_title);
 };
+#undef HIDE
+#undef RO
 
 struct view_query {
 	struct wl_list link;

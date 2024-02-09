@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
 
+#define _LABWC_VIEW_INTERNAL
 #include "common/macros.h"
 #include "common/mem.h"
 #include "decorations.h"

@@ -211,7 +211,7 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 	struct border view_edges = { 0 };
 	struct border target_edges = { 0 };
 
-	struct wlr_box *view_geom =
+	const struct wlr_box *view_geom =
 		use_pending ? &view->pending : &view->current;
 
 	edges_for_target_geometry(&view_edges, view, *view_geom);
@@ -268,7 +268,7 @@ edges_find_outputs(struct border *nearest_edges, struct view *view,
 	struct border view_edges = { 0 };
 	struct border target_edges = { 0 };
 
-	struct wlr_box *view_geom =
+	const struct wlr_box *view_geom =
 		use_pending ? &view->pending : &view->current;
 
 	edges_for_target_geometry(&view_edges, view, *view_geom);
@@ -329,7 +329,7 @@ edges_adjust_move_coords(struct view *view, struct border edges,
 	assert(view);
 
 	struct border border = ssd_get_margin(view->ssd);
-	struct wlr_box *view_geom =
+	const struct wlr_box *view_geom =
 		use_pending ? &view->pending : &view->current;
 
 	/* When moving, limit motion to the best valid, intervening edge */
@@ -359,7 +359,7 @@ edges_adjust_resize_geom(struct view *view, struct border edges,
 	assert(view);
 
 	struct border border = ssd_get_margin(view->ssd);
-	struct wlr_box *view_geom =
+	const struct wlr_box *view_geom =
 		use_pending ? &view->pending : &view->current;
 
 	/*
