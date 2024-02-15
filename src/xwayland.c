@@ -16,29 +16,17 @@
 #include "workspaces.h"
 #include "xwayland.h"
 
-xcb_atom_t atoms[WINDOW_TYPE_LEN] = {0};
-
 static void xwayland_view_unmap(struct view *view, bool client_request);
-
-static bool
-xwayland_surface_contains_window_type(
-		struct wlr_xwayland_surface *surface, enum window_type window_type)
-{
-	assert(surface);
-	for (size_t i = 0; i < surface->window_type_len; i++) {
-		if (surface->window_type[i] == atoms[window_type]) {
-			return true;
-		}
-	}
-	return false;
-}
 
 static bool
 xwayland_view_contains_window_type(struct view *view, int32_t window_type)
 {
+	static_assert(WINDOW_TYPE_LEN == WLR_NET_WM_WINDOW_TYPE_NORMAL + 1,
+		"enum window_type out of sync with wlr_net_wm_window_type");
 	assert(view);
 	struct wlr_xwayland_surface *surface = xwayland_surface_from_view(view);
-	return xwayland_surface_contains_window_type(surface, window_type);
+	return wlr_xwayland_surface_has_window_type(surface,
+			(enum wlr_net_wm_window_type)window_type);
 }
 
 static struct view_size_hints
@@ -105,10 +93,10 @@ xwayland_view_wants_focus(struct view *view)
 		 * Alt-Tab switcher and be automatically focused when
 		 * they become topmost.
 		 */
-		return (xwayland_surface_contains_window_type(xsurface,
-				NET_WM_WINDOW_TYPE_NORMAL)
-			|| xwayland_surface_contains_window_type(xsurface,
-				NET_WM_WINDOW_TYPE_DIALOG)) ?
+		return (wlr_xwayland_surface_has_window_type(xsurface,
+				WLR_NET_WM_WINDOW_TYPE_NORMAL)
+			|| wlr_xwayland_surface_has_window_type(xsurface,
+				WLR_NET_WM_WINDOW_TYPE_DIALOG)) ?
 			VIEW_WANTS_FOCUS_ALWAYS : VIEW_WANTS_FOCUS_OFFER;
 
 	/*
@@ -1066,58 +1054,6 @@ handle_new_surface(struct wl_listener *listener, void *data)
 }
 
 static void
-sync_atoms(xcb_connection_t *xcb_conn)
-{
-	assert(xcb_conn);
-
-	wlr_log(WLR_DEBUG, "Syncing X11 atoms");
-	xcb_intern_atom_cookie_t cookies[WINDOW_TYPE_LEN];
-
-	/* First request everything and then loop over the results to reduce latency */
-	for (size_t i = 0; i < WINDOW_TYPE_LEN; i++) {
-		cookies[i] = xcb_intern_atom(xcb_conn, 0,
-			strlen(atom_names[i]), atom_names[i]);
-	}
-
-	for (size_t i = 0; i < WINDOW_TYPE_LEN; i++) {
-		xcb_generic_error_t *err = NULL;
-		xcb_intern_atom_reply_t *reply =
-			xcb_intern_atom_reply(xcb_conn, cookies[i], &err);
-		if (reply) {
-			atoms[i] = reply->atom;
-			wlr_log(WLR_DEBUG, "Got X11 atom for %s: %u",
-				atom_names[i], reply->atom);
-		}
-		if (err) {
-			wlr_log(WLR_INFO, "Failed to get X11 atom for %s",
-				atom_names[i]);
-		}
-		free(reply);
-		free(err);
-	}
-}
-
-static void
-handle_server_ready(struct wl_listener *listener, void *data)
-{
-	xcb_connection_t *xcb_conn = xcb_connect(NULL, NULL);
-	if (xcb_connection_has_error(xcb_conn)) {
-		wlr_log(WLR_ERROR, "Failed to create xcb connection");
-
-		/* Just clear all existing atoms */
-		for (size_t i = 0; i < WINDOW_TYPE_LEN; i++) {
-			atoms[i] = XCB_ATOM_NONE;
-		}
-		return;
-	}
-
-	wlr_log(WLR_DEBUG, "Connected to xwayland");
-	sync_atoms(xcb_conn);
-	wlr_log(WLR_DEBUG, "Disconnecting from xwayland");
-	xcb_disconnect(xcb_conn);
-}
-
-static void
 handle_xwm_ready(struct wl_listener *listener, void *data)
 {
 	struct server *server =
@@ -1139,10 +1075,6 @@ xwayland_server_init(struct server *server, struct wlr_compositor *compositor)
 	server->xwayland_new_surface.notify = handle_new_surface;
 	wl_signal_add(&server->xwayland->events.new_surface,
 		&server->xwayland_new_surface);
-
-	server->xwayland_server_ready.notify = handle_server_ready;
-	wl_signal_add(&server->xwayland->server->events.ready,
-		&server->xwayland_server_ready);
 
 	server->xwayland_xwm_ready.notify = handle_xwm_ready;
 	wl_signal_add(&server->xwayland->events.ready,
