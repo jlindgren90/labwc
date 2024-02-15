@@ -68,6 +68,7 @@ enum view_wants_focus {
 	VIEW_WANTS_FOCUS_OFFER,
 };
 
+/* keep in sync with wlr_net_wm_window_type! */
 enum window_type {
 	/* https://specifications.freedesktop.org/wm-spec/wm-spec-1.4.html#idm45649101374512 */
 	NET_WM_WINDOW_TYPE_DESKTOP = 0,
