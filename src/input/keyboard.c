@@ -475,6 +475,13 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 		return LAB_KEY_HANDLED_TRUE_AND_VT_CHANGED;
 	}
 
+	/* Hack: disable XF86WakeUp key completely */
+	for (int i = 0; i < keyinfo.translated.nr_syms; i++) {
+		if (keyinfo.translated.syms[i] == XKB_KEY_XF86WakeUp) {
+			return true;
+		}
+	}
+
 	/*
 	 * Ignore labwc keybindings if input is inhibited
 	 * It's important to do this after key_state_set_pressed() to ensure
