@@ -620,6 +620,22 @@ handle_map_request(struct wl_listener *listener, void *data)
 }
 
 static void
+check_natural_geometry(struct view *view)
+{
+	/*
+	 * Some applications (example: Thonny) don't set a reasonable
+	 * un-maximized size when started maximized. Try to detect this
+	 * and set a fallback size.
+	 */
+	if (!view_is_floating(view)
+			&& (view->natural_geometry.width < LAB_MIN_VIEW_WIDTH
+			|| view->natural_geometry.height < LAB_MIN_VIEW_HEIGHT)) {
+		view->natural_geometry.width = LAB_FALLBACK_WIDTH;
+		view->natural_geometry.height = LAB_FALLBACK_HEIGHT;
+	}
+}
+
+static void
 set_initial_position(struct view *view,
 		struct wlr_xwayland_surface *xwayland_surface)
 {
@@ -737,6 +753,7 @@ xwayland_view_map(struct view *view)
 	}
 
 	if (!view->been_mapped) {
+		check_natural_geometry(view);
 		set_initial_position(view, xwayland_surface);
 		/*
 		 * When mapping the view for the first time, visual

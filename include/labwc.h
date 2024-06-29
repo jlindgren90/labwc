@@ -485,6 +485,8 @@ void seat_set_pressed(struct seat *seat, struct view *view,
 void seat_reset_pressed(struct seat *seat);
 void seat_output_layout_changed(struct seat *seat);
 
+int max_move_scale(double pos_cursor, double pos_current,
+	double size_current, double size_orig);
 void interactive_begin(struct view *view, enum input_mode mode, uint32_t edges);
 void interactive_finish(struct view *view);
 void interactive_cancel(struct view *view);

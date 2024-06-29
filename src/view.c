@@ -27,9 +27,6 @@
 #include <wlr/xwayland.h>
 #endif
 
-#define LAB_FALLBACK_WIDTH  640
-#define LAB_FALLBACK_HEIGHT 480
-
 struct view *
 view_from_wlr_surface(struct wlr_surface *surface)
 {
@@ -716,10 +713,6 @@ view_compute_centered_position(struct view *view, const struct wlr_box *ref,
 		int w, int h, int *x, int *y)
 {
 	assert(view);
-	if (w <= 0 || h <= 0) {
-		wlr_log(WLR_ERROR, "view has empty geometry, not centering");
-		return false;
-	}
 	if (!output_is_usable(view->output)) {
 		wlr_log(WLR_ERROR, "view has no output, not centering");
 		return false;
@@ -824,21 +817,6 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 		&geometry->x, &geometry->y);
 }
 
-static void
-set_fallback_geometry(struct view *view)
-{
-	view->natural_geometry.width = LAB_FALLBACK_WIDTH;
-	view->natural_geometry.height = LAB_FALLBACK_HEIGHT;
-	view_compute_centered_position(view, NULL,
-		view->natural_geometry.width,
-		view->natural_geometry.height,
-		&view->natural_geometry.x,
-		&view->natural_geometry.y);
-}
-
-#undef LAB_FALLBACK_WIDTH
-#undef LAB_FALLBACK_HEIGHT
-
 void
 view_store_natural_geometry(struct view *view)
 {
@@ -848,18 +826,14 @@ view_store_natural_geometry(struct view *view)
 		return;
 	}
 
-	/**
-	 * If an application was started maximized or fullscreened, its
-	 * natural_geometry width/height may still be zero (or very small
-	 * values) in which case we set some fallback values. This is the case
-	 * with foot and some Qt/Tk applications.
+	/*
+	 * Note that for xdg-shell views that start fullscreen or maximized,
+	 * we end up storing a natural geometry of 0x0. This is intentional.
+	 * When leaving fullscreen or unmaximizing, we pass 0x0 to the
+	 * xdg-toplevel configure event, which means the application should
+	 * choose its own size.
 	 */
-	if (view->pending.width < LAB_MIN_VIEW_WIDTH
-			|| view->pending.height < LAB_MIN_VIEW_HEIGHT) {
-		set_fallback_geometry(view);
-	} else {
-		view->natural_geometry = view->pending;
-	}
+	view->natural_geometry = view->pending;
 }
 
 int

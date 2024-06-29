@@ -13,6 +13,9 @@
 #define LAB_MIN_VIEW_WIDTH (SSD_BUTTON_WIDTH * SSD_BUTTON_COUNT)
 #define LAB_MIN_VIEW_HEIGHT 60
 
+#define LAB_FALLBACK_WIDTH  640
+#define LAB_FALLBACK_HEIGHT 480
+
 /*
  * In labwc, a view is a container for surfaces which can be moved around by
  * the user. In practice this means XDG toplevel and XWayland windows.

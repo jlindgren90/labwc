@@ -8,7 +8,7 @@
 #include "view.h"
 #include "window-rules.h"
 
-static int
+int
 max_move_scale(double pos_cursor, double pos_current,
 	double size_current, double size_orig)
 {
@@ -61,14 +61,25 @@ interactive_begin(struct view *view, enum input_mode mode, uint32_t edges)
 			 * width/height.
 			 * Don't reset tiled state yet since we may want
 			 * to keep it (in the snap-to-maximize case).
+			 *
+			 * If natural width/height are unknown (possible
+			 * with xdg-shell), the view is only resized
+			 * here, and moved later in the surface commit
+			 * handler. See do_late_positioning() in xdg.c.
 			 */
-			geometry = view->natural_geometry;
-			geometry.x = max_move_scale(seat->cursor->x,
-				view->current.x, view->current.width,
-				geometry.width);
-			geometry.y = max_move_scale(seat->cursor->y,
-				view->current.y, view->current.height,
-				geometry.height);
+			geometry.width = view->natural_geometry.width;
+			geometry.height = view->natural_geometry.height;
+
+			if (geometry.width != 0) {
+				geometry.x = max_move_scale(seat->cursor->x,
+					view->current.x, view->current.width,
+					geometry.width);
+			}
+			if (geometry.height != 0) {
+				geometry.y = max_move_scale(seat->cursor->y,
+					view->current.y, view->current.height,
+					geometry.height);
+			}
 
 			view_set_shade(view, false);
 			view_set_untiled(view);
