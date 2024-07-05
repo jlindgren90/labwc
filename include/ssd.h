@@ -5,8 +5,22 @@
 #include <wayland-server-core.h>
 #include "common/border.h"
 
+/*
+ * Button layout is currently fixed, so there are always 4 buttons:
+ * menu (left of title), minimize, maximize, and close.
+ */
 #define SSD_BUTTON_COUNT 4
+
+/*
+ * Default button width - used except in the abnormal case of a very
+ * small view (where normal-sized buttons won't fit).
+ */
 #define SSD_BUTTON_WIDTH 26
+
+/*
+ * Width of area outside the window border where one can click to resize
+ * the view.
+ */
 #define SSD_EXTENDED_AREA 8
 
 /*
