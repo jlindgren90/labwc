@@ -906,14 +906,17 @@ handle_release_mousebinding(struct server *server,
 	}
 
 	struct mousebind *mousebind;
+	bool matched_any = false;
 
 	uint32_t modifiers = wlr_keyboard_get_modifiers(
 			&server->seat.keyboard_group->keyboard);
 
+retry_without_modifiers:
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ssd_part_contains(mousebind->context, ctx->type)
 				&& mousebind->button == button
 				&& modifiers == mousebind->modifiers) {
+			matched_any = true;
 			switch (mousebind->mouse_event) {
 			case MOUSE_ACTION_RELEASE:
 				break;
@@ -928,6 +931,13 @@ handle_release_mousebinding(struct server *server,
 			actions_run(ctx->view, server, &mousebind->actions, ctx);
 		}
 	}
+
+	/* See handle_press_mousebinding() */
+	if (modifiers && !matched_any) {
+		modifiers = 0;
+		goto retry_without_modifiers;
+	}
+
 }
 
 static bool
@@ -975,14 +985,17 @@ handle_press_mousebinding(struct server *server, struct cursor_context *ctx,
 	struct mousebind *mousebind;
 	bool double_click = is_double_click(rc.doubleclick_time, button, ctx);
 	bool consumed_by_frame_context = false;
+	bool matched_any = false;
 
 	uint32_t modifiers = wlr_keyboard_get_modifiers(
 			&server->seat.keyboard_group->keyboard);
 
+retry_without_modifiers:
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ssd_part_contains(mousebind->context, ctx->type)
 				&& mousebind->button == button
 				&& modifiers == mousebind->modifiers) {
+			matched_any = true;
 			switch (mousebind->mouse_event) {
 			case MOUSE_ACTION_DRAG: /* fallthrough */
 			case MOUSE_ACTION_CLICK:
@@ -1015,6 +1028,18 @@ handle_press_mousebinding(struct server *server, struct cursor_context *ctx,
 			actions_run(ctx->view, server, &mousebind->actions, ctx);
 		}
 	}
+
+	/*
+	 * If no action matched the press with the specific modifiers,
+	 * look for an action without modifiers. This allows e.g. Shift+
+	 * or Ctrl+click to match the default Focus/Raise actions without
+	 * duplicating them for each modifier combination.
+	 */
+	if (modifiers && !matched_any) {
+		modifiers = 0;
+		goto retry_without_modifiers;
+	}
+
 	return consumed_by_frame_context;
 }
 
