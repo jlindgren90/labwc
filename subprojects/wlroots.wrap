@@ -1,6 +1,7 @@
 [wrap-git]
-url = https://gitlab.freedesktop.org/wlroots/wlroots.git
-revision = 9b55737cf512ae5132b10633b83e099d46fa259f
+# jlindgren: use dev branch of wlroots
+url = https://github.com/jlindgren90/wlroots.git
+revision = dev
 
 [provide]
 dependency_names = wlroots-0.19
