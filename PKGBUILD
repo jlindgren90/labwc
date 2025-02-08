@@ -2,7 +2,7 @@
 # Contributor: Lex Black <autumn-wind@web.de>
 
 pkgname=labwc
-pkgver=0.8.3
+pkgver=0.8.4
 pkgrel=1
 pkgdesc='stacking wayland compositor with look and feel from openbox'
 url="https://github.com/labwc/labwc"
@@ -16,7 +16,6 @@ depends=(
   libpng
   librsvg
   libsfdo
-  libwlroots-0.18.so
   libxcb
   libxkbcommon
   libxml2
@@ -26,23 +25,42 @@ depends=(
   ttf-font
   wayland
   xorg-xwayland
+  # wlroots
+  lcms2
+  libdisplay-info
+  libglvnd
+  libliftoff
+  libudev.so
+  libvulkan.so
+  opengl-driver
+  xcb-util-errors
+  xcb-util-renderutil
+  xcb-util-wm
 )
 makedepends=(
   git
   meson
   scdoc
   wayland-protocols
+  # wlroots
+  glslang
+  systemd
+  vulkan-headers
 )
 optdepends=("bemenu: default launcher via Alt+F3")
-source=("git+https://github.com/labwc/labwc#tag=${pkgver}")
-b2sums=('4986862d93f0b0fe63d3e61298bdfb2629ba8f71c549f091a76d2020fc206bbce6e6d049d7b958b80222070a4c139ddd878ea597e9103ef1943b4d193c151c7d')
 
+prepare() {
+  cd ..
+  meson subprojects download wlroots
+}
 
 build() {
-  arch-meson -Dman-pages=enabled "$pkgname" build
+  cd ..
+  arch-meson -Dman-pages=enabled build
   meson compile -C build
 }
 
 package() {
-  meson install -C build --destdir "$pkgdir"
+  cd ..
+  meson install -C build --destdir "$pkgdir" --skip-subprojects
 }
