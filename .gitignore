@@ -7,3 +7,7 @@
 
 # Qt Creator settings
 *.user
+
+# makepkg
+/pkg
+*.pkg.tar.*
