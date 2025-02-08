@@ -16,7 +16,6 @@ depends=(
   libpng
   librsvg
   libsfdo
-  libwlroots-0.18.so
   libxcb
   libxkbcommon
   libxml2
@@ -26,23 +25,42 @@ depends=(
   ttf-font
   wayland
   xorg-xwayland
+  # wlroots
+  lcms2
+  libdisplay-info
+  libglvnd
+  libliftoff
+  libudev.so
+  libvulkan.so
+  opengl-driver
+  xcb-util-errors
+  xcb-util-renderutil
+  xcb-util-wm
 )
 makedepends=(
   git
   meson
   scdoc
   wayland-protocols
+  # wlroots
+  glslang
+  systemd
+  vulkan-headers
 )
 optdepends=("bemenu: default launcher via Alt+F3")
-source=("git+https://github.com/labwc/labwc#tag=${pkgver}")
-b2sums=('ba631a9c5ff6cd1a4178620641dbb8823d20af90cc5b1c705ad0fa70786c6099e95cb04a5b18642aa203964b2bec418e0569b94b1a60543dfd7dbec866c9e0fa')
 
+prepare() {
+  cd ..
+  meson subprojects download wlroots
+}
 
 build() {
-  arch-meson -Dman-pages=enabled "$pkgname" build
+  cd ..
+  arch-meson -Dman-pages=enabled build
   meson compile -C build
 }
 
 package() {
-  meson install -C build --destdir "$pkgdir"
+  cd ..
+  meson install -C build --destdir "$pkgdir" --skip-subprojects
 }
