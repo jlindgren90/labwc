@@ -820,6 +820,15 @@ view_minimize(struct view *view, bool minimized)
 	}
 
 	/*
+	 * If a view is minimized before initial map, just set the flag
+	 * and leave everything else for later. See handle_map().
+	 */
+	if (!view->been_mapped) {
+		view->minimized = minimized;
+		return;
+	}
+
+	/*
 	 * Minimize the root window first because some xwayland clients send a
 	 * request-unmap to sub-windows at this point (for example gimp and its
 	 * 'open file' dialog), so it saves trying to unmap them twice
@@ -2445,7 +2454,18 @@ static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.map);
-	view->impl->map(view);
+	if (view->minimized && !view->been_mapped) {
+		/*
+		 * If view_minimize() was called before the initial map,
+		 * then the view has not actually been minimized. Mark
+		 * it as not minimized, map it, and then minimize it.
+		 */
+		view->minimized = false;
+		view->impl->map(view);
+		view_minimize(view, true);
+	} else {
+		view->impl->map(view);
+	}
 }
 
 static void
