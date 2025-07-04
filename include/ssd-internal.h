@@ -12,6 +12,54 @@ struct ssd_state_title_width {
 	bool truncated;
 };
 
+struct ssd_state_title {
+	char *text;
+	/* indexed by enum ssd_active_state */
+	struct ssd_state_title_width dstates[2];
+};
+
+struct ssd_border_subtree {
+	struct wlr_scene_tree *tree;
+	struct wlr_scene_rect *top, *bottom, *left, *right;
+};
+
+struct ssd_border_scene {
+	struct wlr_scene_tree *tree;
+	struct ssd_border_subtree subtrees[2]; /* indexed by enum ssd_active_state */
+};
+
+struct ssd_extents_scene {
+	struct wlr_scene_tree *tree;
+	struct wlr_scene_rect *top, *bottom, *left, *right;
+};
+
+struct ssd_shadow_subtree {
+	struct wlr_scene_tree *tree;
+	struct wlr_scene_buffer *top, *bottom, *left, *right,
+		*top_left, *top_right, *bottom_left, *bottom_right;
+};
+
+struct ssd_shadow_scene {
+	struct wlr_scene_tree *tree;
+	struct ssd_shadow_subtree subtrees[2]; /* indexed by enum ssd_active_state */
+};
+
+struct ssd_titlebar_subtree {
+	struct wlr_scene_tree *tree;
+	struct wlr_scene_buffer *corner_left;
+	struct wlr_scene_buffer *corner_right;
+	struct wlr_scene_buffer *bar;
+	struct scaled_font_buffer *title;
+	struct wl_list buttons_left; /* ssd_button.link */
+	struct wl_list buttons_right; /* ssd_button.link */
+};
+
+struct ssd_titlebar_scene {
+	int height;
+	struct wlr_scene_tree *tree;
+	struct ssd_titlebar_subtree subtrees[2]; /* indexed by enum ssd_active_state */
+};
+
 /*
  * The scene-graph of SSD looks like below. The parentheses indicate the
  * type of each node (enum lab_node_type, stored in the node_descriptor
@@ -81,51 +129,19 @@ struct ssd {
 		bool was_squared;
 
 		struct wlr_box geometry;
-		struct ssd_state_title {
-			char *text;
-			/* indexed by enum ssd_active_state */
-			struct ssd_state_title_width dstates[2];
-		} title;
+		struct ssd_state_title title;
 	} state;
 
 	/* An invisible area around the view which allows resizing */
-	struct ssd_extents_scene {
-		struct wlr_scene_tree *tree;
-		struct wlr_scene_rect *top, *bottom, *left, *right;
-	} extents;
+	struct ssd_extents_scene extents;
 
 	/* The top of the view, containing buttons, title, .. */
-	struct ssd_titlebar_scene {
-		int height;
-		struct wlr_scene_tree *tree;
-		struct ssd_titlebar_subtree {
-			struct wlr_scene_tree *tree;
-			struct wlr_scene_buffer *corner_left;
-			struct wlr_scene_buffer *corner_right;
-			struct wlr_scene_buffer *bar;
-			struct scaled_font_buffer *title;
-			struct wl_list buttons_left; /* ssd_button.link */
-			struct wl_list buttons_right; /* ssd_button.link */
-		} subtrees[2]; /* indexed by enum ssd_active_state */
-	} titlebar;
+	struct ssd_titlebar_scene titlebar;
 
 	/* Borders allow resizing as well */
-	struct ssd_border_scene {
-		struct wlr_scene_tree *tree;
-		struct ssd_border_subtree {
-			struct wlr_scene_tree *tree;
-			struct wlr_scene_rect *top, *bottom, *left, *right;
-		} subtrees[2]; /* indexed by enum ssd_active_state */
-	} border;
+	struct ssd_border_scene border;
 
-	struct ssd_shadow_scene {
-		struct wlr_scene_tree *tree;
-		struct ssd_shadow_subtree {
-			struct wlr_scene_tree *tree;
-			struct wlr_scene_buffer *top, *bottom, *left, *right,
-				*top_left, *top_right, *bottom_left, *bottom_right;
-		} subtrees[2]; /* indexed by enum ssd_active_state */
-	} shadow;
+	struct ssd_shadow_scene shadow;
 
 	/*
 	 * Space between the extremities of the view's wlr_surface
