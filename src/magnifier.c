@@ -124,6 +124,7 @@ magnifier_draw(struct output *output, struct wlr_buffer *output_buffer, struct w
 		goto cleanup;
 	}
 
+{ /* !goto */
 	struct wlr_box src_box_for_copy;
 	wlr_box_intersection(&src_box_for_copy, &mag_box, &output_box);
 
@@ -210,7 +211,7 @@ magnifier_draw(struct output *output, struct wlr_buffer *output_buffer, struct w
 
 	/* And finally mark the extra damage */
 	*damage = damage_box;
-cleanup:
+} cleanup:
 	wlr_buffer_unlock(output_buffer);
 }
 

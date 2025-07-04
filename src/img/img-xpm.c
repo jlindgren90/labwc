@@ -334,6 +334,7 @@ xpm_load_to_surface(struct file_handle *handle)
 		}
 	}
 
+{ /* !goto */
 	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
 	uint32_t *data = (uint32_t *)cairo_image_surface_get_data(surface);
 	int stride = cairo_image_surface_get_stride(surface) / sizeof(uint32_t);
@@ -368,7 +369,7 @@ xpm_load_to_surface(struct file_handle *handle)
 	/* let cairo know pixel data has been modified */
 	cairo_surface_mark_dirty(surface);
 
-out:
+} out:
 	g_hash_table_destroy(color_hash);
 	free(colors);
 	free(name_buf);
