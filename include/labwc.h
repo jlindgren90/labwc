@@ -21,6 +21,11 @@ enum input_mode {
 	LAB_INPUT_STATE_CYCLE, /* a.k.a. window switching */
 };
 
+struct accumulated_scroll {
+	double delta;
+	double delta_discrete;
+};
+
 struct seat {
 	struct wlr_seat *seat;
 	struct wlr_keyboard_group *keyboard_group;
@@ -36,10 +41,7 @@ struct seat {
 	bool cursor_visible;
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
-	struct accumulated_scroll {
-		double delta;
-		double delta_discrete;
-	} accumulated_scrolls[2]; /* indexed by wl_pointer_axis */
+	struct accumulated_scroll accumulated_scrolls[2]; /* indexed by wl_pointer_axis */
 	bool cursor_scroll_wheel_emulation;
 
 	/*
@@ -144,6 +146,16 @@ struct seat {
 
 	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard;
 	struct wl_listener new_virtual_keyboard;
+};
+
+struct cycle_state {
+	struct view *selected_view;
+	struct wl_list views;
+	bool preview_was_shaded;
+	bool preview_was_enabled;
+	struct wlr_scene_node *preview_node;
+	struct wlr_scene_node *preview_dummy;
+	struct lab_scene_rect *preview_outline;
 };
 
 struct server {
@@ -300,15 +312,7 @@ struct server {
 	struct wlr_security_context_manager_v1 *security_context_manager_v1;
 
 	/* Set when in cycle (alt-tab) mode */
-	struct cycle_state {
-		struct view *selected_view;
-		struct wl_list views;
-		bool preview_was_shaded;
-		bool preview_was_enabled;
-		struct wlr_scene_node *preview_node;
-		struct wlr_scene_node *preview_dummy;
-		struct lab_scene_rect *preview_outline;
-	} cycle;
+	struct cycle_state cycle;
 
 	struct menu *menu_current;
 	struct wl_list menus;
