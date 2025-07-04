@@ -74,6 +74,7 @@ desktop_entry_init(struct server *server)
 		goto err_icon_ctx;
 	}
 
+{ /* !goto */
 	/* sfdo_log_level and wlr_log_importance are compatible */
 	enum sfdo_log_level level =
 		(enum sfdo_log_level)wlr_log_get_verbosity();
@@ -92,6 +93,7 @@ desktop_entry_init(struct server *server)
 		goto err_desktop_db;
 	}
 
+{ /* !goto */
 	/*
 	 * We set some relaxed load options to accommodate delinquent themes in
 	 * the wild, namely:
@@ -121,9 +123,9 @@ desktop_entry_init(struct server *server)
 
 err_icon_theme:
 	sfdo_desktop_db_destroy(sfdo->desktop_db);
-err_desktop_db:
+} err_desktop_db:
 	sfdo_icon_ctx_destroy(sfdo->icon_ctx);
-err_icon_ctx:
+} err_icon_ctx:
 	sfdo_desktop_ctx_destroy(sfdo->desktop_ctx);
 err_desktop_ctx:
 	sfdo_basedir_ctx_destroy(basedir_ctx);

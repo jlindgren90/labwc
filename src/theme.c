@@ -1214,6 +1214,7 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 		goto out;
 	}
 
+{ /* !goto */
 	/*
 	 * Stroke the arc section of the border of the corner piece.
 	 *
@@ -1259,7 +1260,7 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 	}
 	cairo_stroke(cairo);
 
-out:
+} out:
 	cairo_surface_flush(surf);
 	cairo_destroy(cairo);
 

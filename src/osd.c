@@ -327,6 +327,7 @@ create_osd_scene(struct output *output, struct wl_array *views)
 		y += theme->osd_window_switcher_item_height;
 	}
 
+{ /* !goto */
 	struct buf buf = BUF_INIT;
 	int nr_fields = wl_list_length(&rc.window_switcher.fields);
 
@@ -431,7 +432,7 @@ create_osd_scene(struct output *output, struct wl_array *views)
 	}
 	buf_reset(&buf);
 
-error:;
+} error:;
 	/* Center OSD */
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
 	wlr_scene_node_set_position(&output->osd_scene.tree->node,
