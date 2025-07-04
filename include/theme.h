@@ -58,6 +58,37 @@ struct theme_background {
 	float color_to_split_to[4];
 };
 
+struct window_switcher_classic_theme {
+	int width;
+	int padding;
+	int item_padding_x;
+	int item_padding_y;
+	int item_active_border_width;
+	int item_icon_size;
+	bool width_is_percent;
+
+	/*
+	 * Not set in rc.xml/themerc, but derived from the tallest
+	 * titlebar object plus 2 * window_titlebar_padding_height
+	 */
+	int item_height;
+};
+
+struct window_switcher_thumbnail_theme {
+	int max_width;
+	int padding;
+	int item_width;
+	int item_height;
+	int item_padding;
+	int item_active_border_width;
+	float item_active_border_color[4];
+	float item_active_bg_color[4];
+	int item_icon_size;
+	bool max_width_is_percent;
+
+	int title_height;
+};
+
 struct theme {
 	int border_width;
 
@@ -164,36 +195,8 @@ struct theme {
 	float osd_border_color[4];
 	float osd_label_text_color[4];
 
-	struct window_switcher_classic_theme {
-		int width;
-		int padding;
-		int item_padding_x;
-		int item_padding_y;
-		int item_active_border_width;
-		int item_icon_size;
-		bool width_is_percent;
-
-		/*
-		 * Not set in rc.xml/themerc, but derived from the tallest
-		 * titlebar object plus 2 * window_titlebar_padding_height
-		 */
-		int item_height;
-	} osd_window_switcher_classic;
-
-	struct window_switcher_thumbnail_theme {
-		int max_width;
-		int padding;
-		int item_width;
-		int item_height;
-		int item_padding;
-		int item_active_border_width;
-		float item_active_border_color[4];
-		float item_active_bg_color[4];
-		int item_icon_size;
-		bool max_width_is_percent;
-
-		int title_height;
-	} osd_window_switcher_thumbnail;
+	struct window_switcher_classic_theme osd_window_switcher_classic;
+	struct window_switcher_thumbnail_theme osd_window_switcher_thumbnail;
 
 	int osd_window_switcher_preview_border_width;
 	float osd_window_switcher_preview_border_color[3][4];
