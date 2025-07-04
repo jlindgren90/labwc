@@ -10,7 +10,10 @@ enum ssd_active_state {
 	SSD_ACTIVE = 1,
 };
 
-#define FOR_EACH_ACTIVE_STATE(active) for (active = SSD_INACTIVE; active <= SSD_ACTIVE; active++)
+#define FOR_EACH_ACTIVE_STATE(active) \
+	for (active = SSD_INACTIVE; \
+		active <= SSD_ACTIVE; \
+		active = (enum ssd_active_state)(active + 1))
 
 struct wlr_cursor;
 
