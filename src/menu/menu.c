@@ -309,6 +309,7 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 		goto error;
 	}
 
+{ /* !goto */
 	/* Item background nodes */
 	wlr_scene_rect_create(menuitem->normal_tree, bg_width, bg_height,
 		theme->menu_items_bg_color);
@@ -323,7 +324,7 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 	wlr_scene_node_set_position(&line_rect->node,
 		theme->menu_separator_padding_width,
 		theme->menu_separator_padding_height);
-error:
+} error:
 	wlr_scene_node_set_position(&menuitem->tree->node,
 		theme->menu_border_width, *item_y);
 	*item_y += bg_height;
@@ -355,6 +356,7 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 		goto error;
 	}
 
+{ /* !goto */
 	/* Background */
 	wlr_scene_rect_create(menuitem->normal_tree,
 		bg_width, theme->menu_header_height, bg_color);
@@ -383,7 +385,7 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 	int title_y = (theme->menu_header_height - title_font_buffer->height) / 2;
 	wlr_scene_node_set_position(&title_font_buffer->scene_buffer->node,
 		title_x, title_y);
-error:
+} error:
 	wlr_scene_node_set_position(&menuitem->tree->node,
 		theme->menu_border_width, *item_y);
 	*item_y += theme->menu_header_height;
