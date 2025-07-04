@@ -28,7 +28,7 @@ struct buf {
 };
 
 /** Value used to initialize a struct buf to an empty string */
-#define BUF_INIT ((struct buf){.data = ""})
+#define BUF_INIT ((struct buf){.data = const_cast<char*>("")})
 
 /**
  * buf_expand_tilde - expand ~ in buffer
