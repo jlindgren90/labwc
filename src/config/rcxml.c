@@ -228,13 +228,14 @@ fill_title_layout(char *content)
 		goto err;
 	}
 
+{ /* !goto */
 	uint32_t found_buttons = 0;
 	for (size_t i = 0; parts[i]; ++i) {
 		fill_section(parts[i], sections[i], &found_buttons);
 	}
 
 	rc.title_layout_loaded = true;
-err:
+} err:
 	g_strfreev(parts);
 }
 
@@ -687,6 +688,7 @@ get_send_events_mode(const char *s)
 		goto err;
 	}
 
+{ /* !goto */
 	int ret = parse_bool(s, -1);
 	if (ret >= 0) {
 		return ret
@@ -698,7 +700,7 @@ get_send_events_mode(const char *s)
 		return LIBINPUT_CONFIG_SEND_EVENTS_DISABLED_ON_EXTERNAL_MOUSE;
 	}
 
-err:
+} err:
 	wlr_log(WLR_INFO, "Not a recognised send events mode");
 	return -1;
 }
