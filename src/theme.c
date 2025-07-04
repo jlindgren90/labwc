@@ -562,7 +562,7 @@ theme_builtin(void)
 	g_theme.window_button_spacing = 0;
 	g_theme.window_button_hover_bg_corner_radius = 0;
 
-	for (enum lab_node_type type = LAB_NODE_BUTTON_FIRST;
+	for (int type = LAB_NODE_BUTTON_FIRST;
 			type <= LAB_NODE_BUTTON_LAST; type++) {
 		parse_hexstr("#000000",
 			g_theme.window[SSD_INACTIVE].button_colors[type]);
@@ -797,14 +797,14 @@ entry(const char *key, const char *value)
 
 	/* universal button */
 	if (match_glob(key, "window.active.button.unpressed.image.color")) {
-		for (enum lab_node_type type = LAB_NODE_BUTTON_FIRST;
+		for (int type = LAB_NODE_BUTTON_FIRST;
 				type <= LAB_NODE_BUTTON_LAST; type++) {
 			parse_color(value,
 				g_theme.window[SSD_ACTIVE].button_colors[type]);
 		}
 	}
 	if (match_glob(key, "window.inactive.button.unpressed.image.color")) {
-		for (enum lab_node_type type = LAB_NODE_BUTTON_FIRST;
+		for (int type = LAB_NODE_BUTTON_FIRST;
 				type <= LAB_NODE_BUTTON_LAST; type++) {
 			parse_color(value,
 				g_theme.window[SSD_INACTIVE].button_colors[type]);
@@ -1865,7 +1865,7 @@ static void destroy_img(struct lab_img **img)
 void
 theme_finish(void)
 {
-	for (enum lab_node_type type = LAB_NODE_BUTTON_FIRST;
+	for (int type = LAB_NODE_BUTTON_FIRST;
 			type <= LAB_NODE_BUTTON_LAST; type++) {
 		for (uint8_t state_set = LAB_BS_DEFAULT;
 				state_set <= LAB_BS_ALL; state_set++) {
