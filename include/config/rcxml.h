@@ -47,6 +47,28 @@ enum tiling_events_mode {
 		(LAB_TILING_EVENTS_REGION | LAB_TILING_EVENTS_EDGE),
 };
 
+/* All criteria is applied in AND logic */
+enum lab_view_criteria {
+	/* No filter -> all focusable views */
+	LAB_VIEW_CRITERIA_NONE = 0,
+
+	/*
+	 * Includes always-on-top views, e.g.
+	 * what is visible on the current workspace
+	 */
+	LAB_VIEW_CRITERIA_CURRENT_WORKSPACE       = 1 << 0,
+
+	/* Positive criteria */
+	LAB_VIEW_CRITERIA_FULLSCREEN              = 1 << 1,
+	LAB_VIEW_CRITERIA_ALWAYS_ON_TOP           = 1 << 2,
+	LAB_VIEW_CRITERIA_ROOT_TOPLEVEL           = 1 << 3,
+
+	/* Negative criteria */
+	LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP        = 1 << 6,
+	LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER = 1 << 7,
+	LAB_VIEW_CRITERIA_NO_OMNIPRESENT          = 1 << 8,
+};
+
 struct title_button {
 	enum ssd_part_type type;
 	struct wl_list link;
@@ -171,7 +193,7 @@ struct rcxml {
 		bool show;
 		bool preview;
 		bool outlines;
-		uint32_t criteria;
+		enum lab_view_criteria criteria;
 		struct wl_list fields;  /* struct window_switcher_field.link */
 	} window_switcher;
 
