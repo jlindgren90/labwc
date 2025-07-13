@@ -1,3 +1,3 @@
 labwc_sources += files(
-  'menu.c',
+  'menu.cpp',
 )
