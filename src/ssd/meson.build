@@ -1,9 +1,9 @@
 labwc_sources += files(
-  'resize-indicator.c',
-  'ssd.c',
-  'ssd-button.c',
-  'ssd-titlebar.c',
-  'ssd-border.c',
-  'ssd-extents.c',
-  'ssd-shadow.c',
+  'resize-indicator.cpp',
+  'ssd.cpp',
+  'ssd-button.cpp',
+  'ssd-titlebar.cpp',
+  'ssd-border.cpp',
+  'ssd-extents.cpp',
+  'ssd-shadow.cpp',
 )

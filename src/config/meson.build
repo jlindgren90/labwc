@@ -1,10 +1,10 @@
 labwc_sources += files(
-  'rcxml.c',
-  'keybind.c',
-  'session.c',
-  'mousebind.c',
-  'touch.c',
-  'tablet.c',
-  'tablet-tool.c',
-  'libinput.c',
+  'rcxml.cpp',
+  'keybind.cpp',
+  'session.cpp',
+  'mousebind.cpp',
+  'touch.cpp',
+  'tablet.cpp',
+  'tablet-tool.cpp',
+  'libinput.cpp',
 )
