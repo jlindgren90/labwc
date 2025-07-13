@@ -535,7 +535,7 @@ xwayland_view_get_string_prop(struct view *view, const char *prop)
 		return xwayland_surface->title ? xwayland_surface->title : "";
 	}
 	if (!strcmp(prop, "class")) {
-		return xwayland_surface->class ? xwayland_surface->class : "";
+		return xwayland_surface->class_ ? xwayland_surface->class_ : "";
 	}
 	/*
 	 * Use the WM_CLASS 'instance' (1st string) for the app_id. Per
