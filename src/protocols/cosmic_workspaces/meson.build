@@ -1,4 +1,4 @@
 labwc_sources += files(
-  'cosmic-workspaces.c',
-  'output.c',
+  'cosmic-workspaces.cpp',
+  'output.cpp',
 )
