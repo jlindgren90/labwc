@@ -4,6 +4,10 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 void die_if_null(void *ptr);
 
 /*
@@ -61,5 +65,9 @@ char *xstrdup(const char *str);
 #define zfree(ptr) do { \
 	free(ptr); (ptr) = NULL; \
 } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LABWC_MEM_H */

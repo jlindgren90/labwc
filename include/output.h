@@ -3,8 +3,7 @@
 #define LABWC_OUTPUT_H
 
 #include <wlr/types/wlr_output.h>
-
-enum view_edge;
+#include "common/enum.h"
 
 #define LAB_NR_LAYERS (4)
 
