@@ -1,5 +1,5 @@
 labwc_sources += files(
-  'transaction-addon.c',
+  'transaction-addon.cpp',
 )
 
 subdir('cosmic_workspaces')
