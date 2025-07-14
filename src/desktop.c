@@ -47,11 +47,10 @@ desktop_arrange_all_views(void)
 static void
 set_or_offer_focus(struct view *view)
 {
-	struct seat *seat = &g_server.seat;
 	switch (view_wants_focus(view)) {
 	case VIEW_WANTS_FOCUS_ALWAYS:
-		if (view->surface != seat->seat->keyboard_state.focused_surface) {
-			seat_focus_surface(seat, view->surface);
+		if (view->surface != g_seat.seat->keyboard_state.focused_surface) {
+			seat_focus_surface(view->surface);
 		}
 		break;
 	case VIEW_WANTS_FOCUS_LIKELY:
@@ -116,8 +115,8 @@ desktop_focus_view(struct view *view, bool raise)
 
 /* TODO: focus layer-shell surfaces also? */
 void
-desktop_focus_view_or_surface(struct seat *seat, struct view *view,
-		struct wlr_surface *surface, bool raise)
+desktop_focus_view_or_surface(struct view *view, struct wlr_surface *surface,
+		bool raise)
 {
 	assert(view || surface);
 	if (view) {
@@ -127,7 +126,7 @@ desktop_focus_view_or_surface(struct seat *seat, struct view *view,
 		struct wlr_xwayland_surface *xsurface =
 			wlr_xwayland_surface_try_from_wlr_surface(surface);
 		if (xsurface && wlr_xwayland_surface_override_redirect_wants_focus(xsurface)) {
-			seat_focus_surface(seat, surface);
+			seat_focus_surface(surface);
 		}
 #endif
 	}
@@ -164,7 +163,7 @@ desktop_focus_topmost_view(void)
 		 * Defocus previous focused surface/view if no longer
 		 * focusable (e.g. unmapped or on a different workspace).
 		 */
-		seat_focus_surface(&g_server.seat, NULL);
+		seat_focus_surface(NULL);
 	}
 }
 
@@ -191,7 +190,7 @@ desktop_focus_output(struct output *output)
 		if (wlr_output_layout_intersects(layout,
 				output->wlr_output, &view->current)) {
 			desktop_focus_view(view, /*raise*/ false);
-			wlr_cursor_warp(g_server.seat.cursor, NULL,
+			wlr_cursor_warp(g_seat.cursor, NULL,
 				view->current.x + view->current.width / 2,
 				view->current.y + view->current.height / 2);
 			cursor_update_focus();
@@ -202,7 +201,7 @@ desktop_focus_output(struct output *output)
 	struct wlr_box layout_box;
 	wlr_output_layout_get_box(g_server.output_layout, output->wlr_output,
 		&layout_box);
-	wlr_cursor_warp(g_server.seat.cursor, NULL,
+	wlr_cursor_warp(g_seat.cursor, NULL,
 		layout_box.x + output->usable_area.x
 			+ output->usable_area.width / 2,
 		layout_box.y + output->usable_area.y
@@ -267,19 +266,19 @@ struct cursor_context
 get_cursor_context(void)
 {
 	struct cursor_context ret = {.type = LAB_NODE_NONE};
-	struct wlr_cursor *cursor = g_server.seat.cursor;
+	struct wlr_cursor *cursor = g_seat.cursor;
 
 	/* Prevent drag icons to be on top of the hitbox detection */
-	if (g_server.seat.drag.active) {
-		dnd_icons_show(&g_server.seat, false);
+	if (g_seat.drag.active) {
+		dnd_icons_show(false);
 	}
 
 	struct wlr_scene_node *node =
 		wlr_scene_node_at(&g_server.scene->tree.node, cursor->x,
 			cursor->y, &ret.sx, &ret.sy);
 
-	if (g_server.seat.drag.active) {
-		dnd_icons_show(&g_server.seat, true);
+	if (g_seat.drag.active) {
+		dnd_icons_show(true);
 	}
 
 	ret.node = node;

@@ -25,18 +25,17 @@ struct keyboard {
 };
 
 void keyboard_reset_current_keybind(void);
-void keyboard_configure(struct seat *seat, struct wlr_keyboard *kb,
-	bool is_virtual);
+void keyboard_configure(struct wlr_keyboard *kb, bool is_virtual);
 
-void keyboard_group_init(struct seat *seat);
-void keyboard_group_finish(struct seat *seat);
+void keyboard_group_init(void);
+void keyboard_group_finish(void);
 
 void keyboard_setup_handlers(struct keyboard *keyboard);
 void keyboard_set_numlock(struct wlr_keyboard *keyboard);
-void keyboard_update_layout(struct seat *seat, xkb_layout_index_t layout);
+void keyboard_update_layout(xkb_layout_index_t layout);
 void keyboard_cancel_keybind_repeat(struct keyboard *keyboard);
-void keyboard_cancel_all_keybind_repeats(struct seat *seat);
+void keyboard_cancel_all_keybind_repeats(void);
 
-uint32_t keyboard_get_all_modifiers(struct seat *seat);
+uint32_t keyboard_get_all_modifiers(void);
 
 #endif /* LABWC_KEYBOARD_H */

@@ -350,8 +350,7 @@ get_next_occupied(struct workspace *current, struct wl_list *workspaces, bool wr
 static int
 _osd_handle_timeout(void *data)
 {
-	struct seat *seat = data;
-	workspaces_osd_hide(seat);
+	workspaces_osd_hide();
 	/* Don't re-check */
 	return 0;
 }
@@ -370,17 +369,17 @@ _osd_show(void)
 			wlr_scene_node_set_enabled(&output->workspace_osd->node, true);
 		}
 	}
-	if (keyboard_get_all_modifiers(&g_server.seat)) {
+	if (keyboard_get_all_modifiers()) {
 		/* Hidden by release of all modifiers */
-		g_server.seat.workspace_osd_shown_by_modifier = true;
+		g_seat.workspace_osd_shown_by_modifier = true;
 	} else {
 		/* Hidden by timer */
-		if (!g_server.seat.workspace_osd_timer) {
-			g_server.seat.workspace_osd_timer =
+		if (!g_seat.workspace_osd_timer) {
+			g_seat.workspace_osd_timer =
 				wl_event_loop_add_timer(g_server.wl_event_loop,
-					_osd_handle_timeout, &g_server.seat);
+					_osd_handle_timeout, NULL);
 		}
-		wl_event_source_timer_update(g_server.seat.workspace_osd_timer,
+		wl_event_source_timer_update(g_seat.workspace_osd_timer,
 			rc.workspace_config.popuptime);
 	}
 }
@@ -494,9 +493,8 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 }
 
 void
-workspaces_osd_hide(struct seat *seat)
+workspaces_osd_hide(void)
 {
-	assert(seat);
 	struct output *output;
 	wl_list_for_each(output, &g_server.outputs, link) {
 		if (!output->workspace_osd) {
@@ -505,7 +503,7 @@ workspaces_osd_hide(struct seat *seat)
 		wlr_scene_node_set_enabled(&output->workspace_osd->node, false);
 		wlr_scene_buffer_set_buffer(output->workspace_osd, NULL);
 	}
-	seat->workspace_osd_shown_by_modifier = false;
+	g_seat.workspace_osd_shown_by_modifier = false;
 
 	/* Update the cursor focus in case it was on top of the OSD before */
 	cursor_update_focus();
@@ -610,7 +608,7 @@ workspaces_reconfigure(void)
 	}
 
 	/* # of configured workspaces decreased */
-	overlay_hide(&g_server.seat);
+	overlay_hide();
 	struct workspace *first_workspace =
 		wl_container_of(g_server.workspaces.all.next, first_workspace,
 			link);

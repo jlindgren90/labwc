@@ -21,10 +21,10 @@
 #include "view.h"
 
 bool
-tablet_tool_has_focused_surface(struct seat *seat)
+tablet_tool_has_focused_surface(void)
 {
 	struct drawing_tablet_tool *tool;
-	wl_list_for_each(tool, &seat->tablet_tools, link) {
+	wl_list_for_each(tool, &g_seat.tablet_tools, link) {
 		if (tool->tool_v2->focused_surface) {
 			return true;
 		}
@@ -40,9 +40,8 @@ handle_set_cursor(struct wl_listener *listener, void *data)
 		wl_container_of(listener, tool, handlers.set_cursor);
 	struct wlr_tablet_v2_event_cursor *ev = data;
 
-	struct seat *seat = tool->seat;
 	struct wlr_seat_client *focused_client =
-		seat->seat->pointer_state.focused_client;
+		g_seat.seat->pointer_state.focused_client;
 
 	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		return;
@@ -52,8 +51,8 @@ handle_set_cursor(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	wlr_cursor_set_surface(seat->cursor, ev->surface,
-		ev->hotspot_x, ev->hotspot_y);
+	wlr_cursor_set_surface(g_seat.cursor, ev->surface, ev->hotspot_x,
+		ev->hotspot_y);
 }
 
 static void
@@ -69,14 +68,12 @@ handle_tablet_tool_destroy(struct wl_listener *listener, void *data)
 }
 
 static struct drawing_tablet_tool *
-tablet_tool_create(struct seat *seat,
-		struct wlr_tablet_tool *wlr_tablet_tool)
+tablet_tool_create(struct wlr_tablet_tool *wlr_tablet_tool)
 {
 	wlr_log(WLR_DEBUG, "setting up tablet tool");
 	struct drawing_tablet_tool *tool = znew(*tool);
-	tool->seat = seat;
 	tool->tool_v2 = wlr_tablet_tool_create(g_server.tablet_manager,
-		seat->seat, wlr_tablet_tool);
+		g_seat.seat, wlr_tablet_tool);
 	wlr_tablet_tool->data = tool;
 	wlr_log(WLR_INFO, "tablet tool capabilities:%s%s%s%s%s%s",
 		wlr_tablet_tool->tilt ? " tilt" : "",
@@ -89,7 +86,7 @@ tablet_tool_create(struct seat *seat,
 	wl_signal_add(&wlr_tablet_tool->events.destroy, &tool->handlers.destroy);
 	tool->handlers.destroy.notify = handle_tablet_tool_destroy;
 
-	wl_list_insert(&seat->tablet_tools, &tool->link);
+	wl_list_insert(&g_seat.tablet_tools, &tool->link);
 	return tool;
 }
 
@@ -222,7 +219,7 @@ tablet_get_coords(struct drawing_tablet *tablet, struct drawing_tablet_tool *too
 	double lx = -1, ly = -1;
 	switch (tool->motion_mode) {
 	case LAB_MOTION_ABSOLUTE:
-		wlr_cursor_absolute_to_layout_coords(tablet->seat->cursor,
+		wlr_cursor_absolute_to_layout_coords(g_seat.cursor,
 			tablet->wlr_input_device, *x, *y, &lx, &ly);
 		break;
 	case LAB_MOTION_RELATIVE:
@@ -231,8 +228,8 @@ tablet_get_coords(struct drawing_tablet *tablet, struct drawing_tablet_tool *too
 		 * so we can add those directly here to determine our future
 		 * position.
 		 */
-		lx = tablet->seat->cursor->x + *dx;
-		ly = tablet->seat->cursor->y + *dy;
+		lx = g_seat.cursor->x + *dx;
+		ly = g_seat.cursor->y + *dy;
 		break;
 	}
 
@@ -264,12 +261,12 @@ notify_motion(struct drawing_tablet *tablet, struct drawing_tablet_tool *tool,
 
 	switch (tool->motion_mode) {
 	case LAB_MOTION_ABSOLUTE:
-		wlr_cursor_warp_absolute(tablet->seat->cursor,
+		wlr_cursor_warp_absolute(g_seat.cursor,
 			tablet->wlr_input_device, x, y);
 		break;
 	case LAB_MOTION_RELATIVE:
-		wlr_cursor_move(tablet->seat->cursor,
-			tablet->wlr_input_device, dx, dy);
+		wlr_cursor_move(g_seat.cursor, tablet->wlr_input_device, dx,
+			dy);
 		break;
 	}
 
@@ -308,7 +305,8 @@ notify_motion(struct drawing_tablet *tablet, struct drawing_tablet_tool *tool,
 			 * sure what will break since I have the feeling that a
 			 * lot of internals rely on correct pointer focus.
 			 */
-			wlr_seat_pointer_notify_motion(tool->seat->seat, time, -1, -1);
+			wlr_seat_pointer_notify_motion(g_seat.seat, time, -1,
+				-1);
 		}
 	}
 }
@@ -324,15 +322,15 @@ handle_tablet_tool_proximity(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	idle_manager_notify_activity(tablet->seat->seat);
-	cursor_set_visible(tablet->seat, /* visible */ true);
+	idle_manager_notify_activity(g_seat.seat);
+	cursor_set_visible(/* visible */ true);
 
 	if (!tool) {
 		/*
 		 * Unfortunately `wlr_tool` is only present in the events, so
 		 * use proximity for creating a `wlr_tablet_v2_tablet_tool`.
 		 */
-		tool = tablet_tool_create(tablet->seat, ev->tool);
+		tool = tablet_tool_create(ev->tool);
 	}
 
 	/*
@@ -392,8 +390,8 @@ handle_tablet_tool_axis(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	idle_manager_notify_activity(tablet->seat->seat);
-	cursor_set_visible(tablet->seat, /* visible */ true);
+	idle_manager_notify_activity(g_seat.seat);
+	cursor_set_visible(/* visible */ true);
 
 	/*
 	 * Reset relative coordinates. If those axes aren't updated,
@@ -502,14 +500,12 @@ handle_tablet_tool_axis(struct wl_listener *listener, void *data)
 
 			switch (tool->motion_mode) {
 			case LAB_MOTION_ABSOLUTE:
-				cursor_emulate_move_absolute(tablet->seat,
-					&ev->tablet->base,
+				cursor_emulate_move_absolute(&ev->tablet->base,
 					x, y, ev->time_msec);
 				break;
 			case LAB_MOTION_RELATIVE:
-				cursor_emulate_move(tablet->seat,
-					&ev->tablet->base,
-					dx, dy, ev->time_msec);
+				cursor_emulate_move(&ev->tablet->base, dx, dy,
+					ev->time_msec);
 				break;
 			}
 		}
@@ -522,7 +518,7 @@ handle_tablet_tool_axis(struct wl_listener *listener, void *data)
 			 * it is relatively safe to set a fixed value.
 			 */
 			int delta_discrete = tool->wheel_delta >= 0 ? 1 : -1;
-			cursor_emulate_axis(tablet->seat, &ev->tablet->base,
+			cursor_emulate_axis(&ev->tablet->base,
 				WL_POINTER_AXIS_VERTICAL_SCROLL,
 				tool->wheel_delta,
 				WLR_POINTER_AXIS_DISCRETE_STEP * delta_discrete,
@@ -564,8 +560,8 @@ handle_tablet_tool_tip(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	idle_manager_notify_activity(tablet->seat->seat);
-	cursor_set_visible(tablet->seat, /* visible */ true);
+	idle_manager_notify_activity(g_seat.seat);
+	cursor_set_visible(/* visible */ true);
 
 	double x, y, dx, dy;
 	struct wlr_surface *surface = tablet_get_coords(tablet, tool, &x, &y, &dx, &dy);
@@ -588,21 +584,22 @@ handle_tablet_tool_tip(struct wl_listener *listener, void *data)
 		}
 
 		if (ev->state == WLR_TABLET_TOOL_TIP_DOWN) {
-			bool notify = cursor_process_button_press(tool->seat, BTN_LEFT,
+			bool notify = cursor_process_button_press(BTN_LEFT,
 				ev->time_msec);
 			if (notify) {
-				seat_pointer_end_grab(tool->seat, surface);
+				seat_pointer_end_grab(surface);
 				wlr_tablet_v2_tablet_tool_notify_down(tool->tool_v2);
 				wlr_tablet_tool_v2_start_implicit_grab(tool->tool_v2);
 			}
 		} else if (ev->state == WLR_TABLET_TOOL_TIP_UP) {
-			bool notify = cursor_process_button_release(tool->seat, BTN_LEFT,
+			bool notify = cursor_process_button_release(BTN_LEFT,
 				ev->time_msec);
 			if (notify) {
 				wlr_tablet_v2_tablet_tool_notify_up(tool->tool_v2);
 			}
 
-			bool exit_interactive = cursor_finish_button_release(tool->seat, BTN_LEFT);
+			bool exit_interactive =
+				cursor_finish_button_release(BTN_LEFT);
 			if (exit_interactive && surface && tool->tool_v2->focused_surface) {
 				/*
 				 * Re-enter the surface after a resize/move to ensure
@@ -622,8 +619,7 @@ handle_tablet_tool_tip(struct wl_listener *listener, void *data)
 	} else {
 		if (button) {
 			is_down_mouse_emulation = ev->state == WLR_TABLET_TOOL_TIP_DOWN;
-			cursor_emulate_button(tablet->seat,
-				button,
+			cursor_emulate_button(button,
 				ev->state == WLR_TABLET_TOOL_TIP_DOWN
 					? WL_POINTER_BUTTON_STATE_PRESSED
 					: WL_POINTER_BUTTON_STATE_RELEASED,
@@ -643,8 +639,8 @@ handle_tablet_tool_button(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	idle_manager_notify_activity(tablet->seat->seat);
-	cursor_set_visible(tablet->seat, /* visible */ true);
+	idle_manager_notify_activity(g_seat.seat);
+	cursor_set_visible(/* visible */ true);
 
 	double x, y, dx, dy;
 	struct wlr_surface *surface = tablet_get_coords(tablet, tool, &x, &y, &dx, &dy);
@@ -675,7 +671,7 @@ handle_tablet_tool_button(struct wl_listener *listener, void *data)
 		uint32_t stylus_button = to_stylus_button(button);
 		if (stylus_button && stylus_button != BTN_TOOL_PEN) {
 			if (ev->state == WLR_BUTTON_PRESSED) {
-				seat_pointer_end_grab(tool->seat, surface);
+				seat_pointer_end_grab(surface);
 			}
 			wlr_tablet_v2_tablet_tool_notify_button(tool->tool_v2,
 				stylus_button,
@@ -688,7 +684,7 @@ handle_tablet_tool_button(struct wl_listener *listener, void *data)
 	} else {
 		if (button) {
 			is_down_mouse_emulation = ev->state == WLR_BUTTON_PRESSED;
-			cursor_emulate_button(tablet->seat, button,
+			cursor_emulate_button(button,
 				ev->state == WLR_BUTTON_PRESSED
 					? WL_POINTER_BUTTON_STATE_PRESSED
 					: WL_POINTER_BUTTON_STATE_RELEASED,
@@ -704,47 +700,46 @@ handle_destroy(struct wl_listener *listener, void *data)
 		wl_container_of(listener, tablet, handlers.destroy);
 
 	wl_list_remove(&tablet->link);
-	tablet_pad_attach_tablet(tablet->seat);
+	tablet_pad_attach_tablet();
 
 	wl_list_remove(&tablet->handlers.destroy.link);
 	free(tablet);
 }
 
 void
-tablet_create(struct seat *seat, struct wlr_input_device *wlr_device)
+tablet_create(struct wlr_input_device *wlr_device)
 {
 	wlr_log(WLR_DEBUG, "setting up tablet");
 	struct drawing_tablet *tablet = znew(*tablet);
-	tablet->seat = seat;
 	tablet->wlr_input_device = wlr_device;
 	tablet->tablet = wlr_tablet_from_input_device(wlr_device);
 	tablet->tablet->data = tablet;
 	if (g_server.tablet_manager) {
 		tablet->tablet_v2 = wlr_tablet_create(g_server.tablet_manager,
-			seat->seat, wlr_device);
+			g_seat.seat, wlr_device);
 	}
 	wlr_log(WLR_INFO, "tablet dimensions: %.2fmm x %.2fmm",
 		tablet->tablet->width_mm, tablet->tablet->height_mm);
 	CONNECT_SIGNAL(wlr_device, &tablet->handlers, destroy);
 
-	wl_list_insert(&seat->tablets, &tablet->link);
-	tablet_pad_attach_tablet(tablet->seat);
+	wl_list_insert(&g_seat.tablets, &tablet->link);
+	tablet_pad_attach_tablet();
 }
 
 void
-tablet_init(struct seat *seat)
+tablet_init(void)
 {
-	CONNECT_SIGNAL(seat->cursor, seat, tablet_tool_axis);
-	CONNECT_SIGNAL(seat->cursor, seat, tablet_tool_proximity);
-	CONNECT_SIGNAL(seat->cursor, seat, tablet_tool_tip);
-	CONNECT_SIGNAL(seat->cursor, seat, tablet_tool_button);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, tablet_tool_axis);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, tablet_tool_proximity);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, tablet_tool_tip);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, tablet_tool_button);
 }
 
 void
-tablet_finish(struct seat *seat)
+tablet_finish(void)
 {
-	wl_list_remove(&seat->tablet_tool_axis.link);
-	wl_list_remove(&seat->tablet_tool_proximity.link);
-	wl_list_remove(&seat->tablet_tool_tip.link);
-	wl_list_remove(&seat->tablet_tool_button.link);
+	wl_list_remove(&g_seat.tablet_tool_axis.link);
+	wl_list_remove(&g_seat.tablet_tool_proximity.link);
+	wl_list_remove(&g_seat.tablet_tool_tip.link);
+	wl_list_remove(&g_seat.tablet_tool_button.link);
 }

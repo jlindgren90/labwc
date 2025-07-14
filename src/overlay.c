@@ -13,7 +13,7 @@
 #include "view.h"
 
 static void
-create_overlay_rect(struct seat *seat, struct overlay_rect *rect,
+create_overlay_rect(struct overlay_rect *rect,
 		struct theme_snapping_overlay *theme)
 {
 	rect->bg_enabled = theme->bg_enabled;
@@ -43,30 +43,31 @@ create_overlay_rect(struct seat *seat, struct overlay_rect *rect,
 	wlr_scene_node_set_enabled(&rect->tree->node, false);
 }
 
-void overlay_reconfigure(struct seat *seat)
+void
+overlay_reconfigure(void)
 {
-	if (seat->overlay.region_rect.tree) {
-		wlr_scene_node_destroy(&seat->overlay.region_rect.tree->node);
+	if (g_seat.overlay.region_rect.tree) {
+		wlr_scene_node_destroy(&g_seat.overlay.region_rect.tree->node);
 	}
-	if (seat->overlay.edge_rect.tree) {
-		wlr_scene_node_destroy(&seat->overlay.edge_rect.tree->node);
+	if (g_seat.overlay.edge_rect.tree) {
+		wlr_scene_node_destroy(&g_seat.overlay.edge_rect.tree->node);
 	}
 
 	struct theme *theme = g_server.theme;
-	create_overlay_rect(seat, &seat->overlay.region_rect,
+	create_overlay_rect(&g_seat.overlay.region_rect,
 		&theme->snapping_overlay_region);
-	create_overlay_rect(seat, &seat->overlay.edge_rect,
+	create_overlay_rect(&g_seat.overlay.edge_rect,
 		&theme->snapping_overlay_edge);
 }
 
 static void
-show_overlay(struct seat *seat, struct overlay_rect *rect, struct wlr_box *box)
+show_overlay(struct overlay_rect *rect, struct wlr_box *box)
 {
 	struct view *view = g_server.grabbed_view;
 	assert(view);
 
 	if (!rect->tree) {
-		overlay_reconfigure(seat);
+		overlay_reconfigure();
 		assert(rect->tree);
 	}
 
@@ -104,15 +105,15 @@ inactivate_overlay(struct overlay *overlay)
 }
 
 static void
-show_region_overlay(struct seat *seat, struct region *region)
+show_region_overlay(struct region *region)
 {
-	if (region == seat->overlay.active.region) {
+	if (region == g_seat.overlay.active.region) {
 		return;
 	}
-	inactivate_overlay(&seat->overlay);
-	seat->overlay.active.region = region;
+	inactivate_overlay(&g_seat.overlay);
+	g_seat.overlay.active.region = region;
 
-	show_overlay(seat, &seat->overlay.region_rect, &region->geo);
+	show_overlay(&g_seat.overlay.region_rect, &region->geo);
 }
 
 /* TODO: share logic with view_get_edge_snap_box() */
@@ -145,18 +146,16 @@ static struct wlr_box get_edge_snap_box(enum lab_edge edge, struct output *outpu
 static int
 handle_edge_overlay_timeout(void *data)
 {
-	struct seat *seat = data;
-	assert(seat->overlay.active.edge != LAB_EDGE_NONE
-		&& seat->overlay.active.output);
-	struct wlr_box box = get_edge_snap_box(seat->overlay.active.edge,
-		seat->overlay.active.output);
-	show_overlay(seat, &seat->overlay.edge_rect, &box);
+	assert(g_seat.overlay.active.edge != LAB_EDGE_NONE
+		&& g_seat.overlay.active.output);
+	struct wlr_box box = get_edge_snap_box(g_seat.overlay.active.edge,
+		g_seat.overlay.active.output);
+	show_overlay(&g_seat.overlay.edge_rect, &box);
 	return 0;
 }
 
 static bool
-edge_has_adjacent_output_from_cursor(struct seat *seat, struct output *output,
-		enum lab_edge edge)
+edge_has_adjacent_output_from_cursor(struct output *output, enum lab_edge edge)
 {
 	/* Allow only up/down/left/right */
 	if (!lab_edge_is_cardinal(edge)) {
@@ -164,75 +163,75 @@ edge_has_adjacent_output_from_cursor(struct seat *seat, struct output *output,
 	}
 	/* Cast from enum lab_edge to enum wlr_direction is safe */
 	return wlr_output_layout_adjacent_output(g_server.output_layout,
-		(enum wlr_direction)edge, output->wlr_output, seat->cursor->x,
-		seat->cursor->y);
+		(enum wlr_direction)edge, output->wlr_output, g_seat.cursor->x,
+		g_seat.cursor->y);
 }
 
 static void
-show_edge_overlay(struct seat *seat, enum lab_edge edge,
-		struct output *output)
+show_edge_overlay(enum lab_edge edge, struct output *output)
 {
 	if (!rc.snap_overlay_enabled) {
 		return;
 	}
-	if (seat->overlay.active.edge == edge
-			&& seat->overlay.active.output == output) {
+	if (g_seat.overlay.active.edge == edge
+			&& g_seat.overlay.active.output == output) {
 		return;
 	}
-	inactivate_overlay(&seat->overlay);
-	seat->overlay.active.edge = edge;
-	seat->overlay.active.output = output;
+	inactivate_overlay(&g_seat.overlay);
+	g_seat.overlay.active.edge = edge;
+	g_seat.overlay.active.output = output;
 
 	int delay;
-	if (edge_has_adjacent_output_from_cursor(seat, output, edge)) {
+	if (edge_has_adjacent_output_from_cursor(output, edge)) {
 		delay = rc.snap_overlay_delay_inner;
 	} else {
 		delay = rc.snap_overlay_delay_outer;
 	}
 
 	if (delay > 0) {
-		if (!seat->overlay.timer) {
-			seat->overlay.timer =
+		if (!g_seat.overlay.timer) {
+			g_seat.overlay.timer =
 				wl_event_loop_add_timer(g_server.wl_event_loop,
-					handle_edge_overlay_timeout, seat);
+					handle_edge_overlay_timeout, NULL);
 		}
 		/* Show overlay <snapping><preview><delay>ms later */
-		wl_event_source_timer_update(seat->overlay.timer, delay);
+		wl_event_source_timer_update(g_seat.overlay.timer, delay);
 	} else {
 		/* Show overlay now */
-		struct wlr_box box = get_edge_snap_box(seat->overlay.active.edge,
-			seat->overlay.active.output);
-		show_overlay(seat, &seat->overlay.edge_rect, &box);
+		struct wlr_box box =
+			get_edge_snap_box(g_seat.overlay.active.edge,
+				g_seat.overlay.active.output);
+		show_overlay(&g_seat.overlay.edge_rect, &box);
 	}
 }
 
 void
-overlay_update(struct seat *seat)
+overlay_update(void)
 {
 	/* Region-snapping overlay */
 	if (regions_should_snap()) {
 		struct region *region = regions_from_cursor();
 		if (region) {
-			show_region_overlay(seat, region);
+			show_region_overlay(region);
 			return;
 		}
 	}
 
 	/* Edge-snapping overlay */
 	struct output *output;
-	enum lab_edge edge = edge_from_cursor(seat, &output);
+	enum lab_edge edge = edge_from_cursor(&output);
 	if (edge != LAB_EDGE_NONE) {
-		show_edge_overlay(seat, edge, output);
+		show_edge_overlay(edge, output);
 		return;
 	}
 
-	overlay_hide(seat);
+	overlay_hide();
 }
 
 void
-overlay_hide(struct seat *seat)
+overlay_hide(void)
 {
-	struct overlay *overlay = &seat->overlay;
+	struct overlay *overlay = &g_seat.overlay;
 
 	inactivate_overlay(overlay);
 
@@ -251,10 +250,10 @@ overlay_hide(struct seat *seat)
 }
 
 void
-overlay_finish(struct seat *seat)
+overlay_finish(void)
 {
-	if (seat->overlay.timer) {
-		wl_event_source_remove(seat->overlay.timer);
-		seat->overlay.timer = NULL;
+	if (g_seat.overlay.timer) {
+		wl_event_source_remove(g_seat.overlay.timer);
+		g_seat.overlay.timer = NULL;
 	}
 }
