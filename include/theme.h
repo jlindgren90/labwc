@@ -10,8 +10,8 @@
 
 #include <cairo.h>
 #include <stdbool.h>
-#include "buffer.h"
 #include "common/scene-types.h"
+#include "img/img.h"
 
 struct lab_img;
 
@@ -99,8 +99,7 @@ struct theme {
 		 *
 		 * Elements in buttons[0] are all NULL since LAB_NODE_BUTTON_FIRST is 1.
 		 */
-		struct lab_img *button_imgs
-			[LAB_NODE_BUTTON_LAST + 1][LAB_BS_ALL + 1];
+		lab_img button_imgs[LAB_NODE_BUTTON_LAST + 1][LAB_BS_ALL + 1];
 
 		/*
 		 * The titlebar background is specified as a cairo_pattern

@@ -77,8 +77,7 @@ add_scene_buffer(struct wl_list *list, enum lab_node_type type,
 
 struct ssd_part *
 add_scene_button(struct wl_list *part_list, enum lab_node_type type,
-		struct wlr_scene_tree *parent,
-		struct lab_img *imgs[LAB_BS_ALL + 1],
+		struct wlr_scene_tree *parent, lab_img imgs[LAB_BS_ALL + 1],
 		int x, int y, struct view *view)
 {
 	struct ssd_part *button_root = add_scene_part(part_list, type);
@@ -119,7 +118,7 @@ add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 	} else {
 		for (uint8_t state_set = LAB_BS_DEFAULT;
 				state_set <= LAB_BS_ALL; state_set++) {
-			if (!imgs[state_set]) {
+			if (!imgs[state_set].valid()) {
 				continue;
 			}
 			struct ssd_part *icon_part = add_scene_part(part_list, type);
