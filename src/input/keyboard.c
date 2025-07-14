@@ -58,7 +58,7 @@ change_vt(unsigned int vt)
 }
 
 uint32_t
-keyboard_get_all_modifiers(struct seat *seat)
+keyboard_get_all_modifiers(void)
 {
 	/*
 	 * As virtual keyboards like used by wayvnc are not part of the keyboard group,
@@ -70,8 +70,9 @@ keyboard_get_all_modifiers(struct seat *seat)
 	 * to snap a window to a region during a window move operation.
 	 */
 	struct input *input;
-	uint32_t modifiers = wlr_keyboard_get_modifiers(&seat->keyboard_group->keyboard);
-	wl_list_for_each(input, &seat->inputs, link) {
+	uint32_t modifiers =
+		wlr_keyboard_get_modifiers(&g_seat.keyboard_group->keyboard);
+	wl_list_for_each(input, &g_seat.inputs, link) {
 		if (input->wlr_input_device->type != WLR_INPUT_DEVICE_KEYBOARD) {
 			continue;
 		}
@@ -145,22 +146,22 @@ broadcast_modifiers_to_unfocused_clients(struct wlr_seat *seat,
 static void
 handle_modifiers(struct wl_listener *listener, void *data)
 {
-	struct keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
-	struct seat *seat = keyboard->base.seat;
+	struct keyboard *keyboard =
+		wl_container_of(listener, keyboard, modifiers);
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
 		/* Any change to the modifier state re-enable region snap */
-		seat->region_prevent_snap = false;
+		g_seat.region_prevent_snap = false;
 		/* Pressing/releasing modifier key may show/hide region overlay */
-		overlay_update(seat);
+		overlay_update();
 	}
 
 	bool window_switcher_active =
 		g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER;
 
-	if (window_switcher_active || seat->workspace_osd_shown_by_modifier) {
-		if (!keyboard_get_all_modifiers(seat)) {
+	if (window_switcher_active || g_seat.workspace_osd_shown_by_modifier) {
+		if (!keyboard_get_all_modifiers()) {
 			if (window_switcher_active) {
 				if (key_state_nr_bound_keys()) {
 					should_cancel_cycling_on_next_key_release = true;
@@ -168,15 +169,15 @@ handle_modifiers(struct wl_listener *listener, void *data)
 					end_cycling();
 				}
 			}
-			if (seat->workspace_osd_shown_by_modifier) {
-				workspaces_osd_hide(seat);
+			if (g_seat.workspace_osd_shown_by_modifier) {
+				workspaces_osd_hide();
 			}
 		}
 	}
 
 	if (!input_method_keyboard_grab_forward_modifiers(keyboard)) {
 		/* Send modifiers to focused client */
-		wlr_seat_keyboard_notify_modifiers(seat->seat,
+		wlr_seat_keyboard_notify_modifiers(g_seat.seat,
 			&wlr_keyboard->modifiers);
 
 		/*
@@ -198,8 +199,8 @@ handle_modifiers(struct wl_listener *listener, void *data)
 		 * consequences. If so, modifiers ought to still be passed to
 		 * clients with pointer-focus (see issue #2271)
 		 */
-		broadcast_modifiers_to_unfocused_clients(seat->seat,
-			keyboard, &wlr_keyboard->modifiers);
+		broadcast_modifiers_to_unfocused_clients(g_seat.seat, keyboard,
+			&wlr_keyboard->modifiers);
 	}
 }
 
@@ -615,11 +616,11 @@ keyboard_cancel_keybind_repeat(struct keyboard *keyboard)
 }
 
 void
-keyboard_cancel_all_keybind_repeats(struct seat *seat)
+keyboard_cancel_all_keybind_repeats(void)
 {
 	struct input *input;
 	struct keyboard *kb;
-	wl_list_for_each(input, &seat->inputs, link) {
+	wl_list_for_each(input, &g_seat.inputs, link) {
 		if (input->wlr_input_device->type == WLR_INPUT_DEVICE_KEYBOARD) {
 			kb = wl_container_of(input, kb, base);
 			keyboard_cancel_keybind_repeat(kb);
@@ -632,10 +633,9 @@ handle_key(struct wl_listener *listener, void *data)
 {
 	/* This event is raised when a key is pressed or released. */
 	struct keyboard *keyboard = wl_container_of(listener, keyboard, key);
-	struct seat *seat = keyboard->base.seat;
 	struct wlr_keyboard_key_event *event = data;
-	struct wlr_seat *wlr_seat = seat->seat;
-	idle_manager_notify_activity(seat->seat);
+	struct wlr_seat *wlr_seat = g_seat.seat;
+	idle_manager_notify_activity(g_seat.seat);
 
 	/* any new press/release cancels current keybind repeat */
 	keyboard_cancel_keybind_repeat(keyboard);
@@ -696,16 +696,14 @@ keyboard_set_numlock(struct wlr_keyboard *keyboard)
 }
 
 void
-keyboard_update_layout(struct seat *seat, xkb_layout_index_t layout)
+keyboard_update_layout(xkb_layout_index_t layout)
 {
-	assert(seat);
-
 	struct input *input;
 	struct keyboard *keyboard;
 	struct wlr_keyboard *kb = NULL;
 
 	/* We are not using wlr_seat_get_keyboard() here because it might be a virtual one */
-	wl_list_for_each(input, &seat->inputs, link) {
+	wl_list_for_each(input, &g_seat.inputs, link) {
 		if (input->wlr_input_device->type != WLR_INPUT_DEVICE_KEYBOARD) {
 			continue;
 		}
@@ -751,7 +749,7 @@ reset_window_keyboard_layout_groups(void)
 	if (!active_view) {
 		return;
 	}
-	keyboard_update_layout(&g_server.seat, active_view->keyboard_layout);
+	keyboard_update_layout(active_view->keyboard_layout);
 }
 
 /*
@@ -795,7 +793,7 @@ set_layout(struct wlr_keyboard *kb)
 }
 
 void
-keyboard_configure(struct seat *seat, struct wlr_keyboard *kb, bool is_virtual)
+keyboard_configure(struct wlr_keyboard *kb, bool is_virtual)
 {
 	if (!is_virtual) {
 		set_layout(kb);
@@ -805,13 +803,13 @@ keyboard_configure(struct seat *seat, struct wlr_keyboard *kb, bool is_virtual)
 }
 
 void
-keyboard_group_init(struct seat *seat)
+keyboard_group_init(void)
 {
-	if (seat->keyboard_group) {
+	if (g_seat.keyboard_group) {
 		return;
 	}
-	seat->keyboard_group = wlr_keyboard_group_create();
-	keyboard_configure(seat, &seat->keyboard_group->keyboard,
+	g_seat.keyboard_group = wlr_keyboard_group_create();
+	keyboard_configure(&g_seat.keyboard_group->keyboard,
 		/* is_virtual */ false);
 }
 
@@ -823,14 +821,14 @@ keyboard_setup_handlers(struct keyboard *keyboard)
 }
 
 void
-keyboard_group_finish(struct seat *seat)
+keyboard_group_finish(void)
 {
 	/*
 	 * All keyboard listeners must be removed before this to avoid use after
 	 * free
 	 */
-	if (seat->keyboard_group) {
-		wlr_keyboard_group_destroy(seat->keyboard_group);
-		seat->keyboard_group = NULL;
+	if (g_seat.keyboard_group) {
+		wlr_keyboard_group_destroy(g_seat.keyboard_group);
+		g_seat.keyboard_group = NULL;
 	}
 }

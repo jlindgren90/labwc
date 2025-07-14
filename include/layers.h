@@ -42,7 +42,6 @@ void layers_init(void);
 void layers_finish(void);
 
 void layers_arrange(struct output *output);
-void layer_try_set_focus(struct seat *seat,
-	struct wlr_layer_surface_v1 *layer_surface);
+void layer_try_set_focus(struct wlr_layer_surface_v1 *layer_surface);
 
 #endif /* LABWC_LAYERS_H */

@@ -19,8 +19,7 @@ handle_grab_focus(struct wl_listener *listener, void *data)
 	unmanaged->ever_grabbed_focus = true;
 	if (unmanaged->node) {
 		assert(unmanaged->xwayland_surface->surface);
-		seat_focus_surface(&g_server.seat,
-			unmanaged->xwayland_surface->surface);
+		seat_focus_surface(unmanaged->xwayland_surface->surface);
 	}
 }
 
@@ -65,7 +64,7 @@ handle_map(struct wl_listener *listener, void *data)
 
 	if (wlr_xwayland_surface_override_redirect_wants_focus(xsurface)
 			|| unmanaged->ever_grabbed_focus) {
-		seat_focus_surface(&g_server.seat, xsurface->surface);
+		seat_focus_surface(xsurface->surface);
 	}
 
 	/* node will be destroyed automatically once surface is destroyed */
@@ -85,7 +84,7 @@ focus_next_surface(struct wlr_xwayland_surface *xsurface)
 		struct wlr_xwayland_surface *prev = u->xwayland_surface;
 		if (wlr_xwayland_surface_override_redirect_wants_focus(prev)
 				|| u->ever_grabbed_focus) {
-			seat_focus_surface(&g_server.seat, prev->surface);
+			seat_focus_surface(prev->surface);
 			return;
 		}
 	}
@@ -112,8 +111,7 @@ focus_next_surface(struct wlr_xwayland_surface *xsurface)
 	 * menus/tooltips in JetBrains CLion or similar.
 	 */
 	if (g_server.active_view) {
-		seat_focus_surface(&g_server.seat,
-			g_server.active_view->surface);
+		seat_focus_surface(g_server.active_view->surface);
 	}
 }
 
@@ -123,7 +121,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 	struct xwayland_unmanaged *unmanaged =
 		wl_container_of(listener, unmanaged, mappable.unmap);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
-	struct seat *seat = &g_server.seat;
 	assert(unmanaged->node);
 
 	wl_list_remove(&unmanaged->link);
@@ -137,7 +134,7 @@ handle_unmap(struct wl_listener *listener, void *data)
 	unmanaged->node = NULL;
 	cursor_update_focus();
 
-	if (seat->seat->keyboard_state.focused_surface == xsurface->surface) {
+	if (g_seat.seat->keyboard_state.focused_surface == xsurface->surface) {
 		focus_next_surface(xsurface);
 	}
 }
@@ -224,7 +221,6 @@ handle_request_activate(struct wl_listener *listener, void *data)
 	if (!xsurface->surface || !xsurface->surface->mapped) {
 		return;
 	}
-	struct seat *seat = &g_server.seat;
 
 	/*
 	 * Validate that the unmanaged surface trying to grab focus is actually
@@ -242,7 +238,7 @@ handle_request_activate(struct wl_listener *listener, void *data)
 		}
 	}
 
-	seat_focus_surface(seat, xsurface->surface);
+	seat_focus_surface(xsurface->surface);
 }
 
 void
