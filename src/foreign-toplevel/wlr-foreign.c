@@ -134,7 +134,7 @@ handle_new_outputs(struct wl_listener *listener, void *data)
 	 * wlr_foreign_toplevel handle the rest.
 	 */
 	struct output *output;
-	wl_list_for_each(output, &wlr_toplevel->view->server->outputs, link) {
+	wl_list_for_each(output, &g_server.outputs, link) {
 		if (view_on_output(wlr_toplevel->view, output)) {
 			wlr_foreign_toplevel_handle_v1_output_enter(
 				wlr_toplevel->handle, output->wlr_output);
@@ -195,11 +195,11 @@ void
 wlr_foreign_toplevel_init(struct wlr_foreign_toplevel *wlr_toplevel,
 		struct view *view)
 {
-	assert(view->server->foreign_toplevel_manager);
+	assert(g_server.foreign_toplevel_manager);
 	wlr_toplevel->view = view;
 
 	wlr_toplevel->handle = wlr_foreign_toplevel_handle_v1_create(
-		view->server->foreign_toplevel_manager);
+		g_server.foreign_toplevel_manager);
 	if (!wlr_toplevel->handle) {
 		wlr_log(WLR_ERROR, "cannot create wlr foreign toplevel handle for (%s)",
 			view_get_string_prop(view, "title"));

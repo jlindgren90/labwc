@@ -164,7 +164,7 @@ static void
 set_shadow_geometry(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 	int titlebar_height = ssd->titlebar.height;
 	int width = view->current.width;
 	int height = view_effective_height(view, false) + titlebar_height;
@@ -228,7 +228,7 @@ ssd_shadow_create(struct ssd *ssd)
 
 	ssd->shadow.tree = wlr_scene_tree_create(ssd->tree);
 
-	struct theme *theme = ssd->view->server->theme;
+	struct theme *theme = g_server.theme;
 	struct wlr_buffer *corner_top_buffer;
 	struct wlr_buffer *corner_bottom_buffer;
 	struct wlr_buffer *edge_buffer;
@@ -285,7 +285,7 @@ ssd_shadow_update(struct ssd *ssd)
 	assert(ssd->shadow.tree);
 
 	struct view *view = ssd->view;
-	struct theme *theme = ssd->view->server->theme;
+	struct theme *theme = g_server.theme;
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool tiled_shadows = false;
 	if (rc.shadows_on_tiled) {

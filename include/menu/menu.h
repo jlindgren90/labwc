@@ -49,7 +49,6 @@ struct menu {
 		int height;
 	} size;
 	struct wl_list menuitems;
-	struct server *server;
 	struct {
 		struct menu *menu;
 		struct menuitem *item;
@@ -65,14 +64,14 @@ struct menu {
 };
 
 /* For keyboard support */
-void menu_item_select_next(struct server *server);
-void menu_item_select_previous(struct server *server);
-void menu_submenu_enter(struct server *server);
-void menu_submenu_leave(struct server *server);
-bool menu_call_selected_actions(struct server *server);
+void menu_item_select_next(void);
+void menu_item_select_previous(void);
+void menu_submenu_enter(void);
+void menu_submenu_leave(void);
+bool menu_call_selected_actions(void);
 
-void menu_init(struct server *server);
-void menu_finish(struct server *server);
+void menu_init(void);
+void menu_finish(void);
 void menu_on_view_destroy(struct view *view);
 
 /**
@@ -80,7 +79,7 @@ void menu_on_view_destroy(struct view *view);
  *
  * @id id string defined in menu.xml like "root-menu"
  */
-struct menu *menu_get_by_id(struct server *server, const char *id);
+struct menu *menu_get_by_id(const char *id);
 
 /**
  * menu_open_root - open menu on position (x, y)
@@ -120,9 +119,9 @@ bool menu_call_actions(struct wlr_scene_node *node);
  *
  * Additionally, server->input_mode will be set to LAB_INPUT_STATE_PASSTHROUGH.
  */
-void menu_close_root(struct server *server);
+void menu_close_root(void);
 
 /* menu_reconfigure - reload theme and content */
-void menu_reconfigure(struct server *server);
+void menu_reconfigure(void);
 
 #endif /* LABWC_MENU_H */

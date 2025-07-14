@@ -16,11 +16,9 @@ static void
 create_overlay_rect(struct seat *seat, struct overlay_rect *rect,
 		struct theme_snapping_overlay *theme)
 {
-	struct server *server = seat->server;
-
 	rect->bg_enabled = theme->bg_enabled;
 	rect->border_enabled = theme->border_enabled;
-	rect->tree = wlr_scene_tree_create(&server->scene->tree);
+	rect->tree = wlr_scene_tree_create(&g_server.scene->tree);
 
 	if (rect->bg_enabled) {
 		/* Create a filled rectangle */
@@ -54,7 +52,7 @@ void overlay_reconfigure(struct seat *seat)
 		wlr_scene_node_destroy(&seat->overlay.edge_rect.tree->node);
 	}
 
-	struct theme *theme = seat->server->theme;
+	struct theme *theme = g_server.theme;
 	create_overlay_rect(seat, &seat->overlay.region_rect,
 		&theme->snapping_overlay_region);
 	create_overlay_rect(seat, &seat->overlay.edge_rect,
@@ -64,8 +62,7 @@ void overlay_reconfigure(struct seat *seat)
 static void
 show_overlay(struct seat *seat, struct overlay_rect *rect, struct wlr_box *box)
 {
-	struct server *server = seat->server;
-	struct view *view = server->grabbed_view;
+	struct view *view = g_server.grabbed_view;
 	assert(view);
 
 	if (!rect->tree) {
@@ -166,9 +163,9 @@ edge_has_adjacent_output_from_cursor(struct seat *seat, struct output *output,
 		return false;
 	}
 	/* Cast from enum lab_edge to enum wlr_direction is safe */
-	return wlr_output_layout_adjacent_output(
-		seat->server->output_layout, (enum wlr_direction)edge,
-		output->wlr_output, seat->cursor->x, seat->cursor->y);
+	return wlr_output_layout_adjacent_output(g_server.output_layout,
+		(enum wlr_direction)edge, output->wlr_output, seat->cursor->x,
+		seat->cursor->y);
 }
 
 static void
@@ -195,9 +192,9 @@ show_edge_overlay(struct seat *seat, enum lab_edge edge,
 
 	if (delay > 0) {
 		if (!seat->overlay.timer) {
-			seat->overlay.timer = wl_event_loop_add_timer(
-				seat->server->wl_event_loop,
-				handle_edge_overlay_timeout, seat);
+			seat->overlay.timer =
+				wl_event_loop_add_timer(g_server.wl_event_loop,
+					handle_edge_overlay_timeout, seat);
 		}
 		/* Show overlay <snapping><preview><delay>ms later */
 		wl_event_source_timer_update(seat->overlay.timer, delay);
@@ -212,11 +209,9 @@ show_edge_overlay(struct seat *seat, enum lab_edge edge,
 void
 overlay_update(struct seat *seat)
 {
-	struct server *server = seat->server;
-
 	/* Region-snapping overlay */
-	if (regions_should_snap(server)) {
-		struct region *region = regions_from_cursor(server);
+	if (regions_should_snap()) {
+		struct region *region = regions_from_cursor();
 		if (region) {
 			show_region_overlay(seat, region);
 			return;
@@ -238,7 +233,6 @@ void
 overlay_hide(struct seat *seat)
 {
 	struct overlay *overlay = &seat->overlay;
-	struct server *server = seat->server;
 
 	inactivate_overlay(overlay);
 
@@ -248,11 +242,11 @@ overlay_hide(struct seat *seat)
 	 */
 	if (overlay->region_rect.tree) {
 		wlr_scene_node_reparent(&overlay->region_rect.tree->node,
-			&server->scene->tree);
+			&g_server.scene->tree);
 	}
 	if (overlay->edge_rect.tree) {
 		wlr_scene_node_reparent(&overlay->edge_rect.tree->node,
-			&server->scene->tree);
+			&g_server.scene->tree);
 	}
 }
 

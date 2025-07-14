@@ -39,7 +39,7 @@ ssd_thickness(struct view *view)
 		return (struct border){ 0 };
 	}
 
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
 		struct border thickness = { 0 };
@@ -101,7 +101,7 @@ get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 
 	if (!view->ssd_titlebar_hidden) {
 		/* If the titlebar is visible, consider it part of the view */
-		int titlebar_height = view->server->theme->titlebar_height;
+		int titlebar_height = g_server.theme->titlebar_height;
 		view_box.y -= titlebar_height;
 		view_box.height += titlebar_height;
 	}
@@ -242,7 +242,7 @@ ssd_create(struct view *view, bool active)
 	ssd->view = view;
 	ssd->tree = wlr_scene_tree_create(view->scene_tree);
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
-	ssd->titlebar.height = view->server->theme->titlebar_height;
+	ssd->titlebar.height = g_server.theme->titlebar_height;
 	ssd_shadow_create(ssd);
 	ssd_extents_create(ssd);
 	/*
@@ -337,7 +337,7 @@ ssd_set_titlebar(struct ssd *ssd, bool enabled)
 		return;
 	}
 	wlr_scene_node_set_enabled(&ssd->titlebar.tree->node, enabled);
-	ssd->titlebar.height = enabled ? ssd->view->server->theme->titlebar_height : 0;
+	ssd->titlebar.height = enabled ? g_server.theme->titlebar_height : 0;
 	ssd_border_update(ssd);
 	ssd_extents_update(ssd);
 	ssd_shadow_update(ssd);
@@ -354,7 +354,7 @@ ssd_destroy(struct ssd *ssd)
 	/* Maybe reset hover view */
 	struct view *view = ssd->view;
 	struct ssd_hover_state *hover_state;
-	hover_state = view->server->ssd_hover_state;
+	hover_state = g_server.ssd_hover_state;
 	if (hover_state->view == view) {
 		hover_state->view = NULL;
 		hover_state->button = NULL;
