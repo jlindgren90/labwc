@@ -41,5 +41,5 @@ uint32_t parse_modifier(const char *symname);
 
 bool keybind_the_same(struct keybind *a, struct keybind *b);
 
-void keybind_update_keycodes(struct server *server);
+void keybind_update_keycodes(void);
 #endif /* LABWC_KEYBIND_H */
