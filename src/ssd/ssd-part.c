@@ -92,13 +92,12 @@ add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 
 	/* Hitbox */
 	float invisible[4] = { 0, 0, 0, 0 };
-	add_scene_rect(part_list, type, parent,
-		rc.theme->window_button_width, rc.theme->window_button_height, 0, 0,
-		invisible);
+	add_scene_rect(part_list, type, parent, g_theme.window_button_width,
+		g_theme.window_button_height, 0, 0, invisible);
 
 	/* Icons */
-	int button_width = rc.theme->window_button_width;
-	int button_height = rc.theme->window_button_height;
+	int button_width = g_theme.window_button_width;
+	int button_height = g_theme.window_button_height;
 	/*
 	 * Ensure a small amount of horizontal padding within the button
 	 * area (2px on each side with the default 26px button width).
@@ -126,9 +125,11 @@ add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 				continue;
 			}
 			struct ssd_part *icon_part = add_scene_part(part_list, type);
-			struct scaled_img_buffer *img_buffer = scaled_img_buffer_create(
-				parent, imgs[state_set], rc.theme->window_button_width,
-				rc.theme->window_button_height);
+			struct scaled_img_buffer *img_buffer =
+				scaled_img_buffer_create(parent,
+					imgs[state_set],
+					g_theme.window_button_width,
+					g_theme.window_button_height);
 			assert(img_buffer);
 			icon_part->node = &img_buffer->scene_buffer->node;
 			wlr_scene_node_set_enabled(icon_part->node, false);

@@ -53,11 +53,10 @@ overlay_reconfigure(void)
 		wlr_scene_node_destroy(&g_seat.overlay.edge_rect.tree->node);
 	}
 
-	struct theme *theme = g_server.theme;
 	create_overlay_rect(&g_seat.overlay.region_rect,
-		&theme->snapping_overlay_region);
+		&g_theme.snapping_overlay_region);
 	create_overlay_rect(&g_seat.overlay.edge_rect,
-		&theme->snapping_overlay_edge);
+		&g_theme.snapping_overlay_edge);
 }
 
 static void

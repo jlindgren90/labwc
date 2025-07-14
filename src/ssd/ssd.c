@@ -39,25 +39,23 @@ ssd_thickness(struct view *view)
 		return (struct border){ 0 };
 	}
 
-	struct theme *theme = g_server.theme;
-
 	if (view->maximized == VIEW_AXIS_BOTH) {
 		struct border thickness = { 0 };
 		if (!view->ssd_titlebar_hidden) {
-			thickness.top += theme->titlebar_height;
+			thickness.top += g_theme.titlebar_height;
 		}
 		return thickness;
 	}
 
 	struct border thickness = {
-		.top = theme->titlebar_height + theme->border_width,
-		.right = theme->border_width,
-		.bottom = theme->border_width,
-		.left = theme->border_width,
+		.top = g_theme.titlebar_height + g_theme.border_width,
+		.right = g_theme.border_width,
+		.bottom = g_theme.border_width,
+		.left = g_theme.border_width,
 	};
 
 	if (view->ssd_titlebar_hidden) {
-		thickness.top -= theme->titlebar_height;
+		thickness.top -= g_theme.titlebar_height;
 	}
 	return thickness;
 }
@@ -101,7 +99,7 @@ get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 
 	if (!view->ssd_titlebar_hidden) {
 		/* If the titlebar is visible, consider it part of the view */
-		int titlebar_height = g_server.theme->titlebar_height;
+		int titlebar_height = g_theme.titlebar_height;
 		view_box.y -= titlebar_height;
 		view_box.height += titlebar_height;
 	}
@@ -242,7 +240,7 @@ ssd_create(struct view *view, bool active)
 	ssd->view = view;
 	ssd->tree = wlr_scene_tree_create(view->scene_tree);
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
-	ssd->titlebar.height = g_server.theme->titlebar_height;
+	ssd->titlebar.height = g_theme.titlebar_height;
 	ssd_shadow_create(ssd);
 	ssd_extents_create(ssd);
 	/*
@@ -337,7 +335,7 @@ ssd_set_titlebar(struct ssd *ssd, bool enabled)
 		return;
 	}
 	wlr_scene_node_set_enabled(&ssd->titlebar.tree->node, enabled);
-	ssd->titlebar.height = enabled ? g_server.theme->titlebar_height : 0;
+	ssd->titlebar.height = enabled ? g_theme.titlebar_height : 0;
 	ssd_border_update(ssd);
 	ssd_extents_update(ssd);
 	ssd_shadow_update(ssd);
@@ -468,9 +466,8 @@ ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable)
 		return;
 	}
 
-	float *color = enable
-		? rc.theme->window_toggled_keybinds_color
-		: rc.theme->window[THEME_ACTIVE].border_color;
+	float *color = enable ? g_theme.window_toggled_keybinds_color
+		: g_theme.window[THEME_ACTIVE].border_color;
 
 	struct ssd_part *part = ssd_get_part(&ssd->border.active.parts, LAB_NODE_EDGE_TOP);
 	struct wlr_scene_rect *rect = wlr_scene_rect_from_node(part->node);

@@ -19,10 +19,9 @@ ssd_border_create(struct ssd *ssd)
 	assert(!ssd->border.tree);
 
 	struct view *view = ssd->view;
-	struct theme *theme = g_server.theme;
 	int width = view->current.width;
 	int height = view_effective_height(view, /* use_pending */ false);
-	int full_width = width + 2 * theme->border_width;
+	int full_width = width + 2 * g_theme.border_width;
 	int corner_width = ssd_get_corner_width();
 
 	float *color;
@@ -31,7 +30,8 @@ ssd_border_create(struct ssd *ssd)
 	int active;
 
 	ssd->border.tree = wlr_scene_tree_create(ssd->tree);
-	wlr_scene_node_set_position(&ssd->border.tree->node, -theme->border_width, 0);
+	wlr_scene_node_set_position(&ssd->border.tree->node,
+		-g_theme.border_width, 0);
 
 	FOR_EACH_STATE(ssd, subtree) {
 		subtree->tree = wlr_scene_tree_create(ssd->border.tree);
@@ -39,20 +39,20 @@ ssd_border_create(struct ssd *ssd)
 		active = (subtree == &ssd->border.active) ?
 			THEME_ACTIVE : THEME_INACTIVE;
 		wlr_scene_node_set_enabled(&parent->node, active);
-		color = theme->window[active].border_color;
+		color = g_theme.window[active].border_color;
 
 		wl_list_init(&subtree->parts);
 		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_LEFT, parent,
-			theme->border_width, height, 0, 0, color);
+			g_theme.border_width, height, 0, 0, color);
 		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_RIGHT, parent,
-			theme->border_width, height,
-			theme->border_width + width, 0, color);
+			g_theme.border_width, height,
+			g_theme.border_width + width, 0, color);
 		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_BOTTOM, parent,
-			full_width, theme->border_width, 0, height, color);
+			full_width, g_theme.border_width, 0, height, color);
 		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_TOP, parent,
-			MAX(width - 2 * corner_width, 0), theme->border_width,
-			theme->border_width + corner_width,
-			-(ssd->titlebar.height + theme->border_width), color);
+			MAX(width - 2 * corner_width, 0), g_theme.border_width,
+			g_theme.border_width + corner_width,
+			-(ssd->titlebar.height + g_theme.border_width), color);
 	} FOR_EACH_END
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
@@ -90,11 +90,9 @@ ssd_border_update(struct ssd *ssd)
 		ssd->margin = ssd_thickness(ssd->view);
 	}
 
-	struct theme *theme = g_server.theme;
-
 	int width = view->current.width;
 	int height = view_effective_height(view, /* use_pending */ false);
-	int full_width = width + 2 * theme->border_width;
+	int full_width = width + 2 * g_theme.border_width;
 	int corner_width = ssd_get_corner_width();
 
 	/*
@@ -126,8 +124,7 @@ ssd_border_update(struct ssd *ssd)
 		? full_width
 		: MAX(width - 2 * corner_width, 0);
 	int top_x = ssd->titlebar.height <= 0 || ssd->state.was_squared
-		? 0
-		: theme->border_width + corner_width;
+		? 0 : g_theme.border_width + corner_width;
 
 	struct ssd_part *part;
 	struct wlr_scene_rect *rect;
@@ -138,35 +135,30 @@ ssd_border_update(struct ssd *ssd)
 			switch (part->type) {
 			case LAB_NODE_EDGE_LEFT:
 				wlr_scene_rect_set_size(rect,
-					theme->border_width,
-					side_height);
+					g_theme.border_width, side_height);
 				wlr_scene_node_set_position(part->node,
 					0,
 					side_y);
 				continue;
 			case LAB_NODE_EDGE_RIGHT:
 				wlr_scene_rect_set_size(rect,
-					theme->border_width,
-					side_height);
+					g_theme.border_width, side_height);
 				wlr_scene_node_set_position(part->node,
-					theme->border_width + width,
-					side_y);
+					g_theme.border_width + width, side_y);
 				continue;
 			case LAB_NODE_EDGE_BOTTOM:
-				wlr_scene_rect_set_size(rect,
-					full_width,
-					theme->border_width);
+				wlr_scene_rect_set_size(rect, full_width,
+					g_theme.border_width);
 				wlr_scene_node_set_position(part->node,
 					0,
 					height);
 				continue;
 			case LAB_NODE_EDGE_TOP:
-				wlr_scene_rect_set_size(rect,
-					top_width,
-					theme->border_width);
-				wlr_scene_node_set_position(part->node,
-					top_x,
-					-(ssd->titlebar.height + theme->border_width));
+				wlr_scene_rect_set_size(rect, top_width,
+					g_theme.border_width);
+				wlr_scene_node_set_position(part->node, top_x,
+					-(ssd->titlebar.height
+						+ g_theme.border_width));
 				continue;
 			default:
 				continue;

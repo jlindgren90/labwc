@@ -44,17 +44,17 @@ static void
 osd_update_preview_outlines(struct view *view)
 {
 	/* Create / Update preview outline tree */
-	struct theme *theme = g_server.theme;
 	struct lab_scene_rect *rect = g_server.osd_state.preview_outline;
 	if (!rect) {
 		struct lab_scene_rect_options opts = {
 			.border_colors = (float *[3]) {
-				theme->osd_window_switcher_preview_border_color[0],
-				theme->osd_window_switcher_preview_border_color[1],
-				theme->osd_window_switcher_preview_border_color[2],
+				g_theme.osd_window_switcher_preview_border_color[0],
+				g_theme.osd_window_switcher_preview_border_color[1],
+				g_theme.osd_window_switcher_preview_border_color[2],
 			},
 			.nr_borders = 3,
-			.border_width = theme->osd_window_switcher_preview_border_width,
+			.border_width =
+				g_theme.osd_window_switcher_preview_border_width,
 		};
 		rect = lab_scene_rect_create(&g_server.scene->tree, &opts);
 		wlr_scene_node_place_above(&rect->tree->node,
@@ -269,40 +269,39 @@ preview_cycled_view(struct view *view)
 static void
 create_osd_scene(struct output *output, struct wl_array *views)
 {
-	struct theme *theme = g_server.theme;
 	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
 	const char *workspace_name = g_server.workspaces.current->name;
 
-	int w = theme->osd_window_switcher_width;
-	if (theme->osd_window_switcher_width_is_percent) {
+	int w = g_theme.osd_window_switcher_width;
+	if (g_theme.osd_window_switcher_width_is_percent) {
 		w = output->wlr_output->width
-			* theme->osd_window_switcher_width / 100;
+			* g_theme.osd_window_switcher_width / 100;
 	}
-	int h = wl_array_len(views) * rc.theme->osd_window_switcher_item_height
-		+ 2 * rc.theme->osd_border_width
-		+ 2 * rc.theme->osd_window_switcher_padding;
+	int h = wl_array_len(views) * g_theme.osd_window_switcher_item_height
+		+ 2 * g_theme.osd_border_width
+		+ 2 * g_theme.osd_window_switcher_padding;
 	if (show_workspace) {
 		/* workspace indicator */
-		h += theme->osd_window_switcher_item_height;
+		h += g_theme.osd_window_switcher_item_height;
 	}
 
 	output->osd_scene.tree = wlr_scene_tree_create(output->osd_tree);
 
-	float *text_color = theme->osd_label_text_color;
-	float *bg_color = theme->osd_bg_color;
+	float *text_color = g_theme.osd_label_text_color;
+	float *bg_color = g_theme.osd_bg_color;
 
 	/* Draw background */
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]) {theme->osd_border_color},
+		.border_colors = (float *[1]) {g_theme.osd_border_color},
 		.nr_borders = 1,
-		.border_width = theme->osd_border_width,
+		.border_width = g_theme.osd_border_width,
 		.bg_color = bg_color,
 		.width = w,
 		.height = h,
 	};
 	lab_scene_rect_create(output->osd_scene.tree, &bg_opts);
 
-	int y = theme->osd_border_width + theme->osd_window_switcher_padding;
+	int y = g_theme.osd_border_width + g_theme.osd_window_switcher_padding;
 
 	/* Draw workspace indicator */
 	if (show_workspace) {
@@ -319,12 +318,12 @@ create_osd_scene(struct output *output, struct wl_array *views)
 
 		struct scaled_font_buffer *font_buffer =
 			scaled_font_buffer_create(output->osd_scene.tree);
-		wlr_scene_node_set_position(&font_buffer->scene_buffer->node,
-			x, y + (theme->osd_window_switcher_item_height
+		wlr_scene_node_set_position(&font_buffer->scene_buffer->node, x,
+			y + (g_theme.osd_window_switcher_item_height
 				- font_height(&font)) / 2);
 		scaled_font_buffer_update(font_buffer, workspace_name, 0,
 			&font, text_color, bg_color);
-		y += theme->osd_window_switcher_item_height;
+		y += g_theme.osd_window_switcher_item_height;
 	}
 
 { /* !goto */
@@ -332,10 +331,11 @@ create_osd_scene(struct output *output, struct wl_array *views)
 	int nr_fields = wl_list_length(&rc.window_switcher.fields);
 
 	/* This is the width of the area available for text fields */
-	int field_widths_sum = w - 2 * theme->osd_border_width
-		- 2 * theme->osd_window_switcher_padding
-		- 2 * theme->osd_window_switcher_item_active_border_width
-		- (nr_fields + 1) * theme->osd_window_switcher_item_padding_x;
+	int field_widths_sum =
+		w - 2 * g_theme.osd_border_width
+		- 2 * g_theme.osd_window_switcher_padding
+		- 2 * g_theme.osd_window_switcher_item_active_border_width
+		- (nr_fields + 1) * g_theme.osd_window_switcher_item_padding_x;
 	if (field_widths_sum <= 0) {
 		wlr_log(WLR_ERROR, "Not enough spaces for osd contents");
 		goto error;
@@ -363,10 +363,10 @@ create_osd_scene(struct output *output, struct wl_array *views)
 		 * |                                 |
 		 * +---------------------------------+
 		 */
-		int x = theme->osd_border_width
-			+ theme->osd_window_switcher_padding
-			+ theme->osd_window_switcher_item_active_border_width
-			+ theme->osd_window_switcher_item_padding_x;
+		int x = g_theme.osd_border_width
+			+ g_theme.osd_window_switcher_padding
+			+ g_theme.osd_window_switcher_item_active_border_width
+			+ g_theme.osd_window_switcher_item_padding_x;
 		struct wlr_scene_tree *item_root =
 			wlr_scene_tree_create(output->osd_scene.tree);
 
@@ -378,7 +378,7 @@ create_osd_scene(struct output *output, struct wl_array *views)
 
 			if (field->content == LAB_FIELD_ICON) {
 				int icon_size = MIN(field_width,
-					theme->osd_window_switcher_item_icon_size);
+					g_theme.osd_window_switcher_item_icon_size);
 				struct scaled_icon_buffer *icon_buffer =
 					scaled_icon_buffer_create(item_root,
 						icon_size, icon_size);
@@ -402,24 +402,25 @@ create_osd_scene(struct output *output, struct wl_array *views)
 
 			if (node) {
 				int item_height =
-					theme->osd_window_switcher_item_height;
+					g_theme.osd_window_switcher_item_height;
 				wlr_scene_node_set_position(node,
 					x, y + (item_height - height) / 2);
 			}
-			x += field_width + theme->osd_window_switcher_item_padding_x;
+			x += field_width
+				+ g_theme.osd_window_switcher_item_padding_x;
 		}
 
 		/* Highlight around selected window's item */
-		int highlight_x = theme->osd_border_width
-				+ theme->osd_window_switcher_padding;
+		int highlight_x = g_theme.osd_border_width
+			+ g_theme.osd_window_switcher_padding;
 		struct lab_scene_rect_options highlight_opts = {
 			.border_colors = (float *[1]) {text_color},
 			.nr_borders = 1,
 			.border_width =
-				theme->osd_window_switcher_item_active_border_width,
-			.width = w - 2 * theme->osd_border_width
-				- 2 * theme->osd_window_switcher_padding,
-			.height = theme->osd_window_switcher_item_height,
+				g_theme.osd_window_switcher_item_active_border_width,
+			.width = w - 2 * g_theme.osd_border_width
+				- 2 * g_theme.osd_window_switcher_padding,
+			.height = g_theme.osd_window_switcher_item_height,
 		};
 
 		struct lab_scene_rect *highlight_rect = lab_scene_rect_create(
@@ -428,7 +429,7 @@ create_osd_scene(struct output *output, struct wl_array *views)
 		wlr_scene_node_set_position(item->highlight_outline, highlight_x, y);
 		wlr_scene_node_set_enabled(item->highlight_outline, false);
 
-		y += theme->osd_window_switcher_item_height;
+		y += g_theme.osd_window_switcher_item_height;
 	}
 	buf_reset(&buf);
 
@@ -462,7 +463,7 @@ update_osd(void)
 		goto out;
 	}
 
-	if (rc.window_switcher.show && rc.theme->osd_window_switcher_width > 0) {
+	if (rc.window_switcher.show && g_theme.osd_window_switcher_width > 0) {
 		/* Display the actual OSD */
 		struct output *output;
 		wl_list_for_each(output, &g_server.outputs, link) {
