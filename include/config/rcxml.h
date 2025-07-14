@@ -2,7 +2,7 @@
 #ifndef LABWC_RCXML_H
 #define LABWC_RCXML_H
 
-#include <stdbool.h>
+#include <vector>
 #include <wayland-server-core.h>
 #include <wlr/util/box.h>
 
@@ -46,11 +46,6 @@ struct button_map_entry {
 	uint32_t to;
 };
 
-struct title_button {
-	enum ssd_part_type type;
-	struct wl_list link;
-};
-
 struct usable_area_override {
 	struct border margin;
 	char *output;
@@ -85,8 +80,8 @@ struct rcxml {
 	char *theme_name;
 	char *icon_theme_name;
 	char *fallback_app_icon_name;
-	struct wl_list title_buttons_left;
-	struct wl_list title_buttons_right;
+	std::vector<ssd_part_type> title_buttons_left;
+	std::vector<ssd_part_type> title_buttons_right; // right-to-left
 	int corner_radius;
 	bool show_title;
 	bool title_layout_loaded;
