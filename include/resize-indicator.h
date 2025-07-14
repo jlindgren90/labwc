@@ -11,7 +11,7 @@ enum resize_indicator_mode {
 	LAB_RESIZE_INDICATOR_NON_PIXEL
 };
 
-void resize_indicator_reconfigure(struct server *server);
+void resize_indicator_reconfigure(void);
 void resize_indicator_show(struct view *view);
 void resize_indicator_update(struct view *view);
 void resize_indicator_hide(struct view *view);

@@ -97,7 +97,6 @@ struct keyboard {
 
 struct seat {
 	struct wlr_seat *seat;
-	struct server *server;
 	struct wlr_keyboard_group *keyboard_group;
 
 	struct wl_list touch_points; /* struct touch_point.link */
@@ -411,7 +410,6 @@ struct server {
 
 struct output {
 	struct wl_list link; /* server.outputs */
-	struct server *server;
 	struct wlr_output *wlr_output;
 	struct wlr_output_state pending;
 	struct wlr_scene_output *scene_output;
@@ -446,9 +444,19 @@ struct constraint {
 	struct wl_listener destroy;
 };
 
+/*
+ * Globals
+ *
+ * Rationale: these are unlikely to ever have more than one instance
+ * per process, and need to last for the lifetime of the process.
+ * Accessing them indirectly through pointers embedded in every other
+ * struct just adds noise to the code.
+ */
+extern struct server g_server;
+
 void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
-void xdg_shell_init(struct server *server);
-void xdg_shell_finish(struct server *server);
+void xdg_shell_init(void);
+void xdg_shell_finish(void);
 
 /*
  * desktop.c routines deal with a collection of views
@@ -483,15 +491,15 @@ void desktop_focus_view(struct view *view, bool raise);
 void desktop_focus_view_or_surface(struct seat *seat, struct view *view,
 	struct wlr_surface *surface, bool raise);
 
-void desktop_arrange_all_views(struct server *server);
+void desktop_arrange_all_views(void);
 void desktop_focus_output(struct output *output);
-struct view *desktop_topmost_focusable_view(struct server *server);
+struct view *desktop_topmost_focusable_view(void);
 
 /**
  * Toggles the (output local) visibility of the layershell top layer
  * based on the existence of a fullscreen window on the current workspace.
  */
-void desktop_update_top_layer_visibility(struct server *server);
+void desktop_update_top_layer_visibility(void);
 
 /**
  * desktop_focus_topmost_view() - focus the topmost view on the current
@@ -501,11 +509,11 @@ void desktop_update_top_layer_visibility(struct server *server);
  * This function is typically called when the focused view is hidden
  * (closes, is minimized, etc.) to focus the "next" view underneath.
  */
-void desktop_focus_topmost_view(struct server *server);
+void desktop_focus_topmost_view(void);
 
-void seat_init(struct server *server);
-void seat_finish(struct server *server);
-void seat_reconfigure(struct server *server);
+void seat_init(void);
+void seat_finish(void);
+void seat_reconfigure(void);
 void seat_focus_surface(struct seat *seat, struct wlr_surface *surface);
 
 void seat_pointer_end_grab(struct seat *seat, struct wlr_surface *surface);
@@ -544,7 +552,7 @@ void seat_focus_override_end(struct seat *seat);
  * geo->{width,height} are provided by the caller.
  * geo->{x,y} are computed by this function.
  */
-void interactive_anchor_to_cursor(struct server *server, struct wlr_box *geo);
+void interactive_anchor_to_cursor(struct wlr_box *geo);
 
 void interactive_begin(struct view *view, enum input_mode mode, uint32_t edges);
 void interactive_finish(struct view *view);
@@ -552,14 +560,13 @@ void interactive_cancel(struct view *view);
 /* Possibly returns VIEW_EDGE_CENTER if <topMaximize> is yes */
 enum view_edge edge_from_cursor(struct seat *seat, struct output **dest_output);
 
-void output_init(struct server *server);
-void output_finish(struct server *server);
-void output_manager_init(struct server *server);
-struct output *output_from_wlr_output(struct server *server,
-	struct wlr_output *wlr_output);
-struct output *output_from_name(struct server *server, const char *name);
-struct output *output_nearest_to(struct server *server, int lx, int ly);
-struct output *output_nearest_to_cursor(struct server *server);
+void output_init(void);
+void output_finish(void);
+void output_manager_init(void);
+struct output *output_from_wlr_output(struct wlr_output *wlr_output);
+struct output *output_from_name(const char *name);
+struct output *output_nearest_to(int lx, int ly);
+struct output *output_nearest_to_cursor(void);
 
 /**
  * output_get_adjacent() - get next output, in a given direction,
@@ -577,7 +584,7 @@ struct output *output_get_adjacent(struct output *output,
 
 bool output_is_usable(struct output *output);
 void output_update_usable_area(struct output *output);
-void output_update_all_usable_areas(struct server *server, bool layout_changed);
+void output_update_all_usable_areas(bool layout_changed);
 bool output_get_tearing_allowance(struct output *output);
 struct wlr_box output_usable_area_in_layout_coords(struct output *output);
 void handle_output_power_manager_set_mode(struct wl_listener *listener,
@@ -589,16 +596,15 @@ void output_enable_adaptive_sync(struct output *output, bool enabled);
  * Used when loading/rendering resources (e.g. icons) that may be
  * displayed on any output.
  */
-float output_max_scale(struct server *server);
+float output_max_scale(void);
 
 void handle_tearing_new_object(struct wl_listener *listener, void *data);
 
-void server_init(struct server *server);
-void server_start(struct server *server);
-void server_finish(struct server *server);
+void server_init(void);
+void server_start(void);
+void server_finish(void);
 
 void create_constraint(struct wl_listener *listener, void *data);
-void constrain_cursor(struct server *server, struct wlr_pointer_constraint_v1
-	*constraint);
+void constrain_cursor(struct wlr_pointer_constraint_v1 *constraint);
 
 #endif /* LABWC_H */
