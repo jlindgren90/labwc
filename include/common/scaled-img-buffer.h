@@ -3,6 +3,7 @@
 #define LABWC_SCALED_IMG_BUFFER_H
 
 #include "scaled-scene-buffer.h"
+#include "img/img.h"
 
 struct wlr_scene_node;
 struct lab_img;
@@ -13,15 +14,17 @@ struct lab_img;
  * free to destroy it.
  */
 struct scaled_img_buffer : public scaled_scene_buffer {
-	lab_img *img = nullptr;
+	lab_img img;
 	int width = 0;
 	int height = 0;
 
-	scaled_img_buffer(wlr_scene_tree *parent, lab_img *img, int width,
+	scaled_img_buffer(wlr_scene_tree *parent, const lab_img &img, int width,
 		int height);
-	~scaled_img_buffer();
 
-	refptr<lab_data_buffer> create_buffer(double scale) override;
+	refptr<lab_data_buffer> create_buffer(double scale) override {
+		return img.render(width, height, scale);
+	}
+
 	bool equal(scaled_scene_buffer &other) override;
 };
 

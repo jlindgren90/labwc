@@ -156,8 +156,7 @@ struct ssd_part *add_scene_buffer(
 	struct wlr_scene_tree *parent, struct wlr_buffer *buffer, int x, int y);
 struct ssd_part *add_scene_button(struct wl_list *part_list,
 	enum lab_node_type type, struct wlr_scene_tree *parent,
-	struct lab_img *buffers[LAB_BS_ALL + 1], int x, int y,
-	struct view *view);
+	lab_img buffers[LAB_BS_ALL + 1], int x, int y, struct view *view);
 
 /* SSD internal helpers */
 struct ssd_part *ssd_get_part(
