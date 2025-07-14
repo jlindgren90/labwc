@@ -164,7 +164,6 @@ static void
 set_shadow_geometry(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	struct theme *theme = g_server.theme;
 	int titlebar_height = ssd->titlebar.height;
 	int width = view->current.width;
 	int height = view_effective_height(view, false) + titlebar_height;
@@ -180,7 +179,7 @@ set_shadow_geometry(struct ssd *ssd)
 
 		int active = (subtree == &ssd->shadow.active) ?
 			THEME_ACTIVE : THEME_INACTIVE;
-		int visible_shadow_width = theme->window[active].shadow_size;
+		int visible_shadow_width = g_theme.window[active].shadow_size;
 		/* inset as a proportion of shadow width */
 		double inset_proportion = SSD_SHADOW_INSET;
 		/* inset in actual pixels */
@@ -192,7 +191,7 @@ set_shadow_geometry(struct ssd *ssd)
 		 * is different).  The buffers are square so width == height.
 		 */
 		int corner_size =
-			theme->window[active].shadow_corner_top->logical_height;
+			g_theme.window[active].shadow_corner_top->logical_height;
 
 		wl_list_for_each(part, &subtree->parts, link) {
 			set_shadow_part_geometry(part, width, height,
@@ -228,7 +227,6 @@ ssd_shadow_create(struct ssd *ssd)
 
 	ssd->shadow.tree = wlr_scene_tree_create(ssd->tree);
 
-	struct theme *theme = g_server.theme;
 	struct wlr_buffer *corner_top_buffer;
 	struct wlr_buffer *corner_bottom_buffer;
 	struct wlr_buffer *edge_buffer;
@@ -245,16 +243,18 @@ ssd_shadow_create(struct ssd *ssd)
 		}
 		active = (subtree == &ssd->shadow.active) ?
 			THEME_ACTIVE : THEME_INACTIVE;
-		if (theme->window[active].shadow_size == 0) {
+		if (g_theme.window[active].shadow_size == 0) {
 			/* Window shadows are disabled */
 			continue;
 		}
 
 		subtree->tree = wlr_scene_tree_create(ssd->shadow.tree);
 		parent = subtree->tree;
-		corner_top_buffer = &theme->window[active].shadow_corner_top->base;
-		corner_bottom_buffer = &theme->window[active].shadow_corner_bottom->base;
-		edge_buffer = &theme->window[active].shadow_edge->base;
+		corner_top_buffer =
+			&g_theme.window[active].shadow_corner_top->base;
+		corner_bottom_buffer =
+			&g_theme.window[active].shadow_corner_bottom->base;
+		edge_buffer = &g_theme.window[active].shadow_edge->base;
 
 		make_shadow(&subtree->parts, LAB_NODE_CORNER_BOTTOM_RIGHT,
 			parent, corner_bottom_buffer, WL_OUTPUT_TRANSFORM_NORMAL);
@@ -285,12 +285,11 @@ ssd_shadow_update(struct ssd *ssd)
 	assert(ssd->shadow.tree);
 
 	struct view *view = ssd->view;
-	struct theme *theme = g_server.theme;
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool tiled_shadows = false;
 	if (rc.shadows_on_tiled) {
-		if (rc.gap >= theme->window[THEME_ACTIVE].shadow_size
-				&& rc.gap >= theme->window[THEME_INACTIVE].shadow_size) {
+		if (rc.gap >= g_theme.window[THEME_ACTIVE].shadow_size
+				&& rc.gap >= g_theme.window[THEME_INACTIVE].shadow_size) {
 			tiled_shadows = true;
 		} else {
 			wlr_log(WLR_INFO, "gap size < shadow_size, ignore rc.shadows_ontiled");
