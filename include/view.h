@@ -146,7 +146,6 @@ struct resize_outlines {
 };
 
 struct view {
-	struct server *server;
 	enum view_type type;
 	const struct view_impl *impl;
 	struct wl_list link;
@@ -422,8 +421,7 @@ struct view *view_prev_no_head_stop(struct wl_list *head, struct view *from,
  *	}
  *	wl_array_release(&views);
  */
-void view_array_append(struct server *server, struct wl_array *views,
-	enum lab_view_criteria criteria);
+void view_array_append(struct wl_array *views, enum lab_view_criteria criteria);
 
 enum view_wants_focus view_wants_focus(struct view *view);
 bool view_contains_window_type(struct view *view, enum lab_window_type window_type);

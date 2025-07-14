@@ -51,7 +51,7 @@ get_desktop_name(struct view *view)
 {
 #if HAVE_LIBSFDO
 	const char *app_id = view_get_string_prop(view, "app_id");
-	const char *name = desktop_entry_name_lookup(view->server, app_id);
+	const char *name = desktop_entry_name_lookup(app_id);
 	if (name) {
 		return name;
 	}
@@ -160,8 +160,8 @@ static void
 field_set_output_short(struct buf *buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: o */
-	if (wl_list_length(&view->server->outputs) > 1 &&
-			output_is_usable(view->output)) {
+	if (wl_list_length(&g_server.outputs) > 1
+			&& output_is_usable(view->output)) {
 		buf_add(buf, view->output->wlr_output->name);
 	}
 }

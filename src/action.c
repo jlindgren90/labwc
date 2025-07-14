@@ -669,23 +669,22 @@ action_list_free(struct wl_list *action_list)
 }
 
 static void
-show_menu(struct server *server, struct view *view, struct cursor_context *ctx,
-		const char *menu_name, bool at_cursor,
-		const char *pos_x, const char *pos_y)
+show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
+		bool at_cursor, const char *pos_x, const char *pos_y)
 {
-	if (server->input_mode != LAB_INPUT_STATE_PASSTHROUGH
-			&& server->input_mode != LAB_INPUT_STATE_MENU) {
+	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH
+			&& g_server.input_mode != LAB_INPUT_STATE_MENU) {
 		/* Prevent opening a menu while resizing / moving a view */
 		return;
 	}
 
-	struct menu *menu = menu_get_by_id(server, menu_name);
+	struct menu *menu = menu_get_by_id(menu_name);
 	if (!menu) {
 		return;
 	}
 
-	int x = server->seat.cursor->x;
-	int y = server->seat.cursor->y;
+	int x = g_server.seat.cursor->x;
+	int y = g_server.seat.cursor->y;
 
 	/* The client menu needs an active client */
 	bool is_client_menu = !strcasecmp(menu_name, "client-menu");
@@ -704,7 +703,7 @@ show_menu(struct server *server, struct view *view, struct cursor_context *ctx,
 			int lx, ly;
 			wlr_scene_node_coords(ctx->node, &lx, &ly);
 			/* MAX() prevents negative x when the window is maximized */
-			x = MAX(x, lx - server->theme->menu_border_width);
+			x = MAX(x, lx - g_server.theme->menu_border_width);
 		}
 	}
 
@@ -713,8 +712,9 @@ show_menu(struct server *server, struct view *view, struct cursor_context *ctx,
 	 * x/y can be number, "center" or a %percent of screen dimensions
 	 */
 	if (pos_x && pos_y) {
-		struct output *output = output_nearest_to(server,
-				server->seat.cursor->x, server->seat.cursor->y);
+		struct output *output =
+			output_nearest_to(g_server.seat.cursor->x,
+				g_server.seat.cursor->y);
 		struct wlr_box usable = output_usable_area_in_layout_coords(output);
 
 		if (!strcasecmp(pos_x, "center")) {
@@ -758,8 +758,8 @@ show_menu(struct server *server, struct view *view, struct cursor_context *ctx,
 }
 
 static struct view *
-view_for_action(struct view *activator, struct server *server,
-	struct action *action, struct cursor_context *ctx)
+view_for_action(struct view *activator, struct action *action,
+		struct cursor_context *ctx)
 {
 	/* View is explicitly specified for mousebinds */
 	if (activator) {
@@ -771,16 +771,16 @@ view_for_action(struct view *activator, struct server *server,
 	case ACTION_TYPE_FOCUS:
 	case ACTION_TYPE_MOVE:
 	case ACTION_TYPE_RESIZE: {
-		*ctx = get_cursor_context(server);
+		*ctx = get_cursor_context();
 		return ctx->view;
 	}
 	default:
-		return server->active_view;
+		return g_server.active_view;
 	}
 }
 
 static bool
-run_if_action(struct view *view, struct server *server, struct action *action)
+run_if_action(struct view *view, struct action *action)
 {
 	struct view_query *query;
 	struct wl_list *queries, *actions;
@@ -800,20 +800,19 @@ run_if_action(struct view *view, struct server *server, struct action *action)
 
 	actions = action_get_actionlist(action, branch);
 	if (actions) {
-		actions_run(view, server, actions, NULL);
+		actions_run(view, actions, NULL);
 	}
 	return !strcmp(branch, "then");
 }
 
 static struct output *
-get_target_output(struct output *output, struct server *server,
-	struct action *action)
+get_target_output(struct output *output, struct action *action)
 {
 	const char *output_name = action_get_str(action, "output", NULL);
 	struct output *target = NULL;
 
 	if (output_name) {
-		target = output_from_name(server, output_name);
+		target = output_from_name(output_name);
 	} else {
 		enum lab_edge edge =
 			action_get_int(action, "direction", LAB_EDGE_NONE);
@@ -861,13 +860,13 @@ warp_cursor(struct view *view, struct output *output, const char *to, const char
 			target_area.y + target_area.height + offset_y;
 	}
 
-	wlr_cursor_warp(output->server->seat.cursor, NULL, goto_x, goto_y);
-	cursor_update_focus(output->server);
+	wlr_cursor_warp(g_server.seat.cursor, NULL, goto_x, goto_y);
+	cursor_update_focus();
 }
 
 void
-actions_run(struct view *activator, struct server *server,
-	struct wl_list *actions, struct cursor_context *cursor_ctx)
+actions_run(struct view *activator, struct wl_list *actions,
+		struct cursor_context *cursor_ctx)
 {
 	if (!actions) {
 		wlr_log(WLR_ERROR, "empty actions");
@@ -884,7 +883,7 @@ actions_run(struct view *activator, struct server *server,
 
 	struct action *action;
 	wl_list_for_each(action, actions, link) {
-		if (server->input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER
+		if (g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER
 				&& action->type != ACTION_TYPE_NEXT_WINDOW
 				&& action->type != ACTION_TYPE_PREVIOUS_WINDOW) {
 			wlr_log(WLR_INFO, "Only NextWindow or PreviousWindow "
@@ -899,7 +898,7 @@ actions_run(struct view *activator, struct server *server,
 		 * Refetch view because it may have been changed due to the
 		 * previous action
 		 */
-		struct view *view = view_for_action(activator, server, action, &ctx);
+		struct view *view = view_for_action(activator, action, &ctx);
 
 		switch (action->type) {
 		case ACTION_TYPE_CLOSE:
@@ -920,7 +919,7 @@ actions_run(struct view *activator, struct server *server,
 			}
 			break;
 		case ACTION_TYPE_DEBUG:
-			debug_dump_scene(server);
+			debug_dump_scene();
 			break;
 		case ACTION_TYPE_EXECUTE: {
 			struct buf cmd = BUF_INIT;
@@ -931,7 +930,7 @@ actions_run(struct view *activator, struct server *server,
 			break;
 		}
 		case ACTION_TYPE_EXIT:
-			wl_display_terminate(server->wl_display);
+			wl_display_terminate(g_server.wl_display);
 			break;
 		case ACTION_TYPE_MOVE_TO_EDGE:
 			if (view) {
@@ -975,24 +974,24 @@ actions_run(struct view *activator, struct server *server,
 			}
 			break;
 		case ACTION_TYPE_NEXT_WINDOW:
-			if (server->input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER) {
-				osd_cycle(server, LAB_CYCLE_DIR_FORWARD);
+			if (g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER) {
+				osd_cycle(LAB_CYCLE_DIR_FORWARD);
 			} else {
-				osd_begin(server, LAB_CYCLE_DIR_FORWARD);
+				osd_begin(LAB_CYCLE_DIR_FORWARD);
 			}
 			break;
 		case ACTION_TYPE_PREVIOUS_WINDOW:
-			if (server->input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER) {
-				osd_cycle(server, LAB_CYCLE_DIR_BACKWARD);
+			if (g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER) {
+				osd_cycle(LAB_CYCLE_DIR_BACKWARD);
 			} else {
-				osd_begin(server, LAB_CYCLE_DIR_BACKWARD);
+				osd_begin(LAB_CYCLE_DIR_BACKWARD);
 			}
 			break;
 		case ACTION_TYPE_RECONFIGURE:
 			kill(getpid(), SIGHUP);
 			break;
 		case ACTION_TYPE_SHOW_MENU:
-			show_menu(server, view, &ctx,
+			show_menu(view, &ctx,
 				action_get_str(action, "menu", NULL),
 				action_get_bool(action, "atCursor", true),
 				action_get_str(action, "x.position", NULL),
@@ -1061,7 +1060,7 @@ actions_run(struct view *activator, struct server *server,
 			}
 			break;
 		case ACTION_TYPE_UNFOCUS:
-			seat_focus_surface(&server->seat, NULL);
+			seat_focus_surface(&g_server.seat, NULL);
 			break;
 		case ACTION_TYPE_ICONIFY:
 			if (view) {
@@ -1087,7 +1086,7 @@ actions_run(struct view *activator, struct server *server,
 		case ACTION_TYPE_RESIZE:
 			if (view) {
 				enum lab_edge resize_edges = cursor_get_resize_edges(
-					server->seat.cursor, &ctx);
+					g_server.seat.cursor, &ctx);
 				interactive_begin(view, LAB_INPUT_STATE_RESIZE,
 					resize_edges);
 			}
@@ -1158,8 +1157,9 @@ actions_run(struct view *activator, struct server *server,
 			 * removed the action during the initial parsing step as it is
 			 * a required argument for both SendToDesktop and GoToDesktop.
 			 */
-			struct workspace *target_workspace = workspaces_find(
-				server->workspaces.current, to, wrap);
+			struct workspace *target_workspace =
+				workspaces_find(g_server.workspaces.current, to,
+					wrap);
 			if (!target_workspace) {
 				break;
 			}
@@ -1168,8 +1168,8 @@ actions_run(struct view *activator, struct server *server,
 				follow = action_get_bool(action, "follow", true);
 
 				/* Ensure that the focus is not on another desktop */
-				if (!follow && server->active_view == view) {
-					desktop_focus_topmost_view(server);
+				if (!follow && g_server.active_view == view) {
+					desktop_focus_topmost_view();
 				}
 			}
 			if (follow) {
@@ -1183,7 +1183,7 @@ actions_run(struct view *activator, struct server *server,
 				break;
 			}
 			struct output *target_output =
-				get_target_output(view->output, server, action);
+				get_target_output(view->output, action);
 			if (target_output) {
 				view_move_to_output(view, target_output);
 			}
@@ -1237,9 +1237,9 @@ actions_run(struct view *activator, struct server *server,
 			}
 			break;
 		case ACTION_TYPE_FOCUS_OUTPUT: {
-			struct output *output = output_nearest_to_cursor(server);
+			struct output *output = output_nearest_to_cursor();
 			struct output *target_output =
-				get_target_output(output, server, action);
+				get_target_output(output, action);
 			if (target_output) {
 				desktop_focus_output(target_output);
 			}
@@ -1247,7 +1247,7 @@ actions_run(struct view *activator, struct server *server,
 		}
 		case ACTION_TYPE_IF:
 			if (view) {
-				run_if_action(view, server, action);
+				run_if_action(view, action);
 			}
 			break;
 		case ACTION_TYPE_FOR_EACH: {
@@ -1255,16 +1255,16 @@ actions_run(struct view *activator, struct server *server,
 			struct view **item;
 			bool matches = false;
 			wl_array_init(&views);
-			view_array_append(server, &views, LAB_VIEW_CRITERIA_NONE);
+			view_array_append(&views, LAB_VIEW_CRITERIA_NONE);
 			wl_array_for_each(item, &views) {
-				matches |= run_if_action(*item, server, action);
+				matches |= run_if_action(*item, action);
 			}
 			wl_array_release(&views);
 			if (!matches) {
 				struct wl_list *child_actions;
 				child_actions = action_get_actionlist(action, "none");
 				if (child_actions) {
-					actions_run(view, server, child_actions, NULL);
+					actions_run(view, child_actions, NULL);
 				}
 			}
 			break;
@@ -1273,15 +1273,15 @@ actions_run(struct view *activator, struct server *server,
 			/* TODO: rename this argument to "outputName" */
 			const char *output_name =
 				action_get_str(action, "output_name", NULL);
-			output_virtual_add(server, output_name,
-					/*store_wlr_output*/ NULL);
+			output_virtual_add(output_name,
+				/*store_wlr_output*/ NULL);
 			break;
 		}
 		case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE: {
 			/* TODO: rename this argument to "outputName" */
 			const char *output_name =
 				action_get_str(action, "output_name", NULL);
-			output_virtual_remove(server, output_name);
+			output_virtual_remove(output_name);
 			break;
 		}
 		case ACTION_TYPE_AUTO_PLACE:
@@ -1328,14 +1328,14 @@ actions_run(struct view *activator, struct server *server,
 			}
 			break;
 		case ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION:
-			server->seat.cursor_scroll_wheel_emulation = true;
+			g_server.seat.cursor_scroll_wheel_emulation = true;
 			break;
 		case ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION:
-			server->seat.cursor_scroll_wheel_emulation = false;
+			g_server.seat.cursor_scroll_wheel_emulation = false;
 			break;
 		case ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION:
-			server->seat.cursor_scroll_wheel_emulation =
-				!server->seat.cursor_scroll_wheel_emulation;
+			g_server.seat.cursor_scroll_wheel_emulation =
+				!g_server.seat.cursor_scroll_wheel_emulation;
 			break;
 		case ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION:
 			rc.tablet.force_mouse_emulation = true;
@@ -1347,25 +1347,25 @@ actions_run(struct view *activator, struct server *server,
 			rc.tablet.force_mouse_emulation = !rc.tablet.force_mouse_emulation;
 			break;
 		case ACTION_TYPE_TOGGLE_MAGNIFY:
-			magnifier_toggle(server);
+			magnifier_toggle();
 			break;
 		case ACTION_TYPE_ZOOM_IN:
-			magnifier_set_scale(server, MAGNIFY_INCREASE);
+			magnifier_set_scale(MAGNIFY_INCREASE);
 			break;
 		case ACTION_TYPE_ZOOM_OUT:
-			magnifier_set_scale(server, MAGNIFY_DECREASE);
+			magnifier_set_scale(MAGNIFY_DECREASE);
 			break;
 		case ACTION_TYPE_WARP_CURSOR: {
 			const char *to = action_get_str(action, "to", "output");
 			const char *x = action_get_str(action, "x", "center");
 			const char *y = action_get_str(action, "y", "center");
-			struct output *output = output_nearest_to_cursor(server);
+			struct output *output = output_nearest_to_cursor();
 
 			warp_cursor(view, output, to, x, y);
 			break;
 		}
 		case ACTION_TYPE_HIDE_CURSOR:
-			cursor_set_visible(&server->seat, false);
+			cursor_set_visible(&g_server.seat, false);
 			break;
 		case ACTION_TYPE_INVALID:
 			wlr_log(WLR_ERROR, "Not executing unknown action");

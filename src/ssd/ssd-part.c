@@ -112,7 +112,7 @@ add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 	if (type == LAB_NODE_BUTTON_WINDOW_ICON) {
 		struct ssd_part *icon_part = add_scene_part(part_list, type);
 		struct scaled_icon_buffer *icon_buffer =
-			scaled_icon_buffer_create(parent, view->server,
+			scaled_icon_buffer_create(parent,
 				button_width - 2 * icon_padding, button_height);
 		scaled_icon_buffer_set_view(icon_buffer, view);
 		assert(icon_buffer);
