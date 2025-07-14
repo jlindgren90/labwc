@@ -5,10 +5,11 @@
 #include "common/macros.h"
 #include "common/mem.h"
 #include "common/scene-helpers.h"
+#include "config/mousebind.h"
+#include "config/touch.h"
 #include "idle.h"
 #include "input/touch.h"
 #include "labwc.h"
-#include "config/mousebind.h"
 #include "action.h"
 
 /* Holds layout -> surface offsets to report motion events in relative coords */

@@ -3,7 +3,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
-#include "common/macros.h"
 #include "common/scaled-font-buffer.h"
 #include "labwc.h"
 #include "resize-indicator.h"
@@ -15,22 +14,21 @@ resize_indicator_reconfigure_view(struct resize_indicator *indicator)
 {
 	assert(indicator->tree);
 
-	struct theme *theme = rc.theme;
 	indicator->height = font_height(&rc.font_osd)
-		+ 2 * theme->osd_window_switcher_padding
-		+ 2 * theme->osd_border_width;
+		+ 2 * g_theme.osd_window_switcher_padding
+		+ 2 * g_theme.osd_border_width;
 
 	/* Static positions */
 	wlr_scene_node_set_position(&indicator->background->node,
-		theme->osd_border_width, theme->osd_border_width);
+		g_theme.osd_border_width, g_theme.osd_border_width);
 
 	wlr_scene_node_set_position(&indicator->text->scene_buffer->node,
-		theme->osd_border_width + theme->osd_window_switcher_padding,
-		theme->osd_border_width + theme->osd_window_switcher_padding);
+		g_theme.osd_border_width + g_theme.osd_window_switcher_padding,
+		g_theme.osd_border_width + g_theme.osd_window_switcher_padding);
 
 	/* Colors */
-	wlr_scene_rect_set_color(indicator->border, theme->osd_border_color);
-	wlr_scene_rect_set_color(indicator->background, theme->osd_bg_color);
+	wlr_scene_rect_set_color(indicator->border, g_theme.osd_border_color);
+	wlr_scene_rect_set_color(indicator->background, g_theme.osd_bg_color);
 }
 
 static void
@@ -41,10 +39,10 @@ resize_indicator_init(struct view *view)
 	assert(!indicator->tree);
 
 	indicator->tree = wlr_scene_tree_create(view->scene_tree);
-	indicator->border = wlr_scene_rect_create(
-		indicator->tree, 0, 0, rc.theme->osd_border_color);
-	indicator->background = wlr_scene_rect_create(
-		indicator->tree, 0, 0, rc.theme->osd_bg_color);
+	indicator->border = wlr_scene_rect_create(indicator->tree, 0, 0,
+		g_theme.osd_border_color);
+	indicator->background = wlr_scene_rect_create(indicator->tree, 0, 0,
+		g_theme.osd_bg_color);
 	indicator->text = scaled_font_buffer_create(indicator->tree);
 
 	wlr_scene_node_set_enabled(&indicator->tree->node, false);
@@ -104,14 +102,13 @@ resize_indicator_set_size(struct resize_indicator *indicator, int width)
 	assert(indicator->tree);
 
 	/* We are not using a width-cache-early-out here to allow for theme changes */
-	indicator->width = width
-		+ 2 * rc.theme->osd_window_switcher_padding
-		+ 2 * rc.theme->osd_border_width;
+	indicator->width = width + 2 * g_theme.osd_window_switcher_padding
+		+ 2 * g_theme.osd_border_width;
 
 	wlr_scene_rect_set_size(indicator->border, indicator->width, indicator->height);
 	wlr_scene_rect_set_size(indicator->background,
-		indicator->width - 2 * rc.theme->osd_border_width,
-		indicator->height - 2 * rc.theme->osd_border_width);
+		indicator->width - 2 * g_theme.osd_border_width,
+		indicator->height - 2 * g_theme.osd_border_width);
 }
 
 void
@@ -200,7 +197,7 @@ resize_indicator_update(struct view *view)
 	wlr_scene_node_set_position(&indicator->tree->node, x, y);
 
 	scaled_font_buffer_update(indicator->text, text, width, &rc.font_osd,
-		rc.theme->osd_label_text_color, rc.theme->osd_bg_color);
+		g_theme.osd_label_text_color, g_theme.osd_bg_color);
 }
 
 void

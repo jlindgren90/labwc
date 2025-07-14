@@ -2,8 +2,8 @@
 #define _POSIX_C_SOURCE 200809L
 #include <strings.h>
 #include <wlr/util/log.h>
-#include "common/list.h"
 #include "config/rcxml.h"
+#include "config/touch.h"
 
 static struct touch_config_entry *
 find_default_config(void)

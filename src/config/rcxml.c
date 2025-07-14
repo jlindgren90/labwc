@@ -29,6 +29,7 @@
 #include "config/libinput.h"
 #include "config/mousebind.h"
 #include "config/tablet.h"
+#include "config/touch.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "osd.h"

@@ -10,6 +10,8 @@
 #include <wlr/util/log.h>
 #include "common/macros.h"
 #include "common/mem.h"
+#include "config/libinput.h"
+#include "config/touch.h"
 #include "input/ime.h"
 #include "input/tablet.h"
 #include "input/tablet-pad.h"

@@ -3,17 +3,14 @@
 #define LABWC_RCXML_H
 
 #include <stdbool.h>
-#include <stdio.h>
 #include <wayland-server-core.h>
 
 #include "common/border.h"
 #include "common/buf.h"
 #include "common/font.h"
 #include "common/three-state.h"
-#include "config/touch.h"
 #include "config/tablet.h"
 #include "config/tablet-tool.h"
-#include "config/libinput.h"
 #include "resize-indicator.h"
 #include "ssd.h"
 #include "theme.h"
@@ -121,9 +118,6 @@ struct rcxml {
 	struct font font_menuheader;
 	struct font font_menuitem;
 	struct font font_osd;
-
-	/* Pointer to current theme */
-	struct theme *theme;
 
 	/* <margin top="" bottom="" left="" right="" output="" /> */
 	struct wl_list usable_area_overrides;
