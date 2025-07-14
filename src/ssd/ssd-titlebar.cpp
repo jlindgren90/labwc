@@ -86,8 +86,7 @@ ssd_titlebar_create(struct ssd *ssd)
 		int y = (g_theme.titlebar_height - g_theme.window_button_height) / 2;
 
 		wl_list_for_each(b, &rc.title_buttons_left, link) {
-			struct lab_img **imgs =
-				g_theme.window[active].button_imgs[b->type];
+			auto imgs = g_theme.window[active].button_imgs[b->type];
 			add_scene_button(&subtree->parts, b->type, parent,
 				imgs, x, y, view);
 			x += g_theme.window_button_width
@@ -99,8 +98,7 @@ ssd_titlebar_create(struct ssd *ssd)
 		wl_list_for_each_reverse(b, &rc.title_buttons_right, link) {
 			x -= g_theme.window_button_width
 				+ g_theme.window_button_spacing;
-			struct lab_img **imgs =
-				g_theme.window[active].button_imgs[b->type];
+			auto imgs = g_theme.window[active].button_imgs[b->type];
 			add_scene_button(&subtree->parts, b->type, parent,
 				imgs, x, y, view);
 		}
