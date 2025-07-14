@@ -27,9 +27,8 @@ osd_classic_create(struct output *output, struct wl_array *views)
 {
 	assert(!output->osd_scene.tree);
 
-	struct theme *theme = g_server.theme;
 	struct window_switcher_classic_theme *switcher_theme =
-		&theme->osd_window_switcher_classic;
+		&g_theme.osd_window_switcher_classic;
 	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
 	const char *workspace_name = g_server.workspaces.current->name;
 
@@ -38,7 +37,7 @@ osd_classic_create(struct output *output, struct wl_array *views)
 		w = output->wlr_output->width * switcher_theme->width / 100;
 	}
 	int h = wl_array_len(views) * switcher_theme->item_height
-		+ 2 * rc.theme->osd_border_width + 2 * switcher_theme->padding;
+		+ 2 * g_theme.osd_border_width + 2 * switcher_theme->padding;
 	if (show_workspace) {
 		/* workspace indicator */
 		h += switcher_theme->item_height;
@@ -46,21 +45,21 @@ osd_classic_create(struct output *output, struct wl_array *views)
 
 	output->osd_scene.tree = wlr_scene_tree_create(output->osd_tree);
 
-	float *text_color = theme->osd_label_text_color;
-	float *bg_color = theme->osd_bg_color;
+	float *text_color = g_theme.osd_label_text_color;
+	float *bg_color = g_theme.osd_bg_color;
 
 	/* Draw background */
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]) {theme->osd_border_color},
+		.border_colors = (float *[1]){g_theme.osd_border_color},
 		.nr_borders = 1,
-		.border_width = theme->osd_border_width,
+		.border_width = g_theme.osd_border_width,
 		.bg_color = bg_color,
 		.width = w,
 		.height = h,
 	};
 	lab_scene_rect_create(output->osd_scene.tree, &bg_opts);
 
-	int y = theme->osd_border_width + switcher_theme->padding;
+	int y = g_theme.osd_border_width + switcher_theme->padding;
 
 	/* Draw workspace indicator */
 	if (show_workspace) {
@@ -89,7 +88,7 @@ osd_classic_create(struct output *output, struct wl_array *views)
 	int nr_fields = wl_list_length(&rc.window_switcher.fields);
 
 	/* This is the width of the area available for text fields */
-	int field_widths_sum = w - 2 * theme->osd_border_width
+	int field_widths_sum = w - 2 * g_theme.osd_border_width
 		- 2 * switcher_theme->padding
 		- 2 * switcher_theme->item_active_border_width
 		- (nr_fields + 1) * switcher_theme->item_padding_x;
@@ -121,7 +120,7 @@ osd_classic_create(struct output *output, struct wl_array *views)
 		 * |                                 |
 		 * +---------------------------------+
 		 */
-		int x = theme->osd_border_width
+		int x = g_theme.osd_border_width
 			+ switcher_theme->padding
 			+ switcher_theme->item_active_border_width
 			+ switcher_theme->item_padding_x;
@@ -167,13 +166,13 @@ osd_classic_create(struct output *output, struct wl_array *views)
 		}
 
 		/* Highlight around selected window's item */
-		int highlight_x = theme->osd_border_width
+		int highlight_x = g_theme.osd_border_width
 				+ switcher_theme->padding;
 		struct lab_scene_rect_options highlight_opts = {
-			.border_colors = (float *[1]) {text_color},
+			.border_colors = (float *[1]){text_color},
 			.nr_borders = 1,
 			.border_width = switcher_theme->item_active_border_width,
-			.width = w - 2 * theme->osd_border_width
+			.width = w - 2 * g_theme.osd_border_width
 				- 2 * switcher_theme->padding,
 			.height = switcher_theme->item_height,
 		};
