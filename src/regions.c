@@ -21,12 +21,12 @@ regions_should_snap(void)
 {
 	if (g_server.input_mode != LAB_INPUT_STATE_MOVE
 			|| wl_list_empty(&rc.regions)
-			|| g_server.seat.region_prevent_snap
+			|| g_seat.region_prevent_snap
 			|| !view_is_floating(g_server.grabbed_view)) {
 		return false;
 	}
 
-	return keyboard_get_all_modifiers(&g_server.seat);
+	return keyboard_get_all_modifiers();
 }
 
 struct region *
@@ -46,8 +46,8 @@ regions_from_name(const char *region_name, struct output *output)
 struct region *
 regions_from_cursor(void)
 {
-	double lx = g_server.seat.cursor->x;
-	double ly = g_server.seat.cursor->y;
+	double lx = g_seat.cursor->x;
+	double ly = g_seat.cursor->y;
 
 	struct wlr_output *wlr_output =
 		wlr_output_layout_output_at(g_server.output_layout, lx, ly);
@@ -81,7 +81,7 @@ regions_reconfigure_output(struct output *output)
 	/* Evacuate views and destroy current regions */
 	if (!wl_list_empty(&output->regions)) {
 		regions_evacuate_output(output);
-		regions_destroy(&g_server.seat, &output->regions);
+		regions_destroy(&output->regions);
 	}
 
 	/* Initialize regions from config */
@@ -157,14 +157,14 @@ regions_evacuate_output(struct output *output)
 }
 
 void
-regions_destroy(struct seat *seat, struct wl_list *regions)
+regions_destroy(struct wl_list *regions)
 {
 	assert(regions);
 	struct region *region, *region_tmp;
 	wl_list_for_each_safe(region, region_tmp, regions, link) {
 		wl_list_remove(&region->link);
-		if (seat && seat->overlay.active.region == region) {
-			overlay_finish(seat);
+		if (g_seat.overlay.active.region == region) {
+			overlay_finish();
 		}
 		zfree(region->name);
 		zfree(region);

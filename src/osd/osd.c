@@ -176,8 +176,8 @@ osd_begin(enum lab_cycle_dir direction)
 	g_server.osd_state.cycle_view =
 		get_next_cycle_view(g_server.osd_state.cycle_view, direction);
 
-	seat_focus_override_begin(&g_server.seat,
-		LAB_INPUT_STATE_WINDOW_SWITCHER, LAB_CURSOR_DEFAULT);
+	seat_focus_override_begin(LAB_INPUT_STATE_WINDOW_SWITCHER,
+		LAB_CURSOR_DEFAULT);
 	update_osd();
 
 	/* Update cursor, in case it is within the area covered by OSD */
@@ -198,7 +198,7 @@ void
 osd_finish(void)
 {
 	restore_preview_node();
-	seat_focus_override_end(&g_server.seat);
+	seat_focus_override_end();
 
 	g_server.osd_state.preview_node = NULL;
 	g_server.osd_state.preview_anchor = NULL;
