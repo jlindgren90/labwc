@@ -27,9 +27,9 @@ struct touch_point {
 	struct wl_list link; /* seat.touch_points */
 };
 
-static struct wlr_surface*
-touch_get_coords(struct seat *seat, struct wlr_touch *touch, double x, double y,
-		double *x_offset, double *y_offset)
+static struct wlr_surface *
+touch_get_coords(struct wlr_touch *touch, double x, double y, double *x_offset,
+		double *y_offset)
 {
 	/*
 	 * Do not return a surface when mouse emulation is enforced. Not
@@ -58,8 +58,8 @@ touch_get_coords(struct seat *seat, struct wlr_touch *touch, double x, double y,
 
 	/* Convert coordinates: first [0, 1] => layout, then layout => surface */
 	double lx, ly;
-	wlr_cursor_absolute_to_layout_coords(seat->cursor, &touch->base,
-		x, y, &lx, &ly);
+	wlr_cursor_absolute_to_layout_coords(g_seat.cursor, &touch->base, x, y,
+		&lx, &ly);
 
 	double sx, sy;
 	struct wlr_scene_node *node =
@@ -71,7 +71,7 @@ touch_get_coords(struct seat *seat, struct wlr_touch *touch, double x, double y,
 	/* Find the surface and return it if it accepts touch events */
 	struct wlr_surface *surface = lab_wlr_surface_from_node(node);
 
-	if (surface && !wlr_surface_accepts_touch(surface, seat->seat)) {
+	if (surface && !wlr_surface_accepts_touch(surface, g_seat.seat)) {
 		surface = NULL;
 	}
 	return surface;
@@ -80,37 +80,40 @@ touch_get_coords(struct seat *seat, struct wlr_touch *touch, double x, double y,
 static void
 handle_touch_motion(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, touch_motion);
 	struct wlr_touch_motion_event *event = data;
 
-	idle_manager_notify_activity(seat->seat);
+	idle_manager_notify_activity(g_seat.seat);
 
-	int touch_point_count = wl_list_length(&seat->touch_points);
+	int touch_point_count = wl_list_length(&g_seat.touch_points);
 
 	/* Find existing touch point to determine initial offsets to subtract */
 	struct touch_point *touch_point;
-	wl_list_for_each(touch_point, &seat->touch_points, link) {
+	wl_list_for_each(touch_point, &g_seat.touch_points, link) {
 		if (touch_point->touch_id == event->touch_id) {
 			if (touch_point->surface) {
 				/* Convert coordinates: first [0, 1] => layout */
 				double lx, ly;
-				wlr_cursor_absolute_to_layout_coords(seat->cursor,
-					&event->touch->base, event->x, event->y, &lx, &ly);
+				wlr_cursor_absolute_to_layout_coords(
+					g_seat.cursor, &event->touch->base,
+					event->x, event->y, &lx, &ly);
 
 				/* Apply offsets to get surface coords before reporting event */
 				double sx = lx - touch_point->x_offset;
 				double sy = ly - touch_point->y_offset;
 
 				if (touch_point_count == 1) {
-					wlr_cursor_warp_absolute(seat->cursor, &event->touch->base,
-						event->x, event->y);
+					wlr_cursor_warp_absolute(g_seat.cursor,
+						&event->touch->base, event->x,
+						event->y);
 				}
-				wlr_seat_touch_notify_motion(seat->seat, event->time_msec,
-					event->touch_id, sx, sy);
+				wlr_seat_touch_notify_motion(g_seat.seat,
+					event->time_msec, event->touch_id, sx,
+					sy);
 			} else {
 				if (touch_point_count == 1) {
-					cursor_emulate_move_absolute(seat, &event->touch->base,
-						event->x, event->y, event->time_msec);
+					cursor_emulate_move_absolute(
+						&event->touch->base, event->x,
+						event->y, event->time_msec);
 				}
 			}
 			return;
@@ -121,42 +124,39 @@ handle_touch_motion(struct wl_listener *listener, void *data)
 static void
 handle_touch_frame(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, touch_frame);
-
-	wlr_seat_touch_notify_frame(seat->seat);
+	wlr_seat_touch_notify_frame(g_seat.seat);
 }
 
 static void
 handle_touch_down(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, touch_down);
 	struct wlr_touch_down_event *event = data;
 
-	idle_manager_notify_activity(seat->seat);
+	idle_manager_notify_activity(g_seat.seat);
 
 	/* Compute layout => surface offset and save for this touch point */
 	struct touch_point *touch_point = znew(*touch_point);
 	double x_offset = 0.0, y_offset = 0.0;
-	touch_point->surface = touch_get_coords(seat, event->touch,
-			event->x, event->y, &x_offset, &y_offset);
+	touch_point->surface = touch_get_coords(event->touch, event->x,
+		event->y, &x_offset, &y_offset);
 	touch_point->touch_id = event->touch_id;
 	touch_point->x_offset = x_offset;
 	touch_point->y_offset = y_offset;
 
-	wl_list_insert(&seat->touch_points, &touch_point->link);
-	int touch_point_count = wl_list_length(&seat->touch_points);
+	wl_list_insert(&g_seat.touch_points, &touch_point->link);
+	int touch_point_count = wl_list_length(&g_seat.touch_points);
 
 	/* hide the cursor when starting touch input */
-	cursor_set_visible(seat, /* visible */ false);
+	cursor_set_visible(/* visible */ false);
 
 	if (touch_point->surface) {
-		seat_pointer_end_grab(seat, touch_point->surface);
+		seat_pointer_end_grab(touch_point->surface);
 		/* Clear focus to not interfere with touch input */
-		wlr_seat_pointer_notify_clear_focus(seat->seat);
+		wlr_seat_pointer_notify_clear_focus(g_seat.seat);
 
 		/* Convert coordinates: first [0, 1] => layout */
 		double lx, ly;
-		wlr_cursor_absolute_to_layout_coords(seat->cursor,
+		wlr_cursor_absolute_to_layout_coords(g_seat.cursor,
 			&event->touch->base, event->x, event->y, &lx, &ly);
 
 		/* Apply offsets to get surface coords before reporting event */
@@ -174,17 +174,17 @@ handle_touch_down(struct wl_listener *listener, void *data)
 		}
 
 		if (touch_point_count == 1) {
-			wlr_cursor_warp_absolute(seat->cursor, &event->touch->base,
-				event->x, event->y);
+			wlr_cursor_warp_absolute(g_seat.cursor,
+				&event->touch->base, event->x, event->y);
 		}
-		wlr_seat_touch_notify_down(seat->seat, touch_point->surface,
+		wlr_seat_touch_notify_down(g_seat.seat, touch_point->surface,
 			event->time_msec, event->touch_id, sx, sy);
 	} else {
 		if (touch_point_count == 1) {
-			cursor_emulate_move_absolute(seat, &event->touch->base,
+			cursor_emulate_move_absolute(&event->touch->base,
 				event->x, event->y, event->time_msec);
 		}
-		cursor_emulate_button(seat, BTN_LEFT, WL_POINTER_BUTTON_STATE_PRESSED,
+		cursor_emulate_button(BTN_LEFT, WL_POINTER_BUTTON_STATE_PRESSED,
 			event->time_msec);
 	}
 }
@@ -192,21 +192,21 @@ handle_touch_down(struct wl_listener *listener, void *data)
 static void
 handle_touch_up(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, touch_up);
 	struct wlr_touch_up_event *event = data;
 
-	idle_manager_notify_activity(seat->seat);
+	idle_manager_notify_activity(g_seat.seat);
 
 	/* Remove the touch point from the seat */
 	struct touch_point *touch_point, *tmp;
-	wl_list_for_each_safe(touch_point, tmp, &seat->touch_points, link) {
+	wl_list_for_each_safe(touch_point, tmp, &g_seat.touch_points, link) {
 		if (touch_point->touch_id == event->touch_id) {
 			if (touch_point->surface) {
-				wlr_seat_touch_notify_up(seat->seat, event->time_msec,
-					event->touch_id);
+				wlr_seat_touch_notify_up(g_seat.seat,
+					event->time_msec, event->touch_id);
 			} else {
-				cursor_emulate_button(seat, BTN_LEFT,
-					WL_POINTER_BUTTON_STATE_RELEASED, event->time_msec);
+				cursor_emulate_button(BTN_LEFT,
+					WL_POINTER_BUTTON_STATE_RELEASED,
+					event->time_msec);
 				ssd_update_button_hover(NULL,
 					g_server.ssd_hover_state);
 			}
@@ -218,19 +218,19 @@ handle_touch_up(struct wl_listener *listener, void *data)
 }
 
 void
-touch_init(struct seat *seat)
+touch_init(void)
 {
-	CONNECT_SIGNAL(seat->cursor, seat, touch_down);
-	CONNECT_SIGNAL(seat->cursor, seat, touch_up);
-	CONNECT_SIGNAL(seat->cursor, seat, touch_motion);
-	CONNECT_SIGNAL(seat->cursor, seat, touch_frame);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, touch_down);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, touch_up);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, touch_motion);
+	CONNECT_SIGNAL(g_seat.cursor, &g_seat, touch_frame);
 }
 
 void
-touch_finish(struct seat *seat)
+touch_finish(void)
 {
-	wl_list_remove(&seat->touch_down.link);
-	wl_list_remove(&seat->touch_up.link);
-	wl_list_remove(&seat->touch_motion.link);
-	wl_list_remove(&seat->touch_frame.link);
+	wl_list_remove(&g_seat.touch_down.link);
+	wl_list_remove(&g_seat.touch_up.link);
+	wl_list_remove(&g_seat.touch_motion.link);
+	wl_list_remove(&g_seat.touch_frame.link);
 }

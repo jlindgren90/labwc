@@ -516,12 +516,10 @@ view_set_activated(struct view *view, bool activated)
 		if (!activated) {
 			/* Store configured keyboard layout per view */
 			view->keyboard_layout =
-				g_server.seat.keyboard_group->keyboard.modifiers
-					.group;
+				g_seat.keyboard_group->keyboard.modifiers.group;
 		} else {
 			/* Switch to previously stored keyboard layout */
-			keyboard_update_layout(&g_server.seat,
-				view->keyboard_layout);
+			keyboard_update_layout(view->keyboard_layout);
 		}
 	}
 	set_adaptive_sync_fullscreen(view);
@@ -676,8 +674,8 @@ view_move_to_cursor(struct view *view)
 	geo.width += margin.left + margin.right;
 	geo.height += margin.top + margin.bottom;
 
-	int x = g_server.seat.cursor->x - (geo.width / 2);
-	int y = g_server.seat.cursor->y - (geo.height / 2);
+	int x = g_seat.cursor->x - (geo.width / 2);
+	int y = g_seat.cursor->y - (geo.height / 2);
 
 	struct wlr_box usable = output_usable_area_in_layout_coords(pending_output);
 
@@ -2419,9 +2417,9 @@ view_toggle_keybinds(struct view *view)
 	assert(view);
 	view->inhibits_keybinds = !view->inhibits_keybinds;
 	if (view->inhibits_keybinds) {
-		g_server.seat.nr_inhibited_keybind_views++;
+		g_seat.nr_inhibited_keybind_views++;
 	} else {
-		g_server.seat.nr_inhibited_keybind_views--;
+		g_seat.nr_inhibited_keybind_views--;
 	}
 
 	if (view->ssd_enabled) {
@@ -2591,8 +2589,8 @@ view_destroy(struct view *view)
 		g_server.session_lock_manager->last_active_view = NULL;
 	}
 
-	if (g_server.seat.pressed.view == view) {
-		seat_reset_pressed(&g_server.seat);
+	if (g_seat.pressed.view == view) {
+		seat_reset_pressed();
 	}
 
 	if (view->tiled_region_evacuate) {
@@ -2601,7 +2599,7 @@ view_destroy(struct view *view)
 
 	if (view->inhibits_keybinds) {
 		view->inhibits_keybinds = false;
-		g_server.seat.nr_inhibited_keybind_views--;
+		g_seat.nr_inhibited_keybind_views--;
 	}
 
 	osd_on_view_destroy(view);

@@ -139,23 +139,23 @@ get_special(struct wlr_scene_node *node)
 	if (node == &g_server.xdg_popup_tree->node) {
 		return "g_server.xdg_popup_tree";
 	}
-	if (node == &g_server.seat.drag.icons->node) {
-		return "seat->drag.icons";
+	if (node == &g_seat.drag.icons->node) {
+		return "g_seat.drag.icons";
 	}
-	if (g_server.seat.overlay.region_rect.tree
-			&& node == &g_server.seat.overlay.region_rect.tree->node) {
+	if (g_seat.overlay.region_rect.tree
+			&& node == &g_seat.overlay.region_rect.tree->node) {
 		/* Created on-demand */
-		return "seat->overlay.region_rect";
+		return "g_seat.overlay.region_rect";
 	}
-	if (g_server.seat.overlay.edge_rect.tree
-			&& node == &g_server.seat.overlay.edge_rect.tree->node) {
+	if (g_seat.overlay.edge_rect.tree
+			&& node == &g_seat.overlay.edge_rect.tree->node) {
 		/* Created on-demand */
-		return "seat->overlay.edge_rect";
+		return "g_seat.overlay.edge_rect";
 	}
-	if (g_server.seat.input_method_relay->popup_tree
-			&& node == &g_server.seat.input_method_relay->popup_tree->node) {
+	if (g_seat.input_method_relay->popup_tree
+			&& node == &g_seat.input_method_relay->popup_tree->node) {
 		/* Created on-demand */
-		return "seat->im_relay->popup_tree";
+		return "g_seat.im_relay->popup_tree";
 	}
 	if (g_server.osd_state.preview_outline
 			&& node == &g_server.osd_state.preview_outline->tree->node) {
@@ -225,9 +225,9 @@ dump_tree(struct wlr_scene_node *node, int pos, int x, int y)
 	struct lab_scene_rect *osd_preview_outline =
 		g_server.osd_state.preview_outline;
 	struct lab_scene_rect *region_snapping_overlay_outline =
-		g_server.seat.overlay.region_rect.border_rect;
+		g_seat.overlay.region_rect.border_rect;
 	struct lab_scene_rect *edge_snapping_overlay_outline =
-		g_server.seat.overlay.edge_rect.border_rect;
+		g_seat.overlay.edge_rect.border_rect;
 	if ((IGNORE_MENU && node == &g_server.menu_tree->node)
 			|| (IGNORE_SSD && last_view
 				&& ssd_debug_is_root_node(last_view->ssd, node))
