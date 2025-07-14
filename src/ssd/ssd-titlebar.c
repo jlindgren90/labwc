@@ -30,7 +30,7 @@ void
 ssd_titlebar_create(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
 
@@ -64,7 +64,7 @@ ssd_titlebar_create(struct ssd *ssd)
 		 * TODO: remove once https://gitlab.freedesktop.org/wlroots/wlroots/-/issues/3990
 		 * is solved
 		 */
-		if (wlr_renderer_is_pixman(view->server->renderer)) {
+		if (wlr_renderer_is_pixman(g_server.renderer)) {
 			wlr_scene_buffer_set_filter_mode(
 				bg_scene_buffer, WLR_SCALE_FILTER_NEAREST);
 		}
@@ -155,7 +155,7 @@ set_squared_corners(struct ssd *ssd, bool enable)
 	struct view *view = ssd->view;
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 
 	struct ssd_part *part;
 	struct ssd_sub_tree *subtree;
@@ -217,7 +217,7 @@ static void
 update_visible_buttons(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 	int width = MAX(view->current.width - 2 * theme->window_titlebar_padding_width, 0);
 	int button_width = theme->window_button_width;
 	int button_spacing = theme->window_button_spacing;
@@ -272,7 +272,7 @@ ssd_titlebar_update(struct ssd *ssd)
 	struct view *view = ssd->view;
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
@@ -377,7 +377,7 @@ static void
 ssd_update_title_positions(struct ssd *ssd, int offset_left, int offset_right)
 {
 	struct view *view = ssd->view;
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 	int width = view->current.width;
 	int title_bg_width = width - offset_left - offset_right;
 
@@ -433,9 +433,9 @@ static void
 get_title_offsets(struct ssd *ssd, int *offset_left, int *offset_right)
 {
 	struct ssd_sub_tree *subtree = &ssd->titlebar.active;
-	int button_width = ssd->view->server->theme->window_button_width;
-	int button_spacing = ssd->view->server->theme->window_button_spacing;
-	int padding_width = ssd->view->server->theme->window_titlebar_padding_width;
+	int button_width = g_server.theme->window_button_width;
+	int button_spacing = g_server.theme->window_button_spacing;
+	int padding_width = g_server.theme->window_titlebar_padding_width;
 	*offset_left = padding_width;
 	*offset_right = padding_width;
 
@@ -467,7 +467,7 @@ ssd_update_title(struct ssd *ssd)
 		return;
 	}
 
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 	struct ssd_state_title *state = &ssd->state.title;
 	bool title_unchanged = state->text && !strcmp(title, state->text);
 
