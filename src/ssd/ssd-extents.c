@@ -24,10 +24,10 @@ void
 ssd_extents_create(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	struct theme *theme = g_server.theme;
 	struct wl_list *part_list = &ssd->extents.parts;
 
-	int border_width = MAX(0, MAX(rc.resize_minimum_area, theme->border_width));
+	int border_width =
+		MAX(0, MAX(rc.resize_minimum_area, g_theme.border_width));
 
 	ssd->extents.tree = wlr_scene_tree_create(ssd->tree);
 	struct wlr_scene_tree *parent = ssd->extents.tree;
@@ -63,14 +63,14 @@ ssd_extents_update(struct ssd *ssd)
 		return;
 	}
 
-	struct theme *theme = g_server.theme;
-
 	int width = view->current.width;
 	int height = view_effective_height(view, /* use_pending */ false);
-	int full_height = height + theme->border_width * 2 + ssd->titlebar.height;
-	int full_width = width + 2 * theme->border_width;
-	int border_width = MAX(rc.resize_minimum_area, theme->border_width);
-	int extended_area = MAX(0, rc.resize_minimum_area - theme->border_width);
+	int full_height =
+		height + g_theme.border_width * 2 + ssd->titlebar.height;
+	int full_width = width + 2 * g_theme.border_width;
+	int border_width = MAX(rc.resize_minimum_area, g_theme.border_width);
+	int extended_area =
+		MAX(0, rc.resize_minimum_area - g_theme.border_width);
 
 	struct wlr_box part_box;
 	struct wlr_box result_box;
