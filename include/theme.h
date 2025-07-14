@@ -10,7 +10,7 @@
 
 #include <cairo.h>
 #include <wlr/render/wlr_renderer.h>
-#include "buffer.h"
+#include "img/img.h"
 #include "ssd.h"
 
 struct lab_img;
@@ -109,8 +109,7 @@ struct theme {
 		 *
 		 * Elements in buttons[0] are all NULL since LAB_SSD_BUTTON_FIRST is 1.
 		 */
-		struct lab_img *button_imgs
-			[LAB_SSD_BUTTON_LAST + 1][LAB_BS_ALL + 1];
+		lab_img button_imgs[LAB_SSD_BUTTON_LAST + 1][LAB_BS_ALL + 1];
 
 		/*
 		 * The titlebar background is specified as a cairo_pattern
