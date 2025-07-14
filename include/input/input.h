@@ -4,7 +4,7 @@
 
 struct seat;
 
-void input_handlers_init(struct seat *seat);
-void input_handlers_finish(struct seat *seat);
+void input_handlers_init(void);
+void input_handlers_finish(void);
 
 #endif /* LABWC_INPUT_H */

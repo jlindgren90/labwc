@@ -93,7 +93,7 @@ reload_config_and_theme(void)
 static int
 handle_sighup(int signal, void *data)
 {
-	keyboard_cancel_all_keybind_repeats(&g_server.seat);
+	keyboard_cancel_all_keybind_repeats();
 	session_environment_init();
 	reload_config_and_theme();
 	output_virtual_update_fallback();
@@ -655,7 +655,7 @@ server_init(void)
 	wlr_fractional_scale_manager_v1_create(g_server.wl_display,
 		LAB_WLR_FRACTIONAL_SCALE_V1_VERSION);
 
-	idle_manager_create(g_server.wl_display, g_server.seat.seat);
+	idle_manager_create(g_server.wl_display, g_seat.seat);
 
 	g_server.relative_pointer_manager =
 		wlr_relative_pointer_manager_v1_create(g_server.wl_display);

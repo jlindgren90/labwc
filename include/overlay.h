@@ -35,15 +35,15 @@ struct overlay {
 	struct wl_event_source *timer;
 };
 
-void overlay_reconfigure(struct seat *seat);
+void overlay_reconfigure(void);
 
 /* Calls overlay_hide() internally if there's no overlay to show */
-void overlay_update(struct seat *seat);
+void overlay_update(void);
 
 /* This function must be called when server->grabbed_view is destroyed */
-void overlay_hide(struct seat *seat);
+void overlay_hide(void);
 
 /* This function is called to clean up the timer on exit */
-void overlay_finish(struct seat *seat);
+void overlay_finish(void);
 
 #endif

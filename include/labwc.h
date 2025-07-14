@@ -4,9 +4,6 @@
 #include "config.h"
 #include <getopt.h>
 #include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/backend.h>
@@ -44,7 +41,6 @@
 #include <wlr/util/log.h>
 #include "common/set.h"
 #include "config/keybind.h"
-#include "config/rcxml.h"
 #include "input/cursor.h"
 #include "overlay.h"
 #include "regions.h"
@@ -70,7 +66,6 @@ enum input_mode {
 
 struct input {
 	struct wlr_input_device *wlr_input_device;
-	struct seat *seat;
 	/* Set for pointer/touch devices */
 	double scroll_factor;
 	struct wl_listener destroy;
@@ -284,7 +279,6 @@ struct server {
 	struct wl_list views;
 	struct wl_list unmanaged_surfaces;
 
-	struct seat seat;
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
 	bool direct_scanout_enabled;
@@ -439,7 +433,6 @@ struct output {
 #undef LAB_NR_LAYERS
 
 struct constraint {
-	struct seat *seat;
 	struct wlr_pointer_constraint_v1 *constraint;
 	struct wl_listener destroy;
 };
@@ -452,6 +445,7 @@ struct constraint {
  * Accessing them indirectly through pointers embedded in every other
  * struct just adds noise to the code.
  */
+extern struct seat g_seat;
 extern struct server g_server;
 
 void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
@@ -488,7 +482,7 @@ void desktop_focus_view(struct view *view, bool raise);
  * desktop_focus_view_or_surface() - like desktop_focus_view() but can
  * also focus other (e.g. xwayland-unmanaged) surfaces
  */
-void desktop_focus_view_or_surface(struct seat *seat, struct view *view,
+void desktop_focus_view_or_surface(struct view *view,
 	struct wlr_surface *surface, bool raise);
 
 void desktop_arrange_all_views(void);
@@ -514,20 +508,20 @@ void desktop_focus_topmost_view(void);
 void seat_init(void);
 void seat_finish(void);
 void seat_reconfigure(void);
-void seat_focus_surface(struct seat *seat, struct wlr_surface *surface);
+void seat_focus_surface(struct wlr_surface *surface);
 
-void seat_pointer_end_grab(struct seat *seat, struct wlr_surface *surface);
+void seat_pointer_end_grab(struct wlr_surface *surface);
 
 /**
  * seat_focus_lock_surface() - ONLY to be called from session-lock.c to
  * focus lock screen surfaces. Use seat_focus_surface() otherwise.
  */
-void seat_focus_lock_surface(struct seat *seat, struct wlr_surface *surface);
+void seat_focus_lock_surface(struct wlr_surface *surface);
 
-void seat_set_focus_layer(struct seat *seat, struct wlr_layer_surface_v1 *layer);
-void seat_set_pressed(struct seat *seat, struct cursor_context *ctx);
-void seat_reset_pressed(struct seat *seat);
-void seat_output_layout_changed(struct seat *seat);
+void seat_set_focus_layer(struct wlr_layer_surface_v1 *layer);
+void seat_set_pressed(struct cursor_context *ctx);
+void seat_reset_pressed(void);
+void seat_output_layout_changed(void);
 
 /*
  * Temporarily clear the pointer/keyboard focus from the client at the
@@ -535,13 +529,13 @@ void seat_output_layout_changed(struct seat *seat);
  * The focus is kept cleared until seat_focus_override_end() is called or
  * layer-shell/session-lock surfaces are mapped.
  */
-void seat_focus_override_begin(struct seat *seat, enum input_mode input_mode,
+void seat_focus_override_begin(enum input_mode input_mode,
 	enum lab_cursors cursor_shape);
 /*
  * Restore the pointer/keyboard focus which was cleared in
  * seat_focus_override_begin().
  */
-void seat_focus_override_end(struct seat *seat);
+void seat_focus_override_end(void);
 
 /**
  * interactive_anchor_to_cursor() - repositions the geometry to remain
@@ -558,7 +552,7 @@ void interactive_begin(struct view *view, enum input_mode mode, uint32_t edges);
 void interactive_finish(struct view *view);
 void interactive_cancel(struct view *view);
 /* Possibly returns VIEW_EDGE_CENTER if <topMaximize> is yes */
-enum view_edge edge_from_cursor(struct seat *seat, struct output **dest_output);
+enum view_edge edge_from_cursor(struct output **dest_output);
 
 void output_init(void);
 void output_finish(void);

@@ -2115,7 +2115,7 @@ rcxml_finish(void)
 		zfree(w);
 	}
 
-	regions_destroy(NULL, &rc.regions);
+	regions_destroy(&rc.regions);
 
 	clear_window_switcher_fields();
 
