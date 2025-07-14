@@ -215,25 +215,21 @@ load_button(struct button *b, int active)
 	 */
 	auto &rounded_img = button_imgs[b->type][b->state_set | LAB_BS_ROUNDED];
 
-	struct title_button *leftmost_button;
-	wl_list_for_each(leftmost_button,
-			&rc.title_buttons_left, link) {
-		if (leftmost_button->type == b->type) {
+	if (!rc.title_buttons_left.empty()) {
+		auto leftmost_button = rc.title_buttons_left.front();
+		if (leftmost_button == b->type) {
 			rounded_img = img;
 			rounded_img.modifiers.push_back(
 				round_left_corner_button);
 		}
-		break;
 	}
-	struct title_button *rightmost_button;
-	wl_list_for_each_reverse(rightmost_button,
-			&rc.title_buttons_right, link) {
-		if (rightmost_button->type == b->type) {
+	if (!rc.title_buttons_right.empty()) { // note: right-to-left
+		auto rightmost_button = rc.title_buttons_right.front();
+		if (rightmost_button == b->type) {
 			rounded_img = img;
 			rounded_img.modifiers.push_back(
 				round_right_corner_button);
 		}
-		break;
 	}
 }
 

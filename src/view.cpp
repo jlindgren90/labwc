@@ -2271,8 +2271,8 @@ view_reload_ssd(struct view *view)
 int
 view_get_min_width(void)
 {
-	int button_count_left = wl_list_length(&rc.title_buttons_left);
-	int button_count_right =  wl_list_length(&rc.title_buttons_right);
+	int button_count_left = rc.title_buttons_left.size();
+	int button_count_right = rc.title_buttons_right.size();
 	return (g_theme.window_button_width
 			* (button_count_left + button_count_right))
 		+ (g_theme.window_button_spacing
