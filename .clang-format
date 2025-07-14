@@ -11,13 +11,21 @@ BasedOnStyle: LLVM
 UseTab: Always
 IndentWidth: 8
 ContinuationIndentWidth: 8
+AccessModifierOffset: -8
 AlignAfterOpenBracket: DontAlign
+AlignOperands: false
 AlwaysBreakAfterDefinitionReturnType: true
+AlwaysBreakTemplateDeclarations: Yes
 BreakBeforeBinaryOperators: NonAssignment
 BreakBeforeBraces: Linux
 IndentCaseLabels: false
+PenaltyBreakOpenParenthesis: 100
+PenaltyReturnTypeOnItsOwnLine: 500
+SortIncludes: false
+SpaceAfterTemplateKeyword: false
 SpaceBeforeParens: ControlStatementsExceptControlMacros
 ForEachMacros: ['for_each_view',
+                'for_each_view_reverse',
                 'wl_array_for_each',
                 'wl_list_for_each',
                 'wl_list_for_each_reverse',
