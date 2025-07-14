@@ -16,7 +16,6 @@ struct wlr_keyboard_key_event;
  * an active text-input is present, the relay passes messages between them.
  */
 struct input_method_relay {
-	struct seat *seat;
 	struct wl_list text_inputs; /* struct text_input.link */
 	struct wlr_input_method_v2 *input_method;
 	struct wlr_surface *focused_surface;
@@ -80,7 +79,7 @@ bool input_method_keyboard_grab_forward_key(struct keyboard *keyboard,
  */
 bool input_method_keyboard_grab_forward_modifiers(struct keyboard *keyboard);
 
-struct input_method_relay *input_method_relay_create(struct seat *seat);
+struct input_method_relay *input_method_relay_create(void);
 
 void input_method_relay_finish(struct input_method_relay *relay);
 
