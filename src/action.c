@@ -682,8 +682,8 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 		return;
 	}
 
-	int x = g_server.seat.cursor->x;
-	int y = g_server.seat.cursor->y;
+	int x = g_seat.cursor->x;
+	int y = g_seat.cursor->y;
 
 	/* The client menu needs an active client */
 	bool is_client_menu = !strcasecmp(menu_name, "client-menu");
@@ -712,8 +712,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 	 */
 	if (pos_x && pos_y) {
 		struct output *output =
-			output_nearest_to(g_server.seat.cursor->x,
-				g_server.seat.cursor->y);
+			output_nearest_to(g_seat.cursor->x, g_seat.cursor->y);
 		struct wlr_box usable = output_usable_area_in_layout_coords(output);
 
 		if (!strcasecmp(pos_x, "center")) {
@@ -859,7 +858,7 @@ warp_cursor(struct view *view, struct output *output, const char *to, const char
 			target_area.y + target_area.height + offset_y;
 	}
 
-	wlr_cursor_warp(g_server.seat.cursor, NULL, goto_x, goto_y);
+	wlr_cursor_warp(g_seat.cursor, NULL, goto_x, goto_y);
 	cursor_update_focus();
 }
 
@@ -1059,7 +1058,7 @@ actions_run(struct view *activator, struct wl_list *actions,
 			}
 			break;
 		case ACTION_TYPE_UNFOCUS:
-			seat_focus_surface(&g_server.seat, NULL);
+			seat_focus_surface(NULL);
 			break;
 		case ACTION_TYPE_ICONIFY:
 			if (view) {
@@ -1083,8 +1082,9 @@ actions_run(struct view *activator, struct wl_list *actions,
 			break;
 		case ACTION_TYPE_RESIZE:
 			if (view) {
-				uint32_t resize_edges = cursor_get_resize_edges(
-					g_server.seat.cursor, &ctx);
+				uint32_t resize_edges =
+					cursor_get_resize_edges(g_seat.cursor,
+						&ctx);
 				interactive_begin(view, LAB_INPUT_STATE_RESIZE,
 					resize_edges);
 			}
@@ -1326,14 +1326,14 @@ actions_run(struct view *activator, struct wl_list *actions,
 			}
 			break;
 		case ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION:
-			g_server.seat.cursor_scroll_wheel_emulation = true;
+			g_seat.cursor_scroll_wheel_emulation = true;
 			break;
 		case ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION:
-			g_server.seat.cursor_scroll_wheel_emulation = false;
+			g_seat.cursor_scroll_wheel_emulation = false;
 			break;
 		case ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION:
-			g_server.seat.cursor_scroll_wheel_emulation =
-				!g_server.seat.cursor_scroll_wheel_emulation;
+			g_seat.cursor_scroll_wheel_emulation =
+				!g_seat.cursor_scroll_wheel_emulation;
 			break;
 		case ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION:
 			rc.tablet.force_mouse_emulation = true;
@@ -1363,7 +1363,7 @@ actions_run(struct view *activator, struct wl_list *actions,
 			break;
 		}
 		case ACTION_TYPE_HIDE_CURSOR:
-			cursor_set_visible(&g_server.seat, false);
+			cursor_set_visible(false);
 			break;
 		case ACTION_TYPE_INVALID:
 			wlr_log(WLR_ERROR, "Not executing unknown action");
