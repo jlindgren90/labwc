@@ -2,7 +2,15 @@
 #ifndef LABWC_GRAPHIC_HELPERS_H
 #define LABWC_GRAPHIC_HELPERS_H
 
+#include <memory>
 #include <cairo.h>
+
+struct cairo_pattern_deleter {
+	void operator()(cairo_pattern_t *p) { cairo_pattern_destroy(p); }
+};
+
+using cairo_pattern_ptr =
+	std::unique_ptr<cairo_pattern_t, cairo_pattern_deleter>;
 
 struct wlr_fbox;
 
