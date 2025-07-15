@@ -216,7 +216,7 @@ match_keybinding_for_sym(uint32_t modifiers, xkb_keysym_t sym,
 		if (g_seat.nr_inhibited_keybind_views && g_server.active_view
 				&& g_server.active_view->inhibits_keybinds
 				&& !actions_contain_toggle_keybinds(
-					&keybind->actions)) {
+					keybind->actions)) {
 			continue;
 		}
 		if (sym == XKB_KEY_NoSymbol) {
@@ -516,7 +516,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 				cur_keybind = NULL;
 				return LAB_KEY_HANDLED_TRUE;
 			}
-			actions_run(NULL, &cur_keybind->actions, NULL);
+			actions_run(NULL, cur_keybind->actions, NULL);
 			return LAB_KEY_HANDLED_TRUE;
 		} else {
 			return handle_key_release(event->keycode);
@@ -559,7 +559,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 		 */
 		key_state_store_pressed_key_as_bound(event->keycode);
 		if (!cur_keybind->on_release) {
-			actions_run(NULL, &cur_keybind->actions, NULL);
+			actions_run(NULL, cur_keybind->actions, NULL);
 		}
 		return LAB_KEY_HANDLED_TRUE;
 	}
