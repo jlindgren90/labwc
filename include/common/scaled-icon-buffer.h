@@ -2,47 +2,42 @@
 #ifndef LABWC_SCALED_ICON_BUFFER_H
 #define LABWC_SCALED_ICON_BUFFER_H
 
-#include <stdbool.h>
-#include <string>
-#include <wayland-server-core.h>
 #include "common/reflist.h"
 #include "common/str.h"
+#include "scaled-scene-buffer.h"
 
-struct lab_data_buffer;
-struct wlr_scene_tree;
 struct wlr_scene_node;
-struct wlr_scene_buffer;
 
-struct scaled_icon_buffer {
-	struct scaled_scene_buffer *scaled_buffer;
-	struct wlr_scene_buffer *scene_buffer;
-	/* for window icon */
-	struct view *view;
-	std::string view_app_id;
-	std::string view_icon_name;
-	bool view_icon_prefer_client;
+/* Auto scaling icon buffer, providing a wlr_scene_buffer node for display */
+struct scaled_icon_buffer : public scaled_scene_buffer {
+	// for window icon
+	refptr<struct view> view;
+	lab_str view_app_id;
+	lab_str view_icon_name;
+	bool view_icon_prefer_client = false;
 	reflist<lab_data_buffer> view_icon_buffers;
-	struct {
-		struct wl_listener new_app_id;
-		struct wl_listener new_title;
-		struct wl_listener set_icon;
-		struct wl_listener destroy;
-	} on_view;
-	/* for general icon (e.g. in menus) */
+	// for general icon (e.g. in menus)
 	lab_str icon_name;
 
-	int width;
-	int height;
-};
+	int width = 0;
+	int height = 0;
 
-/*
- * Create an auto scaling icon buffer, providing a wlr_scene_buffer node for
- * display. It gets destroyed automatically when the backing scaled_scene_buffer
- * is being destroyed which in turn happens automatically when the backing
- * wlr_scene_buffer (or one of its parents) is being destroyed.
- */
-struct scaled_icon_buffer *scaled_icon_buffer_create(
-	struct wlr_scene_tree *parent, int width, int height);
+	scaled_icon_buffer(wlr_scene_tree *parent, int width, int height);
+
+	lab_data_buffer_ptr create_buffer(double scale) override;
+	bool equal(scaled_scene_buffer &other) override;
+
+	// view listeners
+	void handle_new_app_id(void *);
+	void handle_new_title(void *);
+	void handle_set_icon(void *);
+	void handle_destroy(void *);
+
+	DECLARE_LISTENER(scaled_icon_buffer, new_app_id);
+	DECLARE_LISTENER(scaled_icon_buffer, new_title);
+	DECLARE_LISTENER(scaled_icon_buffer, set_icon);
+	DECLARE_LISTENER(scaled_icon_buffer, destroy);
+};
 
 void scaled_icon_buffer_set_view(struct scaled_icon_buffer *self,
 	struct view *view);
