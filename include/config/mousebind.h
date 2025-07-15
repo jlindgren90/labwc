@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <wayland-util.h>
+#include "action.h"
 #include "common/scene-types.h"
 
 enum mouse_event {
@@ -38,7 +39,7 @@ struct mousebind {
 
 	/* ex: doubleclick, press, drag */
 	enum mouse_event mouse_event;
-	struct wl_list actions;  /* struct action.link */
+	std::vector<action> actions;
 
 	struct wl_list link;     /* struct rcxml.mousebinds */
 	bool pressed_in_context; /* used in click events */

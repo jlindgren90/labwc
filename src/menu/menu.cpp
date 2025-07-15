@@ -79,7 +79,7 @@ menu_create(struct menu *parent, const char *id, const char *label)
 		wlr_log(WLR_ERROR, "menu id %s already exists", id);
 	}
 
-	struct menu *menu = znew(*menu);
+	auto menu = new ::menu{};
 	wl_list_append(&g_server.menus, &menu->link);
 
 	wl_list_init(&menu->menuitems);
@@ -105,24 +105,27 @@ menu_get_by_id(const char *id)
 	return NULL;
 }
 
+static bool
+is_invalid_action(action &action)
+{
+	bool is_show_menu = (action.type == ACTION_TYPE_SHOW_MENU);
+	if (!action.is_valid() || is_show_menu) {
+		if (is_show_menu) {
+			wlr_log(WLR_ERROR, "'ShowMenu' action is"
+				" not allowed in menu items");
+		}
+		wlr_log(WLR_ERROR, "Removed invalid menu action");
+		return true; // invalid
+	}
+	return false; // valid
+}
+
 static void
 validate_menu(struct menu *menu)
 {
 	struct menuitem *item;
-	struct action *action, *action_tmp;
 	wl_list_for_each(item, &menu->menuitems, link) {
-		wl_list_for_each_safe(action, action_tmp, &item->actions, link) {
-			bool is_show_menu = action_is_show_menu(action);
-			if (!action_is_valid(action) || is_show_menu) {
-				if (is_show_menu) {
-					wlr_log(WLR_ERROR, "'ShowMenu' action is"
-						" not allowed in menu items");
-				}
-				wl_list_remove(&action->link);
-				action_free(action);
-				wlr_log(WLR_ERROR, "Removed invalid menu action");
-			}
-		}
+		lab::remove_if(item->actions, is_invalid_action);
 	}
 }
 
@@ -141,7 +144,7 @@ item_create(struct menu *menu, const char *text, bool show_arrow)
 	assert(menu);
 	assert(text);
 
-	struct menuitem *menuitem = znew(*menuitem);
+	auto menuitem = new ::menuitem{};
 	menuitem->parent = menu;
 	menuitem->selectable = true;
 	menuitem->type = LAB_MENU_ITEM;
@@ -154,7 +157,6 @@ item_create(struct menu *menu, const char *text, bool show_arrow)
 	}
 
 	wl_list_append(&menu->menuitems, &menuitem->link);
-	wl_list_init(&menuitem->actions);
 	return menuitem;
 }
 
@@ -262,7 +264,7 @@ item_create_scene(struct menuitem *menuitem, int *item_y)
 static struct menuitem *
 separator_create(struct menu *menu, const char *label)
 {
-	struct menuitem *menuitem = znew(*menuitem);
+	auto menuitem = new ::menuitem{};
 	menuitem->parent = menu;
 	menuitem->selectable = false;
 	menuitem->type = string_null_or_empty(label) ? LAB_MENU_SEPARATOR_LINE
@@ -273,7 +275,6 @@ separator_create(struct menu *menu, const char *label)
 	}
 
 	wl_list_append(&menu->menuitems, &menuitem->link);
-	wl_list_init(&menuitem->actions);
 	return menuitem;
 }
 
@@ -480,15 +481,12 @@ fill_item(struct menu_parse_context *ctx, const char *nodename,
 		}
 #endif
 	} else if (!strcmp(nodename, "name.action")) {
-		ctx->action = action_create(content);
-		if (ctx->action) {
-			wl_list_append(&ctx->item->actions, &ctx->action->link);
-		}
+		ctx->action = action::append_new(ctx->item->actions, content);
 	} else if (!ctx->action) {
 		wlr_log(WLR_ERROR, "expect <action name=\"\"> element first. "
 			"nodename: '%s' content: '%s'", nodename, content);
 	} else {
-		action_arg_from_xml_node(ctx->action, nodename, content);
+		ctx->action->add_arg_from_xml_node(nodename, content);
 	}
 }
 
@@ -496,13 +494,12 @@ static void
 item_destroy(struct menuitem *item)
 {
 	wl_list_remove(&item->link);
-	action_list_free(&item->actions);
 	if (item->tree) {
 		wlr_scene_node_destroy(&item->tree->node);
 	}
 	free(item->text);
 	free(item->icon_name);
-	free(item);
+	delete item;
 }
 
 /*
@@ -878,14 +875,15 @@ menu_reposition(struct menu *menu, struct wlr_box anchor_rect)
 		rules.gravity = XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT;
 	}
 	/* Flip or slide the menu when it overflows from the output */
-	rules.constraint_adjustment =
-		XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_X
-		| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X
-		| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_Y;
+	rules.constraint_adjustment = (xdg_positioner_constraint_adjustment)
+		(XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_X
+			| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X
+			| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_Y);
 	if (!menu->parent) {
 		/* Allow vertically flipping the root menu */
-		rules.constraint_adjustment |=
-			XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y;
+		rules.constraint_adjustment = (xdg_positioner_constraint_adjustment)
+			(rules.constraint_adjustment
+				| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y);
 	}
 
 	struct wlr_box box;
@@ -1171,7 +1169,7 @@ menu_free(struct menu *menu)
 	zfree(menu->label);
 	zfree(menu->icon_name);
 	zfree(menu->execute);
-	zfree(menu);
+	delete menu;
 }
 
 void
@@ -1205,7 +1203,7 @@ menu_on_view_destroy(struct view *view)
 		wl_list_for_each(item, &menu->menuitems, link) {
 			if (item->client_list_view == view) {
 				item->client_list_view = NULL;
-				action_list_free(&item->actions);
+				item->actions.clear();
 			}
 		}
 	}
@@ -1360,7 +1358,7 @@ pipemenu_ctx_destroy(struct menu_pipe_context *ctx)
 static int
 handle_pipemenu_timeout(void *_ctx)
 {
-	struct menu_pipe_context *ctx = _ctx;
+	auto ctx = (menu_pipe_context *)_ctx;
 	wlr_log(WLR_ERROR, "[pipemenu %ld] timeout reached, killing %s",
 		(long)ctx->pid, ctx->pipemenu->execute);
 	kill(ctx->pid, SIGTERM);
@@ -1371,7 +1369,7 @@ handle_pipemenu_timeout(void *_ctx)
 static int
 handle_pipemenu_readable(int fd, uint32_t mask, void *_ctx)
 {
-	struct menu_pipe_context *ctx = _ctx;
+	auto ctx = (menu_pipe_context *)_ctx;
 	/* two 4k pages + 1 NULL byte */
 	char data[8193];
 	ssize_t size;
@@ -1566,9 +1564,9 @@ menu_execute_item(struct menuitem *item)
 	 */
 	if (!strcmp(item->parent->id, "client-list-combined-menu")
 			&& item->client_list_view) {
-		actions_run(item->client_list_view, &item->actions, NULL);
+		actions_run(item->client_list_view, item->actions, NULL);
 	} else {
-		actions_run(item->parent->triggered_by_view, &item->actions,
+		actions_run(item->parent->triggered_by_view, item->actions,
 			NULL);
 	}
 
