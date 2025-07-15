@@ -3,8 +3,8 @@
 #define LABWC_MOUSEBIND_H
 
 #include <wayland-util.h>
+#include "action.h"
 #include "ssd.h"
-#include "config/keybind.h"
 
 enum mouse_event {
 	MOUSE_ACTION_NONE = 0,
@@ -38,7 +38,7 @@ struct mousebind {
 
 	/* ex: doubleclick, press, drag */
 	enum mouse_event mouse_event;
-	struct wl_list actions;  /* struct action.link */
+	std::vector<action> actions;
 
 	struct wl_list link;     /* struct rcxml.mousebinds */
 	bool pressed_in_context; /* used in click events */
