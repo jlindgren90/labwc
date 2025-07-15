@@ -4,22 +4,17 @@
 
 #include <wayland-util.h>
 #include <xkbcommon/xkbcommon.h>
-
-#define MAX_KEYSYMS 32
-#define MAX_KEYCODES 16
-
-struct server;
+#include "action.h"
+#include "common/alg.h"
 
 struct keybind {
 	uint32_t modifiers;
-	xkb_keysym_t *keysyms;
-	size_t keysyms_len;
+	std::vector<xkb_keysym_t> keysyms;
 	bool use_syms_only;
-	xkb_keycode_t keycodes[MAX_KEYCODES];
-	size_t keycodes_len;
+	std::vector<xkb_keycode_t> keycodes;
 	int keycodes_layout;
 	bool allow_when_locked;
-	struct wl_list actions;  /* struct action.link */
+	std::vector<action> actions;
 	struct wl_list link;     /* struct rcxml.keybinds */
 	bool on_release;
 };
@@ -29,8 +24,6 @@ struct keybind {
  * @keybind: key combination
  */
 struct keybind *keybind_create(const char *keybind);
-
-void keybind_destroy(struct keybind *keybind);
 
 /**
  * parse_modifier - parse a string containing a single modifier name (e.g. "S")

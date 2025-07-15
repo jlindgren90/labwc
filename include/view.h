@@ -289,22 +289,28 @@ struct view : public destroyable, public ref_guarded<view>, public view_data {
 };
 
 struct view_query {
-	struct wl_list link;
-	char *identifier;
-	char *title;
+	lab_str identifier;
+	lab_str title;
 	enum lab_window_type window_type;
-	char *sandbox_engine;
-	char *sandbox_app_id;
+	lab_str sandbox_engine;
+	lab_str sandbox_app_id;
 	enum lab_tristate shaded;
 	enum view_axis maximized;
 	enum lab_tristate iconified;
 	enum lab_tristate focused;
 	enum lab_tristate omnipresent;
 	enum lab_edge tiled;
-	char *tiled_region;
-	char *desktop;
+	lab_str tiled_region;
+	lab_str desktop;
 	enum lab_ssd_mode decoration;
-	char *monitor;
+	lab_str monitor;
+
+	static view_query create() {
+		return {
+			.window_type = LAB_WINDOW_TYPE_INVALID,
+			.maximized = VIEW_AXIS_INVALID
+		};
+	}
 };
 
 struct xdg_toplevel_view : public view {
@@ -353,19 +359,6 @@ extern reflist<view> g_views;
  * wlr_surface, or NULL if the surface has no associated view.
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
-
-/**
- * view_query_create() - Create a new heap allocated view query with
- * all members initialized to their default values (window_type = -1,
- * NULL for strings)
- */
-struct view_query *view_query_create(void);
-
-/**
- * view_query_free() - Free a given view query
- * @query: Query to be freed.
- */
-void view_query_free(struct view_query *view);
 
 /**
  * view_matches_query() - Check if view matches the given criteria

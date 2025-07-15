@@ -71,29 +71,6 @@ security_context_from_view(struct view *view)
 	return NULL;
 }
 
-struct view_query *
-view_query_create(void)
-{
-	struct view_query *query = znew(*query);
-	query->window_type = LAB_WINDOW_TYPE_INVALID;
-	query->maximized = VIEW_AXIS_INVALID;
-	return query;
-}
-
-void
-view_query_free(struct view_query *query)
-{
-	wl_list_remove(&query->link);
-	zfree(query->identifier);
-	zfree(query->title);
-	zfree(query->sandbox_engine);
-	zfree(query->sandbox_app_id);
-	zfree(query->tiled_region);
-	zfree(query->desktop);
-	zfree(query->monitor);
-	zfree(query);
-}
-
 static bool
 query_tristate_match(enum lab_tristate desired, bool actual)
 {
@@ -119,11 +96,13 @@ query_str_match(const char *condition, const char *value)
 bool
 view_matches_query(struct view *view, struct view_query *query)
 {
-	if (!query_str_match(query->identifier, view_get_string_prop(view, "app_id"))) {
+	if (!query_str_match(query->identifier.c(),
+			view_get_string_prop(view, "app_id"))) {
 		return false;
 	}
 
-	if (!query_str_match(query->title, view_get_string_prop(view, "title"))) {
+	if (!query_str_match(query->title.c(),
+			view_get_string_prop(view, "title"))) {
 		return false;
 	}
 
@@ -140,11 +119,11 @@ view_matches_query(struct view *view, struct view_query *query)
 			return false;
 		}
 
-		if (!query_str_match(query->sandbox_engine, ctx->sandbox_engine)) {
+		if (!query_str_match(query->sandbox_engine.c(), ctx->sandbox_engine)) {
 			return false;
 		}
 
-		if (!query_str_match(query->sandbox_app_id, ctx->app_id)) {
+		if (!query_str_match(query->sandbox_app_id.c(), ctx->app_id)) {
 			return false;
 		}
 	}
@@ -176,7 +155,7 @@ view_matches_query(struct view *view, struct view_query *query)
 
 	const char *tiled_region =
 		view->tiled_region ? view->tiled_region->name : NULL;
-	if (!query_str_match(query->tiled_region, tiled_region)) {
+	if (!query_str_match(query->tiled_region.c(), tiled_region)) {
 		return false;
 	}
 
@@ -184,15 +163,15 @@ view_matches_query(struct view *view, struct view_query *query)
 		const char *view_workspace = view->workspace->name;
 		struct workspace *current = g_server.workspaces.current;
 
-		if (!strcasecmp(query->desktop, "other")) {
+		if (!strcasecmp(query->desktop.c(), "other")) {
 			/* "other" means the view is NOT on the current desktop */
 			if (!strcasecmp(view_workspace, current->name)) {
 				return false;
 			}
 		} else {
 			// TODO: perhaps wrap "left" and "right" workspaces
-			struct workspace *target =
-				workspaces_find(current, query->desktop, /* wrap */ false);
+			struct workspace *target = workspaces_find(current,
+				query->desktop.c(), /* wrap */ false);
 			if (!target || strcasecmp(view_workspace, target->name)) {
 				return false;
 			}
@@ -207,18 +186,21 @@ view_matches_query(struct view *view, struct view_query *query)
 	if (query->monitor) {
 		struct output *current = output_nearest_to_cursor();
 
-		if (!strcasecmp(query->monitor, "current") && current != view->output) {
+		if (!strcasecmp(query->monitor.c(), "current")
+				&& current != view->output) {
 			return false;
 		}
-		if (!strcasecmp(query->monitor, "left") &&
-			output_get_adjacent(current, LAB_EDGE_LEFT, false) != view->output) {
+		if (!strcasecmp(query->monitor.c(), "left")
+				&& output_get_adjacent(current, LAB_EDGE_LEFT, false)
+					!= view->output) {
 			return false;
 		}
-		if (!strcasecmp(query->monitor, "right") &&
-			output_get_adjacent(current, LAB_EDGE_RIGHT, false) != view->output) {
+		if (!strcasecmp(query->monitor.c(), "right")
+				&& output_get_adjacent(current, LAB_EDGE_RIGHT, false)
+					!= view->output) {
 			return false;
 		}
-		if (output_from_name(query->monitor) != view->output) {
+		if (output_from_name(query->monitor.c()) != view->output) {
 			return false;
 		}
 	}

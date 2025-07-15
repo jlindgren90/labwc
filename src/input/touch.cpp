@@ -169,7 +169,7 @@ handle_touch_down(struct wl_listener *listener, void *data)
 			if (mousebind->mouse_event == MOUSE_ACTION_PRESS
 					&& mousebind->button == BTN_LEFT
 					&& mousebind->context == LAB_NODE_CLIENT) {
-				actions_run(view, &mousebind->actions, NULL);
+				actions_run(view, mousebind->actions, NULL);
 			}
 		}
 
