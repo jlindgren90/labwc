@@ -609,7 +609,8 @@ cursor_process_motion(uint32_t time, double *sx, double *sy)
 	struct mousebind *mousebind;
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ctx.type == LAB_NODE_CLIENT
-				&& view_inhibits_actions(ctx.view, &mousebind->actions)) {
+				&& view_inhibits_actions(ctx.view,
+					mousebind->actions)) {
 			continue;
 		}
 		if (mousebind->mouse_event == MOUSE_ACTION_DRAG
@@ -620,7 +621,7 @@ cursor_process_motion(uint32_t time, double *sx, double *sy)
 			 * moving/resizing the wrong view
 			 */
 			mousebind->pressed_in_context = false;
-			actions_run(g_seat.pressed.view, &mousebind->actions,
+			actions_run(g_seat.pressed.view, mousebind->actions,
 				&g_seat.pressed);
 		}
 	}
@@ -941,7 +942,8 @@ process_release_mousebinding(struct cursor_context *ctx, uint32_t button)
 
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ctx->type == LAB_NODE_CLIENT
-				&& view_inhibits_actions(ctx->view, &mousebind->actions)) {
+				&& view_inhibits_actions(ctx->view,
+					mousebind->actions)) {
 			continue;
 		}
 		if (node_type_contains(mousebind->context, ctx->type)
@@ -958,7 +960,7 @@ process_release_mousebinding(struct cursor_context *ctx, uint32_t button)
 			default:
 				continue;
 			}
-			actions_run(ctx->view, &mousebind->actions, ctx);
+			actions_run(ctx->view, mousebind->actions, ctx);
 		}
 	}
 }
@@ -1011,7 +1013,8 @@ process_press_mousebinding(struct cursor_context *ctx, uint32_t button)
 
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ctx->type == LAB_NODE_CLIENT
-				&& view_inhibits_actions(ctx->view, &mousebind->actions)) {
+				&& view_inhibits_actions(ctx->view,
+					mousebind->actions)) {
 			continue;
 		}
 		if (node_type_contains(mousebind->context, ctx->type)
@@ -1046,7 +1049,7 @@ process_press_mousebinding(struct cursor_context *ctx, uint32_t button)
 			}
 			consumed_by_frame_context |= mousebind->context == LAB_NODE_FRAME;
 			consumed_by_frame_context |= mousebind->context == LAB_NODE_ALL;
-			actions_run(ctx->view, &mousebind->actions, ctx);
+			actions_run(ctx->view, mousebind->actions, ctx);
 		}
 	}
 	return consumed_by_frame_context;
@@ -1323,7 +1326,8 @@ process_cursor_axis(enum wl_pointer_axis orientation, double delta,
 		struct mousebind *mousebind;
 		wl_list_for_each(mousebind, &rc.mousebinds, link) {
 			if (ctx.type == LAB_NODE_CLIENT
-					&& view_inhibits_actions(ctx.view, &mousebind->actions)) {
+					&& view_inhibits_actions(ctx.view,
+						mousebind->actions)) {
 				continue;
 			}
 			if (node_type_contains(mousebind->context, ctx.type)
@@ -1337,7 +1341,7 @@ process_cursor_axis(enum wl_pointer_axis orientation, double delta,
 				 */
 				if (info.run_action) {
 					actions_run(ctx.view,
-						&mousebind->actions, &ctx);
+						mousebind->actions, &ctx);
 				}
 			}
 		}

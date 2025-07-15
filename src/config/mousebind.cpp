@@ -6,7 +6,6 @@
 #include <strings.h>
 #include <wlr/util/log.h>
 #include "common/list.h"
-#include "common/mem.h"
 #include "config/keybind.h"
 #include "config/rcxml.h"
 
@@ -121,11 +120,10 @@ mousebind_create(const char *context)
 		wlr_log(WLR_ERROR, "mousebind context not specified");
 		return NULL;
 	}
-	struct mousebind *m = znew(*m);
+	auto m = new mousebind();
 	m->context = node_type_parse(context);
 	if (m->context != LAB_NODE_NONE) {
 		wl_list_append(&rc.mousebinds, &m->link);
 	}
-	wl_list_init(&m->actions);
 	return m;
 }
