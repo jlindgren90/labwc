@@ -3,6 +3,7 @@
 #define LABWC_MENU_H
 
 #include <wayland-server.h>
+#include "action.h"
 
 /* forward declare arguments */
 struct view;
@@ -19,7 +20,7 @@ enum menuitem_type {
 };
 
 struct menuitem {
-	struct wl_list actions;
+	std::vector<action> actions;
 	char *text;
 	char *icon_name;
 	const char *arrow;
