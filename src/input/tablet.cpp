@@ -662,7 +662,7 @@ handle_tablet_tool_button(struct wl_listener *listener, void *data)
 				if (mousebind->mouse_event == MOUSE_ACTION_PRESS
 						&& mousebind->button == button
 						&& mousebind->context == LAB_NODE_CLIENT) {
-					actions_run(view, &mousebind->actions,
+					actions_run(view, mousebind->actions,
 						NULL);
 				}
 			}
