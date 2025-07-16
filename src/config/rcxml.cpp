@@ -532,7 +532,8 @@ fill_keybind(char *nodename, char *content, struct parser_state *state)
 	}
 	string_truncate_at_pattern(nodename, ".keybind.keyboard");
 	if (!strcmp(nodename, "key")) {
-		state->current_keybind = keybind_create(content);
+		state->current_keybind =
+			keybind_append_new(rc.keybinds, content);
 		state->current_keybind_action = NULL;
 		/*
 		 * If an invalid keybind has been provided,
@@ -588,7 +589,8 @@ fill_mousebind(char *nodename, char *content, struct parser_state *state)
 	} else if (!strcmp(nodename, "mousebind.context.mouse")) {
 		wlr_log(WLR_INFO, "create mousebind for %s",
 			state->current_mouse_context);
-		state->current_mousebind = mousebind_create(state->current_mouse_context);
+		state->current_mousebind = mousebind_append_new(rc.mousebinds,
+			state->current_mouse_context);
 		state->current_mousebind_action = NULL;
 		return;
 	} else if (!content) {
@@ -1513,8 +1515,6 @@ rcxml_init(void)
 
 	if (!has_run) {
 		wl_list_init(&rc.usable_area_overrides);
-		wl_list_init(&rc.keybinds);
-		wl_list_init(&rc.mousebinds);
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
 		wl_list_init(&rc.regions);
@@ -1609,14 +1609,10 @@ rcxml_init(void)
 static void
 load_default_key_bindings(void)
 {
-	struct keybind *k;
 	for (int i = 0; key_combos[i].binding; i++) {
 		struct key_combos *current = &key_combos[i];
-		k = keybind_create(current->binding);
-		if (!k) {
-			continue;
-		}
-
+		auto k = keybind_append_new(rc.keybinds, current->binding);
+		assert(k);
 		auto action = action::append_new(k->actions, current->action);
 		assert(action);
 
@@ -1636,7 +1632,7 @@ static void
 load_default_mouse_bindings(void)
 {
 	uint32_t count = 0;
-	struct mousebind *m;
+	mousebind *m = nullptr;
 	for (int i = 0; mouse_combos[i].context; i++) {
 		struct mouse_combos *current = &mouse_combos[i];
 		if (i == 0
@@ -1644,7 +1640,10 @@ load_default_mouse_bindings(void)
 				|| strcmp(current->button, mouse_combos[i - 1].button)
 				|| strcmp(current->event, mouse_combos[i - 1].event)) {
 			/* Create new mousebind */
-			m = mousebind_create(current->context);
+			m = mousebind_append_new(rc.mousebinds,
+				current->context);
+			assert(m);
+
 			m->mouse_event = mousebind_event_from_str(current->event);
 			if (m->mouse_event == MOUSE_ACTION_SCROLL) {
 				m->direction = mousebind_direction_from_str(current->button,
@@ -1675,29 +1674,29 @@ load_default_mouse_bindings(void)
 static void
 deduplicate_mouse_bindings(void)
 {
-	uint32_t replaced = 0;
-	uint32_t cleared = 0;
-	struct mousebind *current, *tmp, *existing;
-	wl_list_for_each_safe(existing, tmp, &rc.mousebinds, link) {
-		wl_list_for_each_reverse(current, &rc.mousebinds, link) {
-			if (existing == current) {
-				break;
-			}
-			if (mousebind_the_same(existing, current)) {
-				wl_list_remove(&existing->link);
-				delete existing;
-				replaced++;
-				break;
-			}
+	// move to temp list, removing duplicates
+	std::vector<mousebind> tmp;
+	auto end = rc.mousebinds.end();
+	for (auto iter = rc.mousebinds.begin(); iter != end; ++iter) {
+		auto dup = std::find_if(iter + 1, end, [&](mousebind &m) {
+			return mousebind_the_same(*iter, m);
+		});
+		if (dup == end) {
+			tmp.push_back(std::move(*iter));
 		}
 	}
-	wl_list_for_each_safe(current, tmp, &rc.mousebinds, link) {
-		if (current->actions.empty()) {
-			wl_list_remove(&current->link);
-			delete current;
-			cleared++;
-		}
-	}
+
+	uint32_t replaced = rc.mousebinds.size() - tmp.size();
+
+	// move back to original list, removing empty
+	rc.mousebinds.clear();
+	std::copy_if(std::move_iterator(tmp.begin()),
+		std::move_iterator(tmp.end()),
+		std::back_inserter(rc.mousebinds),
+		[](const mousebind &m) { return !m.actions.empty(); });
+
+	uint32_t cleared = tmp.size() - rc.mousebinds.size();
+
 	if (replaced) {
 		wlr_log(WLR_DEBUG, "Replaced %u mousebinds", replaced);
 	}
@@ -1709,29 +1708,28 @@ deduplicate_mouse_bindings(void)
 static void
 deduplicate_key_bindings(void)
 {
-	uint32_t replaced = 0;
-	uint32_t cleared = 0;
-	struct keybind *current, *tmp, *existing;
-	wl_list_for_each_safe(existing, tmp, &rc.keybinds, link) {
-		wl_list_for_each_reverse(current, &rc.keybinds, link) {
-			if (existing == current) {
-				break;
-			}
-			if (keybind_the_same(existing, current)) {
-				wl_list_remove(&existing->link);
-				delete existing;
-				replaced++;
-				break;
-			}
+	// move to temp list, removing duplicates
+	std::vector<keybind> tmp;
+	auto end = rc.keybinds.end();
+	for (auto iter = rc.keybinds.begin(); iter != end; ++iter) {
+		auto dup = std::find_if(iter + 1, end, [&](keybind &k) {
+			return keybind_the_same(*iter, k);
+		});
+		if (dup == end) {
+			tmp.push_back(std::move(*iter));
 		}
 	}
-	wl_list_for_each_safe(current, tmp, &rc.keybinds, link) {
-		if (current->actions.empty()) {
-			wl_list_remove(&current->link);
-			delete current;
-			cleared++;
-		}
-	}
+
+	uint32_t replaced = rc.keybinds.size() - tmp.size();
+
+	// move back to original list, removing empty
+	rc.keybinds.clear();
+	std::copy_if(std::move_iterator(tmp.begin()),
+		std::move_iterator(tmp.end()), std::back_inserter(rc.keybinds),
+		[](const keybind &k) { return !k.actions.empty(); });
+
+	uint32_t cleared = tmp.size() - rc.keybinds.size();
+
 	if (replaced) {
 		wlr_log(WLR_DEBUG, "Replaced %u keybinds", replaced);
 	}
@@ -1769,12 +1767,12 @@ load_default_window_switcher_fields(void)
 static void
 post_processing(void)
 {
-	if (!wl_list_length(&rc.keybinds)) {
+	if (rc.keybinds.empty()) {
 		wlr_log(WLR_INFO, "load default key bindings");
 		load_default_key_bindings();
 	}
 
-	if (!wl_list_length(&rc.mousebinds)) {
+	if (rc.mousebinds.empty()) {
 		wlr_log(WLR_INFO, "load default mouse bindings");
 		load_default_mouse_bindings();
 	}
@@ -1891,14 +1889,12 @@ is_invalid_action(action &action)
 static void
 validate_actions(void)
 {
-	struct keybind *keybind;
-	wl_list_for_each(keybind, &rc.keybinds, link) {
-		lab::remove_if(keybind->actions, is_invalid_action);
+	for (auto &keybind : rc.keybinds) {
+		lab::remove_if(keybind.actions, is_invalid_action);
 	}
 
-	struct mousebind *mousebind;
-	wl_list_for_each(mousebind, &rc.mousebinds, link) {
-		lab::remove_if(mousebind->actions, is_invalid_action);
+	for (auto &mousebind : rc.mousebinds) {
+		lab::remove_if(mousebind.actions, is_invalid_action);
 	}
 
 	struct window_rule *rule;
@@ -2043,17 +2039,8 @@ rcxml_finish(void)
 		zfree(area);
 	}
 
-	struct keybind *k, *k_tmp;
-	wl_list_for_each_safe(k, k_tmp, &rc.keybinds, link) {
-		wl_list_remove(&k->link);
-		delete k;
-	}
-
-	struct mousebind *m, *m_tmp;
-	wl_list_for_each_safe(m, m_tmp, &rc.mousebinds, link) {
-		wl_list_remove(&m->link);
-		delete m;
-	}
+	rc.keybinds.clear();
+	rc.mousebinds.clear();
 
 	struct touch_config_entry *touch_config, *touch_config_tmp;
 	wl_list_for_each_safe(touch_config, touch_config_tmp, &rc.touch_configs, link) {

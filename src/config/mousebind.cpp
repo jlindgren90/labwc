@@ -5,7 +5,6 @@
 #include <linux/input-event-codes.h>
 #include <strings.h>
 #include <wlr/util/log.h>
-#include "common/list.h"
 #include "config/keybind.h"
 #include "config/rcxml.h"
 
@@ -155,27 +154,28 @@ context_from_str(const char *str)
 }
 
 bool
-mousebind_the_same(struct mousebind *a, struct mousebind *b)
+mousebind_the_same(mousebind &a, mousebind &b)
 {
-	assert(a && b);
-	return a->context == b->context
-		&& a->button == b->button
-		&& a->direction == b->direction
-		&& a->mouse_event == b->mouse_event
-		&& a->modifiers == b->modifiers;
+	return a.context == b.context
+		&& a.button == b.button
+		&& a.direction == b.direction
+		&& a.mouse_event == b.mouse_event
+		&& a.modifiers == b.modifiers;
 }
 
 struct mousebind *
-mousebind_create(const char *context)
+mousebind_append_new(std::vector<mousebind> &mousebinds, const char *context)
 {
 	if (!context) {
 		wlr_log(WLR_ERROR, "mousebind context not specified");
-		return NULL;
+		return nullptr;
 	}
-	auto m = new mousebind{};
-	m->context = context_from_str(context);
-	if (m->context != LAB_NODE_NONE) {
-		wl_list_append(&rc.mousebinds, &m->link);
+
+	lab_node_type parsed = context_from_str(context);
+	if (parsed == LAB_NODE_NONE) {
+		return nullptr;
 	}
-	return m;
+
+	mousebinds.push_back(mousebind{.context = parsed});
+	return &mousebinds.back();
 }
