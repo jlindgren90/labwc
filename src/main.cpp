@@ -16,6 +16,7 @@
 #include "regions.h"
 #include "ssd-internal.h"
 #include "theme.h"
+#include "window-rules.h"
 #include "xwayland.h"
 
 /*
