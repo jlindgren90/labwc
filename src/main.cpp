@@ -15,6 +15,7 @@
 #include "menu/menu.h"
 #include "regions.h"
 #include "theme.h"
+#include "window-rules.h"
 #include "xwayland.h"
 
 /*
