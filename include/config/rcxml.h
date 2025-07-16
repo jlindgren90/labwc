@@ -17,6 +17,7 @@
 
 struct keybind;
 struct mousebind;
+struct window_rule;
 
 enum view_placement_policy {
 	LAB_PLACE_INVALID = 0,
@@ -189,7 +190,7 @@ struct rcxml {
 		struct wl_list fields;  /* struct window_switcher_field.link */
 	} window_switcher;
 
-	struct wl_list window_rules; /* struct window_rule.link */
+	std::vector<window_rule> window_rules;
 
 	/* Menu */
 	unsigned int menu_ignore_button_release_period;
