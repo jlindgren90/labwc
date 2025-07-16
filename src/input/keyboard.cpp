@@ -208,27 +208,26 @@ static struct keybind *
 match_keybinding_for_sym(uint32_t modifiers, xkb_keysym_t sym,
 		xkb_keycode_t xkb_keycode)
 {
-	struct keybind *keybind;
-	wl_list_for_each(keybind, &rc.keybinds, link) {
-		if (modifiers ^ keybind->modifiers) {
+	for (auto &keybind : rc.keybinds) {
+		if (modifiers ^ keybind.modifiers) {
 			continue;
 		}
 		if (g_seat.nr_inhibited_keybind_views && g_server.active_view
 				&& g_server.active_view->inhibits_keybinds
 				&& !actions_contain_toggle_keybinds(
-					keybind->actions)) {
+					keybind.actions)) {
 			continue;
 		}
 		if (sym == XKB_KEY_NoSymbol) {
 			/* Use keycodes */
-			if (keybind_contains_keycode(keybind, xkb_keycode)) {
-				return keybind;
+			if (keybind_contains_keycode(&keybind, xkb_keycode)) {
+				return &keybind;
 			}
 		} else {
 			/* Use syms */
-			if (keybind_contains_keysym(keybind,
+			if (keybind_contains_keysym(&keybind,
 					xkb_keysym_to_lower(sym))) {
-				return keybind;
+				return &keybind;
 			}
 		}
 	}

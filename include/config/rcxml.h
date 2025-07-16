@@ -41,6 +41,8 @@ enum tiling_events_mode {
 };
 
 struct buf;
+struct keybind;
+struct mousebind;
 
 struct button_map_entry {
 	uint32_t from;
@@ -103,11 +105,11 @@ struct rcxml {
 	int repeat_delay;
 	enum lab_tristate kb_numlock_enable;
 	bool kb_layout_per_window;
-	struct wl_list keybinds;   /* struct keybind.link */
+	std::vector<keybind> keybinds;
 
 	/* mouse */
 	long doubleclick_time;     /* in ms */
-	struct wl_list mousebinds; /* struct mousebind.link */
+	std::vector<mousebind> mousebinds;
 
 	/* touch tablet */
 	struct wl_list touch_configs;
