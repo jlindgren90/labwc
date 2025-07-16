@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/types/wlr_keyboard_group.h>
-#include <wlr/util/log.h>
-#include "common/list.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 
@@ -33,10 +31,9 @@ parse_modifier(const char *symname)
 }
 
 bool
-keybind_the_same(struct keybind *a, struct keybind *b)
+keybind_the_same(keybind &a, keybind &b)
 {
-	assert(a && b);
-	return (a->modifiers == b->modifiers) && (a->keysyms == b->keysyms);
+	return (a.modifiers == b.modifiers) && (a.keysyms == b.keysyms);
 }
 
 bool
@@ -68,29 +65,29 @@ keybind_contains_any_keysym(struct keybind *keybind,
 static void
 update_keycodes_iter(struct xkb_keymap *keymap, xkb_keycode_t key, void *data)
 {
-	struct keybind *keybind;
 	const xkb_keysym_t *syms;
 	xkb_layout_index_t layout = *(xkb_layout_index_t *)data;
 	int nr_syms = xkb_keymap_key_get_syms_by_level(keymap, key, layout, 0, &syms);
 	if (!nr_syms) {
 		return;
 	}
-	wl_list_for_each(keybind, &rc.keybinds, link) {
-		if (keybind->keycodes_layout >= 0
-				&& (xkb_layout_index_t)keybind->keycodes_layout != layout) {
+	for (auto &keybind : rc.keybinds) {
+		if (keybind.keycodes_layout >= 0
+				&& (xkb_layout_index_t)keybind.keycodes_layout
+					!= layout) {
 			/* Prevent storing keycodes from multiple layouts */
 			continue;
 		}
-		if (keybind->use_syms_only) {
+		if (keybind.use_syms_only) {
 			continue;
 		}
-		if (keybind_contains_any_keysym(keybind, syms, nr_syms)) {
-			if (keybind_contains_keycode(keybind, key)) {
+		if (keybind_contains_any_keysym(&keybind, syms, nr_syms)) {
+			if (keybind_contains_keycode(&keybind, key)) {
 				/* Prevent storing the same keycode twice */
 				continue;
 			}
-			keybind->keycodes.push_back(key);
-			keybind->keycodes_layout = layout;
+			keybind.keycodes.push_back(key);
+			keybind.keycodes_layout = layout;
 		}
 	}
 }
@@ -101,10 +98,9 @@ keybind_update_keycodes(void)
 	struct xkb_state *state = g_seat.keyboard_group->keyboard.xkb_state;
 	struct xkb_keymap *keymap = xkb_state_get_keymap(state);
 
-	struct keybind *keybind;
-	wl_list_for_each(keybind, &rc.keybinds, link) {
-		keybind->keycodes.clear();
-		keybind->keycodes_layout = -1;
+	for (auto &keybind : rc.keybinds) {
+		keybind.keycodes.clear();
+		keybind.keycodes_layout = -1;
 	}
 	xkb_layout_index_t layouts = xkb_keymap_num_layouts(keymap);
 	for (xkb_layout_index_t i = 0; i < layouts; i++) {
@@ -113,10 +109,10 @@ keybind_update_keycodes(void)
 	}
 }
 
-struct keybind *
-keybind_create(const char *keybind)
+keybind *
+keybind_append_new(std::vector<keybind> &keybinds, const char *keybind)
 {
-	auto k = new struct keybind();
+	struct keybind k = {};
 	gchar **symnames = g_strsplit(keybind, "-", -1);
 	for (size_t i = 0; symnames[i]; i++) {
 		const char *symname = symnames[i];
@@ -141,7 +137,7 @@ keybind_create(const char *keybind)
 		}
 		uint32_t modifier = parse_modifier(symname);
 		if (modifier != 0) {
-			k->modifiers |= modifier;
+			k.modifiers |= modifier;
 		} else {
 			auto sym = xkb_keysym_from_name(symname,
 				XKB_KEYSYM_CASE_INSENSITIVE);
@@ -161,17 +157,13 @@ keybind_create(const char *keybind)
 			sym = xkb_keysym_to_lower(sym);
 			if (sym == XKB_KEY_NoSymbol) {
 				wlr_log(WLR_ERROR, "unknown keybind (%s)", symname);
-				delete k;
-				k = NULL;
-				break;
+				g_strfreev(symnames);
+				return nullptr;
 			}
-			k->keysyms.push_back(sym);
+			k.keysyms.push_back(sym);
 		}
 	}
 	g_strfreev(symnames);
-	if (!k) {
-		return NULL;
-	}
-	wl_list_append(&rc.keybinds, &k->link);
-	return k;
+	keybinds.push_back(std::move(k));
+	return &keybinds.back();
 }

@@ -6,6 +6,8 @@
 #include <unistd.h>
 #include "common/fd-util.h"
 #include "common/font.h"
+#include "config/keybind.h"
+#include "config/mousebind.h"
 #include "common/spawn.h"
 #include "config/rcxml.h"
 #include "config/session.h"
