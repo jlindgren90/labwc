@@ -14,6 +14,7 @@
 #include "labwc.h"
 #include "theme.h"
 #include "menu/menu.h"
+#include "window-rules.h"
 #include "xwayland.h"
 
 /*
