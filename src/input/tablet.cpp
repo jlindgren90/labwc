@@ -657,12 +657,12 @@ handle_tablet_tool_button(struct wl_listener *listener, void *data)
 	if (!is_down_mouse_emulation && surface) {
 		if (button && ev->state == WLR_BUTTON_PRESSED) {
 			struct view *view = view_from_wlr_surface(surface);
-			struct mousebind *mousebind;
-			wl_list_for_each(mousebind, &rc.mousebinds, link) {
-				if (mousebind->mouse_event == MOUSE_ACTION_PRESS
-						&& mousebind->button == button
-						&& mousebind->context == LAB_NODE_CLIENT) {
-					actions_run(view, mousebind->actions,
+			for (auto &mousebind : rc.mousebinds) {
+				if (mousebind.mouse_event == MOUSE_ACTION_PRESS
+						&& mousebind.button == button
+						&& mousebind.context
+							== LAB_NODE_CLIENT) {
+					actions_run(view, mousebind.actions,
 						NULL);
 				}
 			}
