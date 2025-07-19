@@ -5,7 +5,7 @@
 #include <string.h>
 #include "common/mem.h"
 
-static void
+void
 die_if_null(void *ptr)
 {
 	if (!ptr) {
