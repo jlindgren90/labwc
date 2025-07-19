@@ -4,6 +4,8 @@
 
 #include <stdlib.h>
 
+void die_if_null(void *ptr);
+
 /*
  * As defined in busybox, weston, etc.
  * Allocates zero-filled memory; calls exit() on error.
