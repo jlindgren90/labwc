@@ -45,6 +45,7 @@
 #endif
 
 #include "common/macros.h"
+#include "common/mem.h"
 #include "common/scaled-scene-buffer.h"
 #include "config/rcxml.h"
 #include "config/session.h"
@@ -549,10 +550,8 @@ server_init(void)
 	g_server.ssd_hover_state = ssd_hover_state_new();
 
 	g_server.scene = wlr_scene_create();
-	if (!g_server.scene) {
-		wlr_log(WLR_ERROR, "unable to create scene");
-		exit(EXIT_FAILURE);
-	}
+	die_if_null(g_server.scene);
+
 	g_server.direct_scanout_enabled =
 		g_server.scene->WLR_PRIVATE.direct_scanout;
 

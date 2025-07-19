@@ -864,11 +864,8 @@ xwayland_view_map(struct view *view)
 		/* Will be free'd automatically once the surface is being destroyed */
 		struct wlr_scene_tree *tree = wlr_scene_subsurface_tree_create(
 			view->scene_tree, view->surface);
-		if (!tree) {
-			/* TODO: might need further clean up */
-			wl_resource_post_no_memory(view->surface->resource);
-			return;
-		}
+		die_if_null(tree);
+
 		view->content_tree = tree;
 	}
 
