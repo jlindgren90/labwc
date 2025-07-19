@@ -209,13 +209,8 @@ session_lock_output_create(struct session_lock_manager *manager, struct output *
 	struct session_lock_output *lock_output = znew(*lock_output);
 
 	struct wlr_scene_tree *tree = wlr_scene_tree_create(output->session_lock_tree);
-	if (!tree) {
-		wlr_log(WLR_ERROR, "session-lock: wlr_scene_tree_create()");
-		free(lock_output);
-		goto exit_session;
-	}
+	die_if_null(tree);
 
-{ /* !goto */
 	/*
 	 * The ext-session-lock protocol says that the compositor should blank
 	 * all outputs with an opaque color such that their normal content is
@@ -223,12 +218,7 @@ session_lock_output_create(struct session_lock_manager *manager, struct output *
 	 */
 	float black[4] = { 0.f, 0.f, 0.f, 1.f };
 	struct wlr_scene_rect *background = wlr_scene_rect_create(tree, 0, 0, black);
-	if (!background) {
-		wlr_log(WLR_ERROR, "session-lock: wlr_scene_rect_create()");
-		wlr_scene_node_destroy(&tree->node);
-		free(lock_output);
-		goto exit_session;
-	}
+	die_if_null(background);
 
 	/*
 	 * Delay blanking output by 100ms to prevent flicker. If the session is
@@ -259,11 +249,6 @@ session_lock_output_create(struct session_lock_manager *manager, struct output *
 
 	wl_list_insert(&manager->lock_outputs, &lock_output->link);
 	return;
-
-} exit_session:
-	/* TODO: Consider a better - but secure - way to deal with this */
-	wlr_log(WLR_ERROR, "out of memory");
-	exit(EXIT_FAILURE);
 }
 
 static void
