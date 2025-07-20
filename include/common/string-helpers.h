@@ -1,7 +1,8 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef LABWC_STRING_HELPERS_H
 #define LABWC_STRING_HELPERS_H
-#include <stdbool.h>
+
+#include "common/str.h"
 
 /**
  * string_null_or_empty() - Check if string is NULL or empty
@@ -41,7 +42,7 @@ void string_truncate_at_pattern(char *buf, const char *pattern);
  * The user must free the returned string.
  * Returns NULL on error.
  */
-char *strdup_printf(const char *fmt, ...);
+lab_str strdup_printf(const char *fmt, ...);
 
 /**
  * str_join - format and join an array of strings with a separator
@@ -59,7 +60,7 @@ char *strdup_printf(const char *fmt, ...);
  * The separator is arbitrary. When the separator is NULL, a single space will
  * be used.
  */
-char *str_join(const char *const parts[], const char *fmt, const char *sep);
+lab_str str_join(const char *const parts[], const char *fmt, const char *sep);
 
 /**
  * str_endswith - indicate whether a string ends with a given suffix

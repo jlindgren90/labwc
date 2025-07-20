@@ -8,11 +8,8 @@
 #include <unistd.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
-#include <wlr/util/log.h>
 #include "common/buf.h"
 #include "common/macros.h"
-#include "common/list.h"
-#include "common/mem.h"
 #include "common/parse-bool.h"
 #include "common/spawn.h"
 #include "common/string-helpers.h"
@@ -208,8 +205,9 @@ action::get_actionlist(const char *key)
 void
 action::add_arg_from_xml_node(const char *nodename, const char *content)
 {
-	char *argument = xstrdup(nodename);
-	string_truncate_at_pattern(argument, ".action");
+	lab_str buf{nodename};
+	string_truncate_at_pattern(buf.data(), ".action");
+	const char *argument = buf.c();
 
 	switch (type) {
 	case ACTION_TYPE_EXECUTE:
@@ -220,13 +218,13 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 		 */
 		if (!strcmp(argument, "command") || !strcmp(argument, "execute")) {
 			add_str("command", content);
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_MOVE_TO_EDGE:
 		if (!strcasecmp(argument, "snapWindows")) {
 			add_bool(argument, parse_bool(content, true));
-			goto cleanup;
+			return;
 		}
 		/* Falls through */
 	case ACTION_TYPE_TOGGLE_SNAP_TO_EDGE:
@@ -246,25 +244,25 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 			} else {
 				add_int(argument, edge);
 			}
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_SHOW_MENU:
 		if (!strcmp(argument, "menu")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		if (!strcasecmp(argument, "atCursor")) {
 			add_bool(argument, parse_bool(content, true));
-			goto cleanup;
+			return;
 		}
 		if (!strcasecmp(argument, "x.position")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		if (!strcasecmp(argument, "y.position")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_MAXIMIZE:
@@ -279,7 +277,7 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 			} else {
 				add_int(argument, axis);
 			}
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_SET_DECORATIONS:
@@ -292,61 +290,61 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 					"Invalid argument for action %s: '%s' (%s)",
 					action_names[type], argument, content);
 			}
-			goto cleanup;
+			return;
 		}
 		if (!strcasecmp(argument, "forceSSD")) {
 			add_bool(argument, parse_bool(content, false));
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_RESIZE_RELATIVE:
 		if (!strcmp(argument, "left") || !strcmp(argument, "right") ||
 				!strcmp(argument, "top") || !strcmp(argument, "bottom")) {
 			add_int(argument, atoi(content));
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_MOVETO:
 	case ACTION_TYPE_MOVE_RELATIVE:
 		if (!strcmp(argument, "x") || !strcmp(argument, "y")) {
 			add_int(argument, atoi(content));
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_RESIZETO:
 		if (!strcmp(argument, "width") || !strcmp(argument, "height")) {
 			add_int(argument, atoi(content));
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_SEND_TO_DESKTOP:
 		if (!strcmp(argument, "follow")) {
 			add_bool(argument, parse_bool(content, true));
-			goto cleanup;
+			return;
 		}
 		/* Falls through to GoToDesktop */
 	case ACTION_TYPE_GO_TO_DESKTOP:
 		if (!strcmp(argument, "to")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		if (!strcmp(argument, "wrap")) {
 			add_bool(argument, parse_bool(content, true));
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_SNAP_TO_REGION:
 	case ACTION_TYPE_SNAP_TO_REGION:
 		if (!strcmp(argument, "region")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_FOCUS_OUTPUT:
 	case ACTION_TYPE_MOVE_TO_OUTPUT:
 		if (!strcmp(argument, "output")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		if (!strcmp(argument, "direction")) {
 			enum lab_edge edge = lab_edge_parse(content);
@@ -357,18 +355,18 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 			} else {
 				add_int(argument, edge);
 			}
-			goto cleanup;
+			return;
 		}
 		if (!strcmp(argument, "wrap")) {
 			add_bool(argument, parse_bool(content, false));
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_VIRTUAL_OUTPUT_ADD:
 	case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE:
 		if (!strcmp(argument, "output_name")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_AUTO_PLACE:
@@ -382,13 +380,13 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 			} else {
 				add_int(argument, policy);
 			}
-			goto cleanup;
+			return;
 		}
 		break;
 	case ACTION_TYPE_WARP_CURSOR:
 		if (!strcmp(argument, "to") || !strcmp(argument, "x") || !strcmp(argument, "y")) {
 			add_str(argument, content);
-			goto cleanup;
+			return;
 		}
 		break;
 	default:
@@ -397,9 +395,6 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 
 	wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s'",
 		action_names[type], argument);
-
-cleanup:
-	free(argument);
 }
 
 static enum action_type
