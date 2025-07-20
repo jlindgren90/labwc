@@ -8,25 +8,27 @@
 static struct touch_config_entry *
 find_default_config(void)
 {
-	struct touch_config_entry *entry;
-	wl_list_for_each_reverse(entry, &rc.touch_configs, link) {
-		if (!entry->device_name) {
+	for (auto iter = rc.touch_configs.rbegin(),
+			end = rc.touch_configs.rend();
+			iter != end; ++iter) {
+		if (!iter->device_name) {
 			wlr_log(WLR_INFO, "found default touch configuration");
-			return entry;
+			return &*iter;
 		}
 	}
 	return NULL;
 }
 
 struct touch_config_entry *
-touch_find_config_for_device(char *device_name)
+touch_find_config_for_device(const char *device_name)
 {
 	wlr_log(WLR_INFO, "find touch configuration for %s", device_name);
-	struct touch_config_entry *entry;
-	wl_list_for_each_reverse(entry, &rc.touch_configs, link) {
-		if (entry->device_name && !strcasecmp(entry->device_name, device_name)) {
+	for (auto iter = rc.touch_configs.rbegin(),
+			end = rc.touch_configs.rend();
+			iter != end; ++iter) {
+		if (iter->device_name && !strcasecmp(iter->device_name.c(), device_name)) {
 			wlr_log(WLR_INFO, "found touch configuration for %s", device_name);
-			return entry;
+			return &*iter;
 		}
 	}
 	return find_default_config();
