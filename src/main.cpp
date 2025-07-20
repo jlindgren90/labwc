@@ -7,6 +7,7 @@
 #include "common/font.h"
 #include "config/keybind.h"
 #include "config/mousebind.h"
+#include "config/touch.h"
 #include "common/spawn.h"
 #include "config/session.h"
 #include "labwc.h"
