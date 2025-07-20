@@ -473,8 +473,8 @@ new_tablet(struct wlr_input_device *dev)
 	input->wlr_input_device = dev;
 	tablet_create(dev);
 	wlr_cursor_attach_input_device(g_seat.cursor, dev);
-	wlr_log(WLR_INFO, "map tablet to output %s", rc.tablet.output_name);
-	map_input_to_output(dev, rc.tablet.output_name);
+	wlr_log(WLR_INFO, "map tablet to output %s", rc.tablet.output_name.c());
+	map_input_to_output(dev, rc.tablet.output_name.c());
 
 	return input;
 }
@@ -738,7 +738,7 @@ seat_reconfigure(void)
 			break;
 		case WLR_INPUT_DEVICE_TABLET:
 			map_input_to_output(input->wlr_input_device,
-				rc.tablet.output_name);
+				rc.tablet.output_name.c());
 			break;
 		default:
 			break;
@@ -888,7 +888,7 @@ seat_output_layout_changed(void)
 			break;
 		case WLR_INPUT_DEVICE_TABLET:
 			map_input_to_output(input->wlr_input_device,
-				rc.tablet.output_name);
+				rc.tablet.output_name.c());
 			break;
 		default:
 			break;
