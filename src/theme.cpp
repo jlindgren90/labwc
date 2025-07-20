@@ -136,7 +136,7 @@ get_button_filename(char *buf, size_t len, const char *name, const char *postfix
 	snprintf(filename, sizeof(filename), "%s%s", name, postfix);
 
 	struct wl_list paths;
-	paths_theme_create(&paths, rc.theme_name, filename);
+	paths_theme_create(&paths, rc.theme_name.c(), filename);
 
 	/*
 	 * You can't really merge buttons, so let's just iterate forwards

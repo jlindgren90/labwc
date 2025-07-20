@@ -120,8 +120,8 @@ scaled_icon_buffer::create_buffer(double scale)
 		}
 	}
 	/* If both client and server icons are unavailable, use the fallback icon */
-	auto img = desktop_entry_load_icon(rc.fallback_app_icon_name, icon_size,
-		scale);
+	auto img = desktop_entry_load_icon(rc.fallback_app_icon_name.c(),
+		icon_size, scale);
 	if (img.valid()) {
 		wlr_log(WLR_DEBUG, "loaded fallback icon");
 		return img.render(self->width, self->height, scale);
