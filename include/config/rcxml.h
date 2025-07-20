@@ -51,6 +51,7 @@ struct cycle_osd_field;
 struct keybind;
 struct mousebind;
 struct region_cfg;
+struct touch_config_entry;
 struct window_rule;
 
 struct button_map_entry {
@@ -128,7 +129,7 @@ struct rcxml {
 	std::vector<mousebind> mousebinds;
 
 	/* touch tablet */
-	struct wl_list touch_configs;
+	std::vector<touch_config_entry> touch_configs;
 
 	/* graphics tablet */
 	struct tablet_config {
