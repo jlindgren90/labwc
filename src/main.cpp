@@ -143,7 +143,7 @@ static void
 idle_callback(void *data)
 {
 	/* Idle callbacks destroy automatically once triggered */
-	struct idle_ctx *ctx = data;
+	auto ctx = (struct idle_ctx *)data;
 
 	/* Start session-manager if one is specified by -S|--session */
 	if (ctx->primary_client) {
@@ -263,7 +263,7 @@ main(int argc, char *argv[])
 	server_init();
 	server_start();
 
-	theme_init(rc.theme_name);
+	theme_init(rc.theme_name.c());
 
 	menu_init();
 
