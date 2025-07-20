@@ -15,6 +15,7 @@
 
 struct buf;
 struct keybind;
+struct libinput_category;
 struct mousebind;
 struct region;
 struct touch_config_entry;
@@ -126,7 +127,7 @@ struct rcxml {
 	} tablet_tool;
 
 	/* libinput */
-	struct wl_list libinput_categories;
+	std::vector<libinput_category> libinput_categories;
 
 	/* resistance */
 	int screen_edge_strength;
