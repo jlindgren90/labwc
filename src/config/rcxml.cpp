@@ -701,7 +701,7 @@ fill_libinput_category(xmlNode *node)
 			 * that the settings should be applicable to.
 			 */
 			if (category->type == LAB_LIBINPUT_DEVICE_NONE) {
-				xstrdup_replace(category->name, content);
+				category->name = lab_str(content);
 			}
 		} else if (!strcasecmp(key, "naturalScroll")) {
 			set_bool_as_int(content, &category->natural_scroll);
@@ -1327,7 +1327,6 @@ rcxml_init(void)
 	static bool has_run;
 
 	if (!has_run) {
-		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
 	}
 	has_run = true;
@@ -1659,9 +1658,8 @@ post_processing(void)
 		wlr_log(WLR_ERROR, "<mouse><scrollFactor> is deprecated"
 				" and overwrites <libinput><scrollFactor>."
 				" Use only <libinput><scrollFactor>.");
-		struct libinput_category *l;
-		wl_list_for_each(l, &rc.libinput_categories, link) {
-			l->scroll_factor = mouse_scroll_factor;
+		for (auto &l : rc.libinput_categories) {
+			l.scroll_factor = mouse_scroll_factor;
 		}
 	}
 
@@ -1853,13 +1851,7 @@ rcxml_finish(void)
 	rc.keybinds.clear();
 	rc.mousebinds.clear();
 	rc.touch_configs.clear();
-
-	struct libinput_category *l, *l_tmp;
-	wl_list_for_each_safe(l, l_tmp, &rc.libinput_categories, link) {
-		wl_list_remove(&l->link);
-		zfree(l->name);
-		zfree(l);
-	}
+	rc.libinput_categories.clear();
 
 	struct workspace *w, *w_tmp;
 	wl_list_for_each_safe(w, w_tmp, &rc.workspace_config.workspaces, link) {
