@@ -72,8 +72,7 @@ enum lab_view_criteria {
 
 struct usable_area_override {
 	struct border margin;
-	char *output;
-	struct wl_list link; /* struct rcxml.usable_area_overrides */
+	lab_str output;
 };
 
 struct rcxml {
@@ -119,7 +118,7 @@ struct rcxml {
 	struct font font_osd;
 
 	/* <margin top="" bottom="" left="" right="" output="" /> */
-	struct wl_list usable_area_overrides;
+	std::vector<usable_area_override> usable_area_overrides;
 
 	/* keyboard */
 	int repeat_rate;
