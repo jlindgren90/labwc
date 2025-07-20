@@ -2,9 +2,6 @@
 #include "osd.h"
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include <wlr/util/box.h>
-#include <wlr/util/log.h>
-#include "common/array.h"
 #include "common/buf.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
@@ -20,11 +17,6 @@
 #include "view.h"
 #include "workspaces.h"
 
-struct osd_scene_item {
-	struct view *view;
-	struct wlr_scene_node *highlight_outline;
-};
-
 static void update_osd(void);
 
 static void
@@ -34,9 +26,7 @@ destroy_osd_scenes(void)
 	wl_list_for_each(output, &g_server.outputs, link) {
 		wlr_scene_node_destroy(&output->osd_scene.tree->node);
 		output->osd_scene.tree = NULL;
-
-		wl_array_release(&output->osd_scene.items);
-		wl_array_init(&output->osd_scene.items);
+		output->osd_scene.items.clear();
 	}
 }
 
@@ -46,12 +36,13 @@ osd_update_preview_outlines(struct view *view)
 	/* Create / Update preview outline tree */
 	struct lab_scene_rect *rect = g_server.osd_state.preview_outline;
 	if (!rect) {
+		float *border_colors[3] = {
+			g_theme.osd_window_switcher_preview_border_color[0],
+			g_theme.osd_window_switcher_preview_border_color[1],
+			g_theme.osd_window_switcher_preview_border_color[2],
+		};
 		struct lab_scene_rect_options opts = {
-			.border_colors = (float *[3]) {
-				g_theme.osd_window_switcher_preview_border_color[0],
-				g_theme.osd_window_switcher_preview_border_color[1],
-				g_theme.osd_window_switcher_preview_border_color[2],
-			},
+			.border_colors = border_colors,
 			.nr_borders = 3,
 			.border_width =
 				g_theme.osd_window_switcher_preview_border_width,
@@ -293,10 +284,11 @@ create_osd_scene(struct output *output, view_list &views)
 
 	float *text_color = g_theme.osd_label_text_color;
 	float *bg_color = g_theme.osd_bg_color;
+	float *border_color = g_theme.osd_border_color;
 
 	/* Draw background */
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]) {g_theme.osd_border_color},
+		.border_colors = &border_color,
 		.nr_borders = 1,
 		.border_width = g_theme.osd_border_width,
 		.bg_color = bg_color,
@@ -332,7 +324,7 @@ create_osd_scene(struct output *output, view_list &views)
 
 { /* !goto */
 	struct buf buf = BUF_INIT;
-	int nr_fields = wl_list_length(&rc.window_switcher.fields);
+	int nr_fields = rc.window_switcher.fields.size();
 
 	/* This is the width of the area available for text fields */
 	int field_widths_sum =
@@ -347,8 +339,8 @@ create_osd_scene(struct output *output, view_list &views)
 
 	/* Draw text for each node */
 	for (auto &view : views) {
-		struct osd_scene_item *item =
-			wl_array_add(&output->osd_scene.items, sizeof(*item));
+		output->osd_scene.items.push_back(osd_scene_item{});
+		auto item = &output->osd_scene.items.back();
 		item->view = &view;
 		/*
 		 *    OSD border
@@ -373,13 +365,13 @@ create_osd_scene(struct output *output, view_list &views)
 		struct wlr_scene_tree *item_root =
 			wlr_scene_tree_create(output->osd_scene.tree);
 
-		struct window_switcher_field *field;
-		wl_list_for_each(field, &rc.window_switcher.fields, link) {
-			int field_width = field_widths_sum * field->width / 100.0;
+		for (auto &field : rc.window_switcher.fields) {
+			int field_width =
+				field_widths_sum * field.width / 100.0;
 			struct wlr_scene_node *node = NULL;
 			int height = -1;
 
-			if (field->content == LAB_FIELD_ICON) {
+			if (field.content == LAB_FIELD_ICON) {
 				int icon_size = MIN(field_width,
 					g_theme.osd_window_switcher_item_icon_size);
 				auto icon_buffer =
@@ -390,7 +382,7 @@ create_osd_scene(struct output *output, view_list &views)
 				height = icon_size;
 			} else {
 				buf_clear(&buf);
-				osd_field_get_content(field, &buf, &view);
+				osd_field_get_content(&field, &buf, &view);
 
 				if (!string_null_or_empty(buf.data)) {
 					auto font_buffer =
@@ -418,7 +410,7 @@ create_osd_scene(struct output *output, view_list &views)
 		int highlight_x = g_theme.osd_border_width
 			+ g_theme.osd_window_switcher_padding;
 		struct lab_scene_rect_options highlight_opts = {
-			.border_colors = (float *[1]) {text_color},
+			.border_colors = &text_color,
 			.nr_borders = 1,
 			.border_width =
 				g_theme.osd_window_switcher_item_active_border_width,
@@ -448,10 +440,9 @@ create_osd_scene(struct output *output, view_list &views)
 static void
 update_item_highlight(struct output *output)
 {
-	struct osd_scene_item *item;
-	wl_array_for_each(item, &output->osd_scene.items) {
-		wlr_scene_node_set_enabled(item->highlight_outline,
-			item->view == g_server.osd_state.cycle_view);
+	for (auto &item : output->osd_scene.items) {
+		wlr_scene_node_set_enabled(item.highlight_outline,
+			item.view == g_server.osd_state.cycle_view);
 	}
 }
 
