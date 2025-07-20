@@ -45,6 +45,7 @@ struct keybind;
 struct mousebind;
 struct region_cfg;
 struct window_rule;
+struct window_switcher_field;
 
 struct button_map_entry {
 	uint32_t from;
@@ -167,7 +168,7 @@ struct rcxml {
 		bool preview;
 		bool outlines;
 		enum lab_view_criteria criteria;
-		struct wl_list fields;  /* struct window_switcher_field.link */
+		std::vector<window_switcher_field> fields;
 	} window_switcher;
 
 	std::vector<window_rule> window_rules;
