@@ -74,9 +74,9 @@ struct rcxml {
 	bool raise_on_focus;
 
 	/* theme */
-	char *theme_name;
-	char *icon_theme_name;
-	char *fallback_app_icon_name;
+	lab_str theme_name;
+	lab_str icon_theme_name;
+	lab_str fallback_app_icon_name;
 	std::vector<ssd_part_type> title_buttons_left;
 	std::vector<ssd_part_type> title_buttons_right; // right-to-left
 	int corner_radius;
@@ -111,7 +111,7 @@ struct rcxml {
 	/* graphics tablet */
 	struct tablet_config {
 		bool force_mouse_emulation;
-		char *output_name;
+		lab_str output_name;
 		struct wlr_fbox box;
 		enum rotation rotation;
 		uint16_t button_map_count;
@@ -147,7 +147,7 @@ struct rcxml {
 	struct {
 		int popuptime;
 		int min_nr_workspaces;
-		char *prefix;
+		lab_str prefix;
 		struct wl_list workspaces;  /* struct workspace.link */
 	} workspace_config;
 
