@@ -362,7 +362,7 @@ output_by_name(const char *name)
 }
 
 static void
-map_input_to_output(struct wlr_input_device *dev, char *output_name)
+map_input_to_output(struct wlr_input_device *dev, const char *output_name)
 {
 	struct wlr_output *output = NULL;
 	if (output_name) {
@@ -440,14 +440,15 @@ map_touch_to_output(struct wlr_input_device *dev)
 {
 	struct wlr_touch *touch = wlr_touch_from_input_device(dev);
 
-	char *touch_config_output_name = NULL;
+	lab_str touch_config_output_name;
 	struct touch_config_entry *config_entry =
 		touch_find_config_for_device(touch->base.name);
 	if (config_entry) {
 		touch_config_output_name = config_entry->output_name;
 	}
 
-	char *output_name = touch->output_name ? touch->output_name : touch_config_output_name;
+	const char *output_name = touch->output_name
+		? touch->output_name : touch_config_output_name.c();
 	wlr_log(WLR_INFO, "map touch to output %s", output_name ? output_name : "unknown");
 	map_input_to_output(dev, output_name);
 }
