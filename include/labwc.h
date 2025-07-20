@@ -392,6 +392,11 @@ struct server {
 
 #define LAB_NR_LAYERS (4)
 
+struct osd_scene_item {
+	struct view *view;
+	struct wlr_scene_node *highlight_outline;
+};
+
 struct output {
 	struct wl_list link; /* server.outputs */
 	struct wlr_output *wlr_output;
@@ -404,7 +409,7 @@ struct output {
 	struct wlr_scene_buffer *workspace_osd;
 
 	struct osd_scene {
-		struct wl_array items; /* struct osd_scene_item */
+		std::vector<osd_scene_item> items;
 		struct wlr_scene_tree *tree;
 	} osd_scene;
 

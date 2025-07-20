@@ -20,7 +20,6 @@
 #include <wlr/util/log.h>
 #include "common/direction.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "labwc.h"
 #include "layers.h"
@@ -485,8 +484,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 
 	output->request_state.notify = handle_output_request_state;
 	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
-
-	wl_array_init(&output->osd_scene.items);
 
 	/*
 	 * Create layer-trees (background, bottom, top and overlay) and

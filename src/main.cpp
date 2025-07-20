@@ -10,6 +10,7 @@
 #include "common/spawn.h"
 #include "config/session.h"
 #include "labwc.h"
+#include "osd.h"
 #include "theme.h"
 #include "menu/menu.h"
 #include "window-rules.h"
