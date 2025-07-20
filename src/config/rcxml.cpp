@@ -231,9 +231,9 @@ static void
 fill_usable_area_override(char *nodename, char *content, struct parser_state *state)
 {
 	if (!strcasecmp(nodename, "margin")) {
-		state->current_usable_area_override = znew(*state->current_usable_area_override);
-		wl_list_append(&rc.usable_area_overrides,
-				&state->current_usable_area_override->link);
+		rc.usable_area_overrides.push_back(usable_area_override{});
+		state->current_usable_area_override =
+			&rc.usable_area_overrides.back();
 		return;
 	}
 	string_truncate_at_pattern(nodename, ".margin");
@@ -242,7 +242,7 @@ fill_usable_area_override(char *nodename, char *content, struct parser_state *st
 	} else if (!state->current_usable_area_override) {
 		wlr_log(WLR_ERROR, "no usable-area-override object");
 	} else if (!strcmp(nodename, "output")) {
-		xstrdup_replace(state->current_usable_area_override->output, content);
+		state->current_usable_area_override->output = lab_str(content);
 	} else if (!strcmp(nodename, "left")) {
 		state->current_usable_area_override->margin.left = atoi(content);
 	} else if (!strcmp(nodename, "right")) {
@@ -1513,7 +1513,6 @@ rcxml_init(void)
 	static bool has_run;
 
 	if (!has_run) {
-		wl_list_init(&rc.usable_area_overrides);
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
 		wl_list_init(&rc.regions);
@@ -2024,13 +2023,7 @@ rcxml_finish(void)
 
 	clear_title_layout();
 
-	struct usable_area_override *area, *area_tmp;
-	wl_list_for_each_safe(area, area_tmp, &rc.usable_area_overrides, link) {
-		wl_list_remove(&area->link);
-		zfree(area->output);
-		zfree(area);
-	}
-
+	rc.usable_area_overrides.clear();
 	rc.keybinds.clear();
 	rc.mousebinds.clear();
 
