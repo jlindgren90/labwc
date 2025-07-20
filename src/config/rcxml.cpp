@@ -1109,7 +1109,7 @@ entry(xmlNode *node, char *nodename, char *content, struct parser_state *state)
 	}
 
 	if (!strcasecmp(nodename, "prefix.desktops")) {
-		xstrdup_replace(rc.workspace_config.prefix, content ? content : "");
+		rc.workspace_config.prefix = lab_str(content ? content : "");
 		return;
 	}
 
@@ -1166,11 +1166,11 @@ entry(xmlNode *node, char *nodename, char *content, struct parser_state *state)
 	} else if (!strcasecmp(nodename, "y.cascadeOffset.placement")) {
 		rc.placement_cascade_offset_y = atoi(content);
 	} else if (!strcmp(nodename, "name.theme")) {
-		xstrdup_replace(rc.theme_name, content);
+		rc.theme_name = lab_str(content);
 	} else if (!strcmp(nodename, "icon.theme")) {
-		xstrdup_replace(rc.icon_theme_name, content);
+		rc.icon_theme_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "fallbackAppIcon.theme")) {
-		xstrdup_replace(rc.fallback_app_icon_name, content);
+		rc.fallback_app_icon_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "layout.titlebar.theme")) {
 		fill_title_layout(content);
 	} else if (!strcasecmp(nodename, "showTitle.titlebar.theme")) {
@@ -1324,7 +1324,7 @@ entry(xmlNode *node, char *nodename, char *content, struct parser_state *state)
 	} else if (!strcasecmp(nodename, "mouseEmulation.tablet")) {
 		set_bool(content, &rc.tablet.force_mouse_emulation);
 	} else if (!strcasecmp(nodename, "mapToOutput.tablet")) {
-		xstrdup_replace(rc.tablet.output_name, content);
+		rc.tablet.output_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "rotate.tablet")) {
 		rc.tablet.rotation = tablet_parse_rotation(atoi(content));
 	} else if (!strcasecmp(nodename, "left.area.tablet")) {
@@ -1555,7 +1555,6 @@ rcxml_init(void)
 	rc.doubleclick_time = 500;
 
 	rc.tablet.force_mouse_emulation = false;
-	rc.tablet.output_name = NULL;
 	rc.tablet.rotation = LAB_ROTATE_NONE;
 	rc.tablet.box = (struct wlr_fbox){0};
 	tablet_load_default_button_mappings();
@@ -1776,11 +1775,11 @@ post_processing(void)
 	}
 
 	if (!rc.fallback_app_icon_name) {
-		rc.fallback_app_icon_name = xstrdup("labwc");
+		rc.fallback_app_icon_name = lab_str("labwc");
 	}
 
 	if (!rc.icon_theme_name && rc.theme_name) {
-		rc.icon_theme_name = xstrdup(rc.theme_name);
+		rc.icon_theme_name = lab_str(rc.theme_name);
 	}
 
 	if (!rc.title_layout_loaded) {
@@ -1841,15 +1840,16 @@ post_processing(void)
 	int nr_workspaces = wl_list_length(&rc.workspace_config.workspaces);
 	if (nr_workspaces < rc.workspace_config.min_nr_workspaces) {
 		if (!rc.workspace_config.prefix) {
-			rc.workspace_config.prefix = xstrdup(_("Workspace"));
+			rc.workspace_config.prefix = lab_str(_("Workspace"));
 		}
 
 		struct buf b = BUF_INIT;
 		struct workspace *workspace;
 		for (int i = nr_workspaces; i < rc.workspace_config.min_nr_workspaces; i++) {
 			workspace = znew(*workspace);
-			if (!string_null_or_empty(rc.workspace_config.prefix)) {
-				buf_add_fmt(&b, "%s ", rc.workspace_config.prefix);
+			if (rc.workspace_config.prefix) {
+				buf_add_fmt(&b, "%s ",
+					rc.workspace_config.prefix.c());
 			}
 			buf_add_fmt(&b, "%d", i + 1);
 			workspace->name = xstrdup(b.data);
@@ -2016,11 +2016,11 @@ rcxml_finish(void)
 	rc.font_menuheader.name = lab_str();
 	rc.font_menuitem.name = lab_str();
 	rc.font_osd.name = lab_str();
-	zfree(rc.theme_name);
-	zfree(rc.icon_theme_name);
-	zfree(rc.fallback_app_icon_name);
-	zfree(rc.workspace_config.prefix);
-	zfree(rc.tablet.output_name);
+	rc.theme_name = lab_str();
+	rc.icon_theme_name = lab_str();
+	rc.fallback_app_icon_name = lab_str();
+	rc.workspace_config.prefix = lab_str();
+	rc.tablet.output_name = lab_str();
 
 	clear_title_layout();
 

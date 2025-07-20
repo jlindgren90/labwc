@@ -82,7 +82,7 @@ reload_config_and_theme(void)
 	rcxml_finish();
 	rcxml_read(rc.config_file);
 	theme_finish();
-	theme_init(rc.theme_name);
+	theme_init(rc.theme_name.c());
 
 #if HAVE_LIBSFDO
 	desktop_entry_finish();
