@@ -3,8 +3,7 @@
 #define LABWC_LIBINPUT_H
 
 #include <libinput.h>
-#include <string.h>
-#include <wayland-server-core.h>
+#include "common/str.h"
 
 enum lab_libinput_device_type {
 	LAB_LIBINPUT_DEVICE_NONE = 0,
@@ -16,8 +15,7 @@ enum lab_libinput_device_type {
 
 struct libinput_category {
 	enum lab_libinput_device_type type;
-	char *name;
-	struct wl_list link;
+	lab_str name;
 	float pointer_speed;
 	int natural_scroll;
 	int left_handed;
