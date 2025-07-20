@@ -618,8 +618,8 @@ static void
 fill_touch(char *nodename, char *content, struct parser_state *state)
 {
 	if (!strcasecmp(nodename, "touch")) {
-		state->current_touch = znew(*state->current_touch);
-		wl_list_append(&rc.touch_configs, &state->current_touch->link);
+		rc.touch_configs.push_back(touch_config_entry{});
+		state->current_touch = &rc.touch_configs.back();
 		return;
 	}
 
@@ -628,9 +628,9 @@ fill_touch(char *nodename, char *content, struct parser_state *state)
 	}
 
 	if (!strcasecmp(nodename, "deviceName.touch")) {
-		xstrdup_replace(state->current_touch->device_name, content);
+		state->current_touch->device_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "mapToOutput.touch")) {
-		xstrdup_replace(state->current_touch->output_name, content);
+		state->current_touch->output_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "mouseEmulation.touch")) {
 		set_bool(content, &state->current_touch->force_mouse_emulation);
 	} else {
@@ -1506,7 +1506,6 @@ rcxml_init(void)
 	if (!has_run) {
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
-		wl_list_init(&rc.touch_configs);
 	}
 	has_run = true;
 
@@ -2010,14 +2009,7 @@ rcxml_finish(void)
 	rc.usable_area_overrides.clear();
 	rc.keybinds.clear();
 	rc.mousebinds.clear();
-
-	struct touch_config_entry *touch_config, *touch_config_tmp;
-	wl_list_for_each_safe(touch_config, touch_config_tmp, &rc.touch_configs, link) {
-		wl_list_remove(&touch_config->link);
-		zfree(touch_config->device_name);
-		zfree(touch_config->output_name);
-		zfree(touch_config);
-	}
+	rc.touch_configs.clear();
 
 	struct libinput_category *l, *l_tmp;
 	wl_list_for_each_safe(l, l_tmp, &rc.libinput_categories, link) {

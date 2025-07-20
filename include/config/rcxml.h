@@ -44,6 +44,7 @@ struct buf;
 struct keybind;
 struct mousebind;
 struct region_cfg;
+struct touch_config_entry;
 struct window_rule;
 struct window_switcher_field;
 
@@ -114,7 +115,7 @@ struct rcxml {
 	std::vector<mousebind> mousebinds;
 
 	/* touch tablet */
-	struct wl_list touch_configs;
+	std::vector<touch_config_entry> touch_configs;
 
 	/* graphics tablet */
 	struct tablet_config {
