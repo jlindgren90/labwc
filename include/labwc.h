@@ -222,12 +222,6 @@ struct lab_data_buffer;
 struct menu;
 struct workspace;
 
-enum lab_cycle_dir {
-	LAB_CYCLE_DIR_NONE,
-	LAB_CYCLE_DIR_FORWARD,
-	LAB_CYCLE_DIR_BACKWARD,
-};
-
 struct osd_state {
 	struct view *cycle_view;
 	bool preview_was_enabled;

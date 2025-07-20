@@ -5,6 +5,12 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
+enum lab_cycle_dir {
+	LAB_CYCLE_DIR_NONE,
+	LAB_CYCLE_DIR_FORWARD,
+	LAB_CYCLE_DIR_BACKWARD,
+};
+
 /* TODO: add field with keyboard layout? */
 enum window_switcher_field_content {
 	LAB_FIELD_NONE = 0,
@@ -37,7 +43,6 @@ struct window_switcher_field {
 struct buf;
 struct view;
 struct server;
-enum lab_cycle_dir;
 
 /* Begin window switcher */
 void osd_begin(enum lab_cycle_dir direction);
