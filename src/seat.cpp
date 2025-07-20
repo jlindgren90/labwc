@@ -81,20 +81,23 @@ static struct libinput_category *
 get_category(struct wlr_input_device *device)
 {
 	/* By name */
-	struct libinput_category *category;
-	wl_list_for_each_reverse(category, &rc.libinput_categories, link) {
-		if (category->name) {
-			if (!strcasecmp(device->name, category->name)) {
-				return category;
+	for (auto iter = rc.libinput_categories.rbegin(),
+			end = rc.libinput_categories.rend();
+			iter != end; iter++) {
+		if (iter->name) {
+			if (!strcasecmp(device->name, iter->name.c())) {
+				return &*iter;
 			}
 		}
 	}
 
 	/* By type */
 	enum lab_libinput_device_type type = device_type_from_wlr_device(device);
-	wl_list_for_each_reverse(category, &rc.libinput_categories, link) {
-		if (category->type == type) {
-			return category;
+	for (auto iter = rc.libinput_categories.rbegin(),
+			end = rc.libinput_categories.rend();
+			iter != end; iter++) {
+		if (iter->type == type) {
+			return &*iter;
 		}
 	}
 
@@ -156,7 +159,7 @@ configure_libinput(struct wlr_input_device *wlr_input_device)
 		libinput_device_get_sysname(libinput_dev));
 
 	wlr_log(WLR_INFO, "matched category: %s",
-		dc->name ? dc->name : libinput_device_type_name(dc->type));
+		dc->name ? dc->name.c() : libinput_device_type_name(dc->type));
 
 	libinput_device_config_tap_set_enabled(libinput_dev,
 		libinput_device_config_tap_get_default_enabled(libinput_dev));
