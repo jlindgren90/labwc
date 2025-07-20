@@ -204,15 +204,14 @@ fill_title_layout(const char *content)
 static void
 fill_usable_area_override(xmlNode *node)
 {
-	struct usable_area_override *usable_area_override =
-		znew(*usable_area_override);
-	wl_list_append(&rc.usable_area_overrides, &usable_area_override->link);
+	rc.usable_area_overrides.push_back(usable_area_override());
+	auto usable_area_override = &rc.usable_area_overrides.back();
 
 	xmlNode *child;
 	char *key, *content;
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		if (!strcmp(key, "output")) {
-			xstrdup_replace(usable_area_override->output, content);
+			usable_area_override->output = lab_str(content);
 		} else if (!strcmp(key, "left")) {
 			usable_area_override->margin.left = atoi(content);
 		} else if (!strcmp(key, "right")) {
@@ -1398,7 +1397,6 @@ rcxml_init(void)
 	static bool has_run;
 
 	if (!has_run) {
-		wl_list_init(&rc.usable_area_overrides);
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
 		wl_list_init(&rc.regions);
@@ -1924,13 +1922,7 @@ rcxml_finish(void)
 
 	clear_title_layout();
 
-	struct usable_area_override *area, *area_tmp;
-	wl_list_for_each_safe(area, area_tmp, &rc.usable_area_overrides, link) {
-		wl_list_remove(&area->link);
-		zfree(area->output);
-		zfree(area);
-	}
-
+	rc.usable_area_overrides.clear();
 	rc.keybinds.clear();
 	rc.mousebinds.clear();
 

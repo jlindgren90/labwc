@@ -29,15 +29,17 @@
 static void
 apply_override(struct output *output, struct wlr_box *usable_area)
 {
-	struct usable_area_override *override;
-	wl_list_for_each(override, &rc.usable_area_overrides, link) {
-		if (override->output && strcasecmp(override->output, output->wlr_output->name)) {
+	for (auto &override : rc.usable_area_overrides) {
+		if (override.output && strcasecmp(override.output.c(),
+				output->wlr_output->name)) {
 			continue;
 		}
-		usable_area->x += override->margin.left;
-		usable_area->y += override->margin.top;
-		usable_area->width -= override->margin.left + override->margin.right;
-		usable_area->height -= override->margin.top + override->margin.bottom;
+		usable_area->x += override.margin.left;
+		usable_area->y += override.margin.top;
+		usable_area->width -=
+			override.margin.left + override.margin.right;
+		usable_area->height -=
+			override.margin.top + override.margin.bottom;
 	}
 }
 
