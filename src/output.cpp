@@ -185,10 +185,9 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 		output->workspace_osd = NULL;
 	}
 
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (auto view : g_views) {
 		if (view->output == output) {
-			view_on_output_destroy(view);
+			view_on_output_destroy(view.get());
 		}
 	}
 
@@ -1030,10 +1029,9 @@ update_usable_area(struct output *output)
 	layers_arrange(output);
 
 #if HAVE_XWAYLAND
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (auto view : g_views) {
 		if (view->mapped && view->type == LAB_XWAYLAND_VIEW) {
-			xwayland_adjust_usable_area(view,
+			xwayland_adjust_usable_area(view.get(),
 				g_server.output_layout, output->wlr_output,
 				&output->usable_area);
 		}
