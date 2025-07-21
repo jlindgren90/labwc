@@ -10,6 +10,7 @@
 
 #include <cairo.h>
 #include <wlr/render/wlr_renderer.h>
+#include "buffer.h"
 #include "ssd.h"
 
 struct lab_img;
@@ -121,14 +122,14 @@ struct theme {
 		 * image. It does not work for horizontal gradients.
 		 */
 		cairo_pattern_t *titlebar_pattern;
-		struct lab_data_buffer *titlebar_fill;
+		lab_data_buffer_ptr titlebar_fill;
 
-		struct lab_data_buffer *corner_top_left_normal;
-		struct lab_data_buffer *corner_top_right_normal;
+		lab_data_buffer_ptr corner_top_left_normal;
+		lab_data_buffer_ptr corner_top_right_normal;
 
-		struct lab_data_buffer *shadow_corner_top;
-		struct lab_data_buffer *shadow_corner_bottom;
-		struct lab_data_buffer *shadow_edge;
+		lab_data_buffer_ptr shadow_corner_top;
+		lab_data_buffer_ptr shadow_corner_bottom;
+		lab_data_buffer_ptr shadow_edge;
 	} window[2];
 
 	/* Derived from font sizes */

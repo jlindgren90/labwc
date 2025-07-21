@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-util.h>
+#include "buffer.h"
 
 enum lab_img_type {
 	LAB_IMG_PNG,
@@ -61,8 +62,8 @@ void lab_img_add_modifier(struct lab_img *img, lab_img_modifier_func_t modifier)
  * @height: height of the created buffer
  * @scale: scale of the created buffer
  */
-struct lab_data_buffer *lab_img_render(struct lab_img *img,
-	int width, int height, double scale);
+lab_data_buffer_ptr lab_img_render(struct lab_img *img, int width, int height,
+	double scale);
 
 /**
  * lab_img_destroy() - destroy lab_img

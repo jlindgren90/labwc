@@ -42,21 +42,21 @@ ispng(const char *filename)
 
 #undef PNG_BYTES_TO_CHECK
 
-struct lab_data_buffer *
+lab_data_buffer_ptr
 img_png_load(const char *filename)
 {
 	if (string_null_or_empty(filename)) {
-		return NULL;
+		return {};
 	}
 	if (!ispng(filename)) {
-		return NULL;
+		return {};
 	}
 
 	cairo_surface_t *image = cairo_image_surface_create_from_png(filename);
 	if (cairo_surface_status(image)) {
 		wlr_log(WLR_ERROR, "error reading png file '%s'", filename);
 		cairo_surface_destroy(image);
-		return NULL;
+		return {};
 	}
 
 	if (cairo_image_surface_get_format(image) == CAIRO_FORMAT_ARGB32) {
@@ -64,7 +64,7 @@ img_png_load(const char *filename)
 	} else {
 		/* Copy non-ARGB32 surface to ARGB32 buffer */
 		/* TODO: directly set non-ARGB32 surface in lab_data_buffer */
-		struct lab_data_buffer *buffer = buffer_create_cairo(
+		auto buffer = buffer_create_cairo(
 			cairo_image_surface_get_width(image),
 			cairo_image_surface_get_height(image), 1);
 		cairo_t *cairo = cairo_create(buffer->surface);
