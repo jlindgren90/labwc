@@ -9,12 +9,14 @@
 #include "common/border.h"
 #include "common/enum.h"
 #include "common/font.h"
+#include "common/reflist.h"
 
 #define BUTTON_MAP_MAX 16
 
 struct buf;
 struct keybind;
 struct mousebind;
+struct region;
 struct window_rule;
 
 enum adaptive_sync_mode {
@@ -151,7 +153,7 @@ struct rcxml {
 	} workspace_config;
 
 	/* Regions */
-	struct wl_list regions;  /* struct region.link */
+	reflist<region> regions;
 
 	/* Window Switcher */
 	struct {
