@@ -524,24 +524,22 @@ update_icon(struct xwayland_view *view)
 	xcb_ewmh_get_wm_icon_reply_t icon;
 	if (!xcb_ewmh_get_wm_icon_from_reply(&icon, reply)) {
 		wlr_log(WLR_INFO, "Invalid x11 icon");
-		view_set_icon(view, NULL, NULL);
+		view_set_icon(view, NULL, {});
 		goto out;
 	}
 
 { /* !goto */
 	xcb_ewmh_wm_icon_iterator_t iter = xcb_ewmh_get_wm_icon_iterator(&icon);
-	struct wl_array buffers;
-	wl_array_init(&buffers);
+	reflist<lab_data_buffer> buffers;
 	for (; iter.rem; xcb_ewmh_get_wm_icon_next(&iter)) {
-		size_t stride = iter.width * 4;
-		auto buf = (uint32_t *)xzalloc(iter.height * stride);
+		auto buf = make_u8_array(4 * iter.width * iter.height);
 
 		/* Pre-multiply alpha */
 		for (uint32_t y = 0; y < iter.height; y++) {
 			for (uint32_t x = 0; x < iter.width; x++) {
 				uint32_t i = x + y * iter.width;
 				uint8_t *src_pixel = (uint8_t *)&iter.data[i];
-				uint8_t *dst_pixel = (uint8_t *)&buf[i];
+				uint8_t *dst_pixel = &buf[4 * i];
 				dst_pixel[0] = src_pixel[0] * src_pixel[3] / 255;
 				dst_pixel[1] = src_pixel[1] * src_pixel[3] / 255;
 				dst_pixel[2] = src_pixel[2] * src_pixel[3] / 255;
@@ -549,15 +547,12 @@ update_icon(struct xwayland_view *view)
 			}
 		}
 
-		struct lab_data_buffer *buffer = buffer_create_from_data(
-			buf, iter.width, iter.height, stride);
-		array_add(&buffers, buffer);
+		buffers.append(buffer_create_from_data(std::move(buf),
+			iter.width, iter.height, 4 * iter.width));
 	}
 
 	/* view takes ownership of the buffers */
-	view_set_icon(view, NULL, &buffers);
-	wl_array_release(&buffers);
-
+	view_set_icon(view, NULL, std::move(buffers));
 } out:
 	free(reply);
 }

@@ -34,10 +34,10 @@ img_svg_load(const char *filename)
 	return svg;
 }
 
-struct lab_data_buffer *
+lab_data_buffer_ptr
 img_svg_render(RsvgHandle *svg, int w, int h, double scale)
 {
-	struct lab_data_buffer *buffer = buffer_create_cairo(w, h, scale);
+	auto buffer = buffer_create_cairo(w, h, scale);
 	cairo_surface_t *image = buffer->surface;
 	cairo_t *cr = cairo_create(image);
 	GError *err = NULL;
@@ -62,7 +62,6 @@ img_svg_render(RsvgHandle *svg, int w, int h, double scale)
 	return buffer;
 
 error:
-	wlr_buffer_drop(&buffer->base);
 	cairo_destroy(cr);
-	return NULL;
+	return {};
 }
