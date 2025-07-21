@@ -83,13 +83,13 @@ font_get_buffer_size(int max_width, const char *text, struct font *font,
 	*height = text_extents.height;
 }
 
-void
-font_buffer_create(struct lab_data_buffer **buffer, int max_width,
-	int height, const char *text, struct font *font, const float *color,
-	cairo_pattern_t *bg_pattern, double scale)
+lab_data_buffer_ptr
+font_buffer_create(int max_width, int height, const char *text,
+		struct font *font, const float *color,
+		cairo_pattern_t *bg_pattern, double scale)
 {
 	if (string_null_or_empty(text)) {
-		return;
+		return {};
 	}
 
 	int width, computed_height;
@@ -98,13 +98,13 @@ font_buffer_create(struct lab_data_buffer **buffer, int max_width,
 		height = computed_height;
 	}
 
-	*buffer = buffer_create_cairo(width, height, scale);
-	if (!*buffer) {
+	auto buffer = buffer_create_cairo(width, height, scale);
+	if (!buffer) {
 		wlr_log(WLR_ERROR, "Failed to create font buffer");
-		return;
+		return {};
 	}
 
-	cairo_surface_t *surf = (*buffer)->surface;
+	cairo_surface_t *surf = buffer->surface;
 	cairo_t *cairo = cairo_create(surf);
 
 	/*
@@ -152,6 +152,8 @@ font_buffer_create(struct lab_data_buffer **buffer, int max_width,
 
 	cairo_surface_flush(surf);
 	cairo_destroy(cairo);
+
+	return buffer;
 }
 
 void

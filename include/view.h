@@ -7,9 +7,11 @@
 #include <wayland-util.h>
 #include <wlr/util/box.h>
 #include <xkbcommon/xkbcommon.h>
+#include "buffer.h"
 #include "common/enum.h"
 #include "common/listener.h"
 #include "common/reflist.h"
+#include "common/str.h"
 #include "config.h"
 
 #define LAB_MIN_VIEW_HEIGHT 60
@@ -214,8 +216,8 @@ struct view_data {
 
 	/* used by scaled_icon_buffer */
 	struct {
-		char *name;
-		struct wl_array buffers; /* struct lab_data_buffer * */
+		lab_str name;
+		reflist<lab_data_buffer> buffers;
 	} icon;
 
 	struct {
@@ -587,7 +589,7 @@ void view_set_shade(struct view *view, bool shaded);
 
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, const char *icon_name,
-	struct wl_array *buffers);
+	reflist<lab_data_buffer> &&buffers);
 
 struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);

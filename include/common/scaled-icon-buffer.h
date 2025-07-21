@@ -3,8 +3,12 @@
 #define LABWC_SCALED_ICON_BUFFER_H
 
 #include <stdbool.h>
+#include <string>
 #include <wayland-server-core.h>
+#include "common/reflist.h"
+#include "common/str.h"
 
+struct lab_data_buffer;
 struct wlr_scene_tree;
 struct wlr_scene_node;
 struct wlr_scene_buffer;
@@ -14,10 +18,10 @@ struct scaled_icon_buffer {
 	struct wlr_scene_buffer *scene_buffer;
 	/* for window icon */
 	struct view *view;
-	char *view_app_id;
-	char *view_icon_name;
+	std::string view_app_id;
+	std::string view_icon_name;
 	bool view_icon_prefer_client;
-	struct wl_array view_icon_buffers;
+	reflist<lab_data_buffer> view_icon_buffers;
 	struct {
 		struct wl_listener new_app_id;
 		struct wl_listener new_title;
@@ -25,7 +29,7 @@ struct scaled_icon_buffer {
 		struct wl_listener destroy;
 	} on_view;
 	/* for general icon (e.g. in menus) */
-	char *icon_name;
+	lab_str icon_name;
 
 	int width;
 	int height;
