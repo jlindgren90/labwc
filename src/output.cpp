@@ -163,7 +163,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct output *output = wl_container_of(listener, output, destroy);
 	regions_evacuate_output(output);
-	regions_destroy(&output->regions);
+	regions_destroy(output->regions);
 	if (g_seat.overlay.active.output == output) {
 		overlay_hide();
 	}
@@ -203,7 +203,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	 * output->scene_output (if still around at this point) is
 	 * destroyed automatically when the wlr_output is destroyed
 	 */
-	free(output);
+	delete output;
 }
 
 static void
@@ -476,7 +476,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	output = znew(*output);
+	output = new ::output{};
 	output->wlr_output = wlr_output;
 	wlr_output->data = output;
 	output_state_init(output);
@@ -491,7 +491,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 	output->request_state.notify = handle_output_request_state;
 	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
 
-	wl_list_init(&output->regions);
 	wl_array_init(&output->osd_scene.items);
 
 	/*
