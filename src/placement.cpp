@@ -54,8 +54,7 @@ count_views(struct view *view)
 
 	int nviews = 0;
 
-	struct view *v;
-	for_each_view(v, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, g_views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 		/* Ignore the target view or anything on a different output */
 		if (v == view || v->output != output) {
 			continue;
@@ -141,8 +140,7 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 	int nr_rows = 2;
 	int nr_cols = 2;
 
-	struct view *v;
-	for_each_view(v, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, g_views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 		if (v == view || v->output != output) {
 			continue;
 		}
@@ -165,7 +163,7 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 
 		x = v->pending.x + margin.right + v->pending.width;
 		y = v->pending.y + margin.bottom
-			+ view_effective_height(v, /* use_pending */ true);
+			+ view_effective_height(v.get(), /* use_pending */ true);
 
 		/* Add a column if the right view edge is in the usable region */
 		if (x > usable.x && x < usable_right) {
@@ -242,8 +240,7 @@ build_overlap(struct overlap_bitmap *bmp, struct view *view)
 		return;
 	}
 
-	struct view *v;
-	for_each_view(v, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, g_views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 		if (v == view || v->output != output) {
 			continue;
 		}
@@ -254,7 +251,8 @@ build_overlap(struct overlap_bitmap *bmp, struct view *view)
 		int ly = v->pending.y - margin.top;
 		int hx = v->pending.x + margin.right + v->pending.width;
 		int hy = v->pending.y + margin.bottom
-			+ view_effective_height(v, /* use_pending */ true);
+			+ view_effective_height(v.get(),
+				/* use_pending */ true);
 
 		/*
 		 * Find the first and last row and column intervals spanned by
