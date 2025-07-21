@@ -8,6 +8,7 @@
 #include "common/border.h"
 #include "common/buf.h"
 #include "common/font.h"
+#include "common/reflist.h"
 #include "common/three-state.h"
 #include "config/tablet.h"
 #include "config/tablet-tool.h"
@@ -17,6 +18,7 @@
 
 struct keybind;
 struct mousebind;
+struct region;
 struct window_rule;
 
 enum view_placement_policy {
@@ -178,7 +180,7 @@ struct rcxml {
 	} workspace_config;
 
 	/* Regions */
-	struct wl_list regions;  /* struct region.link */
+	reflist<region> regions;
 
 	/* Window Switcher */
 	struct {

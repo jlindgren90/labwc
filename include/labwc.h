@@ -417,7 +417,7 @@ struct output {
 	/* In output-relative scene coordinates */
 	struct wlr_box usable_area;
 
-	struct wl_list regions;  /* struct region.link */
+	reflist<region> regions;
 
 	struct wl_listener destroy;
 	struct wl_listener frame;

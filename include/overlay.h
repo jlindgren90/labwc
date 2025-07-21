@@ -24,7 +24,7 @@ struct overlay {
 	/* Represents currently shown or delayed overlay */
 	struct {
 		/* Region overlay */
-		struct region *region;
+		weakptr<::region> region;
 
 		/* Snap-to-edge overlay */
 		enum view_edge edge;
