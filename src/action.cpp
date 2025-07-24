@@ -829,11 +829,9 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 		debug_dump_scene();
 		break;
 	case ACTION_TYPE_EXECUTE: {
-		auto cmd = BUF_INIT;
-		buf_add(&cmd, action.get_str("command", NULL).c());
-		buf_expand_tilde(&cmd);
-		spawn_async_no_shell(cmd.data);
-		buf_reset(&cmd);
+		lab_str cmd = action.get_str("command", NULL);
+		cmd = buf_expand_tilde(cmd.c());
+		spawn_async_no_shell(cmd.c());
 		break;
 	}
 	case ACTION_TYPE_EXIT:
