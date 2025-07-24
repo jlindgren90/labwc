@@ -992,7 +992,7 @@ actions_run(struct view *activator, std::vector<action> &actions,
 			 * a required argument for both SendToDesktop and GoToDesktop.
 			 */
 			struct workspace *target_workspace =
-				workspaces_find(g_server.workspaces.current,
+				workspaces_find(g_server.workspaces.current.get(),
 					to.c(), wrap);
 			if (!target_workspace) {
 				break;
