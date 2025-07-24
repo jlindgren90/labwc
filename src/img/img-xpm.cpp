@@ -19,9 +19,9 @@
 #include <wlr/util/log.h>
 
 #include "buffer.h"
-#include "common/buf.h"
 #include "common/graphic-helpers.h"
 #include "common/mem.h"
+#include "common/str.h"
 
 enum buf_op { op_header, op_cmap, op_body };
 
@@ -32,7 +32,7 @@ struct xpm_color {
 
 struct file_handle {
 	FILE *infile;
-	struct buf buf;
+	lab_str buf;
 };
 
 static inline uint32_t
@@ -128,9 +128,9 @@ xpm_seek_char(FILE *infile, char c)
 }
 
 static bool
-xpm_read_string(FILE *infile, struct buf *buf)
+xpm_read_string(FILE *infile, lab_str &buf)
 {
-	buf_clear(buf);
+	buf.clear();
 	int c;
 
 	do {
@@ -144,7 +144,7 @@ xpm_read_string(FILE *infile, struct buf *buf)
 		if (c == '"') {
 			return true;
 		}
-		buf_add_char(buf, c);
+		buf += (char)c;
 	}
 
 	return false;
@@ -252,10 +252,10 @@ file_buffer(enum buf_op op, struct file_handle *h)
 		/* Fall through to the xpm_read_string. */
 
 	case op_body:
-		if (!xpm_read_string(h->infile, &h->buf)) {
+		if (!xpm_read_string(h->infile, h->buf)) {
 			return NULL;
 		}
-		return h->buf.data;
+		return h->buf.c();
 
 	default:
 		g_assert_not_reached();
@@ -395,7 +395,5 @@ img_xpm_load(const char *filename)
 	}
 
 	fclose(h.infile);
-	buf_reset(&h.buf);
-
 	return buffer;
 }
