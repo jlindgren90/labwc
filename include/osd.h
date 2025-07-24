@@ -38,7 +38,6 @@ struct window_switcher_field {
 	lab_str format;
 };
 
-struct buf;
 struct view;
 
 /* Begin window switcher */
@@ -54,8 +53,8 @@ void osd_finish(void);
 void osd_on_view_destroy(struct view *view);
 
 /* Used by osd.c internally to render window switcher fields */
-void osd_field_get_content(struct window_switcher_field *field,
-	struct buf *buf, struct view *view);
+lab_str osd_field_get_content(struct window_switcher_field *field,
+	struct view *view);
 
 /* Used by rcxml.c when parsing the config */
 struct window_switcher_field *osd_field_create(void);

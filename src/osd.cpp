@@ -2,13 +2,11 @@
 #include "osd.h"
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/buf.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
 #include "common/scaled-font-buffer.h"
 #include "common/scaled-icon-buffer.h"
 #include "common/scene-helpers.h"
-#include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "output.h"
@@ -322,7 +320,6 @@ create_osd_scene(struct output *output, view_list &views)
 	}
 
 { /* !goto */
-	struct buf buf = BUF_INIT;
 	int nr_fields = rc.window_switcher.fields.size();
 
 	/* This is the width of the area available for text fields */
@@ -380,15 +377,13 @@ create_osd_scene(struct output *output, view_list &views)
 				node = &icon_buffer->scene_buffer->node;
 				height = icon_size;
 			} else {
-				buf_clear(&buf);
-				osd_field_get_content(&field, &buf, &view);
-
-				if (!string_null_or_empty(buf.data)) {
+				lab_str buf = osd_field_get_content(&field, &view);
+				if (buf) {
 					auto font_buffer =
 						new scaled_font_buffer(
 							item_root);
 					scaled_font_buffer_update(font_buffer,
-						buf.data, field_width,
+						buf.c(), field_width,
 						&rc.font_osd, text_color, bg_color);
 					node = &font_buffer->scene_buffer->node;
 					height = font_height(&rc.font_osd);
@@ -426,7 +421,6 @@ create_osd_scene(struct output *output, view_list &views)
 
 		y += g_theme.osd_window_switcher_item_height;
 	}
-	buf_reset(&buf);
 
 } error:;
 	/* Center OSD */

@@ -40,7 +40,6 @@ enum tiling_events_mode {
 		(LAB_TILING_EVENTS_REGION | LAB_TILING_EVENTS_EDGE),
 };
 
-struct buf;
 struct keybind;
 struct libinput_category;
 struct mousebind;
@@ -189,7 +188,7 @@ struct rcxml {
 
 extern struct rcxml rc;
 
-void rcxml_parse_xml(struct buf *b);
+void rcxml_parse_xml(const lab_str &buf);
 void rcxml_read(const char *filename);
 void rcxml_finish(void);
 

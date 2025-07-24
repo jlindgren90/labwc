@@ -12,7 +12,6 @@
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include "action.h"
-#include "common/buf.h"
 #include "common/dir.h"
 #include "common/macros.h"
 #include "common/mem.h"
@@ -1473,10 +1472,10 @@ xml_tree_walk(xmlNode *node, struct parser_state *state)
 
 /* Exposed in header file to allow unit tests to parse buffers */
 void
-rcxml_parse_xml(struct buf *b)
+rcxml_parse_xml(const lab_str &buf)
 {
 	int options = 0;
-	xmlDoc *d = xmlReadMemory(b->data, b->len, NULL, NULL, options);
+	xmlDoc *d = xmlReadMemory(buf.c(), buf.size(), NULL, NULL, options);
 	if (!d) {
 		wlr_log(WLR_ERROR, "error parsing config file");
 		return;
@@ -1817,17 +1816,15 @@ post_processing(void)
 			rc.workspace_config.prefix = lab_str(_("Workspace"));
 		}
 
-		struct buf b = BUF_INIT;
 		for (int i = nr_workspaces; i < rc.workspace_config.min_nr_workspaces; i++) {
+			lab_str buf;
 			if (rc.workspace_config.prefix) {
-				buf_add_fmt(&b, "%s ",
+				buf += strdup_printf("%s ",
 					rc.workspace_config.prefix.c());
 			}
-			buf_add_fmt(&b, "%d", i + 1);
-			rc.workspace_config.names.push_back(lab_str(b.data));
-			buf_clear(&b);
+			buf += strdup_printf("%d", i + 1);
+			rc.workspace_config.names.push_back(buf);
 		}
-		buf_reset(&b);
 	}
 	if (rc.workspace_config.popuptime == INT_MIN) {
 		rc.workspace_config.popuptime = 1000;
@@ -1953,7 +1950,7 @@ rcxml_read(const char *filename)
 
 		wlr_log(WLR_INFO, "read config file %s", path.c());
 
-		struct buf b = BUF_INIT;
+		lab_str buf;
 		char *line = NULL;
 		size_t len = 0;
 		while (getline(&line, &len, stream) != -1) {
@@ -1961,12 +1958,11 @@ rcxml_read(const char *filename)
 			if (p) {
 				*p = '\0';
 			}
-			buf_add(&b, line);
+			buf += line;
 		}
 		zfree(line);
 		fclose(stream);
-		rcxml_parse_xml(&b);
-		buf_reset(&b);
+		rcxml_parse_xml(buf);
 		if (!should_merge_config) {
 			break;
 		}

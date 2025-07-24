@@ -91,10 +91,8 @@ find_dir(struct ctx *ctx)
 {
 	char *debug = getenv("LABWC_DEBUG_DIR_CONFIG_AND_THEME");
 
-	struct buf prefix = BUF_INIT;
 	for (int i = 0; ctx->dirs[i].path; i++) {
 		struct dir d = ctx->dirs[i];
-		buf_clear(&prefix);
 
 		/*
 		 * Replace (rather than augment) $HOME/.config with
@@ -102,13 +100,13 @@ find_dir(struct ctx *ctx)
 		 * XDG Base Directories.
 		 */
 		char *pfxenv = getenv(d.prefix);
-		buf_add(&prefix, pfxenv ? pfxenv : d.default_prefix);
-		if (!prefix.len) {
+		lab_str prefix{pfxenv ? pfxenv : d.default_prefix};
+		if (!prefix) {
 			continue;
 		}
 
 		/* Handle .default_prefix shell variables such as $HOME */
-		buf_expand_shell_variables(&prefix);
+		prefix = buf_expand_shell_variables(prefix.c());
 
 		/*
 		 * Respect that $XDG_DATA_DIRS can contain multiple colon
@@ -116,7 +114,7 @@ find_dir(struct ctx *ctx)
 		 * .default_prefix in the same way.
 		 */
 		gchar * *prefixes;
-		prefixes = g_strsplit(prefix.data, ":", -1);
+		prefixes = g_strsplit(prefix.c(), ":", -1);
 		for (gchar * *p = prefixes; *p; p++) {
 			ctx->build_path_fn(ctx, *p, d.path);
 			if (debug) {
@@ -132,7 +130,6 @@ find_dir(struct ctx *ctx)
 		}
 		g_strfreev(prefixes);
 	}
-	buf_reset(&prefix);
 }
 
 std::vector<lab_str>
