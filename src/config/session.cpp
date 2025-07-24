@@ -50,8 +50,7 @@ process_line(char *line)
 		return;
 	}
 
-	struct buf value = BUF_INIT;
-	buf_add(&value, string_strip(++p));
+	lab_str value{string_strip(++p)};
 
 	/*
 	 * Users should not assign environment variables recursively (for
@@ -65,19 +64,16 @@ process_line(char *line)
 	 * defensively handle that growth issue in the case of inadvertent
 	 * recursion.
 	 */
-	if (value.len > LAB_ENV_VAR_MAX_SIZE) {
+	if (value.size() > LAB_ENV_VAR_MAX_SIZE) {
 		wlr_log(WLR_ERROR, "ignoring environment variable assignment as "
 			"its size is greater than %d bytes which indicates recursion "
-			"(%s=%s)", LAB_ENV_VAR_MAX_SIZE, key, value.data);
-		goto err;
+			"(%s=%s)", LAB_ENV_VAR_MAX_SIZE, key, value.c());
+		return;
 	}
 
-	buf_expand_shell_variables(&value);
-	buf_expand_tilde(&value);
-	setenv(key, value.data, 1);
-
-err:
-	buf_reset(&value);
+	value = buf_expand_shell_variables(value.c());
+	value = buf_expand_tilde(value.c());
+	setenv(key, value.c(), 1);
 }
 
 #undef LAB_ENV_VAR_MAX_SIZE
