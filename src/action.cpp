@@ -753,12 +753,9 @@ actions_run(struct view *activator, std::vector<action> &actions,
 			debug_dump_scene();
 			break;
 		case ACTION_TYPE_EXECUTE: {
-			struct buf cmd = BUF_INIT;
 			lab_str str = action.get_str("command", NULL);
-			buf_add(&cmd, str.c());
-			buf_expand_tilde(&cmd);
-			spawn_async_no_shell(cmd.data);
-			buf_reset(&cmd);
+			lab_str cmd = buf_expand_tilde(str.c());
+			spawn_async_no_shell(cmd.c());
 			break;
 		}
 		case ACTION_TYPE_EXIT:
