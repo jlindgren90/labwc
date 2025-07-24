@@ -7,11 +7,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <functional>
 #include "buffer.h"
 #include "common/font.h"
 #include "common/graphic-helpers.h"
-#include "common/list.h"
-#include "common/mem.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "protocols/cosmic-workspaces.h"
@@ -68,14 +67,13 @@ _osd_update(void)
 		|| g_theme.osd_workspace_switcher_boxes_height == 0;
 
 	/* Dimensions */
-	size_t workspace_count = wl_list_length(&g_server.workspaces.all);
+	size_t workspace_count = g_server.workspaces.all.size();
 	uint16_t marker_width = workspace_count * (rect_width + padding) - padding;
 	uint16_t width = margin * 2 + (marker_width < 200 ? 200 : marker_width);
 	uint16_t height = margin * (hide_boxes ? 2 : 3) + rect_height + font_height(&rc.font_osd);
 
 	cairo_t *cairo;
 	cairo_surface_t *surface;
-	struct workspace *workspace;
 
 	struct output *output;
 	wl_list_for_each(output, &g_server.outputs, link) {
@@ -108,9 +106,9 @@ _osd_update(void)
 		uint16_t x;
 		if (!hide_boxes) {
 			x = (width - marker_width) / 2;
-			wl_list_for_each(workspace, &g_server.workspaces.all, link) {
-				bool active = workspace
-					== g_server.workspaces.current;
+			for (auto workspace : g_server.workspaces.all) {
+				bool active = (g_server.workspaces.current
+					== workspace);
 				set_cairo_color(cairo,
 					g_theme.osd_label_text_color);
 				struct wlr_fbox fbox = {
@@ -138,7 +136,7 @@ _osd_update(void)
 
 		/* Center workspace indicator on the x axis */
 		int req_width = font_width(&rc.font_osd,
-			g_server.workspaces.current->name);
+			g_server.workspaces.current->name.c());
 		req_width = MIN(req_width, width - 2 * margin);
 		x = (width - req_width) / 2;
 		if (!hide_boxes) {
@@ -151,8 +149,8 @@ _osd_update(void)
 		pango_layout_set_font_description(layout, desc);
 		pango_layout_set_width(layout, req_width * PANGO_SCALE);
 		pango_font_description_free(desc);
-		pango_layout_set_text(layout, g_server.workspaces.current->name,
-			-1);
+		pango_layout_set_text(layout,
+			g_server.workspaces.current->name.c(), -1);
 		pango_cairo_show_layout(cairo, layout);
 
 		g_object_unref(layout);
@@ -189,7 +187,8 @@ handle_cosmic_workspace_activate(struct wl_listener *listener, void *data)
 {
 	struct workspace *workspace = wl_container_of(listener, workspace, on_cosmic.activate);
 	workspaces_switch_to(workspace, /* update_focus */ true);
-	wlr_log(WLR_INFO, "cosmic activating workspace %s", workspace->name);
+	wlr_log(WLR_INFO, "cosmic activating workspace %s",
+		workspace->name.c());
 }
 
 /* ext workspace handlers */
@@ -198,19 +197,19 @@ handle_ext_workspace_activate(struct wl_listener *listener, void *data)
 {
 	struct workspace *workspace = wl_container_of(listener, workspace, on_ext.activate);
 	workspaces_switch_to(workspace, /* update_focus */ true);
-	wlr_log(WLR_INFO, "ext activating workspace %s", workspace->name);
+	wlr_log(WLR_INFO, "ext activating workspace %s", workspace->name.c());
 }
 
 /* Internal API */
 static void
 add_workspace(const char *name)
 {
-	struct workspace *workspace = znew(*workspace);
-	workspace->name = xstrdup(name);
+	struct workspace *workspace = new ::workspace{};
+	workspace->name = lab_str(name);
 	workspace->tree = wlr_scene_tree_create(g_server.view_tree);
-	wl_list_append(&g_server.workspaces.all, &workspace->link);
+	g_server.workspaces.all.append(workspace);
 	if (!g_server.workspaces.current) {
-		g_server.workspaces.current = workspace;
+		g_server.workspaces.current = weakptr(workspace);
 	} else {
 		wlr_scene_node_set_enabled(&workspace->tree->node, false);
 	}
@@ -241,41 +240,11 @@ add_workspace(const char *name)
 		&workspace->on_ext.activate);
 }
 
-static struct workspace *
-get_prev(struct workspace *current, struct wl_list *workspaces, bool wrap)
-{
-	struct wl_list *target_link = current->link.prev;
-	if (target_link == workspaces) {
-		/* Current workspace is the first one */
-		if (!wrap) {
-			return NULL;
-		}
-		/* Roll over */
-		target_link = target_link->prev;
-	}
-	return wl_container_of(target_link, current, link);
-}
-
-static struct workspace *
-get_next(struct workspace *current, struct wl_list *workspaces, bool wrap)
-{
-	struct wl_list *target_link = current->link.next;
-	if (target_link == workspaces) {
-		/* Current workspace is the last one */
-		if (!wrap) {
-			return NULL;
-		}
-		/* Roll over */
-		target_link = target_link->next;
-	}
-	return wl_container_of(target_link, current, link);
-}
-
-static bool
-workspace_has_views(struct workspace *workspace)
+bool
+workspace::has_views()
 {
 	for_each_view(view, g_views, LAB_VIEW_CRITERIA_NO_OMNIPRESENT) {
-		if (view->workspace == workspace) {
+		if (view->workspace == this) {
 			return true;
 		}
 	}
@@ -283,56 +252,27 @@ workspace_has_views(struct workspace *workspace)
 }
 
 static struct workspace *
-get_adjacent_occupied(struct workspace *current, struct wl_list *workspaces,
+get_adjacent_occupied(struct workspace *current, reflist<workspace> &workspaces,
 		bool wrap, bool reverse)
 {
-	struct wl_list *start = &current->link;
-	struct wl_list *link = reverse ? start->prev : start->next;
-	bool has_wrapped = false;
+	auto start = reverse ? workspaces.rbegin() : workspaces.begin();
+	auto stop = reverse ? workspaces.rend() : workspaces.end();
+	auto occupied = lab::next_after_if(start, stop, current, wrap,
+		std::mem_fn(&workspace::has_views));
 
-	while (true) {
-		/* Handle list boundaries */
-		if (link == workspaces) {
-			if (!wrap) {
-				break;  /* No wrapping allowed - stop searching */
-			}
-			if (has_wrapped) {
-				break;  /* Already wrapped once - stop to prevent infinite loop */
-			}
-			/* Wrap around */
-			link = reverse ? workspaces->prev : workspaces->next;
-			has_wrapped = true;
-			continue;
-		}
-
-		/* Get the workspace */
-		struct workspace *target = wl_container_of(link, target, link);
-
-		/* Check if we've come full circle */
-		if (link == start) {
-			break;
-		}
-
-		/* Check if it's occupied (and not current) */
-		if (target != current && workspace_has_views(target)) {
-			return target;
-		}
-
-		/* Move to next/prev */
-		link = reverse ? link->prev : link->next;
-	}
-
-	return NULL;  /* No occupied workspace found */
+	return (occupied != stop) ? occupied.get() : NULL;
 }
 
 static struct workspace *
-get_prev_occupied(struct workspace *current, struct wl_list *workspaces, bool wrap)
+get_prev_occupied(struct workspace *current, reflist<workspace> &workspaces,
+		bool wrap)
 {
 	return get_adjacent_occupied(current, workspaces, wrap, true);
 }
 
 static struct workspace *
-get_next_occupied(struct workspace *current, struct wl_list *workspaces, bool wrap)
+get_next_occupied(struct workspace *current, reflist<workspace> &workspaces,
+		bool wrap)
 {
 	return get_adjacent_occupied(current, workspaces, wrap, false);
 }
@@ -394,11 +334,8 @@ workspaces_init(void)
 	g_server.workspaces.ext_group =
 		lab_ext_workspace_group_create(g_server.workspaces.ext_manager);
 
-	wl_list_init(&g_server.workspaces.all);
-
-	struct workspace *conf;
-	wl_list_for_each(conf, &rc.workspace_config.workspaces, link) {
-		add_workspace(conf->name);
+	for (auto name : rc.workspace_config.names) {
+		add_workspace(name.c());
 	}
 }
 
@@ -411,7 +348,7 @@ void
 workspaces_switch_to(struct workspace *target, bool update_focus)
 {
 	assert(target);
-	if (target == g_server.workspaces.current) {
+	if (g_server.workspaces.current == target) {
 		return;
 	}
 
@@ -441,7 +378,7 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 	g_server.workspaces.last = g_server.workspaces.current;
 
 	/* Make sure new views will spawn on the new workspace */
-	g_server.workspaces.current = target;
+	g_server.workspaces.current = weakptr(target);
 
 	struct view *grabbed_view = g_server.grabbed_view;
 	if (grabbed_view && !view_is_always_on_top(grabbed_view)) {
@@ -507,32 +444,33 @@ workspaces_find(struct workspace *anchor, const char *name, bool wrap)
 		return NULL;
 	}
 	size_t index = 0;
-	struct workspace *target;
 	size_t wants_index = parse_workspace_index(name);
-	struct wl_list *workspaces = &g_server.workspaces.all;
+	auto &workspaces = g_server.workspaces.all;
 
 	if (wants_index) {
-		wl_list_for_each(target, workspaces, link) {
+		for (auto target : workspaces) {
 			if (wants_index == ++index) {
-				return target;
+				return target.get();
 			}
 		}
 	} else if (!strcasecmp(name, "current")) {
 		return anchor;
 	} else if (!strcasecmp(name, "last")) {
-		return g_server.workspaces.last;
+		return g_server.workspaces.last.get();
 	} else if (!strcasecmp(name, "left")) {
-		return get_prev(anchor, workspaces, wrap);
+		return lab::next_after(workspaces.rbegin(), workspaces.rend(),
+			anchor, wrap).get();
 	} else if (!strcasecmp(name, "right")) {
-		return get_next(anchor, workspaces, wrap);
+		return lab::next_after(workspaces.begin(), workspaces.end(),
+			anchor, wrap).get();
 	} else if (!strcasecmp(name, "left-occupied")) {
 		return get_prev_occupied(anchor, workspaces, wrap);
 	} else if (!strcasecmp(name, "right-occupied")) {
 		return get_next_occupied(anchor, workspaces, wrap);
 	} else {
-		wl_list_for_each(target, workspaces, link) {
-			if (!strcasecmp(target->name, name)) {
-				return target;
+		for (auto target : workspaces) {
+			if (!strcasecmp(target->name.c(), name)) {
+				return target.get();
 			}
 		}
 	}
@@ -540,18 +478,14 @@ workspaces_find(struct workspace *anchor, const char *name, bool wrap)
 	return NULL;
 }
 
-static void
-destroy_workspace(struct workspace *workspace)
+workspace::~workspace()
 {
-	wlr_scene_node_destroy(&workspace->tree->node);
-	zfree(workspace->name);
-	wl_list_remove(&workspace->link);
-	wl_list_remove(&workspace->on_cosmic.activate.link);
-	wl_list_remove(&workspace->on_ext.activate.link);
+	wlr_scene_node_destroy(&tree->node);
+	wl_list_remove(&on_cosmic.activate.link);
+	wl_list_remove(&on_ext.activate.link);
 
-	lab_cosmic_workspace_destroy(workspace->cosmic_workspace);
-	lab_ext_workspace_destroy(workspace->ext_workspace);
-	free(workspace);
+	lab_cosmic_workspace_destroy(cosmic_workspace);
+	lab_ext_workspace_destroy(ext_workspace);
 }
 
 void
@@ -564,51 +498,51 @@ workspaces_reconfigure(void)
 	 *   - Destroy workspaces if fewer workspace are desired
 	 */
 
-	struct wl_list *actual_workspace_link = g_server.workspaces.all.next;
+	auto actual_workspace_iter = g_server.workspaces.all.begin();
 
-	struct workspace *configured_workspace;
-	wl_list_for_each(configured_workspace,
-			&rc.workspace_config.workspaces, link) {
-		struct workspace *actual_workspace = wl_container_of(
-			actual_workspace_link, actual_workspace, link);
-
-		if (actual_workspace_link == &g_server.workspaces.all) {
+	for (auto configured_name : rc.workspace_config.names) {
+		if (!actual_workspace_iter.valid()) {
 			/* # of configured workspaces increased */
 			wlr_log(WLR_DEBUG, "Adding workspace \"%s\"",
-				configured_workspace->name);
-			add_workspace(configured_workspace->name);
+				configured_name.c());
+			add_workspace(configured_name.c());
 			continue;
 		}
-		if (strcmp(actual_workspace->name, configured_workspace->name)) {
+
+		struct workspace *actual_workspace =
+			actual_workspace_iter.get();
+		if (actual_workspace->name != configured_name) {
 			/* Workspace is renamed */
-			wlr_log(WLR_DEBUG, "Renaming workspace \"%s\" to \"%s\"",
-				actual_workspace->name, configured_workspace->name);
-			free(actual_workspace->name);
-			actual_workspace->name = xstrdup(configured_workspace->name);
+			wlr_log(WLR_DEBUG,
+				"Renaming workspace \"%s\" to \"%s\"",
+				actual_workspace->name.c(),
+				configured_name.c());
+			actual_workspace->name = configured_name;
 			lab_cosmic_workspace_set_name(
-				actual_workspace->cosmic_workspace, actual_workspace->name);
+				actual_workspace->cosmic_workspace,
+				actual_workspace->name.c());
 			lab_ext_workspace_set_name(
-				actual_workspace->ext_workspace, actual_workspace->name);
+				actual_workspace->ext_workspace,
+				actual_workspace->name.c());
 		}
-		actual_workspace_link = actual_workspace_link->next;
+		++actual_workspace_iter;
 	}
 
-	if (actual_workspace_link == &g_server.workspaces.all) {
+	if (!actual_workspace_iter.valid()) {
 		return;
 	}
 
 	/* # of configured workspaces decreased */
 	overlay_hide();
 	struct workspace *first_workspace =
-		wl_container_of(g_server.workspaces.all.next, first_workspace,
-			link);
+		g_server.workspaces.all.begin().get();
 
-	while (actual_workspace_link != &g_server.workspaces.all) {
-		struct workspace *actual_workspace = wl_container_of(
-			actual_workspace_link, actual_workspace, link);
+	while (actual_workspace_iter.valid()) {
+		struct workspace *actual_workspace =
+			actual_workspace_iter.get();
 
 		wlr_log(WLR_DEBUG, "Destroying workspace \"%s\"",
-			actual_workspace->name);
+			actual_workspace->name.c());
 
 		for (auto view : g_views) {
 			if (view->workspace == actual_workspace) {
@@ -622,20 +556,16 @@ workspaces_reconfigure(void)
 				/* update_focus */ true);
 		}
 		if (g_server.workspaces.last == actual_workspace) {
-			g_server.workspaces.last = first_workspace;
+			g_server.workspaces.last = weakptr(first_workspace);
 		}
 
-		actual_workspace_link = actual_workspace_link->next;
-		destroy_workspace(actual_workspace);
+		actual_workspace_iter.remove();
+		++actual_workspace_iter;
 	}
 }
 
 void
 workspaces_destroy(void)
 {
-	struct workspace *workspace, *tmp;
-	wl_list_for_each_safe(workspace, tmp, &g_server.workspaces.all, link) {
-		destroy_workspace(workspace);
-	}
-	assert(wl_list_empty(&g_server.workspaces.all));
+	g_server.workspaces.all.clear();
 }

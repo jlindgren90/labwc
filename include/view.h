@@ -16,6 +16,7 @@
 #include "common/str.h"
 #include "common/three-state.h"
 #include "regions.h"
+#include "workspaces.h"
 
 #define LAB_MIN_VIEW_HEIGHT 60
 
@@ -180,7 +181,7 @@ struct view_data {
 	 */
 	uint64_t outputs;
 
-	struct workspace *workspace;
+	weakptr<::workspace> workspace;
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree;
