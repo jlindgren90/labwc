@@ -219,6 +219,7 @@ struct seat {
 };
 
 struct lab_data_buffer;
+struct menu;
 struct workspace;
 
 enum lab_cycle_dir {
@@ -387,8 +388,8 @@ struct server {
 	/* Set when in cycle (alt-tab) mode */
 	struct osd_state osd_state;
 
-	struct menu *menu_current;
-	struct wl_list menus;
+	weakptr<menu> menu_current;
+	reflist<menu> menus;
 
 	struct sfdo *sfdo;
 
