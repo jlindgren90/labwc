@@ -2,30 +2,15 @@
 #include "common/lab-scene-rect.h"
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/mem.h"
-
-struct border_scene {
-	struct wlr_scene_tree *tree;
-	struct wlr_scene_rect *top, *bottom, *left, *right;
-};
-
-static void
-handle_node_destroy(struct wl_listener *listener, void *data)
-{
-	struct lab_scene_rect *rect = wl_container_of(listener, rect, node_destroy);
-	wl_list_remove(&rect->node_destroy.link);
-	free(rect->borders);
-	free(rect);
-}
 
 struct lab_scene_rect *
 lab_scene_rect_create(struct wlr_scene_tree *parent,
 		struct lab_scene_rect_options *opts)
 {
-	struct lab_scene_rect *rect = znew(*rect);
+	auto rect = new lab_scene_rect();
 	rect->border_width = opts->border_width;
 	rect->nr_borders = opts->nr_borders;
-	rect->borders = znew_n(rect->borders[0], opts->nr_borders);
+	rect->borders.resize(opts->nr_borders);
 	rect->tree = wlr_scene_tree_create(parent);
 
 	if (opts->bg_color) {
@@ -42,8 +27,7 @@ lab_scene_rect_create(struct wlr_scene_tree *parent,
 		border->left = wlr_scene_rect_create(border->tree, 0, 0, color);
 	}
 
-	rect->node_destroy.notify = handle_node_destroy;
-	wl_signal_add(&rect->tree->node.events.destroy, &rect->node_destroy);
+	CONNECT_LISTENER(&rect->tree->node, rect, destroy);
 
 	lab_scene_rect_set_size(rect, opts->width, opts->height);
 
