@@ -14,26 +14,15 @@
 #include "img/img-xpm.h"
 #include <glib.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <unordered_map>
 #include <wlr/util/log.h>
 
 #include "buffer.h"
 #include "common/graphic-helpers.h"
-#include "common/mem.h"
 #include "common/str.h"
 
 enum buf_op { op_header, op_cmap, op_body };
-
-struct xpm_color {
-	char *color_string;
-	uint32_t argb;
-};
-
-struct file_handle {
-	FILE *infile;
-	lab_str buf;
-};
 
 static inline uint32_t
 make_argb(uint8_t a, uint8_t r, uint8_t g, uint8_t b)
@@ -127,27 +116,27 @@ xpm_seek_char(FILE *infile, char c)
 	return false;
 }
 
-static bool
-xpm_read_string(FILE *infile, lab_str &buf)
+static lab_str
+xpm_read_string(FILE *infile)
 {
-	buf.clear();
+	lab_str buf;
 	int c;
 
 	do {
 		c = getc(infile);
 		if (c == EOF) {
-			return false;
+			return lab_str();
 		}
 	} while (c != '"');
 
 	while ((c = getc(infile)) != EOF) {
 		if (c == '"') {
-			return true;
+			return buf;
 		}
 		buf += (char)c;
 	}
 
-	return false;
+	return lab_str();
 }
 
 static uint32_t
@@ -231,51 +220,48 @@ xpm_extract_color(const char *buffer)
 	}
 }
 
-static const char *
-file_buffer(enum buf_op op, struct file_handle *h)
+static lab_str
+file_buffer(enum buf_op op, FILE *infile)
 {
 	switch (op) {
 	case op_header:
-		if (!xpm_seek_string(h->infile, "XPM")) {
+		if (!xpm_seek_string(infile, "XPM")) {
 			break;
 		}
-		if (!xpm_seek_char(h->infile, '{')) {
+		if (!xpm_seek_char(infile, '{')) {
 			break;
 		}
 		/* Fall through to the next xpm_seek_char. */
 
 	case op_cmap:
-		xpm_seek_char(h->infile, '"');
-		if (fseek(h->infile, -1, SEEK_CUR) != 0) {
-			return NULL;
+		xpm_seek_char(infile, '"');
+		if (fseek(infile, -1, SEEK_CUR) != 0) {
+			break;
 		}
 		/* Fall through to the xpm_read_string. */
 
 	case op_body:
-		if (!xpm_read_string(h->infile, h->buf)) {
-			return NULL;
-		}
-		return h->buf.c();
+		return xpm_read_string(infile);
 
 	default:
 		g_assert_not_reached();
 	}
 
-	return NULL;
+	return lab_str();
 }
 
 static cairo_surface_t *
-xpm_load_to_surface(struct file_handle *handle)
+xpm_load_to_surface(FILE *infile)
 {
-	const char *buffer = file_buffer(op_header, handle);
+	lab_str buffer = file_buffer(op_header, infile);
 	if (!buffer) {
 		wlr_log(WLR_DEBUG, "No XPM header found");
 		return NULL;
 	}
 
 	int w, h, n_col, cpp, x_hot, y_hot;
-	int items = sscanf(buffer, "%d %d %d %d %d %d", &w, &h, &n_col, &cpp,
-		&x_hot, &y_hot);
+	int items = sscanf(buffer.c(), "%d %d %d %d %d %d", &w, &h, &n_col,
+		&cpp, &x_hot, &y_hot);
 
 	if (items != 4 && items != 6) {
 		wlr_log(WLR_DEBUG, "Invalid XPM header");
@@ -305,37 +291,26 @@ xpm_load_to_surface(struct file_handle *handle)
 	}
 
 	/* The hash is used for fast lookups of color from chars */
-	GHashTable *color_hash = g_hash_table_new(g_str_hash, g_str_equal);
-
-	char *name_buf = xzalloc(n_col * (cpp + 1));
-	struct xpm_color *colors = znew_n(struct xpm_color, n_col);
-	cairo_surface_t *surface = NULL;
-	struct xpm_color *fallbackcolor = NULL;
-	char pixel_str[32]; /* cpp < 32 */
+	std::unordered_map<std::string, uint32_t> color_map;
+	uint32_t fallbackcolor = 0;
 
 	for (int cnt = 0; cnt < n_col; cnt++) {
-		buffer = file_buffer(op_cmap, handle);
-		if (!buffer) {
+		buffer = file_buffer(op_cmap, infile);
+		if (buffer.size() < (size_t)cpp) {
 			wlr_log(WLR_DEBUG, "Cannot read XPM colormap");
-			goto out;
+			return NULL;
 		}
 
-		struct xpm_color *color = &colors[cnt];
-		color->color_string = &name_buf[cnt * (cpp + 1)];
-		g_strlcpy(color->color_string, buffer, cpp + 1);
-		buffer += strlen(color->color_string);
-
-		color->argb = xpm_extract_color(buffer);
-
-		g_hash_table_insert(color_hash, color->color_string, color);
+		auto color_string = buffer.substr(0, cpp);
+		uint32_t argb = xpm_extract_color(&buffer[cpp]);
+		color_map.emplace(color_string, argb);
 
 		if (cnt == 0) {
-			fallbackcolor = color;
+			fallbackcolor = argb;
 		}
 	}
 
-{ /* !goto */
-	surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
+	auto surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
 	uint32_t *data = (uint32_t *)cairo_image_surface_get_data(surface);
 	int stride = cairo_image_surface_get_stride(surface) / sizeof(uint32_t);
 
@@ -343,50 +318,38 @@ xpm_load_to_surface(struct file_handle *handle)
 		uint32_t *pixtmp = data + stride * ycnt;
 		int wbytes = w * cpp;
 
-		buffer = file_buffer(op_body, handle);
-		if (!buffer || (strlen(buffer) < (size_t)wbytes)) {
+		buffer = file_buffer(op_body, infile);
+		if (buffer.size() < (size_t)wbytes) {
 			/* Advertised width doesn't match pixels */
 			wlr_log(WLR_DEBUG, "Dimensions do not match data");
 			cairo_surface_destroy(surface);
-			surface = NULL;
-			goto out;
+			return NULL;
 		}
 
 		for (int n = 0, xcnt = 0; n < wbytes; n += cpp, xcnt++) {
-			g_strlcpy(pixel_str, &buffer[n], cpp + 1);
+			auto pixel_str = buffer.substr(n, cpp);
+			auto iter = color_map.find(pixel_str);
+			uint32_t argb = (iter == color_map.end())
+				? fallbackcolor : iter->second;
 
-			struct xpm_color *color =
-				g_hash_table_lookup(color_hash, pixel_str);
-
-			/* Bad XPM...punt */
-			if (!color) {
-				color = fallbackcolor;
-			}
-
-			*pixtmp++ = color->argb;
+			*pixtmp++ = argb;
 		}
 	}
 	/* let cairo know pixel data has been modified */
 	cairo_surface_mark_dirty(surface);
-
-} out:
-	g_hash_table_destroy(color_hash);
-	free(colors);
-	free(name_buf);
 	return surface;
 }
 
 refptr<lab_data_buffer>
 img_xpm_load(const char *filename)
 {
-	struct file_handle h = {0};
-	h.infile = fopen(filename, "rb");
-	if (!h.infile) {
+	FILE *infile = fopen(filename, "rb");
+	if (!infile) {
 		wlr_log(WLR_ERROR, "error opening '%s'", filename);
 		return {};
 	}
 
-	cairo_surface_t *surface = xpm_load_to_surface(&h);
+	cairo_surface_t *surface = xpm_load_to_surface(infile);
 	refptr<lab_data_buffer> buffer;
 	if (surface) {
 		buffer = buffer_adopt_cairo_surface(surface);
@@ -394,6 +357,6 @@ img_xpm_load(const char *filename)
 		wlr_log(WLR_ERROR, "error loading '%s'", filename);
 	}
 
-	fclose(h.infile);
+	fclose(infile);
 	return buffer;
 }
