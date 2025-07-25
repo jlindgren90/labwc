@@ -1,7 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef LABWC_LAB_SCENE_RECT_H
 #define LABWC_LAB_SCENE_RECT_H
-#include <wayland-server-core.h>
+
+#include <vector>
+#include "listener.h"
 
 struct wlr_scene_tree;
 
@@ -14,14 +16,17 @@ struct lab_scene_rect_options {
 	int height;
 };
 
-struct lab_scene_rect {
+struct border_scene {
+	struct wlr_scene_tree *tree;
+	struct wlr_scene_rect *top, *bottom, *left, *right;
+};
+
+struct lab_scene_rect : public destroyable {
 	struct wlr_scene_tree *tree;
 	int border_width;
 	int nr_borders;
-	struct border_scene *borders;
+	std::vector<border_scene> borders;
 	struct wlr_scene_rect *fill;
-
-	struct wl_listener node_destroy;
 };
 
 /**
