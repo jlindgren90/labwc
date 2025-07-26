@@ -9,7 +9,6 @@
 #include <wlr/types/wlr_scene.h>
 #include "action.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "config/mousebind.h"
 #include "config/rcxml.h"
@@ -64,14 +63,14 @@ handle_tablet_tool_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&tool->link);
 	wl_list_remove(&tool->handlers.set_cursor.link);
 	wl_list_remove(&tool->handlers.destroy.link);
-	free(tool);
+	delete tool;
 }
 
 static struct drawing_tablet_tool *
 tablet_tool_create(struct wlr_tablet_tool *wlr_tablet_tool)
 {
 	wlr_log(WLR_DEBUG, "setting up tablet tool");
-	struct drawing_tablet_tool *tool = znew(*tool);
+	auto tool = new drawing_tablet_tool{};
 	tool->tool_v2 = wlr_tablet_tool_create(g_server.tablet_manager,
 		g_seat.seat, wlr_tablet_tool);
 	wlr_tablet_tool->data = tool;
@@ -703,14 +702,14 @@ handle_destroy(struct wl_listener *listener, void *data)
 	tablet_pad_attach_tablet();
 
 	wl_list_remove(&tablet->handlers.destroy.link);
-	free(tablet);
+	delete tablet;
 }
 
 void
 tablet_create(struct wlr_input_device *wlr_device)
 {
 	wlr_log(WLR_DEBUG, "setting up tablet");
-	struct drawing_tablet *tablet = znew(*tablet);
+	auto tablet = new drawing_tablet{};
 	tablet->wlr_input_device = wlr_device;
 	tablet->tablet = wlr_tablet_from_input_device(wlr_device);
 	tablet->tablet->data = tablet;
