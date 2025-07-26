@@ -20,7 +20,6 @@
 #include <wlr/util/region.h>
 #include "action.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "common/surface-helpers.h"
 #include "config/mousebind.h"
@@ -719,7 +718,7 @@ handle_constraint_destroy(struct wl_listener *listener, void *data)
 {
 	struct constraint *constraint = wl_container_of(listener, constraint,
 		destroy);
-	struct wlr_pointer_constraint_v1 *wlr_constraint = data;
+	auto wlr_constraint = (wlr_pointer_constraint_v1 *)data;
 
 	wl_list_remove(&constraint->destroy.link);
 	if (g_seat.current_constraint == wlr_constraint) {
@@ -732,14 +731,14 @@ handle_constraint_destroy(struct wl_listener *listener, void *data)
 		g_seat.current_constraint = NULL;
 	}
 
-	free(constraint);
+	delete constraint;
 }
 
 void
 create_constraint(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_constraint_v1 *wlr_constraint = data;
-	struct constraint *constraint = znew(*constraint);
+	auto wlr_constraint = (wlr_pointer_constraint_v1 *)data;
+	auto constraint = new ::constraint{};
 
 	constraint->constraint = wlr_constraint;
 	constraint->destroy.notify = handle_constraint_destroy;
