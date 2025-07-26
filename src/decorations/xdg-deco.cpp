@@ -1,50 +1,33 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <wlr/types/wlr_xdg_decoration_v1.h>
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "decorations.h"
 #include "labwc.h"
 #include "view.h"
 
-struct xdg_deco {
+struct xdg_deco : public destroyable {
 	struct wlr_xdg_toplevel_decoration_v1 *wlr_xdg_decoration;
 	enum wlr_xdg_toplevel_decoration_v1_mode client_mode;
 	struct view *view;
-	struct wl_listener destroy;
-	struct wl_listener request_mode;
-	struct wl_listener surface_commit;
+
+	DECLARE_HANDLER(xdg_deco, request_mode);
+	DECLARE_HANDLER(xdg_deco, commit);
 };
 
-static void
-xdg_deco_destroy(struct wl_listener *listener, void *data)
+void
+xdg_deco::handle_commit(void *)
 {
-	struct xdg_deco *xdg_deco = wl_container_of(listener, xdg_deco, destroy);
-	wl_list_remove(&xdg_deco->destroy.link);
-	wl_list_remove(&xdg_deco->request_mode.link);
-	if (xdg_deco->surface_commit.notify) {
-		wl_list_remove(&xdg_deco->surface_commit.link);
-		xdg_deco->surface_commit.notify = NULL;
-	}
-	free(xdg_deco);
-}
-
-static void
-handle_surface_commit(struct wl_listener *listener, void *data)
-{
-	struct xdg_deco *xdg_deco = wl_container_of(listener, xdg_deco, surface_commit);
-	struct wlr_xdg_toplevel_decoration_v1 *deco = xdg_deco->wlr_xdg_decoration;
-
-	if (deco->toplevel->base->initial_commit) {
-		wlr_xdg_toplevel_decoration_v1_set_mode(deco, xdg_deco->client_mode);
-		wl_list_remove(&xdg_deco->surface_commit.link);
-		xdg_deco->surface_commit.notify = NULL;
+	if (wlr_xdg_decoration->toplevel->base->initial_commit) {
+		wlr_xdg_toplevel_decoration_v1_set_mode(wlr_xdg_decoration,
+			client_mode);
+		on_commit.disconnect();
 	}
 }
 
-static void
-xdg_deco_request_mode(struct wl_listener *listener, void *data)
+void
+xdg_deco::handle_request_mode(void *)
 {
-	struct xdg_deco *xdg_deco = wl_container_of(listener, xdg_deco, request_mode);
+	auto xdg_deco = this;
 	enum wlr_xdg_toplevel_decoration_v1_mode client_mode =
 		xdg_deco->wlr_xdg_decoration->requested_mode;
 
@@ -76,12 +59,11 @@ xdg_deco_request_mode(struct wl_listener *listener, void *data)
 	if (xdg_deco->wlr_xdg_decoration->toplevel->base->initialized) {
 		wlr_xdg_toplevel_decoration_v1_set_mode(xdg_deco->wlr_xdg_decoration,
 			client_mode);
-	} else if (!xdg_deco->surface_commit.notify) {
-		xdg_deco->surface_commit.notify = handle_surface_commit;
-		wl_signal_add(
-			&xdg_deco->wlr_xdg_decoration->toplevel->base->surface->events.commit,
-			&xdg_deco->surface_commit);
+	} else {
+		CONNECT_LISTENER(wlr_xdg_decoration->toplevel->base->surface,
+			this, commit);
 	}
+
 	if (client_mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE) {
 		view_set_ssd_mode(xdg_deco->view, LAB_SSD_MODE_FULL);
 	} else {
@@ -92,7 +74,7 @@ xdg_deco_request_mode(struct wl_listener *listener, void *data)
 static void
 xdg_toplevel_decoration(struct wl_listener *listener, void *data)
 {
-	struct wlr_xdg_toplevel_decoration_v1 *wlr_xdg_decoration = data;
+	auto wlr_xdg_decoration = (wlr_xdg_toplevel_decoration_v1 *)data;
 	struct wlr_xdg_surface *xdg_surface = wlr_xdg_decoration->toplevel->base;
 	if (!xdg_surface || !xdg_surface->data) {
 		wlr_log(WLR_ERROR,
@@ -100,18 +82,14 @@ xdg_toplevel_decoration(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct xdg_deco *xdg_deco = znew(*xdg_deco);
+	auto xdg_deco = new ::xdg_deco();
 	xdg_deco->wlr_xdg_decoration = wlr_xdg_decoration;
 	xdg_deco->view = (struct view *)xdg_surface->data;
 
-	wl_signal_add(&wlr_xdg_decoration->events.destroy, &xdg_deco->destroy);
-	xdg_deco->destroy.notify = xdg_deco_destroy;
+	CONNECT_LISTENER(wlr_xdg_decoration, xdg_deco, destroy);
+	CONNECT_LISTENER(wlr_xdg_decoration, xdg_deco, request_mode);
 
-	wl_signal_add(&wlr_xdg_decoration->events.request_mode,
-		&xdg_deco->request_mode);
-	xdg_deco->request_mode.notify = xdg_deco_request_mode;
-
-	xdg_deco_request_mode(&xdg_deco->request_mode, wlr_xdg_decoration);
+	xdg_deco->handle_request_mode();
 }
 
 void
