@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <wlr/types/wlr_xdg_decoration_v1.h>
-#include "common/mem.h"
 #include "decorations.h"
 #include "labwc.h"
 #include "view.h"
@@ -24,7 +23,7 @@ xdg_deco_destroy(struct wl_listener *listener, void *data)
 		wl_list_remove(&xdg_deco->surface_commit.link);
 		xdg_deco->surface_commit.notify = NULL;
 	}
-	free(xdg_deco);
+	delete xdg_deco;
 }
 
 static void
@@ -91,7 +90,7 @@ xdg_deco_request_mode(struct wl_listener *listener, void *data)
 static void
 xdg_toplevel_decoration(struct wl_listener *listener, void *data)
 {
-	struct wlr_xdg_toplevel_decoration_v1 *wlr_xdg_decoration = data;
+	auto wlr_xdg_decoration = (wlr_xdg_toplevel_decoration_v1 *)data;
 	struct wlr_xdg_surface *xdg_surface = wlr_xdg_decoration->toplevel->base;
 	if (!xdg_surface || !xdg_surface->data) {
 		wlr_log(WLR_ERROR,
@@ -99,7 +98,7 @@ xdg_toplevel_decoration(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct xdg_deco *xdg_deco = znew(*xdg_deco);
+	auto xdg_deco = new ::xdg_deco{};
 	xdg_deco->wlr_xdg_decoration = wlr_xdg_decoration;
 	xdg_deco->view = (struct view *)xdg_surface->data;
 

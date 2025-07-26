@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <assert.h>
 #include <wayland-server-core.h>
-#include "common/macros.h"
-#include "common/mem.h"
 #include "labwc.h"
 #include "view.h"
 #include "foreign-toplevel-internal.h"
@@ -45,7 +43,7 @@ foreign_toplevel_create(struct view *view)
 	assert(view);
 	assert(view->mapped);
 
-	struct foreign_toplevel *toplevel = znew(*toplevel);
+	auto toplevel = new foreign_toplevel{};
 	toplevel->view = view;
 
 	wl_signal_init(&toplevel->events.toplevel_parent);
@@ -71,5 +69,5 @@ foreign_toplevel_destroy(struct foreign_toplevel *toplevel)
 	wl_signal_emit_mutable(&toplevel->events.toplevel_destroy, NULL);
 	assert(!toplevel->wlr_toplevel.handle);
 	assert(!toplevel->ext_toplevel.handle);
-	free(toplevel);
+	delete toplevel;
 }

@@ -3,8 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/util/log.h>
-#include "common/mem.h"
 #include "common/parse-double.h"
+#include "common/str.h"
 
 struct dec_separator {
 	int index;
@@ -80,13 +80,13 @@ set_double(const char *str, double *val)
 		return false;
 	}
 
-	char *lstr = NULL;
+	lab_str lstr;
 
 	if (dloc.index >= 0) {
-		lstr = xstrdup(str);
+		lstr = lab_str(str);
 		struct lconv *lc = localeconv();
 		lstr[dloc.index] = *lc->decimal_point;
-		str = lstr;
+		str = lstr.c();
 	}
 
 	struct converted_double conv = convert_double(str);
@@ -94,6 +94,5 @@ set_double(const char *str, double *val)
 		*val = conv.value;
 	}
 
-	free(lstr);
 	return conv.valid;
 }

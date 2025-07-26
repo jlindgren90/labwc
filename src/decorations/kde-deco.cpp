@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include "common/list.h"
-#include "common/mem.h"
 #include "decorations.h"
 #include "labwc.h"
 #include "view.h"
@@ -25,7 +24,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&kde_deco->destroy.link);
 	wl_list_remove(&kde_deco->mode.link);
 	wl_list_remove(&kde_deco->link);
-	free(kde_deco);
+	delete kde_deco;
 }
 
 static void
@@ -36,7 +35,7 @@ handle_mode(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	enum wlr_server_decoration_manager_mode client_mode =
+	auto client_mode = (wlr_server_decoration_manager_mode)
 		kde_deco->wlr_kde_decoration->mode;
 
 	switch (client_mode) {
@@ -62,8 +61,8 @@ handle_mode(struct wl_listener *listener, void *data)
 static void
 handle_new_server_decoration(struct wl_listener *listener, void *data)
 {
-	struct wlr_server_decoration *wlr_deco = data;
-	struct kde_deco *kde_deco = znew(*kde_deco);
+	auto wlr_deco = (wlr_server_decoration *)data;
+	auto kde_deco = new ::kde_deco{};
 	kde_deco->wlr_kde_decoration = wlr_deco;
 
 	if (wlr_deco->surface) {

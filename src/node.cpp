@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <assert.h>
 #include <stdlib.h>
-#include "common/mem.h"
 #include "node.h"
 
 static void
@@ -11,7 +10,7 @@ descriptor_destroy(struct node_descriptor *node_descriptor)
 		return;
 	}
 	wl_list_remove(&node_descriptor->destroy.link);
-	free(node_descriptor);
+	delete node_descriptor;
 }
 
 static void
@@ -26,7 +25,7 @@ void
 node_descriptor_create(struct wlr_scene_node *scene_node,
 		enum node_descriptor_type type, void *data)
 {
-	struct node_descriptor *node_descriptor = znew(*node_descriptor);
+	auto node_descriptor = new ::node_descriptor{};
 	node_descriptor->type = type;
 	node_descriptor->data = data;
 	node_descriptor->destroy.notify = handle_node_destroy;

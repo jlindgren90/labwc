@@ -344,7 +344,7 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&layer->new_popup.link);
 	wl_list_remove(&layer->output_destroy.link);
 	wl_list_remove(&layer->node_destroy.link);
-	free(layer);
+	delete layer;
 }
 
 static void
@@ -416,7 +416,7 @@ handle_popup_destroy(struct wl_listener *listener, void *data)
 
 	cursor_update_focus();
 
-	free(popup);
+	delete popup;
 }
 
 static void
@@ -449,7 +449,7 @@ static void handle_popup_new_popup(struct wl_listener *listener, void *data);
 static struct lab_layer_popup *
 create_popup(struct wlr_xdg_popup *wlr_popup, struct wlr_scene_tree *parent)
 {
-	struct lab_layer_popup *popup = znew(*popup);
+	auto popup = new lab_layer_popup{};
 	popup->wlr_popup = wlr_popup;
 	popup->scene_tree =
 		wlr_scene_xdg_surface_create(parent, wlr_popup->base);
@@ -568,7 +568,7 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 		layer_surface->output = output;
 	}
 
-	struct lab_layer_surface *surface = znew(*surface);
+	auto surface = new lab_layer_surface{};
 	surface->layer_surface = layer_surface;
 
 	struct output *output = layer_surface->output->data;
