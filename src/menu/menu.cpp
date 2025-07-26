@@ -8,7 +8,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <fstream>
 #include <functional>
+#include <sstream>
 #include <wayland-server-core.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
@@ -737,10 +739,10 @@ xml_tree_walk(struct menu_parse_context *ctx, xmlNode *node)
 }
 
 static bool
-parse_buf(struct menu_parse_context *ctx, const lab_str &buf)
+parse_buf(struct menu_parse_context *ctx, const std::string &buf)
 {
 	int options = 0;
-	xmlDoc *d = xmlReadMemory(buf.c(), buf.size(), NULL, NULL, options);
+	xmlDoc *d = xmlReadMemory(buf.data(), buf.size(), NULL, NULL, options);
 	if (!d) {
 		wlr_log(WLR_ERROR, "xmlParseMemory()");
 		return false;
@@ -749,30 +751,6 @@ parse_buf(struct menu_parse_context *ctx, const lab_str &buf)
 	xmlFreeDoc(d);
 	xmlCleanupParser();
 	return true;
-}
-
-/*
- * @stream can come from either of the following:
- *   - fopen() in the case of reading a file such as menu.xml
- *   - popen() when processing pipemenus
- */
-static void
-parse_stream(FILE *stream)
-{
-	char *line = NULL;
-	size_t len = 0;
-	lab_str buf;
-
-	while (getline(&line, &len, stream) != -1) {
-		char *p = strrchr(line, '\n');
-		if (p) {
-			*p = '\0';
-		}
-		buf += line;
-	}
-	free(line);
-	struct menu_parse_context ctx = {0};
-	parse_buf(&ctx, buf);
 }
 
 static void
@@ -786,13 +764,15 @@ parse_xml(const char *filename)
 	for (int idx = 0; idx < num_paths; idx++) {
 		auto &path = should_merge_config ?
 			paths[(num_paths - 1) - idx] : paths[idx];
-		FILE *stream = fopen(path.c(), "r");
-		if (!stream) {
+		std::ifstream ifs(path);
+		if (!ifs.good()) {
 			continue;
 		}
 		wlr_log(WLR_INFO, "read menu file %s", path.c());
-		parse_stream(stream);
-		fclose(stream);
+		std::ostringstream oss;
+		oss << ifs.rdbuf();
+		struct menu_parse_context ctx = {0};
+		parse_buf(&ctx, oss.str());
 		if (!should_merge_config) {
 			break;
 		}
