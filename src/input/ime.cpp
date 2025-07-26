@@ -11,7 +11,6 @@
 #include <wlr/types/wlr_text_input_v3.h>
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include "common/mem.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "node.h"
@@ -367,7 +366,7 @@ handle_popup_surface_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&popup->destroy.link);
 	wl_list_remove(&popup->commit.link);
 	wl_list_remove(&popup->link);
-	free(popup);
+	delete popup;
 }
 
 static void
@@ -384,8 +383,8 @@ handle_input_method_new_popup_surface(struct wl_listener *listener, void *data)
 	struct input_method_relay *relay = wl_container_of(listener, relay,
 		input_method_new_popup_surface);
 
-	struct input_method_popup *popup = znew(*popup);
-	popup->popup_surface = data;
+	auto popup = new input_method_popup{};
+	popup->popup_surface = (wlr_input_popup_surface_v2 *)data;
 	popup->relay = relay;
 
 	popup->destroy.notify = handle_popup_surface_destroy;
@@ -524,7 +523,7 @@ handle_text_input_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&text_input->destroy.link);
 	wl_list_remove(&text_input->link);
 	update_active_text_input(text_input->relay);
-	free(text_input);
+	delete text_input;
 }
 
 static void
@@ -532,12 +531,12 @@ handle_new_text_input(struct wl_listener *listener, void *data)
 {
 	struct input_method_relay *relay =
 		wl_container_of(listener, relay, new_text_input);
-	struct wlr_text_input_v3 *wlr_text_input = data;
+	auto wlr_text_input = (wlr_text_input_v3 *)data;
 	if (g_seat.seat != wlr_text_input->seat) {
 		return;
 	}
 
-	struct text_input *text_input = znew(*text_input);
+	auto text_input = new ::text_input{};
 	text_input->input = wlr_text_input;
 	text_input->relay = relay;
 	wl_list_insert(&relay->text_inputs, &text_input->link);
@@ -575,7 +574,7 @@ handle_focused_surface_destroy(struct wl_listener *listener, void *data)
 struct input_method_relay *
 input_method_relay_create(void)
 {
-	struct input_method_relay *relay = znew(*relay);
+	auto relay = new input_method_relay{};
 	wl_list_init(&relay->text_inputs);
 	wl_list_init(&relay->popups);
 	relay->popup_tree = wlr_scene_tree_create(&g_server.scene->tree);
@@ -598,7 +597,7 @@ input_method_relay_finish(struct input_method_relay *relay)
 {
 	wl_list_remove(&relay->new_text_input.link);
 	wl_list_remove(&relay->new_input_method.link);
-	free(relay);
+	delete relay;
 }
 
 void
