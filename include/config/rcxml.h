@@ -188,7 +188,7 @@ struct rcxml {
 
 extern struct rcxml rc;
 
-void rcxml_parse_xml(const lab_str &buf);
+void rcxml_parse_xml(const std::string &buf);
 void rcxml_read(const char *filename);
 void rcxml_finish(void);
 

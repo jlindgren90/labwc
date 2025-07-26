@@ -16,6 +16,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <fstream>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include <wlr/render/pixman.h>
@@ -26,7 +27,6 @@
 #include "common/font.h"
 #include "common/graphic-helpers.h"
 #include "common/match.h"
-#include "common/mem.h"
 #include "common/parse-bool.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
@@ -1068,24 +1068,16 @@ theme_read(const std::vector<lab_str> &paths)
 	for (int idx = 0; idx < num_paths; idx++) {
 		auto &path = should_merge_config ?
 			paths[(num_paths - 1) - idx] : paths[idx];
-		FILE *stream = fopen(path.c(), "r");
-		if (!stream) {
+		std::ifstream ifs(path);
+		if (!ifs.good()) {
 			continue;
 		}
 
 		wlr_log(WLR_INFO, "read theme %s", path.c());
 
-		char *line = NULL;
-		size_t len = 0;
-		while (getline(&line, &len, stream) != -1) {
-			char *p = strrchr(line, '\n');
-			if (p) {
-				*p = '\0';
-			}
-			process_line(line);
+		for (std::string line; std::getline(ifs, line);) {
+			process_line(line.data());
 		}
-		zfree(line);
-		fclose(stream);
 		if (!should_merge_config) {
 			break;
 		}
