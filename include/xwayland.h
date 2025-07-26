@@ -11,7 +11,9 @@ struct wlr_output;
 struct wlr_output_layout;
 struct wlr_xwayland_surface;
 
-struct xwayland_unmanaged : public refcounted<xwayland_unmanaged> {
+struct xwayland_unmanaged : public destroyable,
+		public refcounted<xwayland_unmanaged>
+{
 	wlr_xwayland_surface *const xwayland_surface;
 	wlr_scene_node *node = nullptr;
 
@@ -33,7 +35,6 @@ struct xwayland_unmanaged : public refcounted<xwayland_unmanaged> {
 	void handle_request_activate(void *);
 	void handle_request_configure(void *);
 	void handle_set_geometry(void *);
-	void handle_destroy(void *) { delete this; }
 	void handle_set_override_redirect(void *);
 
 	DECLARE_LISTENER(xwayland_unmanaged, map);
@@ -45,7 +46,6 @@ struct xwayland_unmanaged : public refcounted<xwayland_unmanaged> {
 	DECLARE_LISTENER(xwayland_unmanaged, request_configure);
 /*	DECLARE_LISTENER(xwayland_unmanaged, request_fullscreen); */
 	DECLARE_LISTENER(xwayland_unmanaged, set_geometry);
-	DECLARE_LISTENER(xwayland_unmanaged, destroy);
 	DECLARE_LISTENER(xwayland_unmanaged, set_override_redirect);
 };
 
@@ -55,6 +55,7 @@ struct xwayland_view : public view {
 
 	xwayland_view(wlr_xwayland_surface *xsurface)
 		: view(LAB_XWAYLAND_VIEW), xwayland_surface(xsurface) {}
+	~xwayland_view();
 
 	void map() override;
 	void unmap(bool client_request) override;
@@ -75,7 +76,6 @@ struct xwayland_view : public view {
 	bool contains_window_type(window_type window_type) override;
 	pid_t get_pid() override;
 
-	void handle_destroy(void *) override;
 	void handle_commit(void *) override;
 	void handle_request_move(void *) override;
 	void handle_request_resize(void *) override;

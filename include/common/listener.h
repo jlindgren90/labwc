@@ -48,4 +48,19 @@ private:
 #define CONNECT_LISTENER(src, dest, name) \
 	(dest)->on_##name.connect(&(src)->events.name)
 
+class destroyable
+{
+public:
+	destroyable() {}
+	virtual ~destroyable() {}
+
+	destroyable(const destroyable &) = delete;
+	destroyable &operator=(const destroyable &) = delete;
+
+	DECLARE_LISTENER(destroyable, destroy);
+
+private:
+	void handle_destroy(void *) { delete this; }
+};
+
 #endif

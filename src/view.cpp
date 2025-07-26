@@ -2353,10 +2353,9 @@ view_set_icon(struct view *view, const char *icon_name,
 	wl_signal_emit_mutable(&view->events.set_icon, NULL);
 }
 
-void
-view_init(struct view *view)
+view::view(view_type type) : view_data(), type(type)
 {
-	assert(view);
+	auto view = this;
 
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
@@ -2369,10 +2368,9 @@ view_init(struct view *view)
 	wl_signal_init(&view->events.destroy);
 }
 
-void
-view_destroy(struct view *view)
+view::~view()
 {
-	assert(view);
+	auto view = this;
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
 	snap_constraints_invalidate(view);
@@ -2433,7 +2431,6 @@ view_destroy(struct view *view)
 	}
 
 	g_views.remove(view);
-	delete view;
 
 	cursor_update_focus();
 }

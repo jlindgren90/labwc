@@ -143,12 +143,11 @@ void
 xwayland_unmanaged::handle_set_override_redirect(void *)
 {
 	auto xsurface = this->xwayland_surface;
-
 	bool mapped = xsurface->surface && xsurface->surface->mapped;
 	if (mapped) {
 		handle_unmap(NULL);
 	}
-	handle_destroy(NULL);
+	delete this;
 	/* "this" is invalid after this point */
 	xwayland_view_create(xsurface, mapped);
 }

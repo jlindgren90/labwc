@@ -269,11 +269,11 @@ struct view_data {
 };
 
 /* C++ class representing a view (constructor-initialized) */
-struct view : public refcounted<view>, public view_data {
+struct view : public destroyable, public refcounted<view>, public view_data {
 	const view_type type;
 
-	view(view_type type) : view_data{}, type(type) {}
-	virtual ~view() {};
+	view(view_type type);
+	virtual ~view();
 
 	void last_unref() { /* no-op */ }
 
@@ -309,7 +309,6 @@ struct view : public refcounted<view>, public view_data {
 		unmap(/* client_request */ true);
 	}
 
-	virtual void handle_destroy(void *) = 0;
 	virtual void handle_commit(void *) = 0;
 	virtual void handle_request_move(void *) = 0;
 	virtual void handle_request_resize(void *) = 0;
@@ -320,7 +319,6 @@ struct view : public refcounted<view>, public view_data {
 
 	DECLARE_LISTENER(view, map);
 	DECLARE_LISTENER(view, unmap);
-	DECLARE_LISTENER(view, destroy);
 	DECLARE_LISTENER(view, commit);
 	DECLARE_LISTENER(view, request_move);
 	DECLARE_LISTENER(view, request_resize);
@@ -360,6 +358,7 @@ struct xdg_toplevel_view : public view {
 
 	xdg_toplevel_view(wlr_xdg_surface *xdg_surface)
 		: view(LAB_XDG_SHELL_VIEW), xdg_surface(xdg_surface) {}
+	~xdg_toplevel_view();
 
 	void map() override;
 	void unmap(bool client_request) override;
@@ -378,7 +377,6 @@ struct xdg_toplevel_view : public view {
 	bool contains_window_type(window_type window_type) override;
 	pid_t get_pid() override;
 
-	void handle_destroy(void *) override;
 	void handle_commit(void *) override;
 	void handle_request_move(void *) override;
 	void handle_request_resize(void *) override;
@@ -623,9 +621,6 @@ void view_adjust_size(struct view *view, int *w, int *h);
 void view_evacuate_region(struct view *view);
 void view_on_output_destroy(struct view *view);
 void view_connect_map(struct view *view, struct wlr_surface *surface);
-
-void view_init(struct view *view);
-void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
 enum view_edge view_edge_parse(const char *direction);

@@ -319,24 +319,19 @@ set_pending_configure_serial(struct view *view, uint32_t serial)
 		CONFIGURE_TIMEOUT_MS);
 }
 
-void
-xdg_toplevel_view::handle_destroy(void *)
+xdg_toplevel_view::~xdg_toplevel_view()
 {
-	auto view = this;
-
 	struct wlr_xdg_popup *popup, *tmp;
-	wl_list_for_each_safe(popup, tmp, &view->xdg_surface->popups, link) {
+	wl_list_for_each_safe(popup, tmp, &xdg_surface->popups, link) {
 		wlr_xdg_popup_destroy(popup);
 	}
 
-	view->xdg_surface->data = NULL;
+	xdg_surface->data = NULL;
 
-	if (view->pending_configure_timeout) {
-		wl_event_source_remove(view->pending_configure_timeout);
-		view->pending_configure_timeout = NULL;
+	if (pending_configure_timeout) {
+		wl_event_source_remove(pending_configure_timeout);
+		pending_configure_timeout = NULL;
 	}
-
-	view_destroy(view);
 }
 
 void
@@ -879,7 +874,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	wlr_xdg_surface_ping(xdg_surface);
 
 	auto view = new xdg_toplevel_view(xdg_surface);
-	view_init(view);
 
 	/*
 	 * Pick an output for the surface as soon as its created, so that the

@@ -308,8 +308,7 @@ xwayland_view::handle_surface_destroy(void *data)
 	on_surface_destroy.disconnect();
 }
 
-void
-xwayland_view::handle_destroy(void *)
+xwayland_view::~xwayland_view()
 {
 	assert(xwayland_surface->data == this);
 
@@ -320,8 +319,6 @@ xwayland_view::handle_destroy(void *)
 	 * that xsurface->data not point to the destroyed view).
 	 */
 	xwayland_surface->data = NULL;
-
-	view_destroy(this);
 }
 
 void
@@ -488,15 +485,13 @@ xwayland_view::handle_set_decorations(void *)
 void
 xwayland_view::handle_set_override_redirect(void *)
 {
-	auto view = this;
-	auto xsurface = view->xwayland_surface;
-
+	auto xsurface = xwayland_surface;
 	bool mapped = xsurface->surface && xsurface->surface->mapped;
 	if (mapped) {
-		view->unmap(/* client_request */ true);
+		unmap(/* client_request */ true);
 	}
-	handle_destroy(xsurface);
-	/* view is invalid after this point */
+	delete this;
+	/* "this" is invalid after this point */
 	xwayland_unmanaged_create(xsurface, mapped);
 }
 
@@ -921,7 +916,6 @@ void
 xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 {
 	auto view = new xwayland_view(xsurface);
-	view_init(view);
 
 	/*
 	 * Set two-way view <-> xsurface association.  Usually the association
