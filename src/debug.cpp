@@ -117,8 +117,7 @@ get_special(struct wlr_scene_node *node)
 		return "unknown workspace";
 	}
 	if (node->parent == &g_server.scene->tree) {
-		struct output *output;
-		wl_list_for_each(output, &g_server.outputs, link) {
+		for (auto output : g_server.outputs) {
 			if (node == &output->osd_tree->node) {
 				return "output->osd_tree";
 			}

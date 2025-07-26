@@ -20,8 +20,7 @@ static void update_osd(void);
 static void
 destroy_osd_scenes(void)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		wlr_scene_node_destroy(&output->osd_scene.tree->node);
 		output->osd_scene.tree = NULL;
 		output->osd_scene.items.clear();
@@ -456,16 +455,15 @@ update_osd(void)
 
 	if (rc.window_switcher.show && g_theme.osd_window_switcher_width > 0) {
 		/* Display the actual OSD */
-		struct output *output;
-		wl_list_for_each(output, &g_server.outputs, link) {
-			if (!output_is_usable(output)) {
+		for (auto output : g_server.outputs) {
+			if (!output_is_usable(output.get())) {
 				continue;
 			}
 			if (!output->osd_scene.tree) {
-				create_osd_scene(output, views);
+				create_osd_scene(output.get(), views);
 				assert(output->osd_scene.tree);
 			}
-			update_item_highlight(output);
+			update_item_highlight(output.get());
 		}
 	}
 

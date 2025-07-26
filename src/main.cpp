@@ -17,6 +17,7 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "osd.h"
+#include "output.h"
 #include "regions.h"
 #include "ssd-internal.h"
 #include "theme.h"

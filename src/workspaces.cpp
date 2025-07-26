@@ -79,9 +79,8 @@ _osd_update(void)
 	cairo_t *cairo;
 	cairo_surface_t *surface;
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
+	for (auto output : g_server.outputs) {
+		if (!output_is_usable(output.get())) {
 			continue;
 		}
 		auto buffer = buffer_create_cairo(width, height,
@@ -297,9 +296,8 @@ _osd_show(void)
 	}
 
 	_osd_update();
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (output_is_usable(output) && output->workspace_osd) {
+	for (auto output : g_server.outputs) {
+		if (output_is_usable(output.get()) && output->workspace_osd) {
 			wlr_scene_node_set_enabled(&output->workspace_osd->node, true);
 		}
 	}
@@ -426,8 +424,7 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 void
 workspaces_osd_hide(void)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		if (!output->workspace_osd) {
 			continue;
 		}
