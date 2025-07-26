@@ -7,7 +7,6 @@
 #include <wlr/types/wlr_tablet_v2.h>
 #include <wlr/util/log.h>
 #include "common/macros.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "config/tablet.h"
 #include "input/cursor.h"
@@ -172,14 +171,14 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&pad->handlers.ring.link);
 	wl_list_remove(&pad->handlers.strip.link);
 	wl_list_remove(&pad->handlers.destroy.link);
-	free(pad);
+	delete pad;
 }
 
 void
 tablet_pad_create(struct wlr_input_device *wlr_device)
 {
 	wlr_log(WLR_DEBUG, "setting up tablet pad");
-	struct drawing_tablet_pad *pad = znew(*pad);
+	auto pad = new drawing_tablet_pad{};
 	pad->wlr_input_device = wlr_device;
 	pad->pad = wlr_tablet_pad_from_input_device(wlr_device);
 	if (g_server.tablet_manager) {
