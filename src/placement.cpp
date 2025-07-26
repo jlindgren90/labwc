@@ -2,8 +2,6 @@
 #include "placement.h"
 #include <assert.h>
 #include <limits.h>
-#include <stdbool.h>
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "output.h"
@@ -16,28 +14,15 @@
 struct overlap_bitmap {
 	int nr_rows;
 	int nr_cols;
-	int *rows;
-	int *cols;
-	int *grid;
+	std::vector<int> rows;
+	std::vector<int> cols;
+	std::vector<int> grid;
 };
 
 static int
 compare_ints(const void *a, const void *b)
 {
 	return *(const int *)a - *(const int *)b;
-}
-
-static void
-destroy_bitmap(struct overlap_bitmap *bmp)
-{
-	assert(bmp);
-
-	zfree(bmp->rows);
-	zfree(bmp->cols);
-	zfree(bmp->grid);
-
-	bmp->nr_rows = 0;
-	bmp->nr_cols = 0;
 }
 
 /* Count the number of views on view->output, excluding *view itself */
@@ -103,7 +88,7 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 	assert(view);
 
 	/* Always start with a fresh bitmap */
-	destroy_bitmap(bmp);
+	*bmp = {};
 
 	struct output *output = view->output;
 	if (!output_is_usable(output)) {
@@ -118,12 +103,8 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 	/* Number of rows/columns is bounded by two per view plus screen edges */
 	int max_rc = 2 * nviews + 2;
 
-	bmp->rows = xzalloc(max_rc * sizeof(int));
-	bmp->cols = xzalloc(max_rc * sizeof(int));
-	if (!bmp->rows || !bmp->cols) {
-		destroy_bitmap(bmp);
-		return;
-	}
+	bmp->rows.resize(max_rc);
+	bmp->cols.resize(max_rc);
 
 	/* First edges of grid are start of usable area of output */
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
@@ -177,16 +158,12 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 		}
 	}
 
-	bmp->nr_rows = order_grid(bmp->rows, nr_rows);
-	bmp->nr_cols = order_grid(bmp->cols, nr_cols);
+	bmp->nr_rows = order_grid(&bmp->rows[0], nr_rows);
+	bmp->nr_cols = order_grid(&bmp->cols[0], nr_cols);
 
 	int grid_size = (bmp->nr_rows - 1) * (bmp->nr_cols - 1);
 
-	bmp->grid = xzalloc(grid_size * sizeof(int));
-	if (!bmp->grid) {
-		destroy_bitmap(bmp);
-		return;
-	}
+	bmp->grid.resize(grid_size);
 }
 
 /*
@@ -267,16 +244,16 @@ build_overlap(struct overlap_bitmap *bmp, struct view *view)
 		 */
 
 		/* First row and column overlapping the view */
-		int fc = find_interval(bmp->cols, bmp->nr_cols, lx + 0.5);
-		int fr = find_interval(bmp->rows, bmp->nr_rows, ly + 0.5);
+		int fc = find_interval(&bmp->cols[0], bmp->nr_cols, lx + 0.5);
+		int fr = find_interval(&bmp->rows[0], bmp->nr_rows, ly + 0.5);
 
 		/* Clip first row/column to start of usable grid */
 		fc = MAX(fc, 0);
 		fr = MAX(fr, 0);
 
 		/* Last row and column overlapping the view */
-		int lc = find_interval(bmp->cols, bmp->nr_cols, hx - 0.5);
-		int lr = find_interval(bmp->rows, bmp->nr_rows, hy - 0.5);
+		int lc = find_interval(&bmp->cols[0], bmp->nr_cols, hx - 0.5);
+		int lr = find_interval(&bmp->rows[0], bmp->nr_rows, hy - 0.5);
 
 		/*
 		 * Increment the last indices to convert them to strict upper
@@ -500,7 +477,7 @@ placement_find_best(struct view *view, struct wlr_box *geometry)
 
 				/* If there is no overlap, the search is done. */
 				if (min_overlap <= 0) {
-					goto final_placement;
+					return true;
 				}
 
 				/*
@@ -514,7 +491,5 @@ placement_find_best(struct view *view, struct wlr_box *geometry)
 		}
 	}
 
-final_placement:
-	destroy_bitmap(&bmp);
 	return true;
 }
