@@ -21,16 +21,12 @@ struct border_scene {
 	struct wlr_scene_rect *top, *bottom, *left, *right;
 };
 
-struct lab_scene_rect {
+struct lab_scene_rect : public destroyable {
 	struct wlr_scene_tree *tree;
 	int border_width;
 	int nr_borders;
 	std::vector<border_scene> borders;
 	struct wlr_scene_rect *fill;
-
-	void handle_destroy(void *) { delete this; }
-
-	DECLARE_LISTENER(lab_scene_rect, destroy);
 };
 
 /**
