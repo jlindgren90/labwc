@@ -6,7 +6,6 @@ labwc_sources += files(
   'fd-util.cpp',
   'file-helpers.cpp',
   'font.cpp',
-  'grab-file.cpp',
   'graphic-helpers.cpp',
   'lab-scene-rect.cpp',
   'match.cpp',
