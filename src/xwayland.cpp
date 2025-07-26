@@ -1295,9 +1295,8 @@ xwayland_update_workarea(void)
 	int workarea_top = layout_top;
 	int workarea_bottom = layout_bottom;
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
+	for (auto output : g_server.outputs) {
+		if (!output_is_usable(output.get())) {
 			continue;
 		}
 

@@ -105,14 +105,14 @@ output_apply_gamma(struct output *output)
 	wlr_output_state_finish(&pending);
 }
 
-static void
-handle_output_frame(struct wl_listener *listener, void *data)
+void
+output::handle_frame(void *)
 {
 	/*
 	 * This function is called every time an output is ready to display a
 	 * frame - which is typically at 60 Hz.
 	 */
-	struct output *output = wl_container_of(listener, output, frame);
+	auto output = this;
 	if (!output_is_usable(output)) {
 		return;
 	}
@@ -158,19 +158,15 @@ handle_output_frame(struct wl_listener *listener, void *data)
 	wlr_scene_output_send_frame_done(output->scene_output, &now);
 }
 
-static void
-handle_output_destroy(struct wl_listener *listener, void *data)
+output::~output()
 {
-	struct output *output = wl_container_of(listener, output, destroy);
+	auto output = this;
 	regions_evacuate_output(output);
 	regions_destroy(output->regions);
 	if (g_seat.overlay.active.output == output) {
 		overlay_hide();
 	}
-	wl_list_remove(&output->link);
-	wl_list_remove(&output->frame.link);
-	wl_list_remove(&output->destroy.link);
-	wl_list_remove(&output->request_state.link);
+	g_server.outputs.remove(this);
 	seat_output_layout_changed();
 
 	for (size_t i = 0; i < ARRAY_SIZE(output->layer_tree); i++) {
@@ -203,15 +199,14 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	 * output->scene_output (if still around at this point) is
 	 * destroyed automatically when the wlr_output is destroyed
 	 */
-	delete output;
 }
 
-static void
-handle_output_request_state(struct wl_listener *listener, void *data)
+void
+output::handle_request_state(void *data)
 {
 	/* This ensures nested backends can be resized */
-	struct output *output = wl_container_of(listener, output, request_state);
-	const struct wlr_output_event_request_state *event = data;
+	auto output = this;
+	auto event = (const wlr_output_event_request_state *)data;
 
 	/*
 	 * If wlroots ever requests other state changes here we could
@@ -415,10 +410,9 @@ handle_new_output(struct wl_listener *listener, void *data)
 	 * This event is raised by the backend when a new output (aka display
 	 * or monitor) becomes available.
 	 */
-	struct wlr_output *wlr_output = data;
+	auto wlr_output = (::wlr_output *)data;
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		if (output->wlr_output == wlr_output) {
 			/*
 			 * This is a duplicated notification.
@@ -476,20 +470,16 @@ handle_new_output(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	output = new ::output{};
+	auto output = new ::output{};
 	output->wlr_output = wlr_output;
 	wlr_output->data = output;
 	output_state_init(output);
 
-	wl_list_insert(&g_server.outputs, &output->link);
+	g_server.outputs.append(output);
 
-	output->destroy.notify = handle_output_destroy;
-	wl_signal_add(&wlr_output->events.destroy, &output->destroy);
-	output->frame.notify = handle_output_frame;
-	wl_signal_add(&wlr_output->events.frame, &output->frame);
-
-	output->request_state.notify = handle_output_request_state;
-	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
+	CONNECT_LISTENER(wlr_output, output, destroy);
+	CONNECT_LISTENER(wlr_output, output, frame);
+	CONNECT_LISTENER(wlr_output, output, request_state);
 
 	/*
 	 * Create layer-trees (background, bottom, top and overlay) and
@@ -578,8 +568,6 @@ output_init(void)
 	/* Enable screen recording with wf-recorder */
 	wlr_xdg_output_manager_v1_create(g_server.wl_display,
 		g_server.output_layout);
-
-	wl_list_init(&g_server.outputs);
 
 	output_manager_init();
 }
@@ -771,7 +759,7 @@ custom_mode_failed:
 static void
 handle_output_manager_test(struct wl_listener *listener, void *data)
 {
-	struct wlr_output_configuration_v1 *config = data;
+	auto config = (wlr_output_configuration_v1 *)data;
 
 	if (verify_output_config_v1(config)) {
 		wlr_output_configuration_v1_send_succeeded(config);
@@ -784,7 +772,7 @@ handle_output_manager_test(struct wl_listener *listener, void *data)
 static void
 handle_output_manager_apply(struct wl_listener *listener, void *data)
 {
-	struct wlr_output_configuration_v1 *config = data;
+	auto config = (wlr_output_configuration_v1 *)data;
 
 	bool config_is_good = verify_output_config_v1(config);
 
@@ -794,8 +782,7 @@ handle_output_manager_apply(struct wl_listener *listener, void *data)
 		wlr_output_configuration_v1_send_failed(config);
 	}
 	wlr_output_configuration_v1_destroy(config);
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		wlr_xcursor_manager_load(g_seat.xcursor_manager,
 			output->wlr_output->scale);
 	}
@@ -820,8 +807,7 @@ create_output_config(void)
 		return NULL;
 	}
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		struct wlr_output_configuration_head_v1 *head =
 			wlr_output_configuration_head_v1_create(config,
 				output->wlr_output);
@@ -876,9 +862,8 @@ handle_output_layout_change(struct wl_listener *listener, void *data)
 static void
 handle_gamma_control_set_gamma(struct wl_listener *listener, void *data)
 {
-	const struct wlr_gamma_control_manager_v1_set_gamma_event *event = data;
-
-	struct output *output = event->output->data;
+	auto event = (const wlr_gamma_control_manager_v1_set_gamma_event *)data;
+	auto output = (::output *)event->output->data;
 	if (!output_is_usable(output)) {
 		return;
 	}
@@ -922,10 +907,9 @@ output_manager_finish(void)
 struct output *
 output_from_wlr_output(struct wlr_output *wlr_output)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		if (output->wlr_output == wlr_output) {
-			return output;
+			return output.get();
 		}
 	}
 	return NULL;
@@ -934,13 +918,13 @@ output_from_wlr_output(struct wlr_output *wlr_output)
 struct output *
 output_from_name(const char *name)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output) || !output->wlr_output->name) {
+	for (auto output : g_server.outputs) {
+		if (!output_is_usable(output.get())
+				|| !output->wlr_output->name) {
 			continue;
 		}
 		if (!strcasecmp(name, output->wlr_output->name)) {
-			return output;
+			return output.get();
 		}
 	}
 	return NULL;
@@ -1052,14 +1036,13 @@ void
 output_update_all_usable_areas(bool layout_changed)
 {
 	bool usable_area_changed = false;
-	struct output *output;
 
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (update_usable_area(output)) {
+	for (auto output : g_server.outputs) {
+		if (update_usable_area(output.get())) {
 			usable_area_changed = true;
-			regions_update_geometry(output);
+			regions_update_geometry(output.get());
 		} else if (layout_changed) {
-			regions_update_geometry(output);
+			regions_update_geometry(output.get());
 		}
 	}
 	if (usable_area_changed || layout_changed) {
@@ -1088,8 +1071,8 @@ output_usable_area_in_layout_coords(struct output *output)
 void
 handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
 {
-	struct wlr_output_power_v1_set_mode_event *event = data;
-	struct output *output = event->output->data;
+	auto event = (wlr_output_power_v1_set_mode_event *)data;
+	auto output = (::output *)event->output->data;
 	assert(output);
 
 	switch (event->mode) {
@@ -1135,9 +1118,8 @@ output_max_scale(void)
 {
 	/* Never return less than 1, in case outputs are disabled */
 	float scale = 1;
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (output_is_usable(output)) {
+	for (auto output : g_server.outputs) {
+		if (output_is_usable(output.get())) {
 			scale = MAX(scale, output->wlr_output->scale);
 		}
 	}

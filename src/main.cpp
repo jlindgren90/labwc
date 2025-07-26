@@ -16,6 +16,7 @@
 #include "libinput.h"
 #include "labwc.h"
 #include "osd.h"
+#include "output.h"
 #include "theme.h"
 #include "menu/menu.h"
 #include "window-rules.h"
