@@ -25,7 +25,9 @@ struct scaled_scene_buffer_cache_entry {
 
 using scaled_scene_buffer_cache = std::list<scaled_scene_buffer_cache_entry>;
 
-struct scaled_scene_buffer : public refcounted<scaled_scene_buffer> {
+struct scaled_scene_buffer : public destroyable,
+		public refcounted<scaled_scene_buffer>
+{
 	const scaled_scene_buffer_type type;
 	wlr_scene_buffer *scene_buffer = nullptr;
 
@@ -47,10 +49,8 @@ struct scaled_scene_buffer : public refcounted<scaled_scene_buffer> {
 	// Returns true if the two buffers are visually the same
 	virtual bool equal(scaled_scene_buffer &other) = 0;
 
-	void handle_destroy(void *) { delete this; }
 	void handle_outputs_update(void *);
 
-	DECLARE_LISTENER(scaled_scene_buffer, destroy);
 	DECLARE_LISTENER(scaled_scene_buffer, outputs_update);
 };
 
