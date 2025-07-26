@@ -8,7 +8,6 @@
 #include <linux/input-event-codes.h>
 #include "action.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "config/mousebind.h"
 #include "config/rcxml.h"
@@ -135,7 +134,7 @@ handle_touch_down(struct wl_listener *listener, void *data)
 	idle_manager_notify_activity(g_seat.seat);
 
 	/* Compute layout => surface offset and save for this touch point */
-	struct touch_point *touch_point = znew(*touch_point);
+	auto touch_point = new struct touch_point();
 	double x_offset = 0.0, y_offset = 0.0;
 	touch_point->surface = touch_get_coords(event->touch, event->x,
 		event->y, &x_offset, &y_offset);
@@ -209,7 +208,7 @@ handle_touch_up(struct wl_listener *listener, void *data)
 				ssd_update_hovered_button(NULL);
 			}
 			wl_list_remove(&touch_point->link);
-			zfree(touch_point);
+			delete touch_point;
 			break;
 		}
 	}
