@@ -322,8 +322,6 @@ struct server {
 	weakptr<menu> menu_current;
 	reflist<menu> menus;
 
-	struct sfdo *sfdo;
-
 	pid_t primary_client_pid;
 };
 
