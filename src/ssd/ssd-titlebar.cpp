@@ -5,7 +5,6 @@
 #include <string.h>
 #include <wlr/render/pixman.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/mem.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
@@ -342,7 +341,7 @@ ssd_titlebar_destroy(struct ssd *ssd)
 		return;
 	}
 
-	zfree(ssd->state.title.text);
+	ssd->state.title.text.clear();
 	wlr_scene_node_destroy(&ssd->titlebar.tree->node);
 	ssd->titlebar = (struct ssd_titlebar_scene){0};
 }
@@ -443,7 +442,7 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	struct ssd_state_title *state = &ssd->state.title;
-	bool title_unchanged = state->text && !strcmp(title, state->text);
+	bool title_unchanged = (state->text == title);
 
 	int offset_left, offset_right;
 	get_title_offsets(ssd, &offset_left, &offset_right);
@@ -480,10 +479,7 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	if (!title_unchanged) {
-		if (state->text) {
-			free(state->text);
-		}
-		state->text = xstrdup(title);
+		state->text = lab_str(title);
 	}
 	ssd_update_title_positions(ssd, offset_left, offset_right);
 }

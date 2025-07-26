@@ -4,6 +4,7 @@
 
 #include <wlr/util/box.h>
 #include "common/border.h"
+#include "common/str.h"
 #include "theme.h"
 #include "view.h"
 
@@ -13,7 +14,7 @@ struct ssd_state_title_width {
 };
 
 struct ssd_state_title {
-	char *text;
+	lab_str text;
 	/* indexed by enum ssd_active_state */
 	struct ssd_state_title_width dstates[2];
 };
