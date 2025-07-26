@@ -9,12 +9,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <fstream>
+#include <sstream>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include "action.h"
 #include "common/dir.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/nodename.h"
 #include "common/parse-bool.h"
 #include "common/parse-double.h"
@@ -1472,10 +1473,10 @@ xml_tree_walk(xmlNode *node, struct parser_state *state)
 
 /* Exposed in header file to allow unit tests to parse buffers */
 void
-rcxml_parse_xml(const lab_str &buf)
+rcxml_parse_xml(const std::string &buf)
 {
 	int options = 0;
-	xmlDoc *d = xmlReadMemory(buf.c(), buf.size(), NULL, NULL, options);
+	xmlDoc *d = xmlReadMemory(buf.data(), buf.size(), NULL, NULL, options);
 	if (!d) {
 		wlr_log(WLR_ERROR, "error parsing config file");
 		return;
@@ -1943,26 +1944,16 @@ rcxml_read(const char *filename)
 	for (int idx = 0; idx < num_paths; idx++) {
 		auto &path = should_merge_config ?
 			paths[(num_paths - 1) - idx] : paths[idx];
-		FILE *stream = fopen(path.c(), "r");
-		if (!stream) {
+		std::ifstream ifs(path);
+		if (!ifs.good()) {
 			continue;
 		}
 
 		wlr_log(WLR_INFO, "read config file %s", path.c());
 
-		lab_str buf;
-		char *line = NULL;
-		size_t len = 0;
-		while (getline(&line, &len, stream) != -1) {
-			char *p = strrchr(line, '\n');
-			if (p) {
-				*p = '\0';
-			}
-			buf += line;
-		}
-		zfree(line);
-		fclose(stream);
-		rcxml_parse_xml(buf);
+		std::ostringstream oss;
+		oss << ifs.rdbuf();
+		rcxml_parse_xml(oss.str());
 		if (!should_merge_config) {
 			break;
 		}

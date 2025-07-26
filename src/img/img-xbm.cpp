@@ -12,9 +12,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <fstream>
+#include <sstream>
 #include <vector>
-#include "common/buf.h"
-#include "common/grab-file.h"
 #include "common/string-helpers.h"
 #include "buffer.h"
 
@@ -263,9 +263,11 @@ img_xbm_load(const char *filename, float *rgba)
 	uint32_t color = argb32(rgba);
 
 	/* Read file into memory as it's easier to tokenize that way */
-	lab_str token_buf = grab_file(filename);
-	if (token_buf) {
-		auto tokens = tokenize_xbm(token_buf.data());
+	std::ifstream ifs(filename);
+	if (ifs.good()) {
+		std::ostringstream oss;
+		oss << ifs.rdbuf();
+		auto tokens = tokenize_xbm(oss.str().data());
 		pixmap = parse_xbm_tokens(&tokens[0], color);
 	}
 	if (!pixmap.data) {
