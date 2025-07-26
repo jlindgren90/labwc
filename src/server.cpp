@@ -400,8 +400,7 @@ handle_renderer_lost(struct wl_listener *listener, void *data)
 
 	wlr_compositor_set_renderer(g_server.compositor, renderer);
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		wlr_output_init_render(output->wlr_output, g_server.allocator,
 			g_server.renderer);
 	}

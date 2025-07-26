@@ -11,7 +11,6 @@
 #include "buffer.h"
 #include "common/box.h"
 #include "common/match.h"
-#include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "config/rcxml.h"
 #include "foreign-toplevel.h"
@@ -475,13 +474,13 @@ view_close(struct view *view)
 static void
 view_update_outputs(struct view *view)
 {
-	struct output *output;
 	struct wlr_output_layout *layout = g_server.output_layout;
 
 	uint64_t new_outputs = 0;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (output_is_usable(output) && wlr_output_layout_intersects(
-				layout, output->wlr_output, &view->current)) {
+	for (auto output : g_server.outputs) {
+		if (output_is_usable(output.get())
+				&& wlr_output_layout_intersects(layout,
+					output->wlr_output, &view->current)) {
 			new_outputs |= (1ull << output->scene_output->WLR_PRIVATE.index);
 		}
 	}

@@ -17,8 +17,7 @@ output_virtual_add(const char *output_name,
 {
 	if (output_name) {
 		/* Prevent creating outputs with the same name */
-		struct output *output;
-		wl_list_for_each(output, &g_server.outputs, link) {
+		for (auto output : g_server.outputs) {
 			if (wlr_output_is_headless(output->wlr_output) &&
 					!strcmp(output->wlr_output->name, output_name)) {
 				wlr_log(WLR_DEBUG,
@@ -82,8 +81,7 @@ restore_handler:
 void
 output_virtual_remove(const char *output_name)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto output : g_server.outputs) {
 		if (!wlr_output_is_headless(output->wlr_output)
 				|| output->wlr_output == fallback_output) {
 			continue;
