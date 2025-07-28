@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
+#include "view.h"
 #include <assert.h>
 #include <stdio.h>
 #include <strings.h>
@@ -24,7 +25,6 @@
 #include "snap-constraints.h"
 #include "snap.h"
 #include "ssd.h"
-#include "view.h"
 #include "window-rules.h"
 #include "wlr/util/log.h"
 #include "workspaces.h"
