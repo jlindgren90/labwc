@@ -18,7 +18,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <wlr/util/box.h>
-#include <wlr/util/log.h>
 #include <wlr/render/pixman.h>
 #include <strings.h>
 #include "common/macros.h"

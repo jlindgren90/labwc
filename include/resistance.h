@@ -1,7 +1,11 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef LABWC_RESISTANCE_H
 #define LABWC_RESISTANCE_H
-#include "labwc.h"
+
+#include <stdbool.h>
+
+struct view;
+struct wlr_box;
 
 /**
  * resistance_unsnap_apply() - Apply resistance when dragging a

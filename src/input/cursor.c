@@ -6,8 +6,10 @@
 #include <sys/time.h>
 #include <time.h>
 #include <wlr/backend/libinput.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
+#include <wlr/types/wlr_layer_shell_v1.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_primary_selection.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
@@ -22,6 +24,7 @@
 #include "common/scene-helpers.h"
 #include "common/surface-helpers.h"
 #include "config/mousebind.h"
+#include "config/rcxml.h"
 #include "dnd.h"
 #include "idle.h"
 #include "input/gestures.h"

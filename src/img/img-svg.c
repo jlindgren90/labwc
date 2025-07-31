@@ -9,7 +9,6 @@
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <wlr/util/log.h>
 #include "buffer.h"
 #include "common/string-helpers.h"
 #include "labwc.h"

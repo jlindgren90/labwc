@@ -1,9 +1,13 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef LABWC_H
 #define LABWC_H
-#include "config.h"
+
+#include <wayland-server-core.h>
+#include <wlr/util/box.h>
 #include <wlr/util/log.h>
+#include "common/enum.h"
 #include "common/set.h"
+#include "config.h"
 #include "input/cursor.h"
 #include "overlay.h"
 #if HAVE_NLS

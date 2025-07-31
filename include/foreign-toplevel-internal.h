@@ -4,7 +4,7 @@
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
-#include "foreign-toplevel.h"
+#include "common/enum.h"
 
 struct foreign_toplevel {
 	struct view *view;

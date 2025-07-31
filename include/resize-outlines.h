@@ -2,9 +2,10 @@
 #ifndef LABWC_RESIZE_OUTLINES_H
 #define LABWC_RESIZE_OUTLINES_H
 
-#include <wlr/util/box.h>
+#include <stdbool.h>
 
 struct view;
+struct wlr_box;
 
 void resize_outlines_update(struct view *view, struct wlr_box new_geo);
 void resize_outlines_finish(struct view *view);

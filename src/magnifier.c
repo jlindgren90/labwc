@@ -4,10 +4,12 @@
 #include <assert.h>
 #include <wlr/render/allocator.h>
 #include <wlr/render/swapchain.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/transform.h>
 #include "common/box.h"
+#include "config/rcxml.h"
 #include "labwc.h"
 #include "output.h"
 #include "theme.h"

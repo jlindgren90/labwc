@@ -1,14 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include <assert.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
+#include <wlr/util/edges.h>
 #include "buffer.h"
 #include "common/array.h"
 #include "common/macros.h"
 #include "common/mem.h"
+#include "config/rcxml.h"
 #include "decorations.h"
 #include "foreign-toplevel.h"
 #include "labwc.h"

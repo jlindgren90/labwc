@@ -2,6 +2,7 @@
 #include "view.h"
 #include <assert.h>
 #include <strings.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
@@ -13,6 +14,7 @@
 #include "common/match.h"
 #include "common/mem.h"
 #include "common/scene-helpers.h"
+#include "config/rcxml.h"
 #include "foreign-toplevel.h"
 #include "input/keyboard.h"
 #include "labwc.h"
@@ -27,6 +29,7 @@
 #include "snap-constraints.h"
 #include "snap.h"
 #include "ssd.h"
+#include "theme.h"
 #include "window-rules.h"
 #include "wlr/util/log.h"
 #include "workspaces.h"

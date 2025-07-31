@@ -21,6 +21,7 @@
 #include <wlr/types/wlr_fractional_scale_v1.h>
 #include <wlr/types/wlr_gamma_control_v1.h>
 #include <wlr/types/wlr_input_method_v2.h>
+#include <wlr/types/wlr_linux_dmabuf_v1.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
@@ -64,6 +65,7 @@
 #include "regions.h"
 #include "resize-indicator.h"
 #include "session-lock.h"
+#include "ssd.h"
 #include "theme.h"
 #include "view.h"
 #include "workspaces.h"

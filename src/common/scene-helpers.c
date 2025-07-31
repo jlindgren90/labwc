@@ -7,7 +7,6 @@
 #include <wlr/util/log.h>
 #include <wlr/util/region.h>
 #include <wlr/util/transform.h>
-#include "labwc.h"
 #include "magnifier.h"
 #include "output.h"
 #include "output-state.h"

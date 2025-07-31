@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <assert.h>
 #include <wayland-server-core.h>
-#include "common/macros.h"
 #include "common/mem.h"
+#include "foreign-toplevel.h"
+#include "foreign-toplevel-internal.h"
 #include "labwc.h"
 #include "view.h"
-#include "foreign-toplevel-internal.h"
 
 /* Internal API */
 void

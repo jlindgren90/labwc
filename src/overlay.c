@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include "overlay.h"
 #include <assert.h>
+#include <wlr/types/wlr_cursor.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/util/edges.h>
 #include "common/lab-scene-rect.h"
+#include "config/rcxml.h"
 #include "labwc.h"
 #include "output.h"
+#include "regions.h"
 #include "view.h"
 #include "theme.h"
 

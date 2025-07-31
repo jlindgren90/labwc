@@ -2,9 +2,7 @@
 #ifndef LABWC_NODENAME_H
 #define LABWC_NODENAME_H
 
-#include <libxml/parser.h>
 #include <libxml/tree.h>
-#include <stdio.h>
 
 /**
  * nodename - give xml node an ascii name
