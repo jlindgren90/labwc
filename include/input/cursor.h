@@ -4,16 +4,13 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <wayland-server-protocol.h>
 #include "common/enum.h"
 
 struct seat;
 struct server;
 struct wlr_cursor;
 struct wlr_input_device;
-
-enum wl_pointer_axis;
-enum wl_pointer_axis_source;
-enum wl_pointer_button_state;
 
 struct cursor_context {
 	struct view *view;

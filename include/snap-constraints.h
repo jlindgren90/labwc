@@ -3,8 +3,7 @@
 #define LABWC_SNAP_CONSTRAINTS_H
 
 #include <stdbool.h>
-
-enum wlr_edges;
+#include <wlr/util/edges.h>
 
 struct view;
 struct wlr_box;

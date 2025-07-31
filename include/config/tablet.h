@@ -3,6 +3,7 @@
 #define LABWC_TABLET_CONFIG_H
 
 #include <stdint.h>
+#include "common/enum.h"
 
 double tablet_get_dbl_if_positive(const char *content, const char *name);
 enum rotation tablet_parse_rotation(int value);
