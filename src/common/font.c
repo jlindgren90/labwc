@@ -8,7 +8,6 @@
 #include <wlr/util/log.h>
 #include "common/graphic-helpers.h"
 #include "common/string-helpers.h"
-#include "labwc.h"
 #include "buffer.h"
 
 PangoFontDescription *

@@ -1,17 +1,22 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include "input/touch.h"
 #include <wayland-util.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_touch.h>
 #include <linux/input-event-codes.h>
+#include "action.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "common/scene-helpers.h"
+#include "config/mousebind.h"
+#include "config/rcxml.h"
+#include "config/touch.h"
 #include "idle.h"
 #include "labwc.h"
-#include "config/mousebind.h"
-#include "action.h"
+#include "ssd.h"
+#include "view.h"
 
 /* Holds layout -> surface offsets to report motion events in relative coords */
 struct touch_point {

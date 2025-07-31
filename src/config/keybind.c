@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <wlr/types/wlr_keyboard_group.h>
-#include <wlr/util/log.h>
 #include "common/list.h"
 #include "common/mem.h"
 #include "config/rcxml.h"

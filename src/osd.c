@@ -2,7 +2,6 @@
 #include "osd.h"
 #include <assert.h>
 #include <cairo.h>
-#include <wlr/util/log.h>
 #include <wlr/util/box.h>
 #include "common/array.h"
 #include "common/buf.h"
@@ -16,6 +15,7 @@
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
+#include "ssd.h"
 #include "theme.h"
 #include "view.h"
 #include "window-rules.h"

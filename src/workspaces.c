@@ -8,17 +8,20 @@
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
 #include "buffer.h"
 #include "common/font.h"
 #include "common/graphic-helpers.h"
 #include "common/list.h"
 #include "common/mem.h"
+#include "config/rcxml.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "output.h"
 #include "protocols/cosmic-workspaces.h"
 #include "protocols/ext-workspace.h"
+#include "theme.h"
 #include "view.h"
 
 #define COSMIC_WORKSPACES_VERSION 1

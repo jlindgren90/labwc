@@ -15,6 +15,7 @@
 #include <string.h>
 #include <drm_fourcc.h>
 #include "img/img.h"
+#include "common/buf.h"
 #include "common/grab-file.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"

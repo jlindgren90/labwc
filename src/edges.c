@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <limits.h>
 #include <pixman.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/util/edges.h>
 #include <wlr/util/box.h>
 #include "common/border.h"
@@ -10,9 +11,10 @@
 #include "common/macros.h"
 #include "config/rcxml.h"
 #include "labwc.h"
-#include "output.h"
-#include "view.h"
 #include "node.h"
+#include "output.h"
+#include "ssd.h"
+#include "view.h"
 
 static void
 edges_for_target_geometry(struct border *edges, struct view *view,

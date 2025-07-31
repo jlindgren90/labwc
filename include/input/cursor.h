@@ -2,32 +2,15 @@
 #ifndef LABWC_CURSOR_H
 #define LABWC_CURSOR_H
 
-#include <wlr/types/wlr_cursor.h>
-#include <wlr/util/edges.h>
-#include "ssd.h"
+#include <stdbool.h>
+#include <stdint.h>
+#include <wayland-server-protocol.h>
+#include "common/enum.h"
 
-struct view;
 struct seat;
 struct server;
-struct wlr_surface;
-struct wlr_scene_node;
-enum wl_pointer_button_state;
-
-/* Cursors used internally by labwc */
-enum lab_cursors {
-	LAB_CURSOR_CLIENT = 0,
-	LAB_CURSOR_DEFAULT,
-	LAB_CURSOR_GRAB,
-	LAB_CURSOR_RESIZE_NW,
-	LAB_CURSOR_RESIZE_N,
-	LAB_CURSOR_RESIZE_NE,
-	LAB_CURSOR_RESIZE_E,
-	LAB_CURSOR_RESIZE_SE,
-	LAB_CURSOR_RESIZE_S,
-	LAB_CURSOR_RESIZE_SW,
-	LAB_CURSOR_RESIZE_W,
-	LAB_CURSOR_COUNT
-};
+struct wlr_cursor;
+struct wlr_input_device;
 
 struct cursor_context {
 	struct view *view;

@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include <strings.h>
 #include <wlr/backend/libinput.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_input_device.h>
 #include <wlr/types/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_group.h>
@@ -13,9 +14,11 @@
 #include <wlr/types/wlr_virtual_keyboard_v1.h>
 #include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/util/log.h>
 #include "common/macros.h"
 #include "common/mem.h"
+#include "config/libinput.h"
+#include "config/rcxml.h"
+#include "config/touch.h"
 #include "input/ime.h"
 #include "input/tablet.h"
 #include "input/tablet-pad.h"

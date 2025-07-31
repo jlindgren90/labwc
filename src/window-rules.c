@@ -6,7 +6,6 @@
 #include <cairo.h>
 #include <glib.h>
 #include <strings.h>
-#include <wlr/util/log.h>
 #include "action.h"
 #include "common/match.h"
 #include "config/rcxml.h"

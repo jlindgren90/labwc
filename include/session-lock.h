@@ -2,10 +2,9 @@
 #ifndef LABWC_SESSION_LOCK_H
 #define LABWC_SESSION_LOCK_H
 
-#include <wlr/types/wlr_session_lock_v1.h>
+#include <wayland-server-core.h>
 
 struct output;
-struct server;
 
 struct session_lock_manager {
 	struct server *server;

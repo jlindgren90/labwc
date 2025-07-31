@@ -6,15 +6,18 @@
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
-#include <wlr/util/log.h>
-#include "common/macros.h"
+#include "common/buf.h"
 #include "common/list.h"
+#include "common/macros.h"
 #include "common/mem.h"
 #include "common/parse-bool.h"
 #include "common/spawn.h"
 #include "common/string-helpers.h"
+#include "config/rcxml.h"
 #include "debug.h"
+#include "input/keyboard.h"
 #include "labwc.h"
 #include "magnifier.h"
 #include "menu/menu.h"
@@ -23,9 +26,9 @@
 #include "output-virtual.h"
 #include "regions.h"
 #include "ssd.h"
+#include "theme.h"
 #include "view.h"
 #include "workspaces.h"
-#include "input/keyboard.h"
 
 enum action_arg_type {
 	LAB_ACTION_ARG_STR = 0,

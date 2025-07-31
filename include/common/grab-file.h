@@ -8,8 +8,6 @@
 #ifndef LABWC_GRAB_FILE_H
 #define LABWC_GRAB_FILE_H
 
-#include "common/buf.h"
-
 /**
  * grab_file - read file into memory buffer
  * @filename: file to read

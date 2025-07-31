@@ -5,12 +5,7 @@
 #include <wlr/util/box.h>
 
 struct seat;
-struct view;
 struct server;
-struct output;
-struct wl_list;
-struct wlr_box;
-struct multi_rect;
 
 /* Double use: rcxml.c for config and output.c for usage */
 struct region {

@@ -2,15 +2,13 @@
 #ifndef LABWC_VIEW_H
 #define LABWC_VIEW_H
 
-#include "config/rcxml.h"
-#include "config.h"
-#include "ssd.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-util.h>
 #include <wlr/util/box.h>
 #include <xkbcommon/xkbcommon.h>
-#include "common/three-state.h"
+#include "common/enum.h"
+#include "config.h"
 
 #define LAB_MIN_VIEW_HEIGHT 60
 
@@ -40,33 +38,6 @@ enum ssd_preference {
 	LAB_SSD_PREF_UNSPEC = 0,
 	LAB_SSD_PREF_CLIENT,
 	LAB_SSD_PREF_SERVER,
-};
-
-/**
- * Directions in which a view can be maximized. "None" is used
- * internally to mean "not maximized" but is not valid in rc.xml.
- * Therefore when parsing rc.xml, "None" means "Invalid".
- */
-enum view_axis {
-	VIEW_AXIS_NONE = 0,
-	VIEW_AXIS_HORIZONTAL = (1 << 0),
-	VIEW_AXIS_VERTICAL = (1 << 1),
-	VIEW_AXIS_BOTH = (VIEW_AXIS_HORIZONTAL | VIEW_AXIS_VERTICAL),
-	/*
-	 * If view_axis is treated as a bitfield, INVALID should never
-	 * set the HORIZONTAL or VERTICAL bits.
-	 */
-	VIEW_AXIS_INVALID = (1 << 2),
-};
-
-enum view_edge {
-	VIEW_EDGE_INVALID = 0,
-
-	VIEW_EDGE_LEFT,
-	VIEW_EDGE_RIGHT,
-	VIEW_EDGE_UP,
-	VIEW_EDGE_DOWN,
-	VIEW_EDGE_CENTER,
 };
 
 enum view_wants_focus {
@@ -337,28 +308,6 @@ struct xdg_toplevel_view {
 	struct wl_listener set_app_id;
 	struct wl_listener request_show_window_menu;
 	struct wl_listener new_popup;
-};
-
-/* All criteria is applied in AND logic */
-enum lab_view_criteria {
-	/* No filter -> all focusable views */
-	LAB_VIEW_CRITERIA_NONE = 0,
-
-	/*
-	 * Includes always-on-top views, e.g.
-	 * what is visible on the current workspace
-	 */
-	LAB_VIEW_CRITERIA_CURRENT_WORKSPACE       = 1 << 0,
-
-	/* Positive criteria */
-	LAB_VIEW_CRITERIA_FULLSCREEN              = 1 << 1,
-	LAB_VIEW_CRITERIA_ALWAYS_ON_TOP           = 1 << 2,
-	LAB_VIEW_CRITERIA_ROOT_TOPLEVEL           = 1 << 3,
-
-	/* Negative criteria */
-	LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP        = 1 << 6,
-	LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER = 1 << 7,
-	LAB_VIEW_CRITERIA_NO_OMNIPRESENT          = 1 << 8,
 };
 
 /**

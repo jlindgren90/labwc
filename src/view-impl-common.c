@@ -2,6 +2,7 @@
 /* view-impl-common.c: common code for shell view->impl functions */
 #include "view-impl-common.h"
 #include <strings.h>
+#include <wlr/util/edges.h>
 #include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "view.h"
