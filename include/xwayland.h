@@ -28,26 +28,16 @@ struct xwayland_unmanaged : public destroyable,
 
 	void last_unref() { /* no-op */ }
 
-	void handle_map(void *);
-	void handle_unmap(void *);
-	void handle_associate(void *);
-	void handle_dissociate(void *);
-	void handle_grab_focus(void *);
-	void handle_request_activate(void *);
-	void handle_request_configure(void *);
-	void handle_set_geometry(void *);
-	void handle_set_override_redirect(void *);
-
-	DECLARE_LISTENER(xwayland_unmanaged, map);
-	DECLARE_LISTENER(xwayland_unmanaged, unmap);
-	DECLARE_LISTENER(xwayland_unmanaged, associate);
-	DECLARE_LISTENER(xwayland_unmanaged, dissociate);
-	DECLARE_LISTENER(xwayland_unmanaged, grab_focus);
-	DECLARE_LISTENER(xwayland_unmanaged, request_activate);
-	DECLARE_LISTENER(xwayland_unmanaged, request_configure);
-/*	DECLARE_LISTENER(xwayland_unmanaged, request_fullscreen); */
-	DECLARE_LISTENER(xwayland_unmanaged, set_geometry);
-	DECLARE_LISTENER(xwayland_unmanaged, set_override_redirect);
+	DECLARE_HANDLER(xwayland_unmanaged, map);
+	DECLARE_HANDLER(xwayland_unmanaged, unmap);
+	DECLARE_HANDLER(xwayland_unmanaged, associate);
+	DECLARE_HANDLER(xwayland_unmanaged, dissociate);
+	DECLARE_HANDLER(xwayland_unmanaged, grab_focus);
+	DECLARE_HANDLER(xwayland_unmanaged, request_activate);
+	DECLARE_HANDLER(xwayland_unmanaged, request_configure);
+/*	DECLARE_HANDLER(xwayland_unmanaged, request_fullscreen); */
+	DECLARE_HANDLER(xwayland_unmanaged, set_geometry);
+	DECLARE_HANDLER(xwayland_unmanaged, set_override_redirect);
 };
 
 struct xwayland_view : public view {
@@ -85,35 +75,23 @@ struct xwayland_view : public view {
 	void handle_request_fullscreen(void *) override;
 	void handle_set_title(void *) override;
 
-	void handle_associate(void *);
-	void handle_dissociate(void *);
-	void handle_surface_destroy(void *);
-	void handle_request_activate(void *);
-	void handle_request_configure(void *);
-	void handle_set_class(void *);
-	void handle_set_decorations(void *);
-	void handle_set_override_redirect(void *);
-	void handle_set_strut_partial(void *);
-	void handle_focus_in(void *);
-	void handle_map_request(void *);
-
 	/* Events unique to XWayland views */
-	DECLARE_LISTENER(xwayland_view, associate);
-	DECLARE_LISTENER(xwayland_view, dissociate);
-	DECLARE_LISTENER(xwayland_view, surface_destroy);
-	DECLARE_LISTENER(xwayland_view, request_activate);
-	DECLARE_LISTENER(xwayland_view, request_configure);
-	DECLARE_LISTENER(xwayland_view, set_class);
-	DECLARE_LISTENER(xwayland_view, set_decorations);
-	DECLARE_LISTENER(xwayland_view, set_override_redirect);
-	DECLARE_LISTENER(xwayland_view, set_strut_partial);
-/*	DECLARE_LISTENER(xwayland_view, set_window_type); */
-	DECLARE_LISTENER(xwayland_view, focus_in);
-	DECLARE_LISTENER(xwayland_view, map_request);
+	DECLARE_HANDLER(xwayland_view, associate);
+	DECLARE_HANDLER(xwayland_view, dissociate);
+	DECLARE_HANDLER(xwayland_view, surface_destroy);
+	DECLARE_HANDLER(xwayland_view, request_activate);
+	DECLARE_HANDLER(xwayland_view, request_configure);
+	DECLARE_HANDLER(xwayland_view, set_class);
+	DECLARE_HANDLER(xwayland_view, set_decorations);
+	DECLARE_HANDLER(xwayland_view, set_override_redirect);
+	DECLARE_HANDLER(xwayland_view, set_strut_partial);
+/*	DECLARE_HANDLER(xwayland_view, set_window_type); */
+	DECLARE_HANDLER(xwayland_view, focus_in);
+	DECLARE_HANDLER(xwayland_view, map_request);
 
 	/* Not (yet) implemented */
-/*	DECLARE_LISTENER(xwayland_view, set_role); */
-/*	DECLARE_LISTENER(xwayland_view, set_hints); */
+/*	DECLARE_HANDLER(xwayland_view, set_role); */
+/*	DECLARE_HANDLER(xwayland_view, set_hints); */
 };
 
 /* Global list of unmanaged surfaces */

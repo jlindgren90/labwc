@@ -358,14 +358,10 @@ struct xdg_toplevel_view : public view {
 	void handle_request_fullscreen(void *) override;
 	void handle_set_title(void *) override;
 
-	void handle_set_app_id(void *);
-	void handle_request_show_window_menu(void *);
-	void handle_new_popup(void *);
-
 	/* Events unique to xdg-toplevel views */
-	DECLARE_LISTENER(xdg_toplevel_view, set_app_id);
-	DECLARE_LISTENER(xdg_toplevel_view, request_show_window_menu);
-	DECLARE_LISTENER(xdg_toplevel_view, new_popup);
+	DECLARE_HANDLER(xdg_toplevel_view, set_app_id);
+	DECLARE_HANDLER(xdg_toplevel_view, request_show_window_menu);
+	DECLARE_HANDLER(xdg_toplevel_view, new_popup);
 };
 
 /* Global list of views */

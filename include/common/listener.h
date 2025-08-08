@@ -45,6 +45,10 @@ private:
 #define DECLARE_LISTENER(type, name) \
 	listener<type> on_##name{this, &type::handle_##name}
 
+#define DECLARE_HANDLER(type, name) \
+	void handle_##name(void * = nullptr); \
+	DECLARE_LISTENER(type, name)
+
 #define CONNECT_LISTENER(src, dest, name) \
 	(dest)->on_##name.connect(&(src)->events.name)
 

@@ -28,15 +28,10 @@ struct scaled_icon_buffer : public scaled_scene_buffer {
 	bool equal(scaled_scene_buffer &other) override;
 
 	// view listeners
-	void handle_new_app_id(void *);
-	void handle_new_title(void *);
-	void handle_set_icon(void *);
-	void handle_destroy(void *);
-
-	DECLARE_LISTENER(scaled_icon_buffer, new_app_id);
-	DECLARE_LISTENER(scaled_icon_buffer, new_title);
-	DECLARE_LISTENER(scaled_icon_buffer, set_icon);
-	DECLARE_LISTENER(scaled_icon_buffer, destroy);
+	DECLARE_HANDLER(scaled_icon_buffer, new_app_id);
+	DECLARE_HANDLER(scaled_icon_buffer, new_title);
+	DECLARE_HANDLER(scaled_icon_buffer, set_icon);
+	DECLARE_HANDLER(scaled_icon_buffer, destroy);
 };
 
 void scaled_icon_buffer_set_view(struct scaled_icon_buffer *self,

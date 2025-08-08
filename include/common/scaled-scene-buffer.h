@@ -49,9 +49,7 @@ struct scaled_scene_buffer : public destroyable,
 	// Returns true if the two buffers are visually the same
 	virtual bool equal(scaled_scene_buffer &other) = 0;
 
-	void handle_outputs_update(void *);
-
-	DECLARE_LISTENER(scaled_scene_buffer, outputs_update);
+	DECLARE_HANDLER(scaled_scene_buffer, outputs_update);
 };
 
 /*

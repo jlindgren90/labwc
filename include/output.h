@@ -42,11 +42,8 @@ struct output : public destroyable, public refcounted<output> {
 
 	void last_unref() { /* no-op */ }
 
-	void handle_frame(void *);
-	void handle_request_state(void *);
-
-	DECLARE_LISTENER(output, frame);
-	DECLARE_LISTENER(output, request_state);
+	DECLARE_HANDLER(output, frame);
+	DECLARE_HANDLER(output, request_state);
 };
 
 #undef LAB_NR_LAYERS

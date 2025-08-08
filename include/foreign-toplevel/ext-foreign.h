@@ -19,12 +19,9 @@ private:
 	ext_foreign_toplevel(view *view,
 		wlr_ext_foreign_toplevel_handle_v1 *handle);
 
-	void handle_new_app_id(void *);
-	void handle_new_title(void *);
-
 	/* Compositor side state updates */
-	DECLARE_LISTENER(ext_foreign_toplevel, new_app_id);
-	DECLARE_LISTENER(ext_foreign_toplevel, new_title);
+	DECLARE_HANDLER(ext_foreign_toplevel, new_app_id);
+	DECLARE_HANDLER(ext_foreign_toplevel, new_title);
 
 public:
 	static ext_foreign_toplevel *create(view *view);

@@ -10,11 +10,8 @@ struct xdg_deco : public destroyable {
 	enum wlr_xdg_toplevel_decoration_v1_mode client_mode;
 	struct view *view;
 
-	void handle_request_mode(void * = nullptr);
-	void handle_commit(void *);
-
-	DECLARE_LISTENER(xdg_deco, request_mode);
-	DECLARE_LISTENER(xdg_deco, commit);
+	DECLARE_HANDLER(xdg_deco, request_mode);
+	DECLARE_HANDLER(xdg_deco, commit);
 };
 
 void
