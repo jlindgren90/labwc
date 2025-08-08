@@ -697,7 +697,7 @@ static void
 init_foreign_toplevel(xwayland_view *view)
 {
 	assert(!view->foreign_toplevel);
-	view->foreign_toplevel = foreign_toplevel_create(view);
+	view->foreign_toplevel = std::make_unique<foreign_toplevel>(view);
 
 	if (!view->xwayland_surface->parent) {
 		return;
@@ -706,7 +706,7 @@ init_foreign_toplevel(xwayland_view *view)
 	if (!parent || !parent->foreign_toplevel) {
 		return;
 	}
-	foreign_toplevel_set_parent(view->foreign_toplevel, parent->foreign_toplevel);
+	view->foreign_toplevel->set_parent(*parent->foreign_toplevel);
 }
 
 void
@@ -826,9 +826,8 @@ xwayland_view::unmap(bool client_request)
 	 * the unmapped view doesn't show up in panels and the like.
 	 */
 out:
-	if (client_request && view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
+	if (client_request) {
+		view->foreign_toplevel.reset();
 	}
 }
 

@@ -2,6 +2,7 @@
 #ifndef LABWC_VIEW_H
 #define LABWC_VIEW_H
 
+#include <memory>
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-util.h>
@@ -93,10 +94,11 @@ enum window_type {
 	WINDOW_TYPE_LEN
 };
 
+class foreign_toplevel;
+
 struct view;
 struct wlr_surface;
 struct wlr_xdg_surface;
-struct foreign_toplevel;
 
 using view_list = reflist<view>;
 using view_iter = reflist<view>::iter;
@@ -214,7 +216,7 @@ struct view_data {
 	struct resize_indicator resize_indicator;
 	struct resize_outlines resize_outlines;
 
-	struct foreign_toplevel *foreign_toplevel;
+	std::unique_ptr<::foreign_toplevel> foreign_toplevel;
 
 	/* used by scaled_icon_buffer */
 	struct {
