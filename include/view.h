@@ -2,6 +2,7 @@
 #ifndef LABWC_VIEW_H
 #define LABWC_VIEW_H
 
+#include <memory>
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-util.h>
@@ -80,7 +81,8 @@ enum view_wants_focus {
 	VIEW_WANTS_FOCUS_UNLIKELY,
 };
 
-struct foreign_toplevel;
+class foreign_toplevel;
+
 struct lab_data_buffer;
 struct region;
 struct view;
@@ -204,7 +206,7 @@ struct view_data {
 	struct resize_indicator resize_indicator;
 	struct resize_outlines resize_outlines;
 
-	struct foreign_toplevel *foreign_toplevel;
+	std::unique_ptr<::foreign_toplevel> foreign_toplevel;
 
 	/* used by scaled_icon_buffer */
 	struct {
