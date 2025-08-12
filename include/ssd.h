@@ -18,7 +18,6 @@ struct wlr_cursor;
 /* Forward declare arguments */
 struct ssd;
 struct ssd_button;
-struct ssd_hover_state;
 struct view;
 struct wlr_scene;
 struct wlr_scene_node;
@@ -45,9 +44,7 @@ void ssd_set_titlebar(struct ssd *ssd, bool enabled);
 void ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable);
 void ssd_enable_shade(struct ssd *ssd, bool enable);
 
-struct ssd_hover_state *ssd_hover_state_new(void);
-void ssd_update_button_hover(struct wlr_scene_node *node,
-	struct ssd_hover_state *hover_state);
+void ssd_update_button_hover(struct wlr_scene_node *node);
 
 enum lab_node_type ssd_button_get_type(const struct ssd_button *button);
 struct view *ssd_button_get_view(const struct ssd_button *button);

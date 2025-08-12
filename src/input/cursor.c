@@ -502,7 +502,7 @@ cursor_update_common(struct cursor_context *ctx, bool cursor_has_moved,
 {
 	struct wlr_seat *wlr_seat = g_seat.seat;
 
-	ssd_update_button_hover(ctx->node, g_server.ssd_hover_state);
+	ssd_update_button_hover(ctx->node);
 
 	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		/*
