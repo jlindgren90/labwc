@@ -3,13 +3,17 @@
 #define LABWC_INPUT_H
 
 #include <wayland-server-core.h>
+#include "common/listener.h"
+#include "common/refptr.h"
 
-struct input {
+struct input : public destroyable, public refcounted<input> {
 	struct wlr_input_device *wlr_input_device;
 	/* Set for pointer/touch devices */
 	double scroll_factor;
-	struct wl_listener destroy;
-	struct wl_list link; /* seat.inputs */
+
+	virtual ~input();
+
+	void last_unref() { /* no-op */ }
 };
 
 void input_handlers_init(void);
