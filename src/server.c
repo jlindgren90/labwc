@@ -547,8 +547,6 @@ server_init(void)
 	wl_list_init(&g_server.views);
 	wl_list_init(&g_server.unmanaged_surfaces);
 
-	g_server.ssd_hover_state = ssd_hover_state_new();
-
 	g_server.scene = wlr_scene_create();
 	die_if_null(g_server.scene);
 
@@ -800,5 +798,4 @@ server_finish(void)
 	wlr_scene_node_destroy(&g_server.scene->tree.node);
 
 	wl_display_destroy(g_server.wl_display);
-	free(g_server.ssd_hover_state);
 }
