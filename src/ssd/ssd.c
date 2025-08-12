@@ -11,10 +11,10 @@
 #include <strings.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
+#include <wlr/util/edges.h>
 #include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "config/rcxml.h"
-#include "labwc.h"
 #include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
@@ -351,11 +351,9 @@ ssd_destroy(struct ssd *ssd)
 
 	/* Maybe reset hover view */
 	struct view *view = ssd->view;
-	struct ssd_hover_state *hover_state;
-	hover_state = g_server.ssd_hover_state;
-	if (hover_state->view == view) {
-		hover_state->view = NULL;
-		hover_state->button = NULL;
+	if (g_ssd_hover_state.view == view) {
+		g_ssd_hover_state.view = NULL;
+		g_ssd_hover_state.button = NULL;
 	}
 
 	/* Destroy subcomponents */
@@ -472,12 +470,6 @@ ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable)
 	struct ssd_part *part = ssd_get_part(&ssd->border.active.parts, LAB_NODE_EDGE_TOP);
 	struct wlr_scene_rect *rect = wlr_scene_rect_from_node(part->node);
 	wlr_scene_rect_set_color(rect, color);
-}
-
-struct ssd_hover_state *
-ssd_hover_state_new(void)
-{
-	return znew(struct ssd_hover_state);
 }
 
 enum lab_node_type

@@ -141,6 +141,8 @@ struct ssd_hover_state {
 struct wlr_buffer;
 struct wlr_scene_tree;
 
+extern struct ssd_hover_state g_ssd_hover_state;
+
 /* SSD internal helpers to create various SSD elements */
 /* TODO: Replace some common args with a struct */
 struct ssd_part *add_scene_part(

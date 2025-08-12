@@ -236,8 +236,6 @@ struct server {
 	 */
 	struct view *active_view;
 
-	struct ssd_hover_state *ssd_hover_state;
-
 	/* Tree for all non-layer xdg/xwayland-shell surfaces */
 	struct wlr_scene_tree *view_tree;
 

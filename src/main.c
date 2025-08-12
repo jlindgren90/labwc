@@ -10,6 +10,7 @@
 #include "config/rcxml.h"
 #include "config/session.h"
 #include "labwc.h"
+#include "ssd-internal.h"
 #include "theme.h"
 #include "menu/menu.h"
 
@@ -20,6 +21,7 @@
 struct rcxml rc;
 struct seat g_seat;
 struct server g_server;
+struct ssd_hover_state g_ssd_hover_state;
 struct theme g_theme;
 
 static const struct option long_options[] = {
