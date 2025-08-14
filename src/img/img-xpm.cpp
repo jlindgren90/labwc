@@ -231,14 +231,14 @@ file_buffer(enum buf_op op, FILE *infile)
 		if (!xpm_seek_char(infile, '{')) {
 			break;
 		}
-		/* Fall through to the next xpm_seek_char. */
+		[[fallthrough]];
 
 	case op_cmap:
 		xpm_seek_char(infile, '"');
 		if (fseek(infile, -1, SEEK_CUR) != 0) {
 			break;
 		}
-		/* Fall through to the xpm_read_string. */
+		[[fallthrough]];
 
 	case op_body:
 		return xpm_read_string(infile);
