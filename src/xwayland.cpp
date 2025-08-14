@@ -10,7 +10,6 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/xwayland.h>
 #include "buffer.h"
-#include "common/array.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
@@ -267,7 +266,7 @@ xwayland_view::handle_request_move(void *)
 	 * want.
 	 */
 	if (this == g_seat.pressed.view) {
-		interactive_begin(this, LAB_INPUT_STATE_MOVE, 0);
+		interactive_begin(this, LAB_INPUT_STATE_MOVE, WLR_EDGE_NONE);
 	}
 }
 
@@ -284,7 +283,8 @@ xwayland_view::handle_request_resize(void *data)
 	 */
 	auto event = (wlr_xwayland_resize_event *)data;
 	if (this == g_seat.pressed.view) {
-		interactive_begin(this, LAB_INPUT_STATE_RESIZE, event->edges);
+		interactive_begin(this, LAB_INPUT_STATE_RESIZE,
+			(enum wlr_edges)event->edges);
 	}
 }
 

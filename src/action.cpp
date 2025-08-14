@@ -900,7 +900,7 @@ actions_run(struct view *activator, std::vector<action> &actions,
 			break;
 		case ACTION_TYPE_MOVE:
 			if (view) {
-				interactive_begin(view, LAB_INPUT_STATE_MOVE, 0);
+				interactive_begin(view, LAB_INPUT_STATE_MOVE, WLR_EDGE_NONE);
 			}
 			break;
 		case ACTION_TYPE_RAISE:
@@ -915,7 +915,7 @@ actions_run(struct view *activator, std::vector<action> &actions,
 			break;
 		case ACTION_TYPE_RESIZE:
 			if (view) {
-				uint32_t resize_edges =
+				enum wlr_edges resize_edges =
 					cursor_get_resize_edges(g_seat.cursor,
 						&ctx);
 				interactive_begin(view, LAB_INPUT_STATE_RESIZE,

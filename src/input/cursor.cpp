@@ -569,18 +569,18 @@ cursor_update_common(struct cursor_context *ctx, bool cursor_has_moved,
 	return false;
 }
 
-uint32_t
+enum wlr_edges
 cursor_get_resize_edges(struct wlr_cursor *cursor, struct cursor_context *ctx)
 {
-	uint32_t resize_edges = ssd_resize_edges(ctx->type);
+	enum wlr_edges resize_edges = ssd_resize_edges(ctx->type);
 	if (ctx->view && !resize_edges) {
 		struct wlr_box box = ctx->view->current;
-		resize_edges |=
-			(int)cursor->x < box.x + box.width / 2 ?
-				WLR_EDGE_LEFT : WLR_EDGE_RIGHT;
-		resize_edges |=
-			(int)cursor->y < box.y + box.height / 2 ?
-				WLR_EDGE_TOP : WLR_EDGE_BOTTOM;
+		resize_edges = (wlr_edges)(resize_edges |
+			((int)cursor->x < box.x + box.width / 2 ?
+				WLR_EDGE_LEFT : WLR_EDGE_RIGHT));
+		resize_edges = (wlr_edges)(resize_edges |
+			((int)cursor->y < box.y + box.height / 2 ?
+				WLR_EDGE_TOP : WLR_EDGE_BOTTOM));
 	}
 	return resize_edges;
 }

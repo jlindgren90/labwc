@@ -105,7 +105,8 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (query->window_type >= 0 && !view_contains_window_type(view, query->window_type)) {
+	if (query->window_type >= 0 && !view_contains_window_type(view,
+			(window_type)query->window_type)) {
 		return false;
 	}
 

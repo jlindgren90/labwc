@@ -204,7 +204,7 @@ ssd_get_part_type(const struct ssd *ssd, struct wlr_scene_node *node,
 	return resizing_type != LAB_SSD_NONE ? resizing_type : part_type;
 }
 
-uint32_t
+enum wlr_edges
 ssd_resize_edges(enum ssd_part_type type)
 {
 	switch (type) {
@@ -217,13 +217,13 @@ ssd_resize_edges(enum ssd_part_type type)
 	case LAB_SSD_PART_LEFT:
 		return WLR_EDGE_LEFT;
 	case LAB_SSD_PART_CORNER_TOP_LEFT:
-		return WLR_EDGE_TOP | WLR_EDGE_LEFT;
+		return (wlr_edges)(WLR_EDGE_TOP | WLR_EDGE_LEFT);
 	case LAB_SSD_PART_CORNER_TOP_RIGHT:
-		return WLR_EDGE_RIGHT | WLR_EDGE_TOP;
+		return (wlr_edges)(WLR_EDGE_RIGHT | WLR_EDGE_TOP);
 	case LAB_SSD_PART_CORNER_BOTTOM_RIGHT:
-		return WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT;
+		return (wlr_edges)(WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT);
 	case LAB_SSD_PART_CORNER_BOTTOM_LEFT:
-		return WLR_EDGE_BOTTOM | WLR_EDGE_LEFT;
+		return (wlr_edges)(WLR_EDGE_BOTTOM | WLR_EDGE_LEFT);
 	default:
 		return WLR_EDGE_NONE;
 	}

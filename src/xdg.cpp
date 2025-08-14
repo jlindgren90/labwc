@@ -366,7 +366,7 @@ xdg_toplevel_view::handle_request_move(void *)
 	 * want.
 	 */
 	if (this == g_seat.pressed.view) {
-		interactive_begin(this, LAB_INPUT_STATE_MOVE, 0);
+		interactive_begin(this, LAB_INPUT_STATE_MOVE, WLR_EDGE_NONE);
 	}
 }
 
@@ -383,7 +383,8 @@ xdg_toplevel_view::handle_request_resize(void *data)
 	 */
 	auto event = (wlr_xdg_toplevel_resize_event *)data;
 	if (this == g_seat.pressed.view) {
-		interactive_begin(this, LAB_INPUT_STATE_RESIZE, event->edges);
+		interactive_begin(this, LAB_INPUT_STATE_RESIZE,
+			(enum wlr_edges)event->edges);
 	}
 }
 
