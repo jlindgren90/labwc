@@ -1973,15 +1973,15 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 			&& view->tiled != LAB_EDGE_CENTER) {
 		enum lab_edge invert_edge = lab_edge_invert(edge);
 		/* Represents axis of snapping direction */
-		enum lab_edge parallel_mask = edge | invert_edge;
+		auto parallel_mask = lab_edge(edge | invert_edge);
 		/*
 		 * The vector view->tiled is split to components
 		 * parallel/orthogonal to snapping direction. For example,
 		 * view->tiled=TOP_LEFT is split to parallel_tiled=TOP and
 		 * orthogonal_tiled=LEFT when edge=TOP or edge=BOTTOM.
 		 */
-		enum lab_edge parallel_tiled = view->tiled & parallel_mask;
-		enum lab_edge orthogonal_tiled = view->tiled & ~parallel_mask;
+		auto parallel_tiled = lab_edge(view->tiled & parallel_mask);
+		auto orthogonal_tiled = lab_edge(view->tiled & ~parallel_mask);
 
 		if (across_outputs && view->tiled == edge) {
 			/*
@@ -2001,13 +2001,13 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 			 * E.g. when window is tiled to downleft/downright and
 			 * being snapped to up, tile it to left/right.
 			 */
-			edge = view->tiled & ~parallel_mask;
+			edge = lab_edge(view->tiled & ~parallel_mask);
 		} else if (combine && parallel_tiled == LAB_EDGE_NONE) {
 			/*
 			 * E.g. when window is tiled to left/right and being
 			 * snapped to up, tile it to upleft/upright.
 			 */
-			edge = view->tiled | edge;
+			edge = lab_edge(view->tiled | edge);
 		}
 	}
 

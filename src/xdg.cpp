@@ -444,7 +444,8 @@ xdg_toplevel_view::handle_request_resize(void *data)
 	 */
 	auto event = (wlr_xdg_toplevel_resize_event *)data;
 	if (this == g_seat.pressed.view) {
-		interactive_begin(this, LAB_INPUT_STATE_RESIZE, event->edges);
+		interactive_begin(this, LAB_INPUT_STATE_RESIZE,
+			lab_edge(event->edges));
 	}
 }
 

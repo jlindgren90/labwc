@@ -570,12 +570,12 @@ cursor_get_resize_edges(struct wlr_cursor *cursor, struct cursor_context *ctx)
 	enum lab_edge resize_edges = node_type_to_edges(ctx->type);
 	if (ctx->view && !resize_edges) {
 		struct wlr_box box = ctx->view->current;
-		resize_edges |=
-			(int)cursor->x < box.x + box.width / 2 ?
-				LAB_EDGE_LEFT : LAB_EDGE_RIGHT;
-		resize_edges |=
-			(int)cursor->y < box.y + box.height / 2 ?
-				LAB_EDGE_TOP : LAB_EDGE_BOTTOM;
+		resize_edges = lab_edge(resize_edges
+			| ((int)cursor->x < box.x + box.width / 2
+				? LAB_EDGE_LEFT : LAB_EDGE_RIGHT));
+		resize_edges = lab_edge(resize_edges
+			| ((int)cursor->y < box.y + box.height / 2
+				? LAB_EDGE_TOP : LAB_EDGE_BOTTOM));
 	}
 	return resize_edges;
 }

@@ -100,7 +100,7 @@ show_edge_overlay(enum lab_edge edge1, enum lab_edge edge2,
 	if (!rc.snap_overlay_enabled) {
 		return;
 	}
-	enum lab_edge edge = edge1 | edge2;
+	auto edge = (lab_edge)(edge1 | edge2);
 	if (g_seat.overlay.active.edge == edge
 			&& g_seat.overlay.active.output == output) {
 		return;
