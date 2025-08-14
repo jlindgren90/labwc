@@ -5,8 +5,6 @@
 #include <string.h>
 #include <wlr/render/pixman.h>
 #include <wlr/types/wlr_scene.h>
-#include "buffer.h"
-#include "common/mem.h"
 #include "common/scaled-font-buffer.h"
 #include "common/scaled-img-buffer.h"
 #include "common/string-helpers.h"
@@ -351,9 +349,7 @@ ssd_titlebar_destroy(struct ssd *ssd)
 		subtree->tree = NULL;
 	} FOR_EACH_END
 
-	if (ssd->state.title.text) {
-		zfree(ssd->state.title.text);
-	}
+	ssd->state.title.text.clear();
 
 	wlr_scene_node_destroy(&ssd->titlebar.tree->node);
 	ssd->titlebar.tree = NULL;
@@ -464,7 +460,7 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	struct ssd_state_title *state = &ssd->state.title;
-	bool title_unchanged = state->text && !strcmp(title, state->text);
+	bool title_unchanged = (state->text == title);
 
 	const float *text_color;
 	const float bg_color[4] = {0, 0, 0, 0}; /* ignored */
@@ -519,10 +515,7 @@ ssd_update_title(struct ssd *ssd)
 	} FOR_EACH_END
 
 	if (!title_unchanged) {
-		if (state->text) {
-			free(state->text);
-		}
-		state->text = xstrdup(title);
+		state->text = lab_str(title);
 	}
 	ssd_update_title_positions(ssd, offset_left, offset_right);
 }
@@ -533,7 +526,7 @@ ssd_update_button_hover(struct wlr_scene_node *node)
 	struct ssd_button *button = NULL;
 
 	if (node && node->data) {
-		struct node_descriptor *desc = node->data;
+		auto desc = (node_descriptor *)node->data;
 		if (desc->type == LAB_NODE_DESC_SSD_BUTTON) {
 			button = node_ssd_button_from_node(node);
 			if (button == g_ssd_hover_state.button) {
