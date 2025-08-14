@@ -103,7 +103,7 @@ compare_xcolor_entry(const void *a, const void *b)
 bool
 lookup_named_color(const char *name, uint32_t *argb)
 {
-	struct xcolor_entry *found = bsearch(name, xcolors, ARRAY_SIZE(xcolors),
+	auto found = (xcolor_entry *)bsearch(name, xcolors, ARRAY_SIZE(xcolors),
 		sizeof(struct xcolor_entry), compare_xcolor_entry);
 	if (!found) {
 		return false;
