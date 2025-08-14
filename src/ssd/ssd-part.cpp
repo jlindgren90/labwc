@@ -3,10 +3,8 @@
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
 #include "common/list.h"
-#include "common/mem.h"
 #include "common/scaled-icon-buffer.h"
 #include "common/scaled-img-buffer.h"
-#include "config/rcxml.h"
 #include "node.h"
 #include "ssd-internal.h"
 #include "theme.h"
@@ -18,7 +16,7 @@ handle_button_node_destroy(struct wl_listener *listener, void *data)
 {
 	struct ssd_button *button = wl_container_of(listener, button, destroy);
 	wl_list_remove(&button->destroy.link);
-	free(button);
+	delete button;
 }
 
 /*
@@ -30,7 +28,7 @@ static struct ssd_button *
 ssd_button_descriptor_create(struct wlr_scene_node *node)
 {
 	/* Create new ssd_button */
-	struct ssd_button *button = znew(*button);
+	auto button = new ssd_button();
 
 	/* Let it destroy automatically when the scene node destroys */
 	button->destroy.notify = handle_button_node_destroy;
@@ -45,8 +43,7 @@ ssd_button_descriptor_create(struct wlr_scene_node *node)
 struct ssd_part *
 add_scene_part(struct wl_list *part_list, enum lab_node_type type)
 {
-	struct ssd_part *part = znew(*part);
-	part->type = type;
+	auto part = new ssd_part{.type = type};
 	wl_list_append(part_list, &part->link);
 	return part;
 }
@@ -161,7 +158,7 @@ ssd_destroy_parts(struct wl_list *list)
 		/* part->buffer will free itself along the scene_buffer node */
 		part->buffer = NULL;
 		wl_list_remove(&part->link);
-		free(part);
+		delete part;
 	}
 	assert(wl_list_empty(list));
 }
