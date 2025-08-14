@@ -322,7 +322,7 @@ action::add_arg_from_xml_node(const char *nodename, const char *content)
 			add_bool(argument, parse_bool(content, true));
 			return;
 		}
-		/* Falls through to GoToDesktop */
+		[[fallthrough]];
 	case ACTION_TYPE_GO_TO_DESKTOP:
 		if (!strcmp(argument, "to")) {
 			add_str(argument, content);
@@ -978,7 +978,7 @@ actions_run(struct view *activator, std::vector<action> &actions,
 			if (!view) {
 				break;
 			}
-			/* Falls through to GoToDesktop */
+			[[fallthrough]];
 		case ACTION_TYPE_GO_TO_DESKTOP: {
 			bool follow = true;
 			bool wrap = action.get_bool("wrap", true);
