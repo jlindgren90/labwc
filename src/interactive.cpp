@@ -121,10 +121,10 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		 */
 		enum view_axis maximized = view->maximized;
 		if (edges & LAB_EDGES_LEFT_RIGHT) {
-			maximized &= ~VIEW_AXIS_HORIZONTAL;
+			maximized = (view_axis)(maximized & ~VIEW_AXIS_HORIZONTAL);
 		}
 		if (edges & LAB_EDGES_TOP_BOTTOM) {
-			maximized &= ~VIEW_AXIS_VERTICAL;
+			maximized = (view_axis)(maximized & ~VIEW_AXIS_VERTICAL);
 		}
 		view_set_maximized(view, maximized);
 		view_set_untiled(view);
@@ -245,7 +245,7 @@ snap_to_edge(struct view *view)
 	if (!edge_from_cursor(&output, &edge1, &edge2)) {
 		return false;
 	}
-	enum lab_edge edge = edge1 | edge2;
+	auto edge = (lab_edge)(edge1 | edge2);
 
 	view_set_output(view, output);
 	/*
