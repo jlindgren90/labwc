@@ -79,7 +79,7 @@ touch_get_coords(struct wlr_touch *touch, double x, double y, double *x_offset,
 static void
 handle_touch_motion(struct wl_listener *listener, void *data)
 {
-	struct wlr_touch_motion_event *event = data;
+	auto event = (wlr_touch_motion_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 
@@ -129,7 +129,7 @@ handle_touch_frame(struct wl_listener *listener, void *data)
 static void
 handle_touch_down(struct wl_listener *listener, void *data)
 {
-	struct wlr_touch_down_event *event = data;
+	auto event = (wlr_touch_down_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 
@@ -190,7 +190,7 @@ handle_touch_down(struct wl_listener *listener, void *data)
 static void
 handle_touch_up(struct wl_listener *listener, void *data)
 {
-	struct wlr_touch_up_event *event = data;
+	auto event = (wlr_touch_up_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 

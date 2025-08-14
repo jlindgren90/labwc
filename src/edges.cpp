@@ -246,16 +246,16 @@ compute_edges_visible(const struct wlr_box *view_size,
 	enum lab_edge edges_visible = LAB_EDGE_NONE;
 	for (int i = 0; i < nrects; i++) {
 		if (rects[i].x1 == view_rect->x1) {
-			edges_visible |= LAB_EDGE_LEFT;
+			edges_visible = lab_edge(edges_visible | LAB_EDGE_LEFT);
 		}
 		if (rects[i].y1 == view_rect->y1) {
-			edges_visible |= LAB_EDGE_TOP;
+			edges_visible = lab_edge(edges_visible | LAB_EDGE_TOP);
 		}
 		if (rects[i].x2 == view_rect->x2) {
-			edges_visible |= LAB_EDGE_RIGHT;
+			edges_visible = lab_edge(edges_visible | LAB_EDGE_RIGHT);
 		}
 		if (rects[i].y2 == view_rect->y2) {
-			edges_visible |= LAB_EDGE_BOTTOM;
+			edges_visible = lab_edge(edges_visible | LAB_EDGE_BOTTOM);
 		}
 	}
 	pixman_region32_fini(&intersection);
@@ -315,7 +315,7 @@ subtract_node_tree(struct wlr_scene_tree *tree, pixman_region32_t *available,
 			continue;
 		}
 
-		node_desc = node->data;
+		node_desc = (node_descriptor *)node->data;
 		if (node_desc && node_desc->type == LAB_NODE_DESC_VIEW) {
 			view = node_view_from_node(node);
 			if (view != ignored_view) {
