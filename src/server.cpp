@@ -114,7 +114,7 @@ handle_sighup(int signal, void *data)
 static int
 handle_sigterm(int signal, void *data)
 {
-	struct wl_display *display = data;
+	auto display = (wl_display *)data;
 
 	wl_display_terminate(display);
 	return 0;
@@ -184,7 +184,7 @@ handle_sigchld(int signal, void *data)
 static void
 handle_drm_lease_request(struct wl_listener *listener, void *data)
 {
-	struct wlr_drm_lease_request_v1 *req = data;
+	auto req = (wlr_drm_lease_request_v1 *)data;
 	struct wlr_drm_lease_v1 *lease = wlr_drm_lease_request_v1_grant(req);
 	if (!lease) {
 		wlr_log(WLR_ERROR, "Failed to grant lease request");
@@ -361,8 +361,7 @@ static void
 get_headless_backend(struct wlr_backend *backend, void *data)
 {
 	if (wlr_backend_is_headless(backend)) {
-		struct wlr_backend **headless = data;
-		*headless = backend;
+		*(wlr_backend **)data = backend;
 	}
 }
 

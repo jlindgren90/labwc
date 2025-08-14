@@ -292,12 +292,12 @@ get_cursor_context(void)
 	}
 #endif
 	while (node) {
-		struct node_descriptor *desc = node->data;
+		auto desc = (node_descriptor *)node->data;
 		if (desc) {
 			switch (desc->type) {
 			case LAB_NODE_DESC_VIEW:
 			case LAB_NODE_DESC_XDG_POPUP:
-				ret.view = desc->data;
+				ret.view = (view *)desc->data;
 				ret.type = ssd_get_part_type(
 					ret.view->ssd, ret.node, cursor);
 				if (ret.type == LAB_NODE_CLIENT) {

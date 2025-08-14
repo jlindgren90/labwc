@@ -37,7 +37,7 @@ handle_set_cursor(struct wl_listener *listener, void *data)
 {
 	struct drawing_tablet_tool *tool =
 		wl_container_of(listener, tool, handlers.set_cursor);
-	struct wlr_tablet_v2_event_cursor *ev = data;
+	auto ev = (wlr_tablet_v2_event_cursor *)data;
 
 	struct wlr_seat_client *focused_client =
 		g_seat.seat->pointer_state.focused_client;
@@ -313,9 +313,9 @@ notify_motion(struct drawing_tablet *tablet, struct drawing_tablet_tool *tool,
 static void
 handle_tablet_tool_proximity(struct wl_listener *listener, void *data)
 {
-	struct wlr_tablet_tool_proximity_event *ev = data;
-	struct drawing_tablet *tablet = ev->tablet->data;
-	struct drawing_tablet_tool *tool = ev->tool->data;
+	auto ev = (wlr_tablet_tool_proximity_event *)data;
+	auto tablet = (drawing_tablet *)ev->tablet->data;
+	auto tool = (drawing_tablet_tool *)ev->tool->data;
 	if (!tablet) {
 		wlr_log(WLR_DEBUG, "tool proximity event before tablet create");
 		return;
@@ -381,9 +381,9 @@ static bool is_down_mouse_emulation = false;
 static void
 handle_tablet_tool_axis(struct wl_listener *listener, void *data)
 {
-	struct wlr_tablet_tool_axis_event *ev = data;
-	struct drawing_tablet *tablet = ev->tablet->data;
-	struct drawing_tablet_tool *tool = ev->tool->data;
+	auto ev = (wlr_tablet_tool_axis_event *)data;
+	auto tablet = (drawing_tablet *)ev->tablet->data;
+	auto tool = (drawing_tablet_tool *)ev->tool->data;
 	if (!tablet || !tool) {
 		wlr_log(WLR_DEBUG, "tool axis event before tablet create");
 		return;
@@ -551,9 +551,9 @@ to_stylus_button(uint32_t button)
 static void
 handle_tablet_tool_tip(struct wl_listener *listener, void *data)
 {
-	struct wlr_tablet_tool_tip_event *ev = data;
-	struct drawing_tablet *tablet = ev->tablet->data;
-	struct drawing_tablet_tool *tool = ev->tool->data;
+	auto ev = (wlr_tablet_tool_tip_event *)data;
+	auto tablet = (drawing_tablet *)ev->tablet->data;
+	auto tool = (drawing_tablet_tool *)ev->tool->data;
 	if (!tablet || !tool) {
 		wlr_log(WLR_DEBUG, "tool tip event before tablet create");
 		return;
@@ -630,9 +630,9 @@ handle_tablet_tool_tip(struct wl_listener *listener, void *data)
 static void
 handle_tablet_tool_button(struct wl_listener *listener, void *data)
 {
-	struct wlr_tablet_tool_button_event *ev = data;
-	struct drawing_tablet *tablet = ev->tablet->data;
-	struct drawing_tablet_tool *tool = ev->tool->data;
+	auto ev = (wlr_tablet_tool_button_event *)data;
+	auto tablet = (drawing_tablet *)ev->tablet->data;
+	auto tool = (drawing_tablet_tool *)ev->tool->data;
 	if (!tablet || !tool) {
 		wlr_log(WLR_DEBUG, "tool button event before tablet create");
 		return;

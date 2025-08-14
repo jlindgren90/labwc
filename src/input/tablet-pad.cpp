@@ -104,7 +104,7 @@ handle_button(struct wl_listener *listener, void *data)
 {
 	struct drawing_tablet_pad *pad =
 		wl_container_of(listener, pad, handlers.button);
-	struct wlr_tablet_pad_button_event *ev = data;
+	auto ev = (wlr_tablet_pad_button_event *)data;
 
 	if (!rc.tablet.force_mouse_emulation
 			&& pad->pad_v2 && pad->current_surface) {
@@ -130,7 +130,7 @@ handle_ring(struct wl_listener *listener, void *data)
 {
 	struct drawing_tablet_pad *pad =
 		wl_container_of(listener, pad, handlers.ring);
-	struct wlr_tablet_pad_ring_event *ev = data;
+	auto ev = (wlr_tablet_pad_ring_event *)data;
 
 	if (!rc.tablet.force_mouse_emulation
 			&& pad->pad_v2 && pad->current_surface) {
@@ -146,7 +146,7 @@ handle_strip(struct wl_listener *listener, void *data)
 {
 	struct drawing_tablet_pad *pad =
 		wl_container_of(listener, pad, handlers.strip);
-	struct wlr_tablet_pad_strip_event *ev = data;
+	auto ev = (wlr_tablet_pad_strip_event *)data;
 
 	if (!rc.tablet.force_mouse_emulation
 			&& pad->pad_v2 && pad->current_surface) {
