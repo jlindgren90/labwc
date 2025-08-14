@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "labwc.h"
 #include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"

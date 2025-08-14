@@ -4,7 +4,9 @@
 
 #include <wlr/util/box.h>
 #include "common/border.h"
+#include "common/enum.h"
 #include "common/macros.h"
+#include "common/str.h"
 
 #define FOR_EACH(tmp, ...) \
 { \
@@ -50,7 +52,7 @@ struct ssd_state_title_width {
 };
 
 struct ssd_state_title {
-	char *text;
+	lab_str text;
 	struct ssd_state_title_width active;
 	struct ssd_state_title_width inactive;
 };

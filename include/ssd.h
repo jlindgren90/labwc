@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include "common/enum.h"
 
 struct wlr_cursor;
 
