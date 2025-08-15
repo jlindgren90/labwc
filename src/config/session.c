@@ -15,7 +15,6 @@
 #include "common/buf.h"
 #include "common/dir.h"
 #include "common/file-helpers.h"
-#include "common/mem.h"
 #include "common/parse-bool.h"
 #include "common/spawn.h"
 #include "common/string-helpers.h"

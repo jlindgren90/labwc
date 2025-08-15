@@ -3,11 +3,11 @@
 #include <sfdo-desktop.h>
 #include <sfdo-icon.h>
 #include <sfdo-basedir.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
 #include <wlr/util/log.h>
-#include "common/macros.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
