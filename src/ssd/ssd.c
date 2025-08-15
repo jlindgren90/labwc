@@ -14,6 +14,7 @@
 #include "common/scene-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
+#include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
 #include "view.h"

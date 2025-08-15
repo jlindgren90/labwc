@@ -3,6 +3,7 @@
 #define LABWC_SSD_INTERNAL_H
 
 #include <wlr/util/box.h>
+#include "common/border.h"
 #include "common/macros.h"
 #include "common/scene-types.h"
 

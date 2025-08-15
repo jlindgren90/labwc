@@ -13,7 +13,6 @@
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "desktop-entry.h"
-#include "img/img.h"
 #include "labwc.h"
 #include "node.h"
 #include "ssd.h"

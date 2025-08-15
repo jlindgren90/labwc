@@ -4,6 +4,7 @@
 
 #include "common/border.h"
 #include "common/edge.h"
+#include "common/scene-types.h"
 #include "config/types.h"
 
 struct wlr_cursor;

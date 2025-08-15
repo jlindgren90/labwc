@@ -2,16 +2,15 @@
 
 #include <assert.h>
 #include "buffer.h"
-#include "common/box.h"
 #include "common/list.h"
 #include "common/mem.h"
 #include "common/scaled-icon-buffer.h"
 #include "common/scaled-img-buffer.h"
 #include "config/rcxml.h"
-#include "labwc.h"
 #include "node.h"
 #include "ssd-internal.h"
 #include "theme.h"
+#include "view.h"
 
 /* Internal helpers */
 static void
