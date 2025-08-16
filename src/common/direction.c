@@ -2,7 +2,6 @@
 #include "common/direction.h"
 #include <assert.h>
 #include <wlr/types/wlr_output_layout.h>
-#include "view.h"
 
 enum wlr_direction
 direction_from_view_edge(enum view_edge edge)

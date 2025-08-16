@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "buffer.h"
 #include "common/list.h"
 #include "common/mem.h"
 #include "common/scaled-icon-buffer.h"
