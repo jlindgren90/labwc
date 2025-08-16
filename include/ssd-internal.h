@@ -5,6 +5,7 @@
 #include <wlr/util/box.h>
 #include "common/border.h"
 #include "common/enum.h"
+#include "common/listener.h"
 #include "common/macros.h"
 #include "common/str.h"
 
@@ -18,7 +19,7 @@
 
 struct lab_img;
 
-struct ssd_button {
+struct ssd_button : public destroyable {
 	struct view *view;
 	enum ssd_part_type type;
 	/*
@@ -37,8 +38,6 @@ struct ssd_button {
 	struct scaled_img_buffer *img_buffers[LAB_BS_ALL + 1];
 
 	struct scaled_icon_buffer *window_icon;
-
-	struct wl_listener destroy;
 };
 
 struct ssd_sub_tree {

@@ -3,13 +3,14 @@
 #include "idle.h"
 #include <assert.h>
 #include <stdlib.h>
+#include <memory>
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_idle_inhibit_v1.h>
-#include "common/mem.h"
+#include "common/listener.h"
 
-struct lab_idle_inhibitor {
+struct lab_idle_inhibitor : public destroyable {
 	struct wlr_idle_inhibitor_v1 *wlr_inhibitor;
-	struct wl_listener on_destroy;
+	~lab_idle_inhibitor();
 };
 
 struct lab_idle_manager {
@@ -22,14 +23,10 @@ struct lab_idle_manager {
 	struct wlr_seat *wlr_seat;
 };
 
-static struct lab_idle_manager *manager;
+static std::unique_ptr<lab_idle_manager> manager;
 
-static void
-handle_idle_inhibitor_destroy(struct wl_listener *listener, void *data)
+lab_idle_inhibitor::~lab_idle_inhibitor()
 {
-	struct lab_idle_inhibitor *idle_inhibitor = wl_container_of(listener,
-		idle_inhibitor, on_destroy);
-
 	if (manager) {
 		/*
 		 * The display destroy event might have been triggered
@@ -39,21 +36,17 @@ handle_idle_inhibitor_destroy(struct wl_listener *listener, void *data)
 			wl_list_length(&manager->inhibitor.manager->inhibitors) > 1;
 		wlr_idle_notifier_v1_set_inhibited(manager->ext, still_inhibited);
 	}
-
-	wl_list_remove(&idle_inhibitor->on_destroy.link);
-	free(idle_inhibitor);
 }
 
 static void
 handle_idle_inhibitor_new(struct wl_listener *listener, void *data)
 {
 	assert(manager);
-	struct wlr_idle_inhibitor_v1 *wlr_inhibitor = data;
+	auto wlr_inhibitor = (wlr_idle_inhibitor_v1 *)data;
 
-	struct lab_idle_inhibitor *inhibitor = znew(*inhibitor);
+	auto inhibitor = new lab_idle_inhibitor();
 	inhibitor->wlr_inhibitor = wlr_inhibitor;
-	inhibitor->on_destroy.notify = handle_idle_inhibitor_destroy;
-	wl_signal_add(&wlr_inhibitor->events.destroy, &inhibitor->on_destroy);
+	CONNECT_LISTENER(wlr_inhibitor, inhibitor, destroy);
 
 	wlr_idle_notifier_v1_set_inhibited(manager->ext, true);
 }
@@ -63,14 +56,14 @@ handle_inhibitor_manager_destroy(struct wl_listener *listener, void *data)
 {
 	wl_list_remove(&manager->inhibitor.on_new_inhibitor.link);
 	wl_list_remove(&manager->inhibitor.on_destroy.link);
-	zfree(manager);
+	manager.reset();
 }
 
 void
 idle_manager_create(struct wl_display *display, struct wlr_seat *wlr_seat)
 {
 	assert(!manager);
-	manager = znew(*manager);
+	manager = std::make_unique<lab_idle_manager>();
 	manager->wlr_seat = wlr_seat;
 
 	manager->ext = wlr_idle_notifier_v1_create(display);
