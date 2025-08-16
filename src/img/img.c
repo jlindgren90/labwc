@@ -2,12 +2,8 @@
 
 #include "img/img.h"
 #include <assert.h>
-#include <wlr/util/log.h>
 #include "buffer.h"
 #include "config.h"
-#include "common/box.h"
-#include "common/graphic-helpers.h"
-#include "common/macros.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
 #include "img/img-png.h"
@@ -16,7 +12,6 @@
 #endif
 #include "img/img-xbm.h"
 #include "img/img-xpm.h"
-#include "labwc.h"
 
 struct lab_img_data {
 	enum lab_img_type type;

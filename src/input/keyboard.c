@@ -3,7 +3,6 @@
 #include "input/keyboard.h"
 #include <assert.h>
 #include <stdlib.h>
-#include <wlr/backend/multi.h>
 #include <wlr/backend/session.h>
 #include <wlr/interfaces/wlr_keyboard.h>
 #include <wlr/types/wlr_keyboard_group.h>
@@ -18,7 +17,6 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "osd.h"
-#include "regions.h"
 #include "session-lock.h"
 #include "view.h"
 #include "workspaces.h"
