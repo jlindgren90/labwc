@@ -2,8 +2,6 @@
 #define _POSIX_C_SOURCE 200809L
 #include "input/cursor.h"
 #include <assert.h>
-#include <linux/input-event-codes.h>
-#include <sys/time.h>
 #include <time.h>
 #include <wlr/backend/libinput.h>
 #include <wlr/types/wlr_cursor.h>
@@ -21,7 +19,6 @@
 #include "action.h"
 #include "common/macros.h"
 #include "common/mem.h"
-#include "common/scene-helpers.h"
 #include "common/surface-helpers.h"
 #include "config/mousebind.h"
 #include "config/rcxml.h"
@@ -35,7 +32,6 @@
 #include "layers.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "regions.h"
 #include "resistance.h"
 #include "resize-outlines.h"
 #include "ssd.h"

@@ -5,8 +5,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <cairo.h>
-
-struct wlr_fbox;
+#include <wlr/util/box.h>
 
 /**
  * Sets the cairo color.

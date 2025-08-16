@@ -5,8 +5,6 @@
 #include <fcntl.h>
 #include <glib.h>
 #include <signal.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <sys/wait.h>
 #include <unistd.h>
 #include <wlr/util/log.h>

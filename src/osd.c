@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include "osd.h"
 #include <assert.h>
-#include <cairo.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
@@ -15,12 +14,10 @@
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
-#include "node.h"
 #include "output.h"
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"
-#include "window-rules.h"
 #include "workspaces.h"
 
 struct osd_scene_item {
