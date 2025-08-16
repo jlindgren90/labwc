@@ -2,8 +2,9 @@
 #include "osd.h"
 #include <assert.h>
 #include <cairo.h>
-#include <wlr/util/log.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
+#include <wlr/util/log.h>
 #include "common/array.h"
 #include "common/buf.h"
 #include "common/font.h"
