@@ -10,15 +10,6 @@
 #include "theme.h"
 #include "view.h"
 
-/* Internal helpers */
-static void
-handle_button_node_destroy(struct wl_listener *listener, void *data)
-{
-	struct ssd_button *button = wl_container_of(listener, button, destroy);
-	wl_list_remove(&button->destroy.link);
-	delete button;
-}
-
 /*
  * Create a new node_descriptor containing a link to a new ssd_button struct.
  * Both will be destroyed automatically once the scene_node they are attached
@@ -31,8 +22,7 @@ ssd_button_descriptor_create(struct wlr_scene_node *node)
 	auto button = new ssd_button();
 
 	/* Let it destroy automatically when the scene node destroys */
-	button->destroy.notify = handle_button_node_destroy;
-	wl_signal_add(&node->events.destroy, &button->destroy);
+	CONNECT_LISTENER(node, button, destroy);
 
 	/* And finally attach the ssd_button to a node descriptor */
 	node_descriptor_create(node, LAB_NODE_DESC_SSD_BUTTON, button);
