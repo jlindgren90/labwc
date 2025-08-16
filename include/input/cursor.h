@@ -2,13 +2,14 @@
 #ifndef LABWC_CURSOR_H
 #define LABWC_CURSOR_H
 
-#include <wlr/types/wlr_cursor.h>
-#include <wlr/util/edges.h>
+#include <wayland-server-protocol.h>
 #include "common/enum.h"
 
 struct view;
 struct seat;
 struct server;
+struct wlr_input_device;
+struct wlr_cursor;
 struct wlr_surface;
 struct wlr_scene_node;
 

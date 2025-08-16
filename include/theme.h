@@ -9,7 +9,7 @@
 #define LABWC_THEME_H
 
 #include <cairo.h>
-#include <wlr/render/wlr_renderer.h>
+#include <stdbool.h>
 #include "common/enum.h"
 
 struct lab_img;

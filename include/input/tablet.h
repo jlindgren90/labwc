@@ -3,7 +3,6 @@
 #define LABWC_TABLET_H
 
 #include <wayland-server-core.h>
-#include <wlr/types/wlr_tablet_v2.h>
 #include "common/enum.h"
 
 struct seat;

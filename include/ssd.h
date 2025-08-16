@@ -2,8 +2,8 @@
 #ifndef LABWC_SSD_H
 #define LABWC_SSD_H
 
-#include <wayland-server-core.h>
-#include "common/border.h"
+#include <stdbool.h>
+#include <stdint.h>
 
 struct wlr_cursor;
 
