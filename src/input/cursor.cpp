@@ -18,7 +18,6 @@
 #include <wlr/util/region.h>
 #include "action.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/surface-helpers.h"
 #include "config/mousebind.h"
 #include "config/rcxml.h"
@@ -40,9 +39,9 @@
 
 #define LAB_CURSOR_SHAPE_V1_VERSION 1
 
-struct constraint {
-	struct wlr_pointer_constraint_v1 *constraint;
-	struct wl_listener destroy;
+struct constraint : public destroyable {
+	struct wlr_pointer_constraint_v1 *wlr_constraint;
+	~constraint();
 };
 
 static const char * const *cursor_names = NULL;
@@ -175,7 +174,7 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 	 * This event is raised by the seat when a client provides a cursor
 	 * image
 	 */
-	struct wlr_seat_pointer_request_set_cursor_event *event = data;
+	auto event = (wlr_seat_pointer_request_set_cursor_event *)data;
 	struct wlr_seat_client *focused_client =
 		g_seat.seat->pointer_state.focused_client;
 
@@ -199,7 +198,7 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 static void
 handle_request_set_shape(struct wl_listener *listener, void *data)
 {
-	struct wlr_cursor_shape_manager_v1_request_set_shape_event *event = data;
+	auto event = (wlr_cursor_shape_manager_v1_request_set_shape_event *)data;
 	const char *shape_name = wlr_cursor_shape_v1_name(event->shape);
 	struct wlr_seat_client *focused_client =
 		g_seat.seat->pointer_state.focused_client;
@@ -244,14 +243,14 @@ handle_request_set_shape(struct wl_listener *listener, void *data)
 static void
 handle_request_set_selection(struct wl_listener *listener, void *data)
 {
-	struct wlr_seat_request_set_selection_event *event = data;
+	auto event = (wlr_seat_request_set_selection_event *)data;
 	wlr_seat_set_selection(g_seat.seat, event->source, event->serial);
 }
 
 static void
 handle_request_set_primary_selection(struct wl_listener *listener, void *data)
 {
-	struct wlr_seat_request_set_primary_selection_event *event = data;
+	auto event = (wlr_seat_request_set_primary_selection_event *)data;
 	wlr_seat_set_primary_selection(g_seat.seat, event->source,
 		event->serial);
 }
@@ -704,14 +703,8 @@ handle_constraint_commit(struct wl_listener *listener, void *data)
 	assert(constraint->surface == data);
 }
 
-static void
-handle_constraint_destroy(struct wl_listener *listener, void *data)
+constraint::~constraint()
 {
-	struct constraint *constraint = wl_container_of(listener, constraint,
-		destroy);
-	struct wlr_pointer_constraint_v1 *wlr_constraint = data;
-
-	wl_list_remove(&constraint->destroy.link);
 	if (g_seat.current_constraint == wlr_constraint) {
 		warp_cursor_to_constraint_hint(wlr_constraint);
 
@@ -721,19 +714,16 @@ handle_constraint_destroy(struct wl_listener *listener, void *data)
 		wl_list_init(&g_seat.constraint_commit.link);
 		g_seat.current_constraint = NULL;
 	}
-
-	free(constraint);
 }
 
 void
 create_constraint(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_constraint_v1 *wlr_constraint = data;
-	struct constraint *constraint = znew(*constraint);
+	auto wlr_constraint = (wlr_pointer_constraint_v1 *)data;
+	auto constraint = new ::constraint();
 
-	constraint->constraint = wlr_constraint;
-	constraint->destroy.notify = handle_constraint_destroy;
-	wl_signal_add(&wlr_constraint->events.destroy, &constraint->destroy);
+	constraint->wlr_constraint = wlr_constraint;
+	CONNECT_LISTENER(wlr_constraint, constraint, destroy);
 
 	struct view *view = g_server.active_view;
 	if (view && view->surface == wlr_constraint->surface) {
@@ -854,7 +844,7 @@ handle_motion(struct wl_listener *listener, void *data)
 	 * This event is forwarded by the cursor when a pointer emits a
 	 * _relative_ pointer motion event (i.e. a delta)
 	 */
-	struct wlr_pointer_motion_event *event = data;
+	auto event = (wlr_pointer_motion_event *)data;
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
 
@@ -905,7 +895,7 @@ handle_motion_absolute(struct wl_listener *listener, void *data)
 	 * window from any edge, so we have to warp the mouse there. There is
 	 * also some hardware which emits these events.
 	 */
-	struct wlr_pointer_motion_absolute_event *event = data;
+	auto event = (wlr_pointer_motion_absolute_event *)data;
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
 
@@ -1190,7 +1180,7 @@ handle_button(struct wl_listener *listener, void *data)
 	 * This event is forwarded by the cursor when a pointer emits a button
 	 * event.
 	 */
-	struct wlr_pointer_button_event *event = data;
+	auto event = (wlr_pointer_button_event *)data;
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
 
@@ -1332,14 +1322,14 @@ handle_axis(struct wl_listener *listener, void *data)
 	 * This event is forwarded by the cursor when a pointer emits an axis
 	 * event, for example when you move the scroll wheel.
 	 */
-	struct wlr_pointer_axis_event *event = data;
+	auto event = (wlr_pointer_axis_event *)data;
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
 
 	/* input->scroll_factor is set for pointer/touch devices */
 	assert(event->pointer->base.type == WLR_INPUT_DEVICE_POINTER
 		|| event->pointer->base.type == WLR_INPUT_DEVICE_TOUCH);
-	struct input *input = event->pointer->base.data;
+	auto input = (::input *)event->pointer->base.data;
 	double scroll_factor = input->scroll_factor;
 
 	bool notify = process_cursor_axis(event->orientation, event->delta,
@@ -1374,7 +1364,7 @@ cursor_emulate_axis(struct wlr_input_device *device,
 		double delta_discrete, enum wl_pointer_axis_source source,
 		uint32_t time_msec)
 {
-	struct input *input = device->data;
+	auto input = (::input *)device->data;
 
 	double scroll_factor = 1.0;
 	/* input->scroll_factor is set for pointer/touch devices */

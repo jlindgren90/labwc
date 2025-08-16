@@ -3,6 +3,7 @@
 #define LABWC_NODE_DESCRIPTOR_H
 
 #include <wayland-server-core.h>
+#include "common/listener.h"
 
 struct view;
 struct lab_layer_surface;
@@ -26,10 +27,9 @@ enum node_descriptor_type {
 	LAB_NODE_DESC_SSD_BUTTON,
 };
 
-struct node_descriptor {
+struct node_descriptor : public destroyable {
 	enum node_descriptor_type type;
 	void *data;
-	struct wl_listener destroy;
 };
 
 /**
