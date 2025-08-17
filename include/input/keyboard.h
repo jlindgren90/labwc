@@ -12,16 +12,18 @@
  * and we achieve that by using `struct keyboard` which inherits `struct input`
  * and adds keyboard specific listeners and a wlr_keyboard pointer.
  */
-struct keyboard {
-	struct input base;
+struct keyboard : public input {
 	struct wlr_keyboard *wlr_keyboard;
 	bool is_virtual;
-	struct wl_listener modifiers;
-	struct wl_listener key;
 	/* key repeat for compositor keybinds */
 	uint32_t keybind_repeat_keycode;
 	int32_t keybind_repeat_rate;
 	struct wl_event_source *keybind_repeat;
+
+	~keyboard();
+
+	DECLARE_HANDLER(keyboard, modifiers);
+	DECLARE_HANDLER(keyboard, key);
 };
 
 void keyboard_reset_current_keybind(void);
