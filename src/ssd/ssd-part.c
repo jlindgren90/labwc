@@ -11,6 +11,7 @@
 #include "labwc.h"
 #include "node.h"
 #include "ssd-internal.h"
+#include "theme.h"
 
 /* Internal helpers */
 static void
@@ -43,7 +44,7 @@ ssd_button_descriptor_create(struct wlr_scene_node *node)
 
 /* Internal API */
 struct ssd_part *
-add_scene_part(struct wl_list *part_list, enum ssd_part_type type)
+add_scene_part(struct wl_list *part_list, enum lab_node_type type)
 {
 	struct ssd_part *part = znew(*part);
 	part->type = type;
@@ -52,7 +53,7 @@ add_scene_part(struct wl_list *part_list, enum ssd_part_type type)
 }
 
 struct ssd_part *
-add_scene_rect(struct wl_list *list, enum ssd_part_type type,
+add_scene_rect(struct wl_list *list, enum lab_node_type type,
 	struct wlr_scene_tree *parent, int width, int height,
 	int x, int y, float color[4])
 {
@@ -65,7 +66,7 @@ add_scene_rect(struct wl_list *list, enum ssd_part_type type,
 }
 
 struct ssd_part *
-add_scene_buffer(struct wl_list *list, enum ssd_part_type type,
+add_scene_buffer(struct wl_list *list, enum lab_node_type type,
 	struct wlr_scene_tree *parent, struct wlr_buffer *buffer,
 	int x, int y)
 {
@@ -76,7 +77,7 @@ add_scene_buffer(struct wl_list *list, enum ssd_part_type type,
 }
 
 struct ssd_part *
-add_scene_button(struct wl_list *part_list, enum ssd_part_type type,
+add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 		struct wlr_scene_tree *parent,
 		struct lab_img *imgs[LAB_BS_ALL + 1],
 		int x, int y, struct view *view)
@@ -109,7 +110,7 @@ add_scene_button(struct wl_list *part_list, enum ssd_part_type type,
 	 */
 	int icon_padding = button_width / 10;
 
-	if (type == LAB_SSD_BUTTON_WINDOW_ICON) {
+	if (type == LAB_NODE_BUTTON_WINDOW_ICON) {
 		struct ssd_part *icon_part = add_scene_part(part_list, type);
 		struct scaled_icon_buffer *icon_buffer =
 			scaled_icon_buffer_create(parent, view->server,
@@ -143,7 +144,7 @@ add_scene_button(struct wl_list *part_list, enum ssd_part_type type,
 }
 
 struct ssd_part *
-ssd_get_part(struct wl_list *part_list, enum ssd_part_type type)
+ssd_get_part(struct wl_list *part_list, enum lab_node_type type)
 {
 	struct ssd_part *part;
 	wl_list_for_each(part, part_list, link) {

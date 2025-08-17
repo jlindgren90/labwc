@@ -16,6 +16,7 @@
 #include "img/img.h"
 #include "labwc.h"
 #include "node.h"
+#include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
 #include "view.h"
@@ -25,7 +26,7 @@
 	&(ssd)->titlebar.inactive)
 
 static void set_squared_corners(struct ssd *ssd, bool enable);
-static void set_alt_button_icon(struct ssd *ssd, enum ssd_part_type type, bool enable);
+static void set_alt_button_icon(struct ssd *ssd, enum lab_node_type type, bool enable);
 static void update_visible_buttons(struct ssd *ssd);
 
 void
@@ -71,13 +72,13 @@ ssd_titlebar_create(struct ssd *ssd)
 				bg_scene_buffer, WLR_SCALE_FILTER_NEAREST);
 		}
 		struct ssd_part *bg_part =
-			add_scene_part(&subtree->parts, LAB_SSD_PART_TITLEBAR);
+			add_scene_part(&subtree->parts, LAB_NODE_TITLEBAR);
 		bg_part->node = &bg_scene_buffer->node;
 		wlr_scene_node_set_position(bg_part->node, corner_width, 0);
 
-		add_scene_buffer(&subtree->parts, LAB_SSD_PART_TITLEBAR_CORNER_LEFT, parent,
+		add_scene_buffer(&subtree->parts, LAB_NODE_TITLEBAR_CORNER_LEFT, parent,
 			corner_top_left, -rc.theme->border_width, -rc.theme->border_width);
-		add_scene_buffer(&subtree->parts, LAB_SSD_PART_TITLEBAR_CORNER_RIGHT, parent,
+		add_scene_buffer(&subtree->parts, LAB_NODE_TITLEBAR_CORNER_RIGHT, parent,
 			corner_top_right, width - corner_width,
 			-rc.theme->border_width);
 
@@ -113,7 +114,7 @@ ssd_titlebar_create(struct ssd *ssd)
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
 	if (maximized) {
-		set_alt_button_icon(ssd, LAB_SSD_BUTTON_MAXIMIZE, true);
+		set_alt_button_icon(ssd, LAB_NODE_BUTTON_MAXIMIZE, true);
 		ssd->state.was_maximized = true;
 	}
 	if (squared) {
@@ -122,11 +123,11 @@ ssd_titlebar_create(struct ssd *ssd)
 	set_squared_corners(ssd, maximized || squared);
 
 	if (view->shaded) {
-		set_alt_button_icon(ssd, LAB_SSD_BUTTON_SHADE, true);
+		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, true);
 	}
 
 	if (view->visible_on_all_workspaces) {
-		set_alt_button_icon(ssd, LAB_SSD_BUTTON_OMNIPRESENT, true);
+		set_alt_button_icon(ssd, LAB_NODE_BUTTON_OMNIPRESENT, true);
 	}
 }
 
@@ -164,16 +165,16 @@ set_squared_corners(struct ssd *ssd, bool enable)
 	int x = enable ? 0 : corner_width;
 
 	FOR_EACH_STATE(ssd, subtree) {
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLEBAR);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLEBAR);
 		wlr_scene_node_set_position(part->node, x, 0);
 		wlr_scene_buffer_set_dest_size(
 			wlr_scene_buffer_from_node(part->node),
 			MAX(width - 2 * x, 0), theme->titlebar_height);
 
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLEBAR_CORNER_LEFT);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLEBAR_CORNER_LEFT);
 		wlr_scene_node_set_enabled(part->node, !enable);
 
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLEBAR_CORNER_RIGHT);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLEBAR_CORNER_RIGHT);
 		wlr_scene_node_set_enabled(part->node, !enable);
 
 		/* (Un)round the corner buttons */
@@ -194,7 +195,7 @@ set_squared_corners(struct ssd *ssd, bool enable)
 }
 
 static void
-set_alt_button_icon(struct ssd *ssd, enum ssd_part_type type, bool enable)
+set_alt_button_icon(struct ssd *ssd, enum lab_node_type type, bool enable)
 {
 	struct ssd_part *part;
 	struct ssd_button *button;
@@ -283,19 +284,19 @@ ssd_titlebar_update(struct ssd *ssd)
 			|| ssd->state.was_squared != squared) {
 		set_squared_corners(ssd, maximized || squared);
 		if (ssd->state.was_maximized != maximized) {
-			set_alt_button_icon(ssd, LAB_SSD_BUTTON_MAXIMIZE, maximized);
+			set_alt_button_icon(ssd, LAB_NODE_BUTTON_MAXIMIZE, maximized);
 		}
 		ssd->state.was_maximized = maximized;
 		ssd->state.was_squared = squared;
 	}
 
 	if (ssd->state.was_shaded != view->shaded) {
-		set_alt_button_icon(ssd, LAB_SSD_BUTTON_SHADE, view->shaded);
+		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, view->shaded);
 		ssd->state.was_shaded = view->shaded;
 	}
 
 	if (ssd->state.was_omnipresent != view->visible_on_all_workspaces) {
-		set_alt_button_icon(ssd, LAB_SSD_BUTTON_OMNIPRESENT,
+		set_alt_button_icon(ssd, LAB_NODE_BUTTON_OMNIPRESENT,
 			view->visible_on_all_workspaces);
 		ssd->state.was_omnipresent = view->visible_on_all_workspaces;
 	}
@@ -314,7 +315,7 @@ ssd_titlebar_update(struct ssd *ssd)
 	struct title_button *b;
 	int bg_offset = maximized || squared ? 0 : corner_width;
 	FOR_EACH_STATE(ssd, subtree) {
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLEBAR);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLEBAR);
 		wlr_scene_buffer_set_dest_size(
 			wlr_scene_buffer_from_node(part->node),
 			MAX(width - bg_offset * 2, 0), theme->titlebar_height);
@@ -327,7 +328,7 @@ ssd_titlebar_update(struct ssd *ssd)
 		}
 
 		x = width - corner_width;
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLEBAR_CORNER_RIGHT);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLEBAR_CORNER_RIGHT);
 		wlr_scene_node_set_position(part->node, x, -rc.theme->border_width);
 
 		x = width - theme->window_titlebar_padding_width + theme->window_button_spacing;
@@ -388,7 +389,7 @@ ssd_update_title_positions(struct ssd *ssd, int offset_left, int offset_right)
 	struct ssd_part *part;
 	struct ssd_sub_tree *subtree;
 	FOR_EACH_STATE(ssd, subtree) {
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLE);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLE);
 		if (!part || !part->node) {
 			/* view->surface never been mapped */
 			/* Or we somehow failed to allocate a scaled titlebar buffer */
@@ -503,10 +504,10 @@ ssd_update_title(struct ssd *ssd)
 			continue;
 		}
 
-		part = ssd_get_part(&subtree->parts, LAB_SSD_PART_TITLE);
+		part = ssd_get_part(&subtree->parts, LAB_NODE_TITLE);
 		if (!part) {
 			/* Initialize part and wlr_scene_buffer without attaching a buffer */
-			part = add_scene_part(&subtree->parts, LAB_SSD_PART_TITLE);
+			part = add_scene_part(&subtree->parts, LAB_NODE_TITLE);
 			part->buffer = scaled_font_buffer_create_for_titlebar(
 				subtree->tree, theme->titlebar_height,
 				theme->window[active].titlebar_pattern);
@@ -557,12 +558,12 @@ ssd_update_button_hover(struct wlr_scene_node *node,
 
 	/* Disable old hover */
 	if (hover_state->button) {
-		update_button_state(hover_state->button, LAB_BS_HOVERD, false);
+		update_button_state(hover_state->button, LAB_BS_HOVERED, false);
 		hover_state->view = NULL;
 		hover_state->button = NULL;
 	}
 	if (button) {
-		update_button_state(button, LAB_BS_HOVERD, true);
+		update_button_state(button, LAB_BS_HOVERED, true);
 		hover_state->view = button->view;
 		hover_state->button = button;
 	}

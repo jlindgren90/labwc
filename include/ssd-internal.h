@@ -4,9 +4,7 @@
 
 #include <wlr/util/box.h>
 #include "common/macros.h"
-#include "ssd.h"
-#include "theme.h"
-#include "view.h"
+#include "common/scene-types.h"
 
 #define FOR_EACH(tmp, ...) \
 { \
@@ -16,9 +14,11 @@
 
 #define FOR_EACH_END }
 
+struct lab_img;
+
 struct ssd_button {
 	struct view *view;
-	enum ssd_part_type type;
+	enum lab_node_type type;
 	/*
 	 * Bitmap of lab_button_state that represents a combination of
 	 * hover/toggled/rounded states.
@@ -29,7 +29,7 @@ struct ssd_button {
 	 * img_buffers[state_set] is displayed. Some of these can be NULL
 	 * (e.g. img_buffers[LAB_BS_ROUNDED] is set only for corner buttons).
 	 *
-	 * When "type" is LAB_SSD_BUTTON_WINDOW_ICON, these are all NULL and
+	 * When "type" is LAB_NODE_BUTTON_WINDOW_ICON, these are all NULL and
 	 * window_icon is used instead.
 	 */
 	struct scaled_img_buffer *img_buffers[LAB_BS_ALL + 1];
@@ -119,7 +119,7 @@ struct ssd {
 };
 
 struct ssd_part {
-	enum ssd_part_type type;
+	enum lab_node_type type;
 
 	/* Buffer pointer. May be NULL */
 	struct scaled_font_buffer *buffer;
@@ -141,22 +141,22 @@ struct wlr_scene_tree;
 /* SSD internal helpers to create various SSD elements */
 /* TODO: Replace some common args with a struct */
 struct ssd_part *add_scene_part(
-	struct wl_list *part_list, enum ssd_part_type type);
+	struct wl_list *part_list, enum lab_node_type type);
 struct ssd_part *add_scene_rect(
-	struct wl_list *list, enum ssd_part_type type,
+	struct wl_list *list, enum lab_node_type type,
 	struct wlr_scene_tree *parent, int width, int height, int x, int y,
 	float color[4]);
 struct ssd_part *add_scene_buffer(
-	struct wl_list *list, enum ssd_part_type type,
+	struct wl_list *list, enum lab_node_type type,
 	struct wlr_scene_tree *parent, struct wlr_buffer *buffer, int x, int y);
 struct ssd_part *add_scene_button(struct wl_list *part_list,
-	enum ssd_part_type type, struct wlr_scene_tree *parent,
+	enum lab_node_type type, struct wlr_scene_tree *parent,
 	struct lab_img *buffers[LAB_BS_ALL + 1], int x, int y,
 	struct view *view);
 
 /* SSD internal helpers */
 struct ssd_part *ssd_get_part(
-	struct wl_list *part_list, enum ssd_part_type type);
+	struct wl_list *part_list, enum lab_node_type type);
 void ssd_destroy_parts(struct wl_list *list);
 
 /* SSD internal */
