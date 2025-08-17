@@ -320,8 +320,8 @@ create_osd_scene(struct output *output, view_list &views)
 			goto error;
 		}
 
-		struct scaled_font_buffer *font_buffer =
-			scaled_font_buffer_create(output->osd_scene.tree);
+		auto font_buffer =
+			new scaled_font_buffer(output->osd_scene.tree);
 		wlr_scene_node_set_position(&font_buffer->scene_buffer->node, x,
 			y + (g_theme.osd_window_switcher_item_height
 				- font_height(&font)) / 2);
@@ -382,8 +382,8 @@ create_osd_scene(struct output *output, view_list &views)
 			if (field->content == LAB_FIELD_ICON) {
 				int icon_size = MIN(field_width,
 					g_theme.osd_window_switcher_item_icon_size);
-				struct scaled_icon_buffer *icon_buffer =
-					scaled_icon_buffer_create(item_root,
+				auto icon_buffer =
+					new scaled_icon_buffer(item_root,
 						icon_size, icon_size);
 				scaled_icon_buffer_set_view(icon_buffer, &view);
 				node = &icon_buffer->scene_buffer->node;
@@ -393,8 +393,9 @@ create_osd_scene(struct output *output, view_list &views)
 				osd_field_get_content(field, &buf, &view);
 
 				if (!string_null_or_empty(buf.data)) {
-					struct scaled_font_buffer *font_buffer =
-						scaled_font_buffer_create(item_root);
+					auto font_buffer =
+						new scaled_font_buffer(
+							item_root);
 					scaled_font_buffer_update(font_buffer,
 						buf.data, field_width,
 						&rc.font_osd, text_color, bg_color);

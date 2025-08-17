@@ -2,10 +2,17 @@
 #ifndef LABWC_GRAPHIC_HELPERS_H
 #define LABWC_GRAPHIC_HELPERS_H
 
-#include <stdbool.h>
-#include <stdint.h>
 #include <cairo.h>
+#include <memory>
+#include <stdint.h>
 #include <wlr/util/box.h>
+
+struct cairo_pattern_deleter {
+	void operator()(cairo_pattern_t *p) { cairo_pattern_destroy(p); }
+};
+
+using cairo_pattern_ptr =
+	std::unique_ptr<cairo_pattern_t, cairo_pattern_deleter>;
 
 /**
  * Sets the cairo color.
