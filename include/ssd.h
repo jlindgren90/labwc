@@ -54,7 +54,7 @@ struct view *ssd_button_get_view(const struct ssd_button *button);
 /* Public SSD helpers */
 enum lab_node_type ssd_get_part_type(const struct ssd *ssd,
 	struct wlr_scene_node *node, struct wlr_cursor *cursor);
-uint32_t ssd_resize_edges(enum lab_node_type type);
+enum wlr_edges ssd_resize_edges(enum lab_node_type type);
 bool ssd_part_contains(enum lab_node_type whole, enum lab_node_type candidate);
 enum lab_ssd_mode ssd_mode_parse(const char *mode);
 

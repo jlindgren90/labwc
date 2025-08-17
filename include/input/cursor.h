@@ -85,7 +85,7 @@ void cursor_set_visible(struct seat *seat, bool visible);
  * This is mostly important when either resizing a window using a
  * keyboard modifier or when using the Resize action from a keybind.
  */
-uint32_t cursor_get_resize_edges(struct wlr_cursor *cursor,
+enum wlr_edges cursor_get_resize_edges(struct wlr_cursor *cursor,
 	struct cursor_context *ctx);
 
 /**

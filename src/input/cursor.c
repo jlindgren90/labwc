@@ -582,10 +582,10 @@ cursor_update_common(struct server *server, struct cursor_context *ctx,
 	return false;
 }
 
-uint32_t
+enum wlr_edges
 cursor_get_resize_edges(struct wlr_cursor *cursor, struct cursor_context *ctx)
 {
-	uint32_t resize_edges = ssd_resize_edges(ctx->type);
+	enum wlr_edges resize_edges = ssd_resize_edges(ctx->type);
 	if (ctx->view && !resize_edges) {
 		struct wlr_box box = ctx->view->current;
 		resize_edges |=
@@ -888,7 +888,7 @@ handle_motion(struct wl_listener *listener, void *data)
 	cursor_set_visible(seat, /* visible */ true);
 
 	if (seat->cursor_scroll_wheel_emulation) {
-		uint32_t orientation;
+		enum wl_pointer_axis orientation;
 		double delta;
 		if (fabs(event->delta_x) > fabs(event->delta_y)) {
 			orientation = WL_POINTER_AXIS_HORIZONTAL_SCROLL;
@@ -1020,7 +1020,7 @@ is_double_click(long double_click_speed, uint32_t button,
 		 */
 		last_button = 0;
 		last_view = NULL;
-		last_type = 0;
+		last_type = LAB_NODE_NONE;
 		return true;
 	}
 	return false;

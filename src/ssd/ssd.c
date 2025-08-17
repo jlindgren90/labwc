@@ -206,7 +206,7 @@ ssd_get_part_type(const struct ssd *ssd, struct wlr_scene_node *node,
 	return resizing_type != LAB_NODE_NONE ? resizing_type : part_type;
 }
 
-uint32_t
+enum wlr_edges
 ssd_resize_edges(enum lab_node_type type)
 {
 	switch (type) {
