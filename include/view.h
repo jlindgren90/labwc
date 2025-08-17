@@ -2,15 +2,13 @@
 #ifndef LABWC_VIEW_H
 #define LABWC_VIEW_H
 
-#include "config/rcxml.h"
-#include "config.h"
-#include "ssd.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <wayland-util.h>
 #include <wlr/util/box.h>
 #include <xkbcommon/xkbcommon.h>
-#include "common/three-state.h"
+#include "config.h"
+#include "config/types.h"
 
 #define LAB_MIN_VIEW_HEIGHT 60
 
@@ -59,16 +57,6 @@ enum view_axis {
 	VIEW_AXIS_INVALID = (1 << 2),
 };
 
-enum view_edge {
-	VIEW_EDGE_INVALID = 0,
-
-	VIEW_EDGE_LEFT,
-	VIEW_EDGE_RIGHT,
-	VIEW_EDGE_UP,
-	VIEW_EDGE_DOWN,
-	VIEW_EDGE_CENTER,
-};
-
 enum view_wants_focus {
 	/* View does not want focus */
 	VIEW_WANTS_FOCUS_NEVER = 0,
@@ -87,33 +75,6 @@ enum view_wants_focus {
 	 */
 	VIEW_WANTS_FOCUS_LIKELY,
 	VIEW_WANTS_FOCUS_UNLIKELY,
-};
-
-/*
- * Window types are based on the NET_WM constants from X11. See:
- *   https://specifications.freedesktop.org/wm-spec/1.4/ar01s05.html#id-1.6.7
- *
- * The enum constants are intended to match wlr_xwayland_net_wm_window_type.
- * Redefining the same constants here may seem redundant, but is necessary
- * to make them available even in builds with xwayland support disabled.
- */
-enum window_type {
-	NET_WM_WINDOW_TYPE_DESKTOP = 0,
-	NET_WM_WINDOW_TYPE_DOCK,
-	NET_WM_WINDOW_TYPE_TOOLBAR,
-	NET_WM_WINDOW_TYPE_MENU,
-	NET_WM_WINDOW_TYPE_UTILITY,
-	NET_WM_WINDOW_TYPE_SPLASH,
-	NET_WM_WINDOW_TYPE_DIALOG,
-	NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-	NET_WM_WINDOW_TYPE_POPUP_MENU,
-	NET_WM_WINDOW_TYPE_TOOLTIP,
-	NET_WM_WINDOW_TYPE_NOTIFICATION,
-	NET_WM_WINDOW_TYPE_COMBO,
-	NET_WM_WINDOW_TYPE_DND,
-	NET_WM_WINDOW_TYPE_NORMAL,
-
-	WINDOW_TYPE_LEN
 };
 
 struct view;
@@ -165,7 +126,7 @@ struct view_impl {
 	bool (*has_strut_partial)(struct view *self);
 	/* returns true if view declared itself a window type */
 	bool (*contains_window_type)(struct view *view,
-		enum window_type window_type);
+		enum lab_window_type window_type);
 	/* returns the client pid that this view belongs to */
 	pid_t (*get_pid)(struct view *view);
 };
@@ -217,9 +178,9 @@ struct view {
 	enum view_axis maximized;
 	bool fullscreen;
 	bool tearing_hint;
-	enum three_state force_tearing;
+	enum lab_tristate force_tearing;
 	bool visible_on_all_workspaces;
-	enum view_edge tiled;
+	enum lab_edge tiled;
 	uint32_t edges_visible;  /* enum wlr_edges bitset */
 	bool inhibits_keybinds;
 	xkb_layout_index_t keyboard_layout;
@@ -317,15 +278,15 @@ struct view_query {
 	int window_type;
 	char *sandbox_engine;
 	char *sandbox_app_id;
-	enum three_state shaded;
+	enum lab_tristate shaded;
 	enum view_axis maximized;
-	enum three_state iconified;
-	enum three_state focused;
-	enum three_state omnipresent;
-	enum view_edge tiled;
+	enum lab_tristate iconified;
+	enum lab_tristate focused;
+	enum lab_tristate omnipresent;
+	enum lab_edge tiled;
 	char *tiled_region;
 	char *desktop;
-	enum ssd_mode decoration;
+	enum lab_ssd_mode decoration;
 	char *monitor;
 };
 
@@ -337,28 +298,6 @@ struct xdg_toplevel_view {
 	struct wl_listener set_app_id;
 	struct wl_listener request_show_window_menu;
 	struct wl_listener new_popup;
-};
-
-/* All criteria is applied in AND logic */
-enum lab_view_criteria {
-	/* No filter -> all focusable views */
-	LAB_VIEW_CRITERIA_NONE = 0,
-
-	/*
-	 * Includes always-on-top views, e.g.
-	 * what is visible on the current workspace
-	 */
-	LAB_VIEW_CRITERIA_CURRENT_WORKSPACE       = 1 << 0,
-
-	/* Positive criteria */
-	LAB_VIEW_CRITERIA_FULLSCREEN              = 1 << 1,
-	LAB_VIEW_CRITERIA_ALWAYS_ON_TOP           = 1 << 2,
-	LAB_VIEW_CRITERIA_ROOT_TOPLEVEL           = 1 << 3,
-
-	/* Negative criteria */
-	LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP        = 1 << 6,
-	LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER = 1 << 7,
-	LAB_VIEW_CRITERIA_NO_OMNIPRESENT          = 1 << 8,
 };
 
 /**
@@ -482,16 +421,16 @@ void view_array_append(struct server *server, struct wl_array *views,
 	enum lab_view_criteria criteria);
 
 enum view_wants_focus view_wants_focus(struct view *view);
-bool view_contains_window_type(struct view *view, enum window_type window_type);
+bool view_contains_window_type(struct view *view, enum lab_window_type window_type);
 
 /**
  * view_edge_invert() - select the opposite of a provided edge
  *
- * VIEW_EDGE_CENTER and VIEW_EDGE_INVALID both map to VIEW_EDGE_INVALID.
+ * LAB_EDGE_CENTER and LAB_EDGE_INVALID both map to LAB_EDGE_INVALID.
  *
  * @edge: edge to be inverted
  */
-enum view_edge view_edge_invert(enum view_edge edge);
+enum lab_edge view_edge_invert(enum lab_edge edge);
 
 /**
  * view_is_focusable() - Check whether or not a view can be focused
@@ -572,7 +511,7 @@ void view_center(struct view *view, const struct wlr_box *ref);
  * @policy: placement policy to apply
  */
 void view_place_by_policy(struct view *view, bool allow_cursor,
-	enum view_placement_policy policy);
+	enum lab_placement_policy policy);
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
 void view_restore_to(struct view *view, struct wlr_box geometry);
@@ -595,16 +534,16 @@ bool view_is_tiled(struct view *view);
 bool view_is_tiled_and_notify_tiled(struct view *view);
 bool view_is_floating(struct view *view);
 void view_move_to_workspace(struct view *view, struct workspace *workspace);
-enum ssd_mode view_get_ssd_mode(struct view *view);
-void view_set_ssd_mode(struct view *view, enum ssd_mode mode);
-void view_set_decorations(struct view *view, enum ssd_mode mode, bool force_ssd);
+enum lab_ssd_mode view_get_ssd_mode(struct view *view);
+void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
+void view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_ssd);
 void view_toggle_fullscreen(struct view *view);
 void view_invalidate_last_layout_geometry(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
-void view_move_to_edge(struct view *view, enum view_edge direction, bool snap_to_windows);
-void view_grow_to_edge(struct view *view, enum view_edge direction);
-void view_shrink_to_edge(struct view *view, enum view_edge direction);
-void view_snap_to_edge(struct view *view, enum view_edge direction,
+void view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windows);
+void view_grow_to_edge(struct view *view, enum lab_edge direction);
+void view_shrink_to_edge(struct view *view, enum lab_edge direction);
+void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool store_natural_geometry);
 void view_snap_to_region(struct view *view, struct region *region, bool store_natural_geometry);
 void view_move_to_output(struct view *view, struct output *output);
@@ -654,8 +593,8 @@ void view_init(struct view *view);
 void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
-enum view_edge view_edge_parse(const char *direction);
-enum view_placement_policy view_placement_parse(const char *policy);
+enum lab_edge view_edge_parse(const char *direction);
+enum lab_placement_policy view_placement_parse(const char *policy);
 
 /* xdg.c */
 struct wlr_xdg_surface *xdg_surface_from_view(struct view *view);

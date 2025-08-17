@@ -24,12 +24,13 @@
 #include "common/parse-bool.h"
 #include "common/parse-double.h"
 #include "common/string-helpers.h"
-#include "common/three-state.h"
 #include "config/default-bindings.h"
 #include "config/keybind.h"
 #include "config/libinput.h"
 #include "config/mousebind.h"
 #include "config/tablet.h"
+#include "config/tablet-tool.h"
+#include "config/touch.h"
 #include "labwc.h"
 #include "osd.h"
 #include "regions.h"
@@ -90,33 +91,33 @@ parse_window_type(const char *type)
 		return -1;
 	}
 	if (!strcasecmp(type, "desktop")) {
-		return NET_WM_WINDOW_TYPE_DESKTOP;
+		return LAB_WINDOW_TYPE_DESKTOP;
 	} else if (!strcasecmp(type, "dock")) {
-		return NET_WM_WINDOW_TYPE_DOCK;
+		return LAB_WINDOW_TYPE_DOCK;
 	} else if (!strcasecmp(type, "toolbar")) {
-		return NET_WM_WINDOW_TYPE_TOOLBAR;
+		return LAB_WINDOW_TYPE_TOOLBAR;
 	} else if (!strcasecmp(type, "menu")) {
-		return NET_WM_WINDOW_TYPE_MENU;
+		return LAB_WINDOW_TYPE_MENU;
 	} else if (!strcasecmp(type, "utility")) {
-		return NET_WM_WINDOW_TYPE_UTILITY;
+		return LAB_WINDOW_TYPE_UTILITY;
 	} else if (!strcasecmp(type, "splash")) {
-		return NET_WM_WINDOW_TYPE_SPLASH;
+		return LAB_WINDOW_TYPE_SPLASH;
 	} else if (!strcasecmp(type, "dialog")) {
-		return NET_WM_WINDOW_TYPE_DIALOG;
+		return LAB_WINDOW_TYPE_DIALOG;
 	} else if (!strcasecmp(type, "dropdown_menu")) {
-		return NET_WM_WINDOW_TYPE_DROPDOWN_MENU;
+		return LAB_WINDOW_TYPE_DROPDOWN_MENU;
 	} else if (!strcasecmp(type, "popup_menu")) {
-		return NET_WM_WINDOW_TYPE_POPUP_MENU;
+		return LAB_WINDOW_TYPE_POPUP_MENU;
 	} else if (!strcasecmp(type, "tooltip")) {
-		return NET_WM_WINDOW_TYPE_TOOLTIP;
+		return LAB_WINDOW_TYPE_TOOLTIP;
 	} else if (!strcasecmp(type, "notification")) {
-		return NET_WM_WINDOW_TYPE_NOTIFICATION;
+		return LAB_WINDOW_TYPE_NOTIFICATION;
 	} else if (!strcasecmp(type, "combo")) {
-		return NET_WM_WINDOW_TYPE_COMBO;
+		return LAB_WINDOW_TYPE_COMBO;
 	} else if (!strcasecmp(type, "dnd")) {
-		return NET_WM_WINDOW_TYPE_DND;
+		return LAB_WINDOW_TYPE_DND;
 	} else if (!strcasecmp(type, "normal")) {
-		return NET_WM_WINDOW_TYPE_NORMAL;
+		return LAB_WINDOW_TYPE_NORMAL;
 	} else {
 		return -1;
 	}
@@ -472,15 +473,15 @@ fill_action_query(char *nodename, char *content, struct action *action, struct p
 	} else if (!strcasecmp(nodename, "sandboxAppId")) {
 		xstrdup_replace(state->current_view_query->sandbox_app_id, content);
 	} else if (!strcasecmp(nodename, "shaded")) {
-		state->current_view_query->shaded = parse_three_state(content);
+		state->current_view_query->shaded = parse_tristate(content);
 	} else if (!strcasecmp(nodename, "maximized")) {
 		state->current_view_query->maximized = view_axis_parse(content);
 	} else if (!strcasecmp(nodename, "iconified")) {
-		state->current_view_query->iconified = parse_three_state(content);
+		state->current_view_query->iconified = parse_tristate(content);
 	} else if (!strcasecmp(nodename, "focused")) {
-		state->current_view_query->focused = parse_three_state(content);
+		state->current_view_query->focused = parse_tristate(content);
 	} else if (!strcasecmp(nodename, "omnipresent")) {
-		state->current_view_query->omnipresent = parse_three_state(content);
+		state->current_view_query->omnipresent = parse_tristate(content);
 	} else if (!strcasecmp(nodename, "tiled")) {
 		state->current_view_query->tiled = view_edge_parse(content);
 	} else if (!strcasecmp(nodename, "tiled_region")) {
@@ -1173,7 +1174,7 @@ entry(xmlNode *node, char *nodename, char *content, struct parser_state *state)
 	} else if (!strcasecmp(nodename, "primarySelection.core")) {
 		set_bool(content, &rc.primary_selection);
 	} else if (!strcmp(nodename, "policy.placement")) {
-		enum view_placement_policy policy = view_placement_parse(content);
+		enum lab_placement_policy policy = view_placement_parse(content);
 		if (policy != LAB_PLACE_INVALID) {
 			rc.placement_policy = policy;
 		}
@@ -1579,7 +1580,7 @@ rcxml_init(void)
 	rc.tablet.rotation = 0;
 	rc.tablet.box = (struct wlr_fbox){0};
 	tablet_load_default_button_mappings();
-	rc.tablet_tool.motion = LAB_TABLET_MOTION_ABSOLUTE;
+	rc.tablet_tool.motion = LAB_MOTION_ABSOLUTE;
 	rc.tablet_tool.relative_motion_sensitivity = 1.0;
 
 	rc.repeat_rate = 25;

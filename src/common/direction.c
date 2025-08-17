@@ -5,19 +5,19 @@
 #include "view.h"
 
 enum wlr_direction
-direction_from_view_edge(enum view_edge edge)
+direction_from_edge(enum lab_edge edge)
 {
 	switch (edge) {
-	case VIEW_EDGE_LEFT:
+	case LAB_EDGE_LEFT:
 		return WLR_DIRECTION_LEFT;
-	case VIEW_EDGE_RIGHT:
+	case LAB_EDGE_RIGHT:
 		return WLR_DIRECTION_RIGHT;
-	case VIEW_EDGE_UP:
+	case LAB_EDGE_UP:
 		return WLR_DIRECTION_UP;
-	case VIEW_EDGE_DOWN:
+	case LAB_EDGE_DOWN:
 		return WLR_DIRECTION_DOWN;
-	case VIEW_EDGE_CENTER:
-	case VIEW_EDGE_INVALID:
+	case LAB_EDGE_CENTER:
+	case LAB_EDGE_INVALID:
 	default:
 		return WLR_DIRECTION_UP;
 	}

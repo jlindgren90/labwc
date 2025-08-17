@@ -27,6 +27,7 @@
 #include "common/macros.h"
 #include "common/mem.h"
 #include "common/scene-helpers.h"
+#include "config/rcxml.h"
 #include "labwc.h"
 #include "layers.h"
 #include "node.h"
@@ -977,7 +978,7 @@ output_nearest_to_cursor(struct server *server)
 }
 
 struct output *
-output_get_adjacent(struct output *output, enum view_edge edge, bool wrap)
+output_get_adjacent(struct output *output, enum lab_edge edge, bool wrap)
 {
 	if (!output_is_usable(output)) {
 		wlr_log(WLR_ERROR,
@@ -993,7 +994,7 @@ output_get_adjacent(struct output *output, enum view_edge edge, bool wrap)
 	struct wlr_output *new_output = NULL;
 	struct wlr_output *current_output = output->wlr_output;
 	struct wlr_output_layout *layout = output->server->output_layout;
-	enum wlr_direction direction = direction_from_view_edge(edge);
+	enum wlr_direction direction = direction_from_edge(edge);
 	new_output = wlr_output_layout_adjacent_output(layout, direction,
 		current_output, lx, ly);
 
