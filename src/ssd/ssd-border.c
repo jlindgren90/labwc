@@ -4,6 +4,7 @@
 #include <wlr/types/wlr_scene.h>
 #include "common/scene-helpers.h"
 #include "labwc.h"
+#include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
 #include "view.h"
@@ -42,14 +43,14 @@ ssd_border_create(struct ssd *ssd)
 		color = theme->window[active].border_color;
 
 		wl_list_init(&subtree->parts);
-		add_scene_rect(&subtree->parts, LAB_SSD_PART_LEFT, parent,
+		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_LEFT, parent,
 			theme->border_width, height, 0, 0, color);
-		add_scene_rect(&subtree->parts, LAB_SSD_PART_RIGHT, parent,
+		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_RIGHT, parent,
 			theme->border_width, height,
 			theme->border_width + width, 0, color);
-		add_scene_rect(&subtree->parts, LAB_SSD_PART_BOTTOM, parent,
+		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_BOTTOM, parent,
 			full_width, theme->border_width, 0, height, color);
-		add_scene_rect(&subtree->parts, LAB_SSD_PART_TOP, parent,
+		add_scene_rect(&subtree->parts, LAB_NODE_EDGE_TOP, parent,
 			MAX(width - 2 * corner_width, 0), theme->border_width,
 			theme->border_width + corner_width,
 			-(ssd->titlebar.height + theme->border_width), color);
@@ -136,7 +137,7 @@ ssd_border_update(struct ssd *ssd)
 		wl_list_for_each(part, &subtree->parts, link) {
 			rect = wlr_scene_rect_from_node(part->node);
 			switch (part->type) {
-			case LAB_SSD_PART_LEFT:
+			case LAB_NODE_EDGE_LEFT:
 				wlr_scene_rect_set_size(rect,
 					theme->border_width,
 					side_height);
@@ -144,7 +145,7 @@ ssd_border_update(struct ssd *ssd)
 					0,
 					side_y);
 				continue;
-			case LAB_SSD_PART_RIGHT:
+			case LAB_NODE_EDGE_RIGHT:
 				wlr_scene_rect_set_size(rect,
 					theme->border_width,
 					side_height);
@@ -152,7 +153,7 @@ ssd_border_update(struct ssd *ssd)
 					theme->border_width + width,
 					side_y);
 				continue;
-			case LAB_SSD_PART_BOTTOM:
+			case LAB_NODE_EDGE_BOTTOM:
 				wlr_scene_rect_set_size(rect,
 					full_width,
 					theme->border_width);
@@ -160,7 +161,7 @@ ssd_border_update(struct ssd *ssd)
 					0,
 					height);
 				continue;
-			case LAB_SSD_PART_TOP:
+			case LAB_NODE_EDGE_TOP:
 				wlr_scene_rect_set_size(rect,
 					top_width,
 					theme->border_width);

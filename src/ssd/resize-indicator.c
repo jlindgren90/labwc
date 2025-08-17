@@ -9,6 +9,7 @@
 #include "labwc.h"
 #include "resize-indicator.h"
 #include "resize-outlines.h"
+#include "ssd.h"
 #include "theme.h"
 #include "view.h"
 

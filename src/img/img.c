@@ -17,7 +17,6 @@
 #include "img/img-xbm.h"
 #include "img/img-xpm.h"
 #include "labwc.h"
-#include "theme.h"
 
 struct lab_img_data {
 	enum lab_img_type type;

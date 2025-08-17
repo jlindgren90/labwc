@@ -103,56 +103,56 @@ mousebind_event_from_str(const char *str)
 	return MOUSE_ACTION_NONE;
 }
 
-static enum ssd_part_type
+static enum lab_node_type
 context_from_str(const char *str)
 {
 	if (!strcasecmp(str, "Close")) {
-		return LAB_SSD_BUTTON_CLOSE;
+		return LAB_NODE_BUTTON_CLOSE;
 	} else if (!strcasecmp(str, "Maximize")) {
-		return LAB_SSD_BUTTON_MAXIMIZE;
+		return LAB_NODE_BUTTON_MAXIMIZE;
 	} else if (!strcasecmp(str, "Iconify")) {
-		return LAB_SSD_BUTTON_ICONIFY;
+		return LAB_NODE_BUTTON_ICONIFY;
 	} else if (!strcasecmp(str, "WindowMenu")) {
-		return LAB_SSD_BUTTON_WINDOW_MENU;
+		return LAB_NODE_BUTTON_WINDOW_MENU;
 	} else if (!strcasecmp(str, "Icon")) {
-		return LAB_SSD_BUTTON_WINDOW_ICON;
+		return LAB_NODE_BUTTON_WINDOW_ICON;
 	} else if (!strcasecmp(str, "Shade")) {
-		return LAB_SSD_BUTTON_SHADE;
+		return LAB_NODE_BUTTON_SHADE;
 	} else if (!strcasecmp(str, "AllDesktops")) {
-		return LAB_SSD_BUTTON_OMNIPRESENT;
+		return LAB_NODE_BUTTON_OMNIPRESENT;
 	} else if (!strcasecmp(str, "Titlebar")) {
-		return LAB_SSD_PART_TITLEBAR;
+		return LAB_NODE_TITLEBAR;
 	} else if (!strcasecmp(str, "Title")) {
-		return LAB_SSD_PART_TITLE;
+		return LAB_NODE_TITLE;
 	} else if (!strcasecmp(str, "TLCorner")) {
-		return LAB_SSD_PART_CORNER_TOP_LEFT;
+		return LAB_NODE_CORNER_TOP_LEFT;
 	} else if (!strcasecmp(str, "TRCorner")) {
-		return LAB_SSD_PART_CORNER_TOP_RIGHT;
+		return LAB_NODE_CORNER_TOP_RIGHT;
 	} else if (!strcasecmp(str, "BRCorner")) {
-		return LAB_SSD_PART_CORNER_BOTTOM_RIGHT;
+		return LAB_NODE_CORNER_BOTTOM_RIGHT;
 	} else if (!strcasecmp(str, "BLCorner")) {
-		return LAB_SSD_PART_CORNER_BOTTOM_LEFT;
+		return LAB_NODE_CORNER_BOTTOM_LEFT;
 	} else if (!strcasecmp(str, "Top")) {
-		return LAB_SSD_PART_TOP;
+		return LAB_NODE_EDGE_TOP;
 	} else if (!strcasecmp(str, "Right")) {
-		return LAB_SSD_PART_RIGHT;
+		return LAB_NODE_EDGE_RIGHT;
 	} else if (!strcasecmp(str, "Bottom")) {
-		return LAB_SSD_PART_BOTTOM;
+		return LAB_NODE_EDGE_BOTTOM;
 	} else if (!strcasecmp(str, "Left")) {
-		return LAB_SSD_PART_LEFT;
+		return LAB_NODE_EDGE_LEFT;
 	} else if (!strcasecmp(str, "Frame")) {
-		return LAB_SSD_FRAME;
+		return LAB_NODE_FRAME;
 	} else if (!strcasecmp(str, "Client")) {
-		return LAB_SSD_CLIENT;
+		return LAB_NODE_CLIENT;
 	} else if (!strcasecmp(str, "Desktop")) {
-		return LAB_SSD_ROOT;
+		return LAB_NODE_ROOT;
 	} else if (!strcasecmp(str, "Root")) {
-		return LAB_SSD_ROOT;
+		return LAB_NODE_ROOT;
 	} else if (!strcasecmp(str, "All")) {
-		return LAB_SSD_ALL;
+		return LAB_NODE_ALL;
 	}
 	wlr_log(WLR_ERROR, "unknown mouse context (%s)", str);
-	return LAB_SSD_NONE;
+	return LAB_NODE_NONE;
 }
 
 bool
@@ -175,7 +175,7 @@ mousebind_create(const char *context)
 	}
 	struct mousebind *m = znew(*m);
 	m->context = context_from_str(context);
-	if (m->context != LAB_SSD_NONE) {
+	if (m->context != LAB_NODE_NONE) {
 		wl_list_append(&rc.mousebinds, &m->link);
 	}
 	wl_list_init(&m->actions);

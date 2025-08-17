@@ -9,8 +9,8 @@
 #include "common/border.h"
 #include "common/buf.h"
 #include "common/font.h"
+#include "common/scene-types.h"
 #include "config/types.h"
-#include "ssd.h"
 
 #define BUTTON_MAP_MAX 16
 
@@ -47,7 +47,7 @@ struct button_map_entry {
 };
 
 struct title_button {
-	enum ssd_part_type type;
+	enum lab_node_type type;
 	struct wl_list link;
 };
 

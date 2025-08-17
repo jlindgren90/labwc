@@ -10,7 +10,7 @@
 
 #include <cairo.h>
 #include <wlr/render/wlr_renderer.h>
-#include "ssd.h"
+#include "common/scene-types.h"
 
 struct lab_img;
 
@@ -36,16 +36,6 @@ struct theme_snapping_overlay {
 	float bg_color[4];
 	int border_width;
 	float border_color[3][4];
-};
-
-enum lab_button_state {
-	LAB_BS_DEFAULT = 0,
-
-	LAB_BS_HOVERD = 1 << 0,
-	LAB_BS_TOGGLED = 1 << 1,
-	LAB_BS_ROUNDED = 1 << 2,
-
-	LAB_BS_ALL = LAB_BS_HOVERD | LAB_BS_TOGGLED | LAB_BS_ROUNDED,
 };
 
 struct theme_background {
@@ -90,7 +80,7 @@ struct theme {
 		struct theme_background title_bg;
 
 		/* TODO: add toggled/hover/pressed/disabled colors for buttons */
-		float button_colors[LAB_SSD_BUTTON_LAST + 1][4];
+		float button_colors[LAB_NODE_BUTTON_LAST + 1][4];
 
 		float border_color[4];
 		float toggled_keybinds_color[4];
@@ -104,12 +94,12 @@ struct theme {
 		 * The texture of a window buttons for each hover/toggled/rounded
 		 * state. This can be accessed like:
 		 *
-		 * buttons[LAB_SSD_BUTTON_ICONIFY][LAB_BS_HOVERD | LAB_BS_TOGGLED]
+		 * buttons[LAB_NODE_BUTTON_ICONIFY][LAB_BS_HOVERED | LAB_BS_TOGGLED]
 		 *
-		 * Elements in buttons[0] are all NULL since LAB_SSD_BUTTON_FIRST is 1.
+		 * Elements in buttons[0] are all NULL since LAB_NODE_BUTTON_FIRST is 1.
 		 */
 		struct lab_img *button_imgs
-			[LAB_SSD_BUTTON_LAST + 1][LAB_BS_ALL + 1];
+			[LAB_NODE_BUTTON_LAST + 1][LAB_BS_ALL + 1];
 
 		/*
 		 * The titlebar background is specified as a cairo_pattern

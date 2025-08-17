@@ -12,7 +12,7 @@
 #include "view.h"
 
 static struct ssd_part *
-add_extent(struct wl_list *part_list, enum ssd_part_type type,
+add_extent(struct wl_list *part_list, enum lab_node_type type,
 		struct wlr_scene_tree *parent)
 {
 	float invisible[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
@@ -39,10 +39,10 @@ ssd_extents_create(struct ssd *ssd)
 	wlr_scene_node_set_position(&parent->node,
 		-border_width, -(ssd->titlebar.height + border_width));
 
-	add_extent(part_list, LAB_SSD_PART_TOP, parent);
-	add_extent(part_list, LAB_SSD_PART_LEFT, parent);
-	add_extent(part_list, LAB_SSD_PART_RIGHT, parent);
-	add_extent(part_list, LAB_SSD_PART_BOTTOM, parent);
+	add_extent(part_list, LAB_NODE_EDGE_TOP, parent);
+	add_extent(part_list, LAB_NODE_EDGE_LEFT, parent);
+	add_extent(part_list, LAB_NODE_EDGE_RIGHT, parent);
+	add_extent(part_list, LAB_NODE_EDGE_BOTTOM, parent);
 
 	/* Initial manual update to keep X11 applications happy */
 	ssd_extents_update(ssd);
@@ -110,25 +110,25 @@ ssd_extents_update(struct ssd *ssd)
 	wl_list_for_each(part, &ssd->extents.parts, link) {
 		rect = wlr_scene_rect_from_node(part->node);
 		switch (part->type) {
-		case LAB_SSD_PART_TOP:
+		case LAB_NODE_EDGE_TOP:
 			target.x = 0;
 			target.y = 0;
 			target.width = full_width + extended_area * 2;
 			target.height = extended_area;
 			break;
-		case LAB_SSD_PART_LEFT:
+		case LAB_NODE_EDGE_LEFT:
 			target.x = 0;
 			target.y = extended_area;
 			target.width = extended_area;
 			target.height = full_height;
 			break;
-		case LAB_SSD_PART_RIGHT:
+		case LAB_NODE_EDGE_RIGHT:
 			target.x = extended_area + full_width;
 			target.y = extended_area;
 			target.width = extended_area;
 			target.height = full_height;
 			break;
-		case LAB_SSD_PART_BOTTOM:
+		case LAB_NODE_EDGE_BOTTOM:
 			target.x = 0;
 			target.y = extended_area + full_height;
 			target.width = full_width + extended_area * 2;
