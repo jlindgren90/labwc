@@ -119,7 +119,7 @@ cursor_get_from_edge(uint32_t resize_edges)
 }
 
 static enum lab_cursors
-cursor_get_from_ssd(enum ssd_part_type view_area)
+cursor_get_from_ssd(enum lab_node_type view_area)
 {
 	uint32_t resize_edges = ssd_resize_edges(view_area);
 	return cursor_get_from_edge(resize_edges);
@@ -614,7 +614,7 @@ cursor_process_motion(struct server *server, uint32_t time, double *sx, double *
 	struct cursor_context ctx = get_cursor_context(server);
 	struct seat *seat = &server->seat;
 
-	if (ctx.type == LAB_SSD_MENU) {
+	if (ctx.type == LAB_NODE_MENU) {
 		menu_process_cursor_motion(ctx.node);
 		cursor_set(&server->seat, LAB_CURSOR_DEFAULT);
 		return false;
@@ -626,7 +626,7 @@ cursor_process_motion(struct server *server, uint32_t time, double *sx, double *
 
 	struct mousebind *mousebind;
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
-		if (ctx.type == LAB_SSD_CLIENT
+		if (ctx.type == LAB_NODE_CLIENT
 				&& view_inhibits_actions(ctx.view, &mousebind->actions)) {
 			continue;
 		}
@@ -969,7 +969,7 @@ process_release_mousebinding(struct server *server,
 	uint32_t modifiers = keyboard_get_all_modifiers(&server->seat);
 
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
-		if (ctx->type == LAB_SSD_CLIENT
+		if (ctx->type == LAB_NODE_CLIENT
 				&& view_inhibits_actions(ctx->view, &mousebind->actions)) {
 			continue;
 		}
@@ -996,7 +996,7 @@ static bool
 is_double_click(long double_click_speed, uint32_t button,
 		struct cursor_context *ctx)
 {
-	static enum ssd_part_type last_type;
+	static enum lab_node_type last_type;
 	static uint32_t last_button;
 	static struct view *last_view;
 	static struct timespec last_click;
@@ -1040,7 +1040,7 @@ process_press_mousebinding(struct server *server, struct cursor_context *ctx,
 	uint32_t modifiers = keyboard_get_all_modifiers(&server->seat);
 
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
-		if (ctx->type == LAB_SSD_CLIENT
+		if (ctx->type == LAB_NODE_CLIENT
 				&& view_inhibits_actions(ctx->view, &mousebind->actions)) {
 			continue;
 		}
@@ -1058,9 +1058,9 @@ process_press_mousebinding(struct server *server, struct cursor_context *ctx,
 				if (!double_click) {
 					/* Swallow the press event */
 					consumed_by_frame_context |=
-						mousebind->context == LAB_SSD_FRAME;
+						mousebind->context == LAB_NODE_FRAME;
 					consumed_by_frame_context |=
-						mousebind->context == LAB_SSD_ALL;
+						mousebind->context == LAB_NODE_ALL;
 					mousebind->pressed_in_context = true;
 				}
 				continue;
@@ -1074,8 +1074,8 @@ process_press_mousebinding(struct server *server, struct cursor_context *ctx,
 			default:
 				continue;
 			}
-			consumed_by_frame_context |= mousebind->context == LAB_SSD_FRAME;
-			consumed_by_frame_context |= mousebind->context == LAB_SSD_ALL;
+			consumed_by_frame_context |= mousebind->context == LAB_NODE_FRAME;
+			consumed_by_frame_context |= mousebind->context == LAB_NODE_ALL;
 			actions_run(ctx->view, server, &mousebind->actions, ctx);
 		}
 	}
@@ -1113,14 +1113,14 @@ cursor_process_button_press(struct seat *seat, uint32_t button, uint32_t time_ms
 	 * Action processing does not run for these surfaces and thus
 	 * the Focus action (used for normal views) does not work.
 	 */
-	if (ctx.type == LAB_SSD_LAYER_SURFACE) {
+	if (ctx.type == LAB_NODE_LAYER_SURFACE) {
 		wlr_log(WLR_DEBUG, "press on layer-surface");
 		struct wlr_layer_surface_v1 *layer =
 			wlr_layer_surface_v1_try_from_wlr_surface(ctx.surface);
 		if (layer && layer->current.keyboard_interactive) {
 			layer_try_set_focus(seat, layer);
 		}
-	} else if (ctx.type == LAB_SSD_LAYER_SUBSURFACE) {
+	} else if (ctx.type == LAB_NODE_LAYER_SUBSURFACE) {
 		wlr_log(WLR_DEBUG, "press on layer-subsurface");
 		struct wlr_layer_surface_v1 *layer =
 			subsurface_parent_layer(ctx.surface);
@@ -1128,13 +1128,13 @@ cursor_process_button_press(struct seat *seat, uint32_t button, uint32_t time_ms
 			layer_try_set_focus(seat, layer);
 		}
 #ifdef HAVE_XWAYLAND
-	} else if (ctx.type == LAB_SSD_UNMANAGED) {
+	} else if (ctx.type == LAB_NODE_UNMANAGED) {
 		desktop_focus_view_or_surface(seat, NULL, ctx.surface,
 			/*raise*/ false);
 #endif
 	}
 
-	if (ctx.type != LAB_SSD_CLIENT && ctx.type != LAB_SSD_LAYER_SUBSURFACE
+	if (ctx.type != LAB_NODE_CLIENT && ctx.type != LAB_NODE_LAYER_SUBSURFACE
 			&& wlr_seat_pointer_has_grab(seat->seat)) {
 		/*
 		 * If we have an active popup grab (an open popup) we want to
@@ -1178,7 +1178,7 @@ cursor_process_button_release(struct seat *seat, uint32_t button,
 	if (server->input_mode == LAB_INPUT_STATE_MENU) {
 		/* TODO: take into account overflow of time_msec */
 		if (time_msec - press_msec > rc.menu_ignore_button_release_period) {
-			if (ctx.type == LAB_SSD_MENU) {
+			if (ctx.type == LAB_NODE_MENU) {
 				menu_call_selected_actions(server);
 			} else {
 				menu_close_root(server);
@@ -1347,7 +1347,7 @@ process_cursor_axis(struct server *server, enum wl_pointer_axis orientation,
 	if (direction != LAB_DIRECTION_INVALID) {
 		struct mousebind *mousebind;
 		wl_list_for_each(mousebind, &rc.mousebinds, link) {
-			if (ctx.type == LAB_SSD_CLIENT
+			if (ctx.type == LAB_NODE_CLIENT
 					&& view_inhibits_actions(ctx.view, &mousebind->actions)) {
 				continue;
 			}

@@ -8,6 +8,7 @@
 #include "labwc.h"
 #include "output.h"
 #include "snap-constraints.h"
+#include "ssd.h"
 #include "view.h"
 
 static void
