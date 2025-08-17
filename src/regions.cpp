@@ -148,10 +148,9 @@ void
 regions_evacuate_output(struct output *output)
 {
 	assert(output);
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
-		if (view->tiled_region && view->tiled_region->output == output) {
-			view_evacuate_region(view);
+	for (auto &view : g_views) {
+		if (view.tiled_region && view.tiled_region->output == output) {
+			view_evacuate_region(&view);
 		}
 	}
 }

@@ -36,10 +36,9 @@ desktop_arrange_all_views(void)
 	 * still unmapped. We do want to adjust the geometry of those
 	 * views.
 	 */
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
-		if (!wlr_box_empty(&view->pending)) {
-			view_adjust_for_layout_change(view);
+	for (auto &view : g_views) {
+		if (!wlr_box_empty(&view.pending)) {
+			view_adjust_for_layout_change(&view);
 		}
 	}
 }
@@ -212,7 +211,6 @@ desktop_focus_output(struct output *output)
 void
 desktop_update_top_layer_visibility(void)
 {
-	struct view *view;
 	struct output *output;
 	uint32_t top = ZWLR_LAYER_SHELL_V1_LAYER_TOP;
 
@@ -229,7 +227,8 @@ desktop_update_top_layer_visibility(void)
 	 * any views above it
 	 */
 	uint64_t outputs_covered = 0;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, g_views.begin(),
+			LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 		if (view->minimized) {
 			continue;
 		}

@@ -908,8 +908,7 @@ actions_run(struct view *activator, struct wl_list *actions,
 		case ACTION_TYPE_KILL:
 			if (view) {
 				/* Send SIGTERM to the process associated with the surface */
-				assert(view->impl->get_pid);
-				pid_t pid = view->impl->get_pid(view);
+				pid_t pid = view->get_pid();
 				if (pid == getpid()) {
 					wlr_log(WLR_ERROR, "Preventing sending SIGTERM to labwc");
 				} else if (pid > 0) {
@@ -1251,15 +1250,10 @@ actions_run(struct view *activator, struct wl_list *actions,
 			}
 			break;
 		case ACTION_TYPE_FOR_EACH: {
-			struct wl_array views;
-			struct view **item;
 			bool matches = false;
-			wl_array_init(&views);
-			view_array_append(&views, LAB_VIEW_CRITERIA_NONE);
-			wl_array_for_each(item, &views) {
-				matches |= run_if_action(*item, action);
+			for (auto &v : view_list_matching(LAB_VIEW_CRITERIA_NONE)) {
+				matches |= run_if_action(&v, action);
 			}
-			wl_array_release(&views);
 			if (!matches) {
 				struct wl_list *child_actions;
 				child_actions = action_get_actionlist(action, "none");

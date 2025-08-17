@@ -10,7 +10,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include "buffer.h"
 #include "common/box.h"
-#include "common/list.h"
 #include "common/match.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
@@ -49,13 +48,13 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	struct wlr_xdg_surface *xdg_surface =
 		wlr_xdg_surface_try_from_wlr_surface(surface);
 	if (xdg_surface) {
-		return xdg_surface->data;
+		return (view *)xdg_surface->data;
 	}
 #if HAVE_XWAYLAND
 	struct wlr_xwayland_surface *xsurface =
 		wlr_xwayland_surface_try_from_wlr_surface(surface);
 	if (xsurface) {
-		return xsurface->data;
+		return (view *)xsurface->data;
 	}
 #endif
 	return NULL;
@@ -281,112 +280,39 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 	return true;
 }
 
-struct view *
-view_next(struct wl_list *head, struct view *view, enum lab_view_criteria criteria)
+view_iter
+view_find_matching(view_iter start, lab_view_criteria criteria)
 {
-	assert(head);
-
-	struct wl_list *elm = view ? &view->link : head;
-
-	for (elm = elm->next; elm != head; elm = elm->next) {
-		view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
+	for (; start; ++start) {
+		if (matches_criteria(start.get(), criteria)) {
+			break;
 		}
 	}
-	return NULL;
+	return start;
 }
 
-struct view *
-view_prev(struct wl_list *head, struct view *view, enum lab_view_criteria criteria)
+view_list
+view_list_matching(lab_view_criteria criteria)
 {
-	assert(head);
-
-	struct wl_list *elm = view ? &view->link : head;
-
-	for (elm = elm->prev; elm != head; elm = elm->prev) {
-		view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
-		}
+	view_list matching;
+	for_each_view(view, g_views.begin(), criteria) {
+		matching.append(view.get());
 	}
-	return NULL;
-}
-
-struct view *
-view_next_no_head_stop(struct wl_list *head, struct view *from,
-		enum lab_view_criteria criteria)
-{
-	assert(head);
-
-	struct wl_list *elm = from ? &from->link : head;
-
-	struct wl_list *end = elm;
-	for (elm = elm->next; elm != end; elm = elm->next) {
-		if (elm == head) {
-			continue;
-		}
-		struct view *view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
-		}
-	}
-	return from;
-}
-
-struct view *
-view_prev_no_head_stop(struct wl_list *head, struct view *from,
-		enum lab_view_criteria criteria)
-{
-	assert(head);
-
-	struct wl_list *elm = from ? &from->link : head;
-
-	struct wl_list *end = elm;
-	for (elm = elm->prev; elm != end; elm = elm->prev) {
-		if (elm == head) {
-			continue;
-		}
-		struct view *view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
-		}
-	}
-	return from;
-}
-
-void
-view_array_append(struct wl_array *views, enum lab_view_criteria criteria)
-{
-	struct view *view;
-	for_each_view(view, &g_server.views, criteria) {
-		struct view **entry = wl_array_add(views, sizeof(*entry));
-		if (!entry) {
-			wlr_log(WLR_ERROR, "wl_array_add(): out of memory");
-			continue;
-		}
-		*entry = view;
-	}
+	return matching;
 }
 
 enum view_wants_focus
 view_wants_focus(struct view *view)
 {
 	assert(view);
-	if (view->impl->wants_focus) {
-		return view->impl->wants_focus(view);
-	}
-	return VIEW_WANTS_FOCUS_ALWAYS;
+	return view->wants_focus();
 }
 
 bool
 view_contains_window_type(struct view *view, enum lab_window_type window_type)
 {
 	assert(view);
-	if (view->impl->contains_window_type) {
-		return view->impl->contains_window_type(view, window_type);
-	}
-	return false;
+	return view->contains_window_type(window_type);
 }
 
 bool
@@ -410,9 +336,7 @@ void
 view_offer_focus(struct view *view)
 {
 	assert(view);
-	if (view->impl->offer_focus) {
-		view->impl->offer_focus(view);
-	}
+	view->offer_focus();
 }
 
 /**
@@ -506,9 +430,7 @@ view_set_activated(struct view *view, bool activated)
 {
 	assert(view);
 	ssd_set_active(view->ssd, activated);
-	if (view->impl->set_activated) {
-		view->impl->set_activated(view, activated);
-	}
+	view->set_activated(activated);
 
 	wl_signal_emit_mutable(&view->events.activated, &activated);
 
@@ -544,9 +466,7 @@ void
 view_close(struct view *view)
 {
 	assert(view);
-	if (view->impl->close) {
-		view->impl->close(view);
-	}
+	view->close();
 }
 
 static void
@@ -616,9 +536,7 @@ void
 view_move_resize(struct view *view, struct wlr_box geo)
 {
 	assert(view);
-	if (view->impl->configure) {
-		view->impl->configure(view, geo);
-	}
+	view->configure(geo);
 }
 
 void
@@ -702,10 +620,7 @@ struct view_size_hints
 view_get_size_hints(struct view *view)
 {
 	assert(view);
-	if (view->impl->get_size_hints) {
-		return view->impl->get_size_hints(view);
-	}
-	return (struct view_size_hints){0};
+	return view->get_size_hints();
 }
 
 static void
@@ -772,33 +687,24 @@ _minimize(struct view *view, bool minimized)
 		return;
 	}
 
-	if (view->impl->minimize) {
-		view->impl->minimize(view, minimized);
-	}
-
+	view->minimize(minimized);
 	view->minimized = minimized;
 	wl_signal_emit_mutable(&view->events.minimized, NULL);
 
 	if (minimized) {
-		view->impl->unmap(view, /* client_request */ false);
+		view->unmap(/* client_request */ false);
 	} else {
-		view->impl->map(view);
+		view->map();
 	}
 }
 
 static void
 minimize_sub_views(struct view *view, bool minimized)
 {
-	struct view **child;
-	struct wl_array children;
-
-	wl_array_init(&children);
-	view_append_children(view, &children);
-	wl_array_for_each(child, &children) {
-		_minimize(*child, minimized);
-		minimize_sub_views(*child, minimized);
+	for (auto &child : view_get_children(view)) {
+		_minimize(&child, minimized);
+		minimize_sub_views(&child, minimized);
 	}
-	wl_array_release(&children);
 }
 
 /*
@@ -1052,12 +958,10 @@ view_cascade(struct view *view)
 		struct wlr_box covered = {0};
 
 		/* Iterate over views from top to bottom */
-		struct view *other_view;
-		for_each_view(other_view, &g_server.views,
+		for_each_view(other_view, g_views.begin(),
 				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
-			struct wlr_box other = ssd_max_extents(other_view);
-			if (other_view == view
-					|| view->minimized
+			auto other = ssd_max_extents(other_view.get());
+			if (other_view.get() == view || view->minimized
 					|| !box_intersects(&candidate, &other)) {
 				continue;
 			}
@@ -1354,10 +1258,7 @@ view_apply_special_geometry(struct view *view)
 static void
 set_maximized(struct view *view, enum view_axis maximized)
 {
-	if (view->impl->maximize) {
-		view->impl->maximize(view, maximized);
-	}
-
+	view->maximize(maximized);
 	view->maximized = maximized;
 	wl_signal_emit_mutable(&view->events.maximized, NULL);
 
@@ -1423,9 +1324,7 @@ static void
 view_notify_tiled(struct view *view)
 {
 	assert(view);
-	if (view->impl->notify_tiled) {
-		view->impl->notify_tiled(view);
-	}
+	view->notify_tiled();
 }
 
 /* Reset tiled state of view without changing geometry */
@@ -1504,7 +1403,7 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 	case VIEW_AXIS_HORIZONTAL:
 	case VIEW_AXIS_VERTICAL:
 		/* Toggle one axis (XOR) */
-		view_maximize(view, view->maximized ^ axis,
+		view_maximize(view, (view_axis)(view->maximized ^ axis),
 			/*store_natural_geometry*/ true);
 		break;
 	case VIEW_AXIS_BOTH:
@@ -1722,10 +1621,7 @@ set_fullscreen(struct view *view, bool fullscreen)
 		undecorate(view);
 	}
 
-	if (view->impl->set_fullscreen) {
-		view->impl->set_fullscreen(view, fullscreen);
-	}
-
+	view->set_fullscreen(fullscreen);
 	view->fullscreen = fullscreen;
 	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
 
@@ -2236,32 +2132,20 @@ view_move_to_output(struct view *view, struct output *output)
 }
 
 static void
-for_each_subview(struct view *view, void (*action)(struct view *))
-{
-	struct wl_array subviews;
-	struct view **subview;
-
-	wl_array_init(&subviews);
-	view_append_children(view, &subviews);
-	wl_array_for_each(subview, &subviews) {
-		action(*subview);
-	}
-	wl_array_release(&subviews);
-}
-
-static void
 move_to_front(struct view *view)
 {
-	wl_list_remove(&view->link);
-	wl_list_insert(&g_server.views, &view->link);
+	auto iter = lab::find_ptr(g_views.begin(), view);
+	assert(iter);
+	g_views.prepend(iter.remove());
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 }
 
 static void
 move_to_back(struct view *view)
 {
-	wl_list_remove(&view->link);
-	wl_list_append(&g_server.views, &view->link);
+	auto iter = lab::find_ptr(g_views.begin(), view);
+	assert(iter);
+	g_views.append(iter.remove());
 	wlr_scene_node_lower_to_bottom(&view->scene_tree->node);
 }
 
@@ -2280,7 +2164,9 @@ view_move_to_front(struct view *view)
 	assert(root);
 
 	move_to_front(root);
-	for_each_subview(root, move_to_front);
+	for (auto &child : view_get_children(root)) {
+		move_to_front(&child);
+	}
 	/* make sure view is in front of other sub-views */
 	if (view != root) {
 		move_to_front(view);
@@ -2297,7 +2183,9 @@ view_move_to_back(struct view *view)
 	struct view *root = view_get_root(view);
 	assert(root);
 
-	for_each_subview(root, move_to_back);
+	for (auto &child : view_get_children(root)) {
+		move_to_back(&child);
+	}
 	move_to_back(root);
 
 	cursor_update_focus();
@@ -2308,57 +2196,41 @@ struct view *
 view_get_root(struct view *view)
 {
 	assert(view);
-	if (view->impl->get_root) {
-		return view->impl->get_root(view);
-	}
-	return view;
+	return view->get_root();
 }
 
-void
-view_append_children(struct view *view, struct wl_array *children)
+view_list
+view_get_children(struct view *view)
 {
 	assert(view);
-	if (view->impl->append_children) {
-		view->impl->append_children(view, children);
-	}
+	return view->get_children();
 }
 
 struct view *
 view_get_modal_dialog(struct view *view)
 {
 	assert(view);
-	if (!view->impl->is_modal_dialog) {
-		return NULL;
-	}
 	/* check view itself first */
-	if (view->impl->is_modal_dialog(view)) {
+	if (view->is_modal_dialog()) {
 		return view;
 	}
 
 	/* check sibling views */
-	struct view *dialog = NULL;
 	struct view *root = view_get_root(view);
-	struct wl_array children;
-	struct view **child;
 
-	wl_array_init(&children);
-	view_append_children(root, &children);
-	wl_array_for_each(child, &children) {
-		if (view->impl->is_modal_dialog(*child)) {
-			dialog = *child;
-			break;
+	for (auto &child : view_get_children(root)) {
+		if (child.is_modal_dialog()) {
+			return &child;
 		}
 	}
-	wl_array_release(&children);
-	return dialog;
+	return nullptr;
 }
 
 bool
 view_has_strut_partial(struct view *view)
 {
 	assert(view);
-	return view->impl->has_strut_partial &&
-		view->impl->has_strut_partial(view);
+	return view->has_strut_partial();
 }
 
 /* Note: It is safe to assume that this function never returns NULL */
@@ -2367,11 +2239,8 @@ view_get_string_prop(struct view *view, const char *prop)
 {
 	assert(view);
 	assert(prop);
-	if (view->impl->get_string_prop) {
-		const char *ret = view->impl->get_string_prop(view, prop);
-		return ret ? ret : "";
-	}
-	return "";
+	const char *ret = view->get_string_prop(prop);
+	return ret ? ret : "";
 }
 
 void
@@ -2431,32 +2300,9 @@ view_toggle_keybinds(struct view *view)
 }
 
 void
-mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
-		wl_notify_func_t notify_map, wl_notify_func_t notify_unmap)
+view::handle_map(void *)
 {
-	assert(mappable);
-	assert(!mappable->connected);
-	mappable->map.notify = notify_map;
-	wl_signal_add(&surface->events.map, &mappable->map);
-	mappable->unmap.notify = notify_unmap;
-	wl_signal_add(&surface->events.unmap, &mappable->unmap);
-	mappable->connected = true;
-}
-
-void
-mappable_disconnect(struct mappable *mappable)
-{
-	assert(mappable);
-	assert(mappable->connected);
-	wl_list_remove(&mappable->map.link);
-	wl_list_remove(&mappable->unmap.link);
-	mappable->connected = false;
-}
-
-static void
-handle_map(struct wl_listener *listener, void *data)
-{
-	struct view *view = wl_container_of(listener, view, mappable.map);
+	auto view = this;
 	if (view->minimized) {
 		/*
 		 * The view->impl functions do not directly support
@@ -2464,30 +2310,11 @@ handle_map(struct wl_listener *listener, void *data)
 		 * not minimized, map it, and then minimize it again.
 		 */
 		view->minimized = false;
-		view->impl->map(view);
+		view->map();
 		view_minimize(view, true);
 	} else {
-		view->impl->map(view);
+		view->map();
 	}
-}
-
-static void
-handle_unmap(struct wl_listener *listener, void *data)
-{
-	struct view *view = wl_container_of(listener, view, mappable.unmap);
-	view->impl->unmap(view, /* client_request */ true);
-}
-
-/*
- * TODO: after the release of wlroots 0.17, consider incorporating this
- * function into a more general view_set_surface() function, which could
- * connect other surface event handlers (like commit) as well.
- */
-void
-view_connect_map(struct view *view, struct wlr_surface *surface)
-{
-	assert(view);
-	mappable_connect(&view->mappable, surface, handle_map, handle_unmap);
 }
 
 void
@@ -2537,10 +2364,9 @@ view_set_icon(struct view *view, const char *icon_name, struct wl_array *buffers
 	wl_signal_emit_mutable(&view->events.set_icon, NULL);
 }
 
-void
-view_init(struct view *view)
+view::view(view_type type) : view_data(), type(type)
 {
-	assert(view);
+	auto view = this;
 
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
@@ -2553,25 +2379,12 @@ view_init(struct view *view)
 	wl_signal_init(&view->events.destroy);
 }
 
-void
-view_destroy(struct view *view)
+view::~view()
 {
-	assert(view);
+	auto view = this;
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
 	snap_constraints_invalidate(view);
-
-	if (view->mappable.connected) {
-		mappable_disconnect(&view->mappable);
-	}
-
-	wl_list_remove(&view->request_move.link);
-	wl_list_remove(&view->request_resize.link);
-	wl_list_remove(&view->request_minimize.link);
-	wl_list_remove(&view->request_maximize.link);
-	wl_list_remove(&view->request_fullscreen.link);
-	wl_list_remove(&view->set_title.link);
-	wl_list_remove(&view->destroy.link);
 
 	if (view->foreign_toplevel) {
 		foreign_toplevel_destroy(view->foreign_toplevel);
@@ -2644,9 +2457,7 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
 
-	/* Remove view from g_server.views */
-	wl_list_remove(&view->link);
-	free(view);
+	g_views.remove(view);
 
 	cursor_update_focus();
 }

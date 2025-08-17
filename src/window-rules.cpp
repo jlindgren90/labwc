@@ -6,17 +6,13 @@
 #include <strings.h>
 #include "action.h"
 #include "config/rcxml.h"
-#include "labwc.h"
 #include "view.h"
 
 static bool
 other_instances_exist(struct view *self, struct view_query *query)
 {
-	struct wl_list *views = &g_server.views;
-	struct view *view;
-
-	wl_list_for_each(view, views, link) {
-		if (view != self && view_matches_query(view, query)) {
+	for (auto &view : g_views) {
+		if (&view != self && view_matches_query(&view, query)) {
 			return true;
 		}
 	}
