@@ -13,6 +13,7 @@
 #include "common/spawn.h"
 #include "config/rcxml.h"
 #include "config/session.h"
+#include "input/input.h"
 #include "libinput.h"
 #include "labwc.h"
 #include "menu/menu.h"
