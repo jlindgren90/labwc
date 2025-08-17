@@ -57,7 +57,7 @@ struct parser_state {
 	const char *current_mouse_context;
 	struct action *current_keybind_action;
 	struct action *current_mousebind_action;
-	struct region *current_region;
+	struct region_cfg *current_region;
 	struct window_switcher_field *current_field;
 	struct window_rule *current_window_rule;
 	struct action *current_window_rule_action;
@@ -384,8 +384,8 @@ fill_region(char *nodename, char *content, struct parser_state *state)
 	string_truncate_at_pattern(nodename, ".region.regions");
 
 	if (!strcasecmp(nodename, "region.regions")) {
-		state->current_region = znew(*state->current_region);
-		wl_list_append(&rc.regions, &state->current_region->link);
+		rc.regions.push_back(region_cfg());
+		state->current_region = &rc.regions.back();
 	} else if (!content) {
 		/* intentionally left empty */
 	} else if (!state->current_region) {
@@ -394,14 +394,14 @@ fill_region(char *nodename, char *content, struct parser_state *state)
 	} else if (!strcasecmp(nodename, "name")) {
 		/* Prevent leaking memory if config contains multiple names */
 		if (!state->current_region->name) {
-			state->current_region->name = xstrdup(content);
+			state->current_region->name = lab_str(content);
 		}
 	} else if (strstr("xywidtheight", nodename) && !strchr(content, '%')) {
-		wlr_log(WLR_ERROR, "Removing invalid region '%s': %s='%s' misses"
-			" a trailing %%", state->current_region->name, nodename, content);
-		wl_list_remove(&state->current_region->link);
-		zfree(state->current_region->name);
-		zfree(state->current_region);
+		wlr_log(WLR_ERROR,
+			"Removing invalid region '%s': %s='%s' misses a trailing %%",
+			state->current_region->name.c(), nodename, content);
+		rc.regions.pop_back();
+		state->current_region = nullptr;
 	} else if (!strcmp(nodename, "x")) {
 		state->current_region->percentage.x = atoi(content);
 	} else if (!strcmp(nodename, "y")) {
@@ -1515,7 +1515,6 @@ rcxml_init(void)
 	if (!has_run) {
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
-		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.fields);
 		wl_list_init(&rc.touch_configs);
 	}
@@ -1903,28 +1902,28 @@ is_invalid_rule(window_rule &rule)
 	return false; // valid
 }
 
+static bool
+is_invalid_region(region_cfg &region)
+{
+	struct wlr_box box = region.percentage;
+	bool invalid = !region.name
+		|| box.x < 0 || box.x > 100
+		|| box.y < 0 || box.y > 100
+		|| box.width <= 0 || box.width > 100
+		|| box.height <= 0 || box.height > 100;
+	if (invalid) {
+		wlr_log(WLR_ERROR,
+			"Removing invalid region '%s': %d%% x %d%% @ %d%%,%d%%",
+			region.name.c(), box.width, box.height, box.x, box.y);
+	}
+	return invalid;
+}
+
 static void
 validate(void)
 {
 	/* Regions */
-	struct region *region, *region_tmp;
-	wl_list_for_each_safe(region, region_tmp, &rc.regions, link) {
-		struct wlr_box box = region->percentage;
-		bool invalid = !region->name
-			|| box.x < 0 || box.x > 100
-			|| box.y < 0 || box.y > 100
-			|| box.width <= 0 || box.width > 100
-			|| box.height <= 0 || box.height > 100;
-		if (invalid) {
-			wlr_log(WLR_ERROR,
-				"Removing invalid region '%s': %d%% x %d%% @ %d%%,%d%%",
-				region->name, box.width, box.height, box.x, box.y);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			free(region);
-		}
-	}
-
+	lab::remove_if(rc.regions, is_invalid_region);
 	/* Window-rule criteria */
 	lab::remove_if(rc.window_rules, is_invalid_rule);
 
@@ -2049,7 +2048,7 @@ rcxml_finish(void)
 		zfree(w);
 	}
 
-	regions_destroy(&rc.regions);
+	rc.regions.clear();
 
 	clear_window_switcher_fields();
 

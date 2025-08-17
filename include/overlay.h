@@ -4,7 +4,9 @@
 
 #include <stdbool.h>
 #include "common/edge.h"
+#include "common/refptr.h"
 
+struct region;
 struct seat;
 
 /* TODO: replace this with single lab_scene_rect */
@@ -24,7 +26,7 @@ struct overlay {
 	/* Represents currently shown or delayed overlay */
 	struct {
 		/* Region overlay */
-		struct region *region;
+		weakptr<::region> region;
 
 		/* Snap-to-edge overlay */
 		enum lab_edge edge;
