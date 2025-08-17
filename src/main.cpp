@@ -10,8 +10,10 @@
 #include "config/rcxml.h"
 #include "config/session.h"
 #include "labwc.h"
-#include "theme.h"
 #include "menu/menu.h"
+#include "regions.h"
+#include "theme.h"
+#include "xwayland.h"
 
 /*
  * Significant globals should be defined here to ensure a predictable
@@ -21,6 +23,12 @@ struct rcxml rc;
 struct seat g_seat;
 struct server g_server;
 struct theme g_theme;
+
+reflist<view> g_views;
+
+#if HAVE_XWAYLAND
+reflist<xwayland_unmanaged> g_unmanaged_surfaces;
+#endif
 
 static const struct option long_options[] = {
 	{"config", required_argument, NULL, 'c'},
