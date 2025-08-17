@@ -89,9 +89,8 @@ reload_config_and_theme(void)
 	desktop_entry_init();
 #endif
 
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
-		view_reload_ssd(view);
+	for (auto &view : g_views) {
+		view_reload_ssd(&view);
 	}
 
 	menu_reconfigure();
@@ -543,9 +542,6 @@ server_init(void)
 		wlr_log(WLR_ERROR, "unable to create allocator");
 		exit(EXIT_FAILURE);
 	}
-
-	wl_list_init(&g_server.views);
-	wl_list_init(&g_server.unmanaged_surfaces);
 
 	g_server.scene = wlr_scene_create();
 	die_if_null(g_server.scene);

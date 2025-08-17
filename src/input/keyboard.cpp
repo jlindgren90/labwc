@@ -741,8 +741,7 @@ reset_window_keyboard_layout_groups(void)
 	 * to new group ones if particular layouts exist in both old and new,
 	 * but let's keep it simple for now and just reset them all.
 	 */
-	struct view *view;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
+	for_each_view(view, g_views.begin(), LAB_VIEW_CRITERIA_NONE) {
 		view->keyboard_layout = 0;
 	}
 

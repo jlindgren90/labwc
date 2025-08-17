@@ -74,10 +74,9 @@ osd_update_preview_outlines(struct view *view)
 static struct view *
 get_next_cycle_view(struct view *start_view, enum lab_cycle_dir dir)
 {
-	struct view *(*iter)(struct wl_list *head, struct view *view,
-		enum lab_view_criteria criteria);
 	bool forwards = dir == LAB_CYCLE_DIR_FORWARD;
-	iter = forwards ? view_next_no_head_stop : view_prev_no_head_stop;
+	auto begin = forwards ? g_views.begin() : g_views.rbegin();
+	auto pos = lab::find_ptr(begin, start_view);
 
 	enum lab_view_criteria criteria = rc.window_switcher.criteria;
 
@@ -91,11 +90,16 @@ get_next_cycle_view(struct view *start_view, enum lab_cycle_dir dir)
 	 *   View #3
 	 *   ...
 	 */
-	if (!start_view && forwards) {
-		start_view = iter(&g_server.views, NULL, criteria);
+	if (!pos && forwards) {
+		pos = view_find_matching(begin, criteria); // top view
 	}
-
-	return iter(&g_server.views, start_view, criteria);
+	if (pos) {
+		pos = view_find_matching(++pos, criteria); // next view
+	}
+	if (!pos) {
+		pos = view_find_matching(begin, criteria); // wrap around
+	}
+	return pos.get();
 }
 
 void
@@ -267,7 +271,7 @@ preview_cycled_view(struct view *view)
 }
 
 static void
-create_osd_scene(struct output *output, struct wl_array *views)
+create_osd_scene(struct output *output, view_list &views)
 {
 	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
 	const char *workspace_name = g_server.workspaces.current->name;
@@ -277,7 +281,7 @@ create_osd_scene(struct output *output, struct wl_array *views)
 		w = output->wlr_output->width
 			* g_theme.osd_window_switcher_width / 100;
 	}
-	int h = wl_array_len(views) * g_theme.osd_window_switcher_item_height
+	int h = views.size() * g_theme.osd_window_switcher_item_height
 		+ 2 * g_theme.osd_border_width
 		+ 2 * g_theme.osd_window_switcher_padding;
 	if (show_workspace) {
@@ -342,11 +346,10 @@ create_osd_scene(struct output *output, struct wl_array *views)
 	}
 
 	/* Draw text for each node */
-	struct view **view;
-	wl_array_for_each(view, views) {
+	for (auto &view : views) {
 		struct osd_scene_item *item =
 			wl_array_add(&output->osd_scene.items, sizeof(*item));
-		item->view = *view;
+		item->view = &view;
 		/*
 		 *    OSD border
 		 * +---------------------------------+
@@ -382,12 +385,12 @@ create_osd_scene(struct output *output, struct wl_array *views)
 				struct scaled_icon_buffer *icon_buffer =
 					scaled_icon_buffer_create(item_root,
 						icon_size, icon_size);
-				scaled_icon_buffer_set_view(icon_buffer, *view);
+				scaled_icon_buffer_set_view(icon_buffer, &view);
 				node = &icon_buffer->scene_buffer->node;
 				height = icon_size;
 			} else {
 				buf_clear(&buf);
-				osd_field_get_content(field, &buf, *view);
+				osd_field_get_content(field, &buf, &view);
 
 				if (!string_null_or_empty(buf.data)) {
 					struct scaled_font_buffer *font_buffer =
@@ -454,13 +457,11 @@ update_item_highlight(struct output *output)
 static void
 update_osd(void)
 {
-	struct wl_array views;
-	wl_array_init(&views);
-	view_array_append(&views, rc.window_switcher.criteria);
+	auto views = view_list_matching(rc.window_switcher.criteria);
 
-	if (!wl_array_len(&views) || !g_server.osd_state.cycle_view) {
+	if (views.empty() || !g_server.osd_state.cycle_view) {
 		osd_finish();
-		goto out;
+		return;
 	}
 
 	if (rc.window_switcher.show && g_theme.osd_window_switcher_width > 0) {
@@ -471,7 +472,7 @@ update_osd(void)
 				continue;
 			}
 			if (!output->osd_scene.tree) {
-				create_osd_scene(output, &views);
+				create_osd_scene(output, views);
 				assert(output->osd_scene.tree);
 			}
 			update_item_highlight(output);
@@ -489,6 +490,4 @@ update_osd(void)
 	if (rc.window_switcher.preview) {
 		preview_cycled_view(g_server.osd_state.cycle_view);
 	}
-out:
-	wl_array_release(&views);
 }

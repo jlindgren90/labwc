@@ -8,6 +8,8 @@
 #include <wlr/util/box.h>
 #include <xkbcommon/xkbcommon.h>
 #include "common/edge.h"
+#include "common/listener.h"
+#include "common/reflist.h"
 #include "config.h"
 #include "config/types.h"
 
@@ -78,16 +80,16 @@ enum view_wants_focus {
 	VIEW_WANTS_FOCUS_UNLIKELY,
 };
 
+struct foreign_toplevel;
+struct lab_data_buffer;
+struct region;
 struct view;
 struct wlr_surface;
-struct foreign_toplevel;
+struct wlr_xdg_surface;
+struct workspace;
 
-/* Common to struct view and struct xwayland_unmanaged */
-struct mappable {
-	bool connected;
-	struct wl_listener map;
-	struct wl_listener unmap;
-};
+using view_list = reflist<view>;
+using view_iter = reflist<view>::iter;
 
 /* Basic size hints (subset of XSizeHints from X11) */
 struct view_size_hints {
@@ -97,39 +99,6 @@ struct view_size_hints {
 	int height_inc;
 	int base_width;
 	int base_height;
-};
-
-struct view_impl {
-	void (*configure)(struct view *view, struct wlr_box geo);
-	void (*close)(struct view *view);
-	const char *(*get_string_prop)(struct view *view, const char *prop);
-	void (*map)(struct view *view);
-	void (*set_activated)(struct view *view, bool activated);
-	void (*set_fullscreen)(struct view *view, bool fullscreen);
-	void (*notify_tiled)(struct view *view);
-	/*
-	 * client_request is true if the client unmapped its own
-	 * surface; false if we are just minimizing the view. The two
-	 * cases are similar but have subtle differences (e.g., when
-	 * minimizing we don't destroy the foreign toplevel handle).
-	 */
-	void (*unmap)(struct view *view, bool client_request);
-	void (*maximize)(struct view *view, enum view_axis maximized);
-	void (*minimize)(struct view *view, bool minimize);
-	struct view *(*get_root)(struct view *self);
-	void (*append_children)(struct view *self, struct wl_array *children);
-	bool (*is_modal_dialog)(struct view *self);
-	struct view_size_hints (*get_size_hints)(struct view *self);
-	/* if not implemented, VIEW_WANTS_FOCUS_ALWAYS is assumed */
-	enum view_wants_focus (*wants_focus)(struct view *self);
-	void (*offer_focus)(struct view *self);
-	/* returns true if view reserves space at screen edge */
-	bool (*has_strut_partial)(struct view *self);
-	/* returns true if view declared itself a window type */
-	bool (*contains_window_type)(struct view *view,
-		enum lab_window_type window_type);
-	/* returns the client pid that this view belongs to */
-	pid_t (*get_pid)(struct view *view);
 };
 
 struct resize_indicator {
@@ -145,11 +114,8 @@ struct resize_outlines {
 	struct lab_scene_rect *rect;
 };
 
-struct view {
-	enum view_type type;
-	const struct view_impl *impl;
-	struct wl_list link;
-
+/* C++ aggregate type holding view-related data (value-initialized) */
+struct view_data {
 	/*
 	 * The primary output that the view is displayed on. Specifically:
 	 *
@@ -238,18 +204,6 @@ struct view {
 	struct resize_indicator resize_indicator;
 	struct resize_outlines resize_outlines;
 
-	struct mappable mappable;
-
-	struct wl_listener destroy;
-	struct wl_listener surface_destroy;
-	struct wl_listener commit;
-	struct wl_listener request_move;
-	struct wl_listener request_resize;
-	struct wl_listener request_minimize;
-	struct wl_listener request_maximize;
-	struct wl_listener request_fullscreen;
-	struct wl_listener set_title;
-
 	struct foreign_toplevel *foreign_toplevel;
 
 	/* used by scaled_icon_buffer */
@@ -275,6 +229,64 @@ struct view {
 	} events;
 };
 
+/* C++ class representing a view (constructor-initialized) */
+struct view : public destroyable, public ref_guarded<view>, public view_data {
+	const view_type type;
+
+	view(view_type type);
+	virtual ~view();
+
+	virtual void map() = 0;
+	// client_request is true if the client unmapped its own
+	// surface; false if we are just minimizing the view. The two
+	// cases are similar but have subtle differences (e.g., when
+	// minimizing we don't destroy the foreign toplevel handle).
+	virtual void unmap(bool client_request) = 0;
+	virtual void configure(wlr_box geo) = 0;
+	virtual void close() = 0;
+	virtual const char *get_string_prop(const char *prop) = 0;
+	virtual void set_activated(bool activated) = 0;
+	virtual void set_fullscreen(bool fullscreen) = 0;
+	virtual void notify_tiled() { /* no-op */ }
+	virtual void maximize(view_axis maximized) = 0;
+	virtual void minimize(bool minimize) = 0;
+	virtual view *get_root() = 0;
+	virtual view_list get_children() = 0;
+	virtual bool is_modal_dialog() { return false; }
+	virtual view_size_hints get_size_hints() = 0;
+	virtual view_wants_focus wants_focus() { return VIEW_WANTS_FOCUS_ALWAYS; }
+	virtual void offer_focus() = 0;
+	// returns true if view reserves space at screen edge
+	virtual bool has_strut_partial() { return false; }
+	// returns true if view declared itself a window type
+	virtual bool contains_window_type(lab_window_type window_type) = 0;
+	// returns the client pid that this view belongs to
+	virtual pid_t get_pid() = 0;
+
+	void handle_map(void *);
+	void handle_unmap(void *) {
+		unmap(/* client_request */ true);
+	}
+
+	virtual void handle_commit(void *) = 0;
+	virtual void handle_request_move(void *) = 0;
+	virtual void handle_request_resize(void *) = 0;
+	virtual void handle_request_minimize(void *) = 0;
+	virtual void handle_request_maximize(void *) = 0;
+	virtual void handle_request_fullscreen(void *) = 0;
+	virtual void handle_set_title(void *) = 0;
+
+	DECLARE_LISTENER(view, map);
+	DECLARE_LISTENER(view, unmap);
+	DECLARE_LISTENER(view, commit);
+	DECLARE_LISTENER(view, request_move);
+	DECLARE_LISTENER(view, request_resize);
+	DECLARE_LISTENER(view, request_minimize);
+	DECLARE_LISTENER(view, request_maximize);
+	DECLARE_LISTENER(view, request_fullscreen);
+	DECLARE_LISTENER(view, set_title);
+};
+
 struct view_query {
 	struct wl_list link;
 	char *identifier;
@@ -294,15 +306,46 @@ struct view_query {
 	char *monitor;
 };
 
-struct xdg_toplevel_view {
-	struct view base;
-	struct wlr_xdg_surface *xdg_surface;
+struct xdg_toplevel_view : public view {
+	wlr_xdg_surface *const xdg_surface;
+
+	xdg_toplevel_view(wlr_xdg_surface *xdg_surface)
+		: view(LAB_XDG_SHELL_VIEW), xdg_surface(xdg_surface) {}
+	~xdg_toplevel_view();
+
+	void map() override;
+	void unmap(bool client_request) override;
+	void configure(wlr_box geo) override;
+	void close() override;
+	const char *get_string_prop(const char *prop) override;
+	void set_activated(bool activated) override;
+	void set_fullscreen(bool fullscreen) override;
+	void notify_tiled() override;
+	void maximize(view_axis maximized) override;
+	void minimize(bool minimize) override;
+	view *get_root() override;
+	view_list get_children() override;
+	view_size_hints get_size_hints() override;
+	void offer_focus() override {}
+	bool contains_window_type(lab_window_type window_type) override;
+	pid_t get_pid() override;
+
+	void handle_commit(void *) override;
+	void handle_request_move(void *) override;
+	void handle_request_resize(void *) override;
+	void handle_request_minimize(void *) override;
+	void handle_request_maximize(void *) override;
+	void handle_request_fullscreen(void *) override;
+	void handle_set_title(void *) override;
 
 	/* Events unique to xdg-toplevel views */
-	struct wl_listener set_app_id;
-	struct wl_listener request_show_window_menu;
-	struct wl_listener new_popup;
+	DECLARE_HANDLER(xdg_toplevel_view, set_app_id);
+	DECLARE_HANDLER(xdg_toplevel_view, request_show_window_menu);
+	DECLARE_HANDLER(xdg_toplevel_view, new_popup);
 };
+
+/* Global list of views */
+extern reflist<view> g_views;
 
 /**
  * view_from_wlr_surface() - returns the view associated with a
@@ -335,93 +378,39 @@ bool view_matches_query(struct view *view, struct view_query *query);
 
 /**
  * for_each_view() - iterate over all views which match criteria
- * @view: Iterator.
- * @head: Head of list to iterate over.
+ * @v: Name of view iterator.
+ * @start: Start of range to iterate over.
  * @criteria: Criteria to match against.
  * Example:
- *	struct view *view;
- *	for_each_view(view, &server->views, LAB_VIEW_CRITERIA_NONE) {
- *		printf("%s\n", view_get_string_prop(view, "app_id"));
+ *	for_each_view(view, g_views, LAB_VIEW_CRITERIA_NONE) {
+ *		printf("%s\n", view_get_string_prop(view.get(), "app_id"));
  *	}
  */
-#define for_each_view(view, head, criteria)           \
-	for (view = view_next(head, NULL, criteria);  \
-	     view;                                    \
-	     view = view_next(head, view, criteria))
+#define for_each_view(v, start, criteria) \
+	for (auto v = (start); (v = view_find_matching(v, (criteria))); ++v)
 
 /**
- * for_each_view_reverse() - iterate over all views which match criteria
- * @view: Iterator.
- * @head: Head of list to iterate over.
- * @criteria: Criteria to match against.
- * Example:
- *	struct view *view;
- *	for_each_view_reverse(view, &server->views, LAB_VIEW_CRITERIA_NONE) {
- *		printf("%s\n", view_get_string_prop(view, "app_id"));
- *	}
- */
-#define for_each_view_reverse(view, head, criteria)   \
-	for (view = view_prev(head, NULL, criteria);  \
-	     view;                                    \
-	     view = view_prev(head, view, criteria))
-
-/**
- * view_next() - Get next view which matches criteria.
- * @head: Head of list to iterate over.
- * @view: Current view from which to find the next one. If NULL is provided as
- *	  the view argument, the start of the list will be used.
+ * view_find_matching() - find first view that matches criteria
+ * @start: Start of range to iterate over.
  * @criteria: Criteria to match against.
  *
- * Returns NULL if there are no views matching the criteria.
+ * Returns @stop if there are no views matching the criteria.
  */
-struct view *view_next(struct wl_list *head, struct view *view,
-	enum lab_view_criteria criteria);
+view_iter view_find_matching(view_iter start, lab_view_criteria criteria);
 
 /**
- * view_prev() - Get previous view which matches criteria.
- * @head: Head of list to iterate over.
- * @view: Current view from which to find the previous one. If NULL is provided
- *        as the view argument, the end of the list will be used.
- * @criteria: Criteria to match against.
- *
- * Returns NULL if there are no views matching the criteria.
- */
-struct view *view_prev(struct wl_list *head, struct view *view,
-	enum lab_view_criteria criteria);
-
-/*
- * Same as `view_next()` except that they iterate one whole cycle rather than
- * stopping at the list-head
- */
-struct view *view_next_no_head_stop(struct wl_list *head, struct view *from,
-	enum lab_view_criteria criteria);
-struct view *view_prev_no_head_stop(struct wl_list *head, struct view *from,
-	enum lab_view_criteria criteria);
-
-/**
- * view_array_append() - Append views that match criteria to array
+ * view_list_matching() - create list of views that match criteria
  * @server: server context
- * @views: arrays to append to
  * @criteria: criteria to match against
  *
  * This function is useful in cases where the calling function may change the
  * stacking order or where it needs to iterate over the views multiple times,
  * for example to get the number of views before processing them.
  *
- * Note: This array has a very short shelf-life so it is intended to be used
+ * Note: This list has a very short shelf-life so it is intended to be used
  *       with a single-use-throw-away approach.
- *
- * Example usage:
- *	struct view **view;
- *	struct wl_array views;
- *	wl_array_init(&views);
- *	view_array_append(server, &views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE);
- *	wl_array_for_each(view, &views) {
- *		// Do something with *view
- *	}
- *	wl_array_release(&views);
  */
-void view_array_append(struct wl_array *views, enum lab_view_criteria criteria);
+view_list view_list_matching(lab_view_criteria criteria);
 
 enum view_wants_focus view_wants_focus(struct view *view);
 bool view_contains_window_type(struct view *view, enum lab_window_type window_type);
@@ -445,10 +434,6 @@ bool view_is_focusable(struct view *view);
  * See the description of VIEW_WANTS_FOCUS_OFFER for more information.
  */
 void view_offer_focus(struct view *view);
-
-void mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
-	wl_notify_func_t notify_map, wl_notify_func_t notify_unmap);
-void mappable_disconnect(struct mappable *mappable);
 
 void view_toggle_keybinds(struct view *view);
 
@@ -545,7 +530,7 @@ void view_move_to_output(struct view *view, struct output *output);
 void view_move_to_front(struct view *view);
 void view_move_to_back(struct view *view);
 struct view *view_get_root(struct view *view);
-void view_append_children(struct view *view, struct wl_array *children);
+view_list view_get_children(struct view *view);
 
 /**
  * view_get_modal_dialog() - returns any modal dialog found among this
@@ -582,9 +567,6 @@ void view_adjust_size(struct view *view, int *w, int *h);
 void view_evacuate_region(struct view *view);
 void view_on_output_destroy(struct view *view);
 void view_connect_map(struct view *view, struct wlr_surface *surface);
-
-void view_init(struct view *view);
-void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
 enum lab_placement_policy view_placement_parse(const char *policy);
