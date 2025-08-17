@@ -33,25 +33,19 @@ ssd_titlebar_create(struct ssd *ssd)
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
 
-	struct wlr_scene_tree *parent;
-	struct wlr_buffer *titlebar_fill;
-	struct wlr_buffer *corner_top_left;
-	struct wlr_buffer *corner_top_right;
-	int active;
-
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
 
 	struct ssd_sub_tree *subtree;
 	FOR_EACH_STATE(ssd, subtree) {
 		subtree->tree = wlr_scene_tree_create(ssd->titlebar.tree);
-		parent = subtree->tree;
-		active = (subtree == &ssd->titlebar.active) ?
-			THEME_ACTIVE : THEME_INACTIVE;
-		titlebar_fill = &g_theme.window[active].titlebar_fill->base;
-		corner_top_left =
-			&g_theme.window[active].corner_top_left_normal->base;
-		corner_top_right =
-			&g_theme.window[active].corner_top_right_normal->base;
+		auto parent = subtree->tree;
+		int active = (subtree == &ssd->titlebar.active)
+			? THEME_ACTIVE : THEME_INACTIVE;
+		auto titlebar_fill = g_theme.window[active].titlebar_fill;
+		auto corner_top_left =
+			g_theme.window[active].corner_top_left_normal;
+		auto corner_top_right =
+			g_theme.window[active].corner_top_right_normal;
 		wlr_scene_node_set_enabled(&parent->node, active);
 		wlr_scene_node_set_position(&parent->node, 0,
 			-g_theme.titlebar_height);
@@ -59,7 +53,7 @@ ssd_titlebar_create(struct ssd *ssd)
 
 		/* Background */
 		struct wlr_scene_buffer *bg_scene_buffer =
-			wlr_scene_buffer_create(parent, titlebar_fill);
+			wlr_scene_buffer_create(parent, titlebar_fill.get());
 		/*
 		 * Work around the wlroots/pixman bug that widened 1px buffer
 		 * becomes translucent when bilinear filtering is used.
@@ -77,11 +71,11 @@ ssd_titlebar_create(struct ssd *ssd)
 
 		add_scene_buffer(&subtree->parts,
 			LAB_NODE_TITLEBAR_CORNER_LEFT, parent,
-			corner_top_left, -g_theme.border_width,
+			corner_top_left.get(), -g_theme.border_width,
 			-g_theme.border_width);
 		add_scene_buffer(&subtree->parts,
 			LAB_NODE_TITLEBAR_CORNER_RIGHT, parent,
-			corner_top_right, width - corner_width,
+			corner_top_right.get(), width - corner_width,
 			-g_theme.border_width);
 
 		/* Buttons */
