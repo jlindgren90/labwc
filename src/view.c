@@ -77,7 +77,7 @@ struct view_query *
 view_query_create(void)
 {
 	struct view_query *query = znew(*query);
-	query->window_type = -1;
+	query->window_type = LAB_WINDOW_TYPE_INVALID;
 	query->maximized = VIEW_AXIS_INVALID;
 	return query;
 }

@@ -79,6 +79,7 @@ enum lab_view_criteria {
  * to make them available even in builds with xwayland support disabled.
  */
 enum lab_window_type {
+	LAB_WINDOW_TYPE_INVALID = -1,
 	LAB_WINDOW_TYPE_DESKTOP = 0,
 	LAB_WINDOW_TYPE_DOCK,
 	LAB_WINDOW_TYPE_TOOLBAR,
