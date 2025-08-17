@@ -20,6 +20,7 @@
 #define XCURSOR_DEFAULT "left_ptr"
 #define XCURSOR_SIZE 24
 
+struct input;
 struct wlr_xdg_popup;
 struct workspace;
 
@@ -108,7 +109,7 @@ struct seat {
 	/* Used to prevent region snapping when starting a move with A-Left */
 	bool region_prevent_snap;
 
-	struct wl_list inputs;
+	reflist<input> inputs;
 	struct wl_listener new_input;
 	struct wl_listener focus_change;
 
