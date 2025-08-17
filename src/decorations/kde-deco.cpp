@@ -2,43 +2,34 @@
 #include <assert.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include "common/list.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "decorations.h"
 #include "labwc.h"
 #include "view.h"
 
-static struct wl_list decorations;
+static reflist<struct kde_deco> decorations;
 static struct wlr_server_decoration_manager *kde_deco_mgr;
 
-struct kde_deco {
-	struct wl_list link;  /* decorations */
+struct kde_deco : public destroyable, public ref_guarded<kde_deco> {
 	struct wlr_server_decoration *wlr_kde_decoration;
 	struct view *view;
-	struct wl_listener mode;
-	struct wl_listener destroy;
+
+	~kde_deco() { decorations.remove(this); }
+
+	void handle_mode(void * = nullptr);
+
+	DECLARE_LISTENER(kde_deco, mode);
 };
 
-static void
-handle_destroy(struct wl_listener *listener, void *data)
+void
+kde_deco::handle_mode(void *)
 {
-	struct kde_deco *kde_deco = wl_container_of(listener, kde_deco, destroy);
-	wl_list_remove(&kde_deco->destroy.link);
-	wl_list_remove(&kde_deco->mode.link);
-	wl_list_remove(&kde_deco->link);
-	free(kde_deco);
-}
-
-static void
-handle_mode(struct wl_listener *listener, void *data)
-{
-	struct kde_deco *kde_deco = wl_container_of(listener, kde_deco, mode);
+	auto kde_deco = this;
 	if (!kde_deco->view) {
 		return;
 	}
 
-	enum wlr_server_decoration_manager_mode client_mode =
+	auto client_mode = (wlr_server_decoration_manager_mode)
 		kde_deco->wlr_kde_decoration->mode;
 
 	switch (client_mode) {
@@ -64,8 +55,8 @@ handle_mode(struct wl_listener *listener, void *data)
 static void
 handle_new_server_decoration(struct wl_listener *listener, void *data)
 {
-	struct wlr_server_decoration *wlr_deco = data;
-	struct kde_deco *kde_deco = znew(*kde_deco);
+	auto wlr_deco = (wlr_server_decoration *)data;
+	auto kde_deco = new struct kde_deco();
 	kde_deco->wlr_kde_decoration = wlr_deco;
 
 	if (wlr_deco->surface) {
@@ -80,28 +71,24 @@ handle_new_server_decoration(struct wl_listener *listener, void *data)
 			wlr_xdg_surface_try_from_wlr_surface(wlr_deco->surface);
 		if (xdg_surface && xdg_surface->data) {
 			kde_deco->view = (struct view *)xdg_surface->data;
-			handle_mode(&kde_deco->mode, wlr_deco);
+			kde_deco->handle_mode();
 		}
 	}
 
-	wl_signal_add(&wlr_deco->events.destroy, &kde_deco->destroy);
-	kde_deco->destroy.notify = handle_destroy;
+	CONNECT_LISTENER(wlr_deco, kde_deco, destroy);
+	CONNECT_LISTENER(wlr_deco, kde_deco, mode);
 
-	wl_signal_add(&wlr_deco->events.mode, &kde_deco->mode);
-	kde_deco->mode.notify = handle_mode;
-
-	wl_list_append(&decorations, &kde_deco->link);
+	decorations.append(kde_deco);
 }
 
 void
 kde_server_decoration_set_view(struct view *view, struct wlr_surface *surface)
 {
-	struct kde_deco *kde_deco;
-	wl_list_for_each(kde_deco, &decorations, link) {
-		if (kde_deco->wlr_kde_decoration->surface == surface) {
-			if (!kde_deco->view) {
-				kde_deco->view = view;
-				handle_mode(&kde_deco->mode, kde_deco->wlr_kde_decoration);
+	for (auto &kde_deco : decorations) {
+		if (kde_deco.wlr_kde_decoration->surface == surface) {
+			if (!kde_deco.view) {
+				kde_deco.view = view;
+				kde_deco.handle_mode();
 			}
 			return;
 		}
@@ -129,7 +116,6 @@ kde_server_decoration_init(void)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&decorations);
 	kde_server_decoration_update_default();
 
 	wl_signal_add(&kde_deco_mgr->events.new_decoration,
