@@ -352,14 +352,13 @@ edges_calculate_visibility(struct view *ignored_view)
 	 * layout which could cover actual invisible areas
 	 * in case the output resolutions differ.
 	 */
-	struct output *output;
 	struct wlr_box layout_box;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
+	for (auto &output : g_server.outputs) {
+		if (!output_is_usable(&output)) {
 			continue;
 		}
 		wlr_output_layout_get_box(g_server.output_layout,
-			output->wlr_output, &layout_box);
+			output.wlr_output, &layout_box);
 		pixman_region32_union_rect(&region, &region,
 			layout_box.x, layout_box.y, layout_box.width, layout_box.height);
 	}
@@ -449,18 +448,16 @@ edges_find_outputs(struct border *nearest_edges, struct view *view,
 	edges_for_target_geometry(&view_edges, view, origin);
 	edges_for_target_geometry(&target_edges, view, target);
 
-	struct output *o;
-	wl_list_for_each(o, &g_server.outputs, link) {
-		if (!output_is_usable(o)) {
+	for (auto &o : g_server.outputs) {
+		if (!output_is_usable(&o)) {
 			continue;
 		}
 
-		if (output && o != output) {
+		if (output && &o != output) {
 			continue;
 		}
 
-		struct wlr_box usable =
-			output_usable_area_in_layout_coords(o);
+		struct wlr_box usable = output_usable_area_in_layout_coords(&o);
 
 		if (!box_intersects(&origin, &usable)
 				&& !box_intersects(&target, &usable)) {

@@ -207,15 +207,14 @@ desktop_focus_output(struct output *output)
 void
 desktop_update_top_layer_visibility(void)
 {
-	struct output *output;
 	uint32_t top = ZWLR_LAYER_SHELL_V1_LAYER_TOP;
 
 	/* Enable all top layers */
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
+	for (auto &output : g_server.outputs) {
+		if (!output_is_usable(&output)) {
 			continue;
 		}
-		wlr_scene_node_set_enabled(&output->layer_tree[top]->node, true);
+		wlr_scene_node_set_enabled(&output.layer_tree[top]->node, true);
 	}
 
 	/*

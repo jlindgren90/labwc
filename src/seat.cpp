@@ -324,10 +324,9 @@ static struct wlr_output *
 output_by_name(const char *name)
 {
 	assert(name);
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!strcasecmp(output->wlr_output->name, name)) {
-			return output->wlr_output;
+	for (auto &output : g_server.outputs) {
+		if (!strcasecmp(output.wlr_output->name, name)) {
+			return output.wlr_output;
 		}
 	}
 	return NULL;

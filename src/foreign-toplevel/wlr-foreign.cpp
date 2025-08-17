@@ -133,14 +133,13 @@ handle_new_outputs(struct wl_listener *listener, void *data)
 	 * destroy events so its fine to just relay the current state and let
 	 * wlr_foreign_toplevel handle the rest.
 	 */
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (view_on_output(wlr_toplevel->view, output)) {
+	for (auto &output : g_server.outputs) {
+		if (view_on_output(wlr_toplevel->view, &output)) {
 			wlr_foreign_toplevel_handle_v1_output_enter(
-				wlr_toplevel->handle, output->wlr_output);
+				wlr_toplevel->handle, output.wlr_output);
 		} else {
 			wlr_foreign_toplevel_handle_v1_output_leave(
-				wlr_toplevel->handle, output->wlr_output);
+				wlr_toplevel->handle, output.wlr_output);
 		}
 	}
 }

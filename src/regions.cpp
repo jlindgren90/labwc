@@ -96,11 +96,9 @@ regions_reconfigure_output(struct output *output)
 void
 regions_reconfigure(void)
 {
-	struct output *output;
-
 	/* Evacuate views and initialize regions from config */
-	wl_list_for_each(output, &g_server.outputs, link) {
-		regions_reconfigure_output(output);
+	for (auto &output : g_server.outputs) {
+		regions_reconfigure_output(&output);
 	}
 
 	/* Tries to match the evacuated views to the new regions */

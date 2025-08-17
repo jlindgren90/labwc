@@ -4,6 +4,7 @@
 
 #include <wlr/types/wlr_output.h>
 #include "common/edge.h"
+#include "common/listener.h"
 #include "common/reflist.h"
 
 #define LAB_NR_LAYERS (4)
@@ -15,8 +16,7 @@ struct osd_scene_item {
 	struct wlr_scene_node *highlight_outline;
 };
 
-struct output {
-	struct wl_list link; /* server.outputs */
+struct output : public destroyable, public ref_guarded<output> {
 	struct wlr_output *wlr_output;
 	struct wlr_output_state pending;
 	struct wlr_scene_output *scene_output;
@@ -36,11 +36,12 @@ struct output {
 
 	reflist<region> regions;
 
-	struct wl_listener destroy;
-	struct wl_listener frame;
-	struct wl_listener request_state;
-
 	bool gamma_lut_changed;
+
+	~output();
+
+	DECLARE_HANDLER(output, frame);
+	DECLARE_HANDLER(output, request_state);
 };
 
 #undef LAB_NR_LAYERS

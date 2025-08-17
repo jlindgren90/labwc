@@ -1295,15 +1295,14 @@ xwayland_update_workarea(void)
 	int workarea_top = layout_top;
 	int workarea_bottom = layout_bottom;
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
+	for (auto &output : g_server.outputs) {
+		if (!output_is_usable(&output)) {
 			continue;
 		}
 
 		struct wlr_box ob;
 		wlr_output_layout_get_box(g_server.output_layout,
-			output->wlr_output, &ob);
+			output.wlr_output, &ob);
 
 		/* Compute edges of output */
 		int output_left = ob.x;
@@ -1312,10 +1311,10 @@ xwayland_update_workarea(void)
 		int output_bottom = ob.y + ob.height;
 
 		/* Compute edges of usable area */
-		int usable_left = output_left + output->usable_area.x;
-		int usable_right = usable_left + output->usable_area.width;
-		int usable_top = output_top + output->usable_area.y;
-		int usable_bottom = usable_top + output->usable_area.height;
+		int usable_left = output_left + output.usable_area.x;
+		int usable_right = usable_left + output.usable_area.width;
+		int usable_top = output_top + output.usable_area.y;
+		int usable_bottom = usable_top + output.usable_area.height;
 
 		/*
 		 * Only adjust workarea edges for output edges that are

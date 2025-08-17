@@ -271,7 +271,7 @@ struct server {
 		} on;
 	} workspaces;
 
-	struct wl_list outputs;
+	reflist<output> outputs;
 	struct wl_listener new_output;
 	struct wlr_output_layout *output_layout;
 
