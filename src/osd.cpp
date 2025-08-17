@@ -264,8 +264,8 @@ preview_cycled_view(struct view *view)
 static void
 create_osd_scene(struct output *output, view_list &views)
 {
-	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
-	const char *workspace_name = g_server.workspaces.current->name;
+	bool show_workspace = rc.workspace_config.names.size() > 1;
+	const char *workspace_name = g_server.workspaces.current->name.c();
 
 	int w = g_theme.osd_window_switcher_width;
 	if (g_theme.osd_window_switcher_width_is_percent) {

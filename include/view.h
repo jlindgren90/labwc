@@ -143,7 +143,7 @@ struct view_data {
 	 */
 	uint64_t outputs;
 
-	struct workspace *workspace;
+	weakptr<::workspace> workspace;
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree;

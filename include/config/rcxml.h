@@ -158,7 +158,7 @@ struct rcxml {
 		int popuptime;
 		int min_nr_workspaces;
 		lab_str prefix;
-		struct wl_list workspaces;  /* struct workspace.link */
+		std::vector<lab_str> names;
 	} workspace_config;
 
 	/* Regions */

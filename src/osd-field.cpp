@@ -109,15 +109,15 @@ static void
 field_set_workspace(struct buf *buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: W */
-	buf_add(buf, view->workspace->name);
+	buf_add(buf, view->workspace->name.c());
 }
 
 static void
 field_set_workspace_short(struct buf *buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: w */
-	if (wl_list_length(&rc.workspace_config.workspaces) > 1) {
-		buf_add(buf, view->workspace->name);
+	if (rc.workspace_config.names.size() > 1) {
+		buf_add(buf, view->workspace->name.c());
 	}
 }
 

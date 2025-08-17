@@ -159,19 +159,20 @@ view_matches_query(struct view *view, struct view_query *query)
 	}
 
 	if (query->desktop) {
-		const char *view_workspace = view->workspace->name;
-		struct workspace *current = g_server.workspaces.current;
+		const char *view_workspace = view->workspace->name.c();
+		struct workspace *current = g_server.workspaces.current.get();
 
 		if (!strcasecmp(query->desktop.c(), "other")) {
 			/* "other" means the view is NOT on the current desktop */
-			if (!strcasecmp(view_workspace, current->name)) {
+			if (!strcasecmp(view_workspace, current->name.c())) {
 				return false;
 			}
 		} else {
 			// TODO: perhaps wrap "left" and "right" workspaces
 			struct workspace *target = workspaces_find(current,
 				query->desktop.c(), /* wrap */ false);
-			if (!target || strcasecmp(view_workspace, target->name)) {
+			if (!target || strcasecmp(view_workspace,
+					target->name.c())) {
 				return false;
 			}
 		}
@@ -1516,7 +1517,7 @@ view_move_to_workspace(struct view *view, struct workspace *workspace)
 	assert(view);
 	assert(workspace);
 	if (view->workspace != workspace) {
-		view->workspace = workspace;
+		view->workspace = weakptr(workspace);
 		wlr_scene_node_reparent(&view->scene_tree->node,
 			workspace->tree);
 	}
