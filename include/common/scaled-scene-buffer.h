@@ -2,41 +2,52 @@
 #ifndef LABWC_SCALED_SCENE_BUFFER_H
 #define LABWC_SCALED_SCENE_BUFFER_H
 
-#include <wayland-server-core.h>
+#include <list>
 #include "buffer.h"
+#include "listener.h"
 
 #define LAB_SCALED_BUFFER_MAX_CACHE 2
 
-struct wlr_buffer;
+struct wlr_scene_buffer;
 struct wlr_scene_tree;
-struct lab_data_buffer;
-struct scaled_scene_buffer;
 
-struct scaled_scene_buffer_impl {
-	/* Return a new buffer optimized for the new scale */
-	refptr<lab_data_buffer> (*create_buffer)(
-		struct scaled_scene_buffer *scaled_buffer, double scale);
-	/* Might be NULL or used for cleaning up */
-	void (*destroy)(struct scaled_scene_buffer *scaled_buffer);
-	/* Returns true if the two buffers are visually the same */
-	bool (*equal)(struct scaled_scene_buffer *scaled_buffer_a,
-		struct scaled_scene_buffer *scaled_buffer_b);
+enum scaled_scene_buffer_type {
+	SCALED_FONT_BUFFER,
+	SCALED_ICON_BUFFER,
+	SCALED_IMG_BUFFER,
 };
 
-struct scaled_scene_buffer {
-	struct wlr_scene_buffer *scene_buffer;
-	int width;   /* unscaled, read only */
-	int height;  /* unscaled, read only */
-	void *data;  /* opaque user data */
+/* Private */
+struct scaled_scene_buffer_cache_entry {
+	refptr<lab_data_buffer> buffer;
+	double scale;
+};
 
-	/* Private */
-	double active_scale;
-	/* cached wlr_buffers for each scale */
-	struct wl_list cache;  /* struct scaled_buffer_cache_entry.link */
-	struct wl_listener destroy;
-	struct wl_listener outputs_update;
-	const struct scaled_scene_buffer_impl *impl;
-	struct wl_list link; /* all_scaled_buffers */
+using scaled_scene_buffer_cache = std::list<scaled_scene_buffer_cache_entry>;
+
+struct scaled_scene_buffer : public destroyable,
+		public ref_guarded<scaled_scene_buffer>
+{
+	const scaled_scene_buffer_type type;
+	wlr_scene_buffer *scene_buffer = nullptr;
+
+	int width = 0;	// unscaled, read only
+	int height = 0; // unscaled, read only
+
+	double active_scale = 0;
+	// cached wlr_buffers for each scale
+	scaled_scene_buffer_cache cache;
+
+	scaled_scene_buffer(scaled_scene_buffer_type type,
+		wlr_scene_tree *parent);
+	virtual ~scaled_scene_buffer();
+
+	// Returns a new buffer optimized for the new scale
+	virtual refptr<lab_data_buffer> create_buffer(double scale) = 0;
+	// Returns true if the two buffers are visually the same
+	virtual bool equal(scaled_scene_buffer &other) = 0;
+
+	DECLARE_HANDLER(scaled_scene_buffer, outputs_update);
 };
 
 /*
@@ -66,12 +77,12 @@ struct scaled_scene_buffer {
  */
 
 /**
- * Create an auto scaling buffer that creates a wlr_scene_buffer
- * and subscribes to its output_enter and output_leave signals.
+ * scaled_scene_buffer is an auto scaling buffer providing a wlr_scene_buffer
+ * and subscribing to its output_enter and output_leave signals.
  *
  * If the maximal scale changes, it either sets an already existing buffer
  * that was rendered for the current scale or - if there is none - calls
- * implementation->create_buffer(self, scale) to get a new lab_data_buffer
+ * the virtual function create_buffer(scale) to get a new lab_data_buffer
  * optimized for the new scale.
  *
  * Up to LAB_SCALED_BUFFER_MAX_CACHE (2) buffers are cached in an LRU fashion
@@ -79,23 +90,18 @@ struct scaled_scene_buffer {
  * than two different scales.
  *
  * scaled_scene_buffer will clean up automatically once the internal
- * wlr_scene_buffer is being destroyed. If implementation->destroy is set
- * it will also get called so a consumer of this API may clean up its own
- * allocations.
+ * wlr_scene_buffer is being destroyed.
  *
  * Besides caching buffers for each scale per scaled_scene_buffer, we also
  * store all the scaled_scene_buffers from all the implementers in a list
  * in order to reuse backing buffers for visually duplicated
- * scaled_scene_buffers found via impl->equal().
+ * scaled_scene_buffers found via equal().
  *
- * All requested lab_data_buffers via impl->create_buffer() will be stored
+ * All requested lab_data_buffers via create_buffer() will be stored
  * in the cache via refptr (thus prevented by refcount from being destroyed)
  * until evacuated from the cache (due to LAB_SCALED_BUFFER_MAX_CACHE
  * or the internal wlr_scene_buffer being destroyed).
  */
-struct scaled_scene_buffer *scaled_scene_buffer_create(
-	struct wlr_scene_tree *parent,
-	const struct scaled_scene_buffer_impl *impl);
 
 /**
  * scaled_scene_buffer_request_update - mark the buffer that needs to be
@@ -116,12 +122,5 @@ void scaled_scene_buffer_request_update(struct scaled_scene_buffer *self,
  * scaled_scene_buffers rather than reusing ones created before Reconfigure.
  */
 void scaled_scene_buffer_invalidate_sharing(void);
-
-/* Private */
-struct scaled_scene_buffer_cache_entry {
-	struct wl_list link;   /* struct scaled_scene_buffer.cache */
-	refptr<lab_data_buffer> buffer;
-	double scale;
-};
 
 #endif /* LABWC_SCALED_SCENE_BUFFER_H */

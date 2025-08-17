@@ -1,11 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#define _POSIX_C_SOURCE 200809L
 #include "common/scaled-icon-buffer.h"
-#include <assert.h>
-#include <string.h>
 #include <wlr/util/log.h>
-#include "buffer.h"
-#include "common/scaled-scene-buffer.h"
 #include "config.h"
 #include "config/rcxml.h"
 #include "desktop-entry.h"
@@ -57,9 +52,8 @@ img_to_buffer(struct lab_img *img, int width, int height, int scale)
 static refptr<lab_data_buffer>
 load_client_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 {
-	struct lab_img *img =
-		desktop_entry_load_icon(self->view_icon_name.c(), icon_size,
-			scale);
+	struct lab_img *img = desktop_entry_load_icon(self->view_icon_name.c(),
+		icon_size, scale);
 	if (img) {
 		wlr_log(WLR_DEBUG, "loaded icon from client icon name");
 		return img_to_buffer(img, self->width, self->height, scale);
@@ -96,11 +90,11 @@ load_server_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 
 #endif /* HAVE_LIBSFDO */
 
-static refptr<lab_data_buffer>
-_create_buffer(struct scaled_scene_buffer *scaled_buffer, double scale)
+refptr<lab_data_buffer>
+scaled_icon_buffer::create_buffer(double scale)
 {
 #if HAVE_LIBSFDO
-	auto self = (scaled_icon_buffer *)scaled_buffer->data;
+	auto self = this;
 	int icon_size = MIN(self->width, self->height);
 	struct lab_img *img = NULL;
 
@@ -146,19 +140,6 @@ _create_buffer(struct scaled_scene_buffer *scaled_buffer, double scale)
 	return {};
 }
 
-static void
-_destroy(struct scaled_scene_buffer *scaled_buffer)
-{
-	auto self = (scaled_icon_buffer *)scaled_buffer->data;
-	if (self->view) {
-		wl_list_remove(&self->on_view.set_icon.link);
-		wl_list_remove(&self->on_view.new_title.link);
-		wl_list_remove(&self->on_view.new_app_id.link);
-		wl_list_remove(&self->on_view.destroy.link);
-	}
-	delete self;
-}
-
 static bool
 lists_equal(reflist<lab_data_buffer> &a, reflist<lab_data_buffer> &b)
 {
@@ -168,12 +149,15 @@ lists_equal(reflist<lab_data_buffer> &a, reflist<lab_data_buffer> &b)
 		});
 }
 
-static bool
-_equal(struct scaled_scene_buffer *scaled_buffer_a,
-		struct scaled_scene_buffer *scaled_buffer_b)
+bool
+scaled_icon_buffer::equal(scaled_scene_buffer &other)
 {
-	auto a = (scaled_icon_buffer *)scaled_buffer_a->data;
-	auto b = (scaled_icon_buffer *)scaled_buffer_b->data;
+	if (other.type != SCALED_ICON_BUFFER) {
+		return false;
+	}
+
+	auto a = this;
+	auto b = static_cast<scaled_icon_buffer *>(&other);
 
 	return a->view_app_id == b->view_app_id
 		&& a->view_icon_prefer_client == b->view_icon_prefer_client
@@ -184,92 +168,70 @@ _equal(struct scaled_scene_buffer *scaled_buffer_a,
 		&& a->height == b->height;
 }
 
-static struct scaled_scene_buffer_impl impl = {
-	.create_buffer = _create_buffer,
-	.destroy = _destroy,
-	.equal = _equal,
-};
-
-struct scaled_icon_buffer *
-scaled_icon_buffer_create(struct wlr_scene_tree *parent, int width, int height)
+scaled_icon_buffer::scaled_icon_buffer(wlr_scene_tree *parent, int width,
+		int height)
+	: scaled_scene_buffer(SCALED_ICON_BUFFER, parent)
 {
-	assert(parent);
 	assert(width >= 0 && height >= 0);
 
-	auto scaled_buffer = scaled_scene_buffer_create(parent, &impl);
-	auto self = new scaled_icon_buffer{};
-	self->scaled_buffer = scaled_buffer;
-	self->scene_buffer = scaled_buffer->scene_buffer;
-	self->width = width;
-	self->height = height;
-
-	scaled_buffer->data = self;
-
-	return self;
+	this->width = width;
+	this->height = height;
 }
 
-static void
-handle_view_set_icon(struct wl_listener *listener, void *data)
+void
+scaled_icon_buffer::handle_set_icon(void *)
 {
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.set_icon);
-
-	if (self->view_icon_name == self->view->icon.name
-			&& lists_equal(self->view_icon_buffers,
-				self->view->icon.buffers)) {
+	CHECK_PTR_OR_RET(this->view, view);
+	if (view_icon_name == view->icon.name
+			&& lists_equal(view_icon_buffers, view->icon.buffers)) {
 		return;
 	}
 
-	self->view_icon_name = self->view->icon.name;
-	self->view_icon_buffers = self->view->icon.buffers;
-	scaled_scene_buffer_request_update(self->scaled_buffer,
-		self->width, self->height);
+	view_icon_name = view->icon.name;
+	view_icon_buffers = view->icon.buffers;
+	scaled_scene_buffer_request_update(this, this->width, this->height);
 }
 
-static void
-handle_view_new_title(struct wl_listener *listener, void *data)
+void
+scaled_icon_buffer::handle_new_title(void *)
 {
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.new_title);
-
-	bool prefer_client = window_rules_get_property(
-		self->view, "iconPreferClient") == LAB_PROP_TRUE;
-	if (prefer_client == self->view_icon_prefer_client) {
-		return;
-	}
-	self->view_icon_prefer_client = prefer_client;
-	scaled_scene_buffer_request_update(self->scaled_buffer,
-		self->width, self->height);
-}
-
-static void
-handle_view_new_app_id(struct wl_listener *listener, void *data)
-{
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.new_app_id);
-
-	const char *app_id = view_get_string_prop(self->view, "app_id");
-	if (app_id == self->view_app_id) {
+	CHECK_PTR_OR_RET(this->view, view);
+	bool prefer_client =
+		window_rules_get_property(view, "iconPreferClient")
+			== LAB_PROP_TRUE;
+	if (prefer_client == view_icon_prefer_client) {
 		return;
 	}
 
-	self->view_app_id = lab_str(app_id);
-	self->view_icon_prefer_client = window_rules_get_property(
-		self->view, "iconPreferClient") == LAB_PROP_TRUE;
-	scaled_scene_buffer_request_update(self->scaled_buffer,
-		self->width, self->height);
+	view_icon_prefer_client = prefer_client;
+	scaled_scene_buffer_request_update(this, this->width, this->height);
 }
 
-static void
-handle_view_destroy(struct wl_listener *listener, void *data)
+void
+scaled_icon_buffer::handle_new_app_id(void *)
 {
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.destroy);
-	wl_list_remove(&self->on_view.destroy.link);
-	wl_list_remove(&self->on_view.set_icon.link);
-	wl_list_remove(&self->on_view.new_title.link);
-	wl_list_remove(&self->on_view.new_app_id.link);
-	self->view = NULL;
+	CHECK_PTR_OR_RET(this->view, view);
+	const char *app_id = view_get_string_prop(view, "app_id");
+	if (app_id == view_app_id) {
+		return;
+	}
+
+	view_app_id = lab_str(app_id);
+	view_icon_prefer_client =
+		window_rules_get_property(view, "iconPreferClient")
+			== LAB_PROP_TRUE;
+	scaled_scene_buffer_request_update(this, this->width, this->height);
+}
+
+void
+scaled_icon_buffer::handle_destroy(void *)
+{
+	// view was destroyed
+	view.reset();
+	on_new_app_id.disconnect();
+	on_new_title.disconnect();
+	on_set_icon.disconnect();
+	on_destroy.disconnect();
 }
 
 void
@@ -280,29 +242,15 @@ scaled_icon_buffer_set_view(struct scaled_icon_buffer *self, struct view *view)
 		return;
 	}
 
-	if (self->view) {
-		wl_list_remove(&self->on_view.set_icon.link);
-		wl_list_remove(&self->on_view.new_title.link);
-		wl_list_remove(&self->on_view.new_app_id.link);
-		wl_list_remove(&self->on_view.destroy.link);
-	}
-	self->view = view;
+	self->view.reset(view);
+	CONNECT_LISTENER(view, self, new_app_id);
+	CONNECT_LISTENER(view, self, new_title);
+	CONNECT_LISTENER(view, self, set_icon);
+	CONNECT_LISTENER(view, self, destroy);
 
-	self->on_view.set_icon.notify = handle_view_set_icon;
-	wl_signal_add(&view->events.set_icon, &self->on_view.set_icon);
-
-	self->on_view.new_title.notify = handle_view_new_title;
-	wl_signal_add(&view->events.new_title, &self->on_view.new_title);
-
-	self->on_view.new_app_id.notify = handle_view_new_app_id;
-	wl_signal_add(&view->events.new_app_id, &self->on_view.new_app_id);
-
-	self->on_view.destroy.notify = handle_view_destroy;
-	wl_signal_add(&view->events.destroy, &self->on_view.destroy);
-
-	handle_view_set_icon(&self->on_view.set_icon, NULL);
-	handle_view_new_app_id(&self->on_view.new_app_id, NULL);
-	handle_view_new_title(&self->on_view.new_title, NULL);
+	self->handle_new_app_id(NULL);
+	self->handle_new_title(NULL);
+	self->handle_set_icon(NULL);
 }
 
 void
@@ -314,7 +262,7 @@ scaled_icon_buffer_set_icon_name(struct scaled_icon_buffer *self,
 		return;
 	}
 	self->icon_name = lab_str(icon_name);
-	scaled_scene_buffer_request_update(self->scaled_buffer, self->width, self->height);
+	scaled_scene_buffer_request_update(self, self->width, self->height);
 }
 
 struct scaled_icon_buffer *
@@ -322,6 +270,6 @@ scaled_icon_buffer_from_node(struct wlr_scene_node *node)
 {
 	struct scaled_scene_buffer *scaled_buffer =
 		node_scaled_scene_buffer_from_node(node);
-	assert(scaled_buffer->impl == &impl);
-	return (scaled_icon_buffer *)scaled_buffer->data;
+	assert(scaled_buffer->type == SCALED_ICON_BUFFER);
+	return static_cast<scaled_icon_buffer *>(scaled_buffer);
 }

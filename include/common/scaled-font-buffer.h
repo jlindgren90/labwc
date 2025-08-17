@@ -3,56 +3,43 @@
 #define LABWC_SCALED_FONT_BUFFER_H
 
 #include "common/font.h"
-
-struct wlr_scene_tree;
-struct wlr_scene_buffer;
-struct scaled_scene_buffer;
-
-struct scaled_font_buffer {
-	struct wlr_scene_buffer *scene_buffer;
-	int width;   /* unscaled, read only */
-	int height;  /* unscaled, read only */
-
-	/* Private */
-	char *text;
-	int max_width;
-	float color[4];
-	float bg_color[4];
-	struct font font;
-	struct scaled_scene_buffer *scaled_buffer;
-
-	/*
-	 * The following fields are used only for the titlebar, where
-	 * the font buffer can be rendered with a pattern background to
-	 * support gradients. In this case, the font buffer is also
-	 * padded to a fixed height (with the text centered vertically)
-	 * in order to align the pattern with the rest of the titlebar.
-	 */
-	int fixed_height;
-	cairo_pattern_t *bg_pattern; /* overrides bg_color if set */
-};
+#include "graphic-helpers.h"
+#include "scaled-scene-buffer.h"
 
 /**
- * Create an auto scaling font buffer, providing a wlr_scene_buffer node for
- * display. It gets destroyed automatically when the backing scaled_scene_buffer
- * is being destroyed which in turn happens automatically when the backing
- * wlr_scene_buffer (or one of its parents) is being destroyed.
- *
+ * Auto scaling font buffer, providing a wlr_scene_buffer node for display.
  * To actually show some text, scaled_font_buffer_update() has to be called.
- *
  */
-struct scaled_font_buffer *scaled_font_buffer_create(struct wlr_scene_tree *parent);
+struct scaled_font_buffer : public scaled_scene_buffer {
+	int width;  // unscaled, read only
+	int height; // unscaled, read only
 
-/**
- * Create an auto scaling font buffer for titlebar text.
- * The font buffer takes a new reference to bg_pattern.
- *
- * @param fixed_height Fixed height for the buffer (logical pixels)
- * @param bg_pattern Background pattern (solid color or gradient)
- */
-struct scaled_font_buffer *
-scaled_font_buffer_create_for_titlebar(struct wlr_scene_tree *parent,
-	int fixed_height, cairo_pattern_t *bg_pattern);
+	lab_str text;
+	int max_width = 0;
+	float color[4] = {0};
+	float bg_color[4] = {0};
+	::font font{};
+
+	// The following fields are used only for the titlebar, where
+	// the font buffer can be rendered with a pattern background to
+	// support gradients. In this case, the font buffer is also
+	// padded to a fixed height (with the text centered vertically)
+	// in order to align the pattern with the rest of the titlebar.
+	int fixed_height = 0;         // logical pixels
+	cairo_pattern_ptr bg_pattern; // overrides bg_color if set
+
+	// Takes a new reference to bg_pattern (if set)
+	scaled_font_buffer(wlr_scene_tree *parent, int fixed_height = 0,
+			cairo_pattern_t *bg_pattern = nullptr)
+		: scaled_scene_buffer(SCALED_FONT_BUFFER, parent),
+			fixed_height(fixed_height),
+			bg_pattern(bg_pattern
+				? cairo_pattern_reference(bg_pattern)
+				: nullptr) {}
+
+	refptr<lab_data_buffer> create_buffer(double scale) override;
+	bool equal(scaled_scene_buffer &other) override;
+};
 
 /**
  * Update an existing auto scaling font buffer.

@@ -507,14 +507,10 @@ ssd_update_title(struct ssd *ssd)
 		if (!part) {
 			/* Initialize part and wlr_scene_buffer without attaching a buffer */
 			part = add_scene_part(&subtree->parts, LAB_NODE_TITLE);
-			part->buffer = scaled_font_buffer_create_for_titlebar(
-				subtree->tree, g_theme.titlebar_height,
+			part->buffer = new scaled_font_buffer(subtree->tree,
+				g_theme.titlebar_height,
 				g_theme.window[active].titlebar_pattern);
-			if (part->buffer) {
-				part->node = &part->buffer->scene_buffer->node;
-			} else {
-				wlr_log(WLR_ERROR, "Failed to create title node");
-			}
+			part->node = &part->buffer->scene_buffer->node;
 		}
 
 		if (part->buffer) {

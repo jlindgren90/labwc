@@ -110,11 +110,9 @@ add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 
 	if (type == LAB_NODE_BUTTON_WINDOW_ICON) {
 		struct ssd_part *icon_part = add_scene_part(part_list, type);
-		struct scaled_icon_buffer *icon_buffer =
-			scaled_icon_buffer_create(parent,
-				button_width - 2 * icon_padding, button_height);
+		auto icon_buffer = new scaled_icon_buffer(parent,
+			button_width - 2 * icon_padding, button_height);
 		scaled_icon_buffer_set_view(icon_buffer, view);
-		assert(icon_buffer);
 		icon_part->node = &icon_buffer->scene_buffer->node;
 		wlr_scene_node_set_position(icon_part->node, icon_padding, 0);
 		button->window_icon = icon_buffer;
@@ -125,12 +123,9 @@ add_scene_button(struct wl_list *part_list, enum lab_node_type type,
 				continue;
 			}
 			struct ssd_part *icon_part = add_scene_part(part_list, type);
-			struct scaled_img_buffer *img_buffer =
-				scaled_img_buffer_create(parent,
-					imgs[state_set],
-					g_theme.window_button_width,
-					g_theme.window_button_height);
-			assert(img_buffer);
+			auto img_buffer = new scaled_img_buffer(parent,
+				imgs[state_set], g_theme.window_button_width,
+				g_theme.window_button_height);
 			icon_part->node = &img_buffer->scene_buffer->node;
 			wlr_scene_node_set_enabled(icon_part->node, false);
 			button->img_buffers[state_set] = img_buffer;

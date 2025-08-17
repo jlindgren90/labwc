@@ -1,66 +1,46 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#define _POSIX_C_SOURCE 200809L
 #include "common/scaled-img-buffer.h"
-#include <assert.h>
-#include "common/mem.h"
-#include "common/scaled-scene-buffer.h"
 #include "img/img.h"
 #include "node.h"
 
-static refptr<lab_data_buffer>
-_create_buffer(struct scaled_scene_buffer *scaled_buffer, double scale)
+refptr<lab_data_buffer>
+scaled_img_buffer::create_buffer(double scale)
 {
-	struct scaled_img_buffer *self = scaled_buffer->data;
-	return lab_img_render(self->img, self->width, self->height, scale);
+	return lab_img_render(this->img, this->width, this->height, scale);
 }
 
-static void
-_destroy(struct scaled_scene_buffer *scaled_buffer)
+scaled_img_buffer::~scaled_img_buffer()
 {
-	struct scaled_img_buffer *self = scaled_buffer->data;
-	lab_img_destroy(self->img);
-	free(self);
+	lab_img_destroy(this->img);
 }
 
-static bool
-_equal(struct scaled_scene_buffer *scaled_buffer_a,
-	struct scaled_scene_buffer *scaled_buffer_b)
+bool
+scaled_img_buffer::equal(scaled_scene_buffer &other)
 {
-	struct scaled_img_buffer *a = scaled_buffer_a->data;
-	struct scaled_img_buffer *b = scaled_buffer_b->data;
+	if (other.type != SCALED_IMG_BUFFER) {
+		return false;
+	}
+
+	auto a = this;
+	auto b = static_cast<scaled_img_buffer *>(&other);
 
 	return lab_img_equal(a->img, b->img)
 		&& a->width == b->width
 		&& a->height == b->height;
 }
 
-static struct scaled_scene_buffer_impl impl = {
-	.create_buffer = _create_buffer,
-	.destroy = _destroy,
-	.equal = _equal,
-};
-
-struct scaled_img_buffer *
-scaled_img_buffer_create(struct wlr_scene_tree *parent, struct lab_img *img,
-	int width, int height)
+scaled_img_buffer::scaled_img_buffer(wlr_scene_tree *parent, lab_img *img,
+		int width, int height)
+	: scaled_scene_buffer(SCALED_IMG_BUFFER, parent)
 {
-	assert(parent);
 	assert(img);
 	assert(width >= 0 && height >= 0);
 
-	auto scaled_buffer = scaled_scene_buffer_create(parent, &impl);
-	struct scaled_img_buffer *self = znew(*self);
-	self->scaled_buffer = scaled_buffer;
-	self->scene_buffer = scaled_buffer->scene_buffer;
-	self->img = lab_img_copy(img);
-	self->width = width;
-	self->height = height;
+	this->img = lab_img_copy(img);
+	this->width = width;
+	this->height = height;
 
-	scaled_buffer->data = self;
-
-	scaled_scene_buffer_request_update(scaled_buffer, width, height);
-
-	return self;
+	scaled_scene_buffer_request_update(this, width, height);
 }
 
 struct scaled_img_buffer *
@@ -68,6 +48,6 @@ scaled_img_buffer_from_node(struct wlr_scene_node *node)
 {
 	struct scaled_scene_buffer *scaled_buffer =
 		node_scaled_scene_buffer_from_node(node);
-	assert(scaled_buffer->impl == &impl);
-	return scaled_buffer->data;
+	assert(scaled_buffer->type == SCALED_IMG_BUFFER);
+	return static_cast<scaled_img_buffer *>(scaled_buffer);
 }

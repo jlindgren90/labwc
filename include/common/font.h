@@ -5,9 +5,10 @@
 #include <cairo.h>
 #include <pango/pango-font.h>
 #include "buffer.h"
+#include "common/str.h"
 
 struct font {
-	char *name;
+	lab_str name;
 	int size;
 	PangoStyle slant;
 	PangoWeight weight;
