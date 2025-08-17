@@ -69,8 +69,8 @@ ssd_titlebar_create(struct ssd *ssd)
 			width - corner_width, -g_theme.border_width);
 
 		/* Title */
-		subtree->title = scaled_font_buffer_create_for_titlebar(
-			subtree->tree, g_theme.titlebar_height,
+		subtree->title = new scaled_font_buffer(subtree->tree,
+			g_theme.titlebar_height,
 			g_theme.window[active].titlebar_pattern);
 		assert(subtree->title);
 		node_descriptor_create(&subtree->title->scene_buffer->node,
