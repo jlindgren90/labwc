@@ -5,58 +5,67 @@
 #include "alg.h"
 #include <assert.h>
 #include <memory>
+#include <utility>
 
-/* Owning pointer (alias for std::unique_ptr) */
+/* Generic owning pointer (slightly modified std::unique_ptr) */
 template<typename T>
 class ownptr : public std::unique_ptr<T>
 {
 public:
+	using value_type = T;
+
 	using std::unique_ptr<T>::unique_ptr;
+	using std::unique_ptr<T>::get;
+	using std::unique_ptr<T>::reset;
+
 	explicit ownptr(T *ptr) : std::unique_ptr<T>(ptr) {}
+
+	// discouraged due to making null dereference too easy
+	[[deprecated]] T &operator*() const { return *get(); }
+	[[deprecated]] T *operator->() const { return get(); }
+
+	// safe usage pattern to prevent accidental null dereference
+	[[nodiscard]] bool check(T *&ptr) { return (bool)(ptr = get()); }
+
+	template<typename... Args>
+	T *set_new(Args &&... args) {
+		reset(new T(std::forward<Args>(args)...));
+		return get();
+	}
 };
 
 /*
- * Generic intrusive reference-counting pointer.
+ * Common base for a counting reference (used by ref and refptr).
  *
- * The pointed-to type needs to inherit the "refcounted" mix-in and
+ * The referenced type needs to inherit the "refcounted" mix-in and
  * implement a last_unref() function, which is called to perform
  * type-specific behavior when the reference count drops to zero.
  *
  * Shared-ownership semantics can be obtained by making last_unref()
  * delete the object, but other behaviors are possible too.
  *
- * It is an error to destroy an object while refptrs to it exist.
+ * It is an error to destroy an object with a non-zero refcount.
  */
 template<typename T>
-class refptr
+class ref_base
 {
 public:
-	refptr() {}
-	refptr(const refptr &rp) { reset(rp.m_ptr); }
-	refptr(refptr &&rp) : m_ptr(rp.m_ptr) { rp.m_ptr = nullptr; }
-	~refptr() { reset(); }
+	using value_type = T;
 
-	explicit refptr(T *ptr) { reset(ptr); }
+	ref_base() {}
+	ref_base(const ref_base &r) { reset(r.m_ptr); }
+	ref_base(ref_base &&r) : m_ptr(r.m_ptr) { r.m_ptr = nullptr; }
+	~ref_base() { reset(); }
 
-	refptr &operator=(const refptr &rp) {
-		return lab::reconstruct(*this, rp);
+	ref_base &operator=(const ref_base &r) {
+		return lab::reconstruct(*this, r);
 	}
 
-	refptr &operator=(refptr &&rp) {
+	ref_base &operator=(ref_base &&rp) {
 		return lab::reconstruct(*this, std::move(rp));
 	}
 
 	T *get() const { return m_ptr; }
-
-	T &operator*() const { return *m_ptr; }
-	T *operator->() const { return m_ptr; }
-
-	explicit operator bool() const { return (bool)m_ptr; }
-
-	bool operator==(T *ptr) const { return m_ptr == ptr; }
-	bool operator==(const refptr &rp) const { return m_ptr == rp.m_ptr; }
-	bool operator!=(T *ptr) const { return m_ptr != ptr; }
-	bool operator!=(const refptr &rp) const { return m_ptr != rp.m_ptr; }
 
 	void reset(T *ptr = nullptr) {
 		if (ptr) {
@@ -75,6 +84,65 @@ private:
 	T *m_ptr = nullptr;
 };
 
+/* Restricted intrusive counting reference. Cannot be null. */
+template<typename T>
+class ref : private ref_base<T>
+{
+public:
+	explicit ref(T &obj) { ref_base<T>::reset(&obj); }
+
+	// inherit copy from ref_base
+	ref(const ref &) = default;
+	ref &operator=(const ref &) = default;
+
+	// prevent move as it would leave the source null
+	ref(ref &&) = delete;
+	ref &operator=(ref &&) = delete;
+
+	using ref_base<T>::get;
+
+	T &operator*() const { return *get(); }
+	T *operator->() const { return get(); }
+};
+
+template<typename T, typename... Args>
+ref<T> make_ref(Args &&... args)
+{
+	return ref(*new T(std::forward<Args>(args)...));
+}
+
+/*
+ * Full-featured intrusive reference-counting pointer.
+ * Can be null and provides full set of conversion/equality ops.
+ */
+template<typename T>
+class refptr : public ref_base<T>
+{
+public:
+	using ref_base<T>::ref_base;
+	using ref_base<T>::get;
+	using ref_base<T>::reset;
+
+	explicit refptr(T *ptr) { reset(ptr); }
+
+	// allow conversion from ref (but not vice versa)
+	refptr(const ref<T> &r) { reset(r.get()); }
+
+	explicit operator bool() const { return (bool)get(); }
+
+	// discouraged due to making null dereference too easy
+	[[deprecated]] T &operator*() const { return *get(); }
+	[[deprecated]] T *operator->() const { return get(); }
+
+	// safe usage pattern to prevent accidental null dereference
+	[[nodiscard]] bool check(T *&ptr) { return (bool)(ptr = get()); }
+
+	bool operator==(T *ptr) const { return get() == ptr; }
+	bool operator==(const refptr &rp) const { return get() == rp.get(); }
+	bool operator!=(T *ptr) const { return get() != ptr; }
+	bool operator!=(const refptr &rp) const { return get() != rp.get(); }
+};
+
 template<typename T>
 static inline bool operator==(T *ptr, const refptr<T> &rp) {
 	return rp.operator==(ptr);
@@ -90,10 +158,13 @@ template<typename T>
 class refcounted
 {
 public:
-	friend refptr<T>;
+	friend ref_base<T>;
 
 	refcounted() {}
-	~refcounted() { assert(m_refcount == 0); }
+	~refcounted() {
+		// make sure all references are gone
+		assert(m_refcount == 0);
+	}
 
 	// The mix-in itself does not support copy/move, since the refcount
 	// is not transferable. A derived class may implement copy/move if
@@ -137,6 +208,8 @@ template<typename T>
 class weakptr
 {
 public:
+	using value_type = T;
+
 	weakptr() {}
 	weakptr(const weakptr &wp) { reset(wp.m_ptr); }
 	// move constructor omitted (cannot be moved efficiently)
@@ -151,10 +224,14 @@ public:
 
 	T *get() const { return m_ptr; }
 
-	T &operator*() const { return *m_ptr; }
-	T *operator->() const { return m_ptr; }
-
 	explicit operator bool() const { return (bool)m_ptr; }
+
+	// discouraged due to making null dereference too easy
+	[[deprecated]] T &operator*() const { return *m_ptr; }
+	[[deprecated]] T *operator->() const { return m_ptr; }
+
+	// safe usage pattern to prevent accidental null dereference
+	[[nodiscard]] bool check(T *&ptr) { return (bool)(ptr = get()); }
 
 	bool operator==(T *ptr) const { return m_ptr == ptr; }
 	bool operator==(const weakptr &wp) const { return m_ptr == wp.m_ptr; }
@@ -254,5 +331,25 @@ public:
 		weakptr<T>::reset(ptr);
 	}
 };
+
+/* Shorthand for use in "if" or (less commonly) "for" conditions */
+#define CHECK_PTR(ptr, name) \
+	decltype(ptr)::value_type *name; (ptr).check(name)
+
+#define CHECK_PTR_OR_RET(ptr, name)        \
+	decltype(ptr)::value_type *name;   \
+	do {                               \
+		if (!(ptr).check(name)) {  \
+			return;            \
+		}                          \
+	} while (0)
+
+#define CHECK_PTR_OR_RET_VAL(ptr, name, retval)  \
+	decltype(ptr)::value_type *name;         \
+	do {                                     \
+		if (!(ptr).check(name)) {        \
+			return (retval);         \
+		}                                \
+	} while (0)
 
 #endif // REFPTR_H
