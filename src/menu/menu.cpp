@@ -818,7 +818,7 @@ menu_reposition(struct menu *menu, struct wlr_box anchor_rect)
 	 * Place menu at left or right side of anchor_rect, with their
 	 * top edges aligned. The alignment is inherited from parent.
 	 */
-	if (menu->parent && menu->parent->align_left) {
+	if (CHECK_PTR(menu->parent, parent) && parent->align_left) {
 		rules.anchor = XDG_POSITIONER_ANCHOR_TOP_LEFT;
 		rules.gravity = XDG_POSITIONER_GRAVITY_BOTTOM_LEFT;
 	} else {
@@ -1080,8 +1080,8 @@ void
 menu_on_view_destroy(struct view *view)
 {
 	/* If the view being destroy has an open window menu, then close it */
-	if (g_server.menu_current
-			&& g_server.menu_current->triggered_by_view == view) {
+	if (CHECK_PTR(g_server.menu_current, current)
+			&& current->triggered_by_view == view) {
 		menu_close_root();
 	}
 
@@ -1108,11 +1108,9 @@ static void
 menu_set_selection(struct menu *menu, struct menuitem *item)
 {
 	/* Clear old selection */
-	if (menu->selection.item) {
-		wlr_scene_node_set_enabled(
-			&menu->selection.item->normal_tree->node, true);
-		wlr_scene_node_set_enabled(
-			&menu->selection.item->selected_tree->node, false);
+	if (CHECK_PTR(menu->selection.item, old)) {
+		wlr_scene_node_set_enabled(&old->normal_tree->node, true);
+		wlr_scene_node_set_enabled(&old->selected_tree->node, false);
 	}
 	/* Set new selection */
 	if (item) {
@@ -1359,17 +1357,17 @@ menu_process_item_selection(struct menuitem *item)
 		menu_close(menu.selection.menu.get());
 	}
 
-	if (item->submenu) {
+	if (CHECK_PTR(item->submenu, submenu)) {
 		/* Sync the triggering view */
-		item->submenu->triggered_by_view = menu.triggered_by_view;
+		submenu->triggered_by_view = menu.triggered_by_view;
 		/* Ensure the submenu has its parent set correctly */
-		item->submenu->parent = menu.parent;
+		submenu->parent = menu.parent;
 		/* And open the new submenu tree */
 		struct wlr_box anchor_rect = get_item_anchor_rect(item);
-		if (item->submenu->execute && !item->submenu->scene_tree) {
-			open_pipemenu_async(item->submenu.get(), anchor_rect);
+		if (submenu->execute && !submenu->scene_tree) {
+			open_pipemenu_async(submenu, anchor_rect);
 		} else {
-			open_menu(item->submenu.get(), anchor_rect);
+			open_menu(submenu, anchor_rect);
 		}
 	}
 
@@ -1385,11 +1383,10 @@ get_selection_leaf(void)
 		return NULL;
 	}
 
-	while (menu->selection.menu) {
-		if (!menu->selection.menu->selection.item) {
+	for (CHECK_PTR(menu->selection.menu, sel); menu = sel) {
+		if (!sel->selection.item) {
 			return menu;
 		}
-		menu = menu->selection.menu.get();
 	}
 
 	return menu;
@@ -1477,13 +1474,13 @@ menu_call_selected_actions(void)
 void
 menu_submenu_enter(void)
 {
-	struct menu *menu = get_selection_leaf();
-	if (!menu || !menu->selection.menu) {
+	struct menu *menu = get_selection_leaf(), *sel;
+	if (!menu || !menu->selection.menu.check(sel)) {
 		return;
 	}
 
-	auto &items = menu->selection.menu->menuitems;
-	auto iter = lab::find_if(items, std::mem_fn(&menuitem::selectable));
+	auto iter = lab::find_if(sel->menuitems,
+		std::mem_fn(&menuitem::selectable));
 	if (iter) {
 		menu_process_item_selection(iter.get());
 	}
@@ -1493,12 +1490,12 @@ menu_submenu_enter(void)
 void
 menu_submenu_leave(void)
 {
-	struct menu *menu = get_selection_leaf();
-	if (!menu || !menu->parent || !menu->parent->selection.item) {
+	struct menu *menu = get_selection_leaf(), *parent;
+	if (!menu || !menu->parent.check(parent) || !parent->selection.item) {
 		return;
 	}
 
-	menu_process_item_selection(menu->parent->selection.item.get());
+	menu_process_item_selection(parent->selection.item.get());
 }
 
 /* Mouse based selection */
