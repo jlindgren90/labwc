@@ -68,13 +68,13 @@ using lab_data_buffer_ptr = refptr<lab_data_buffer>;
  * The logical size is set to the surface size in pixels, ignoring
  * device scale.
  */
-lab_data_buffer_ptr buffer_adopt_cairo_surface(cairo_surface_t *surface);
+ref<lab_data_buffer> buffer_adopt_cairo_surface(cairo_surface_t *surface);
 
 /*
  * Create a buffer which holds a new CAIRO_FORMAT_ARGB32 image surface.
  * Additionally create a cairo context for drawing to the surface.
  */
-lab_data_buffer_ptr buffer_create_cairo(uint32_t logical_width,
+ref<lab_data_buffer> buffer_create_cairo(uint32_t logical_width,
 	uint32_t logical_height, float scale);
 
 /*
@@ -83,7 +83,7 @@ lab_data_buffer_ptr buffer_create_cairo(uint32_t logical_width,
  *
  * The logical size is set to the width and height of the pixel data.
  */
-lab_data_buffer_ptr buffer_create_from_data(u8_array_ptr pixel_data,
+ref<lab_data_buffer> buffer_create_from_data(u8_array_ptr pixel_data,
 	uint32_t width, uint32_t height, uint32_t stride);
 
 /*
@@ -98,7 +98,7 @@ lab_data_buffer_ptr buffer_create_from_wlr_buffer(
  * image surface. The source surface is rendered at the center of the
  * output buffer and shrunk if it overflows from the output buffer.
  */
-lab_data_buffer_ptr buffer_scale_cairo_surface(cairo_surface_t *surface,
+ref<lab_data_buffer> buffer_scale_cairo_surface(cairo_surface_t *surface,
 	int width, int height, double scale);
 
 #endif /* LABWC_BUFFER_H */

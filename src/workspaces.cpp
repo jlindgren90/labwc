@@ -85,11 +85,6 @@ _osd_update(void)
 		}
 		auto buffer = buffer_create_cairo(width, height,
 			output.wlr_output->scale);
-		if (!buffer) {
-			wlr_log(WLR_ERROR, "Failed to allocate buffer for workspace OSD");
-			continue;
-		}
-
 		cairo = cairo_create(buffer->surface);
 
 		/* Background */

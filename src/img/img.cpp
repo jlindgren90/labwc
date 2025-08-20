@@ -52,30 +52,30 @@ lab_img::load_from_bitmap(const char *bitmap, float *rgba)
 lab_data_buffer_ptr
 lab_img::render(int width, int height, double scale)
 {
-	assert(valid());
-
 	lab_data_buffer_ptr buffer;
 
+	CHECK_PTR_OR_RET_VAL(this->data, data, buffer);
+
 	/* Render the image into the buffer for the given size */
-	if (data->buffer) {
-		buffer = buffer_scale_cairo_surface(data->buffer->surface,
-			width, height, scale);
+	if (CHECK_PTR(data->buffer, orig)) {
+		buffer = buffer_scale_cairo_surface(orig->surface, width,
+			height, scale);
 #if HAVE_RSVG
 	} else if (data->svg) {
 		buffer = img_svg_render(data->svg, width, height, scale);
 #endif
 	}
 
-	if (buffer) {
+	if (CHECK_PTR(buffer, buf)) {
 		/* Apply modifiers to the buffer (e.g. draw hover overlay) */
-		cairo_t *cairo = cairo_create(buffer->surface);
-		for (auto modifier : modifiers) {
+		cairo_t *cairo = cairo_create(buf->surface);
+		for (auto modifier : this->modifiers) {
 			cairo_save(cairo);
 			(*modifier)(cairo, width, height);
 			cairo_restore(cairo);
 		}
 
-		cairo_surface_flush(buffer->surface);
+		cairo_surface_flush(buf->surface);
 		cairo_destroy(cairo);
 	}
 

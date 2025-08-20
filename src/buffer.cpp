@@ -88,7 +88,7 @@ const wlr_buffer_impl lab_data_buffer::impl = {
 	.end_data_ptr_access = data_buffer_end_data_ptr_access,
 };
 
-lab_data_buffer_ptr
+ref<lab_data_buffer>
 buffer_adopt_cairo_surface(cairo_surface_t *surface)
 {
 	assert(cairo_surface_get_type(surface) == CAIRO_SURFACE_TYPE_IMAGE);
@@ -97,7 +97,7 @@ buffer_adopt_cairo_surface(cairo_surface_t *surface)
 	int width = cairo_image_surface_get_width(surface);
 	int height = cairo_image_surface_get_height(surface);
 
-	refptr buffer{new lab_data_buffer(width, height)};
+	auto buffer = make_ref<lab_data_buffer>(width, height);
 
 	buffer->surface = surface;
 	buffer->data = cairo_image_surface_get_data(buffer->surface);
@@ -106,10 +106,10 @@ buffer_adopt_cairo_surface(cairo_surface_t *surface)
 	buffer->logical_width = width;
 	buffer->logical_height = height;
 
-	return buffer;
+	return ref(buffer);
 }
 
-lab_data_buffer_ptr
+ref<lab_data_buffer>
 buffer_create_cairo(uint32_t logical_width, uint32_t logical_height,
 		float scale)
 {
@@ -137,14 +137,14 @@ buffer_create_cairo(uint32_t logical_width, uint32_t logical_height,
 	buffer->logical_width = logical_width;
 	buffer->logical_height = logical_height;
 
-	return buffer;
+	return ref(buffer);
 }
 
-lab_data_buffer_ptr
+ref<lab_data_buffer>
 buffer_create_from_data(u8_array_ptr pixel_data, uint32_t width,
 		uint32_t height, uint32_t stride)
 {
-	refptr buffer{new lab_data_buffer(width, height)};
+	auto buffer = make_ref<lab_data_buffer>(width, height);
 
 	buffer->logical_width = width;
 	buffer->logical_height = height;
@@ -155,7 +155,7 @@ buffer_create_from_data(u8_array_ptr pixel_data, uint32_t width,
 	buffer->surface = cairo_image_surface_create_for_data(buffer->data,
 		CAIRO_FORMAT_ARGB32, width, height, stride);
 
-	return buffer;
+	return ref(buffer);
 }
 
 lab_data_buffer_ptr
@@ -184,7 +184,7 @@ buffer_create_from_wlr_buffer(struct wlr_buffer *wlr_buffer)
 		wlr_buffer->width, wlr_buffer->height, stride);
 }
 
-lab_data_buffer_ptr
+ref<lab_data_buffer>
 buffer_scale_cairo_surface(cairo_surface_t *surface, int width, int height,
 		double scale)
 {
@@ -213,5 +213,5 @@ buffer_scale_cairo_surface(cairo_surface_t *surface, int width, int height,
 	cairo_surface_flush(buffer->surface);
 	cairo_destroy(cairo);
 
-	return buffer;
+	return ref(buffer);
 }

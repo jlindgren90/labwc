@@ -96,11 +96,6 @@ font_buffer_create(int max_width, int height, const char *text,
 	}
 
 	auto buffer = buffer_create_cairo(width, height, scale);
-	if (!buffer) {
-		wlr_log(WLR_ERROR, "Failed to create font buffer");
-		return {};
-	}
-
 	cairo_surface_t *surf = buffer->surface;
 	cairo_t *cairo = cairo_create(surf);
 
