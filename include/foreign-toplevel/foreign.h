@@ -20,19 +20,19 @@ public:
 		ext_toplevel(ext_foreign_toplevel::create(view)) {}
 
 	~foreign_toplevel() {
-		if (wlr_toplevel) {
-			wlr_toplevel->destroy();
+		if (CHECK_PTR(wlr_toplevel, wt)) {
+			wt->destroy();
 			assert(!wlr_toplevel);
 		}
-		if (ext_toplevel) {
-			ext_toplevel->destroy();
+		if (CHECK_PTR(ext_toplevel, et)) {
+			et->destroy();
 			assert(!ext_toplevel);
 		}
 	}
 
 	void set_parent(foreign_toplevel &parent) {
-		if (wlr_toplevel) {
-			wlr_toplevel->set_parent(parent.wlr_toplevel.get());
+		if (CHECK_PTR(wlr_toplevel, wt)) {
+			wt->set_parent(parent.wlr_toplevel.get());
 		}
 	}
 };

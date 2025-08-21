@@ -40,14 +40,14 @@ static weakptr<lab_idle_manager> manager;
 
 lab_idle_inhibitor::~lab_idle_inhibitor()
 {
-	if (manager) {
+	if (CHECK_PTR(manager, mgr)) {
 		/*
 		 * The display destroy event might have been triggered
 		 * already and thus the manager would be NULL.
 		 */
 		bool still_inhibited =
-			wl_list_length(&manager->inhibit_mgr->inhibitors) > 1;
-		wlr_idle_notifier_v1_set_inhibited(manager->notifier,
+			wl_list_length(&mgr->inhibit_mgr->inhibitors) > 1;
+		wlr_idle_notifier_v1_set_inhibited(mgr->notifier,
 			still_inhibited);
 	}
 }
@@ -75,7 +75,7 @@ idle_manager_notify_activity(struct wlr_seat *seat)
 	 * future code changes we might also get called before
 	 * the manager has been created.
 	 */
-	if (manager) {
-		wlr_idle_notifier_v1_notify_activity(manager->notifier, seat);
+	if (CHECK_PTR(manager, mgr)) {
+		wlr_idle_notifier_v1_notify_activity(mgr->notifier, seat);
 	}
 }

@@ -64,7 +64,8 @@ log_handler(enum sfdo_log_level level, const char *fmt, va_list args, void *tag)
 void
 desktop_entry_init(void)
 {
-	ownptr sfdo(new ::sfdo());
+	ownptr<::sfdo> sfdo_owner;
+	auto sfdo = sfdo_owner.set_new();
 
 	debug_libsfdo = getenv("LABWC_DEBUG_LIBSFDO");
 
@@ -126,7 +127,7 @@ desktop_entry_init(void)
 		return;
 	}
 
-	g_sfdo = std::move(sfdo);
+	g_sfdo = std::move(sfdo_owner);
 }
 
 void
@@ -294,12 +295,10 @@ desktop_entry_load_icon(const char *icon_name, int size, float scale)
 {
 	/* static analyzer isn't able to detect the NULL check in string_null_or_empty() */
 	if (string_null_or_empty(icon_name) || !icon_name) {
-		return {};
+		return lab_img();
 	}
 
-	if (!g_sfdo) {
-		return {};
-	}
+	CHECK_PTR_OR_RET_VAL(g_sfdo, sfdo, lab_img());
 
 	/*
 	 * libsfdo doesn't support loading icons for fractional scales,
@@ -313,8 +312,8 @@ desktop_entry_load_icon(const char *icon_name, int size, float scale)
 	if (icon_name[0] == '/') {
 		ret = process_abs_name(&ctx, icon_name);
 	} else {
-		ret = process_rel_name(&ctx, icon_name, g_sfdo.get(),
-			lookup_size, lookup_scale);
+		ret = process_rel_name(&ctx, icon_name, sfdo, lookup_size,
+			lookup_scale);
 	}
 	if (ret < 0) {
 		wlr_log(WLR_INFO, "failed to load icon file %s", icon_name);
@@ -329,16 +328,13 @@ lab_img
 desktop_entry_load_icon_from_app_id(const char *app_id, int size, float scale)
 {
 	if (string_null_or_empty(app_id)) {
-		return {};
+		return lab_img();
 	}
 
-	if (!g_sfdo) {
-		return {};
-	}
+	CHECK_PTR_OR_RET_VAL(g_sfdo, sfdo, lab_img());
 
 	const char *icon_name = NULL;
-	struct sfdo_desktop_entry *entry =
-		get_desktop_entry(g_sfdo.get(), app_id);
+	struct sfdo_desktop_entry *entry = get_desktop_entry(sfdo, app_id);
 	if (entry) {
 		icon_name = sfdo_desktop_entry_get_icon(entry, NULL);
 	}
@@ -358,12 +354,9 @@ desktop_entry_name_lookup(const char *app_id)
 		return NULL;
 	}
 
-	if (!g_sfdo) {
-		return NULL;
-	}
+	CHECK_PTR_OR_RET_VAL(g_sfdo, sfdo, NULL);
 
-	struct sfdo_desktop_entry *entry =
-		get_desktop_entry(g_sfdo.get(), app_id);
+	struct sfdo_desktop_entry *entry = get_desktop_entry(sfdo, app_id);
 	if (!entry) {
 		return NULL;
 	}

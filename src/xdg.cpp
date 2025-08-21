@@ -718,7 +718,7 @@ static void
 init_foreign_toplevel(struct view *view)
 {
 	assert(!view->foreign_toplevel);
-	view->foreign_toplevel.reset(new foreign_toplevel(view));
+	auto foreign_toplevel = view->foreign_toplevel.set_new(view);
 
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 	if (!toplevel->parent) {
@@ -726,10 +726,9 @@ init_foreign_toplevel(struct view *view)
 	}
 	struct wlr_xdg_surface *surface = toplevel->parent->base;
 	auto parent = (struct view *)surface->data;
-	if (!parent->foreign_toplevel) {
-		return;
+	if (CHECK_PTR(parent->foreign_toplevel, parent_foreign_toplevel)) {
+		foreign_toplevel->set_parent(*parent_foreign_toplevel);
 	}
-	view->foreign_toplevel->set_parent(*parent->foreign_toplevel);
 }
 
 void
