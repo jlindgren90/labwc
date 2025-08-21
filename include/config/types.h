@@ -11,16 +11,6 @@
  * For the full config struct, see config/rcxml.h.
  */
 
-enum lab_edge {
-	LAB_EDGE_INVALID = 0,
-
-	LAB_EDGE_LEFT,
-	LAB_EDGE_RIGHT,
-	LAB_EDGE_UP,
-	LAB_EDGE_DOWN,
-	LAB_EDGE_CENTER,
-};
-
 /**
  * Indicates whether tablet tool motion events should be reported using
  * absolute or relative coordinates

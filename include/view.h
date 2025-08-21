@@ -7,6 +7,7 @@
 #include <wayland-util.h>
 #include <wlr/util/box.h>
 #include <xkbcommon/xkbcommon.h>
+#include "common/edge.h"
 #include "config.h"
 #include "config/types.h"
 
@@ -424,15 +425,6 @@ enum view_wants_focus view_wants_focus(struct view *view);
 bool view_contains_window_type(struct view *view, enum lab_window_type window_type);
 
 /**
- * view_edge_invert() - select the opposite of a provided edge
- *
- * LAB_EDGE_CENTER and LAB_EDGE_INVALID both map to LAB_EDGE_INVALID.
- *
- * @edge: edge to be inverted
- */
-enum lab_edge view_edge_invert(enum lab_edge edge);
-
-/**
  * view_is_focusable() - Check whether or not a view can be focused
  * @view: view to be checked
  *
@@ -593,7 +585,6 @@ void view_init(struct view *view);
 void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
-enum lab_edge view_edge_parse(const char *direction);
 enum lab_placement_policy view_placement_parse(const char *policy);
 
 /* xdg.c */

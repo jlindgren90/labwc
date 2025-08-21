@@ -483,7 +483,7 @@ fill_action_query(char *nodename, char *content, struct action *action, struct p
 	} else if (!strcasecmp(nodename, "omnipresent")) {
 		state->current_view_query->omnipresent = parse_tristate(content);
 	} else if (!strcasecmp(nodename, "tiled")) {
-		state->current_view_query->tiled = view_edge_parse(content);
+		state->current_view_query->tiled = lab_edge_parse(content);
 	} else if (!strcasecmp(nodename, "tiled_region")) {
 		xstrdup_replace(state->current_view_query->tiled_region, content);
 	} else if (!strcasecmp(nodename, "desktop")) {
