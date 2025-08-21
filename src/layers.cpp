@@ -119,13 +119,11 @@ layers_arrange(struct output *output)
 	output->usable_area = usable_area;
 }
 
-static void
-handle_output_destroy(struct wl_listener *listener, void *data)
+void
+lab_layer_surface::handle_output_destroy(void *)
 {
-	struct lab_layer_surface *layer =
-		wl_container_of(listener, layer, output_destroy);
-	layer->scene_layer_surface->layer_surface->output = NULL;
-	wlr_layer_surface_v1_destroy(layer->scene_layer_surface->layer_surface);
+	scene_layer_surface->layer_surface->output = NULL;
+	wlr_layer_surface_v1_destroy(scene_layer_surface->layer_surface);
 }
 
 static inline bool
@@ -249,11 +247,10 @@ is_on_demand(struct wlr_layer_surface_v1 *layer_surface)
 		ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND;
 }
 
-static void
-handle_surface_commit(struct wl_listener *listener, void *data)
+void
+lab_layer_surface::handle_commit(void *)
 {
-	struct lab_layer_surface *layer =
-		wl_container_of(listener, layer, surface_commit);
+	auto layer = this;
 	struct wlr_layer_surface_v1 *layer_surface =
 		layer->scene_layer_surface->layer_surface;
 	struct wlr_output *wlr_output =
@@ -304,11 +301,9 @@ out:
 	}
 }
 
-static void
-handle_node_destroy(struct wl_listener *listener, void *data)
+lab_layer_surface::~lab_layer_surface()
 {
-	struct lab_layer_surface *layer =
-		wl_container_of(listener, layer, node_destroy);
+	auto layer = this;
 
 	/*
 	 * If the surface of this node has the current keyboard focus, then we
@@ -339,20 +334,12 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 	 * If it is, try and find another layer owned by this client to pass
 	 * focus to.
 	 */
-
-	wl_list_remove(&layer->map.link);
-	wl_list_remove(&layer->unmap.link);
-	wl_list_remove(&layer->surface_commit.link);
-	wl_list_remove(&layer->new_popup.link);
-	wl_list_remove(&layer->output_destroy.link);
-	wl_list_remove(&layer->node_destroy.link);
-	free(layer);
 }
 
-static void
-handle_unmap(struct wl_listener *listener, void *data)
+void
+lab_layer_surface::handle_unmap(void *)
 {
-	struct lab_layer_surface *layer = wl_container_of(listener, layer, unmap);
+	auto layer = this;
 	struct wlr_layer_surface_v1 *layer_surface =
 		layer->scene_layer_surface->layer_surface;
 
@@ -368,7 +355,7 @@ handle_unmap(struct wl_listener *listener, void *data)
 	layer->being_unmapped = true;
 
 	if (layer_surface->output) {
-		output_update_usable_area(layer_surface->output->data);
+		output_update_usable_area((output *)layer_surface->output->data);
 	}
 	if (g_seat.focused_layer == layer_surface) {
 		try_to_focus_next_layer_or_toplevel();
@@ -377,14 +364,14 @@ handle_unmap(struct wl_listener *listener, void *data)
 	layer->being_unmapped = false;
 }
 
-static void
-handle_map(struct wl_listener *listener, void *data)
+void
+lab_layer_surface::handle_map(void *)
 {
-	struct lab_layer_surface *layer = wl_container_of(listener, layer, map);
+	auto layer = this;
 	struct wlr_output *wlr_output =
 		layer->scene_layer_surface->layer_surface->output;
 	if (wlr_output) {
-		output_update_usable_area(wlr_output->data);
+		output_update_usable_area((output *)wlr_output->data);
 	}
 
 	/*
@@ -396,62 +383,38 @@ handle_map(struct wl_listener *listener, void *data)
 	layer_try_set_focus(layer->scene_layer_surface->layer_surface);
 }
 
-static void
-handle_popup_destroy(struct wl_listener *listener, void *data)
+lab_layer_popup::~lab_layer_popup()
 {
-	struct lab_layer_popup *popup =
-		wl_container_of(listener, popup, destroy);
-
 	struct wlr_xdg_popup *_popup, *tmp;
-	wl_list_for_each_safe(_popup, tmp, &popup->wlr_popup->base->popups, link) {
+	wl_list_for_each_safe(_popup, tmp, &wlr_popup->base->popups, link) {
 		wlr_xdg_popup_destroy(_popup);
 	}
 
-	wl_list_remove(&popup->destroy.link);
-	wl_list_remove(&popup->new_popup.link);
-	wl_list_remove(&popup->reposition.link);
-
-	/* Usually already removed unless there was no commit at all */
-	if (popup->commit.notify) {
-		wl_list_remove(&popup->commit.link);
-	}
-
 	cursor_update_focus();
-
-	free(popup);
 }
 
-static void
-handle_popup_commit(struct wl_listener *listener, void *data)
+void
+lab_layer_popup::handle_commit(void *)
 {
-	struct lab_layer_popup *popup =
-		wl_container_of(listener, popup, commit);
-
-	if (popup->wlr_popup->base->initial_commit) {
-		wlr_xdg_popup_unconstrain_from_box(popup->wlr_popup,
-			&popup->output_toplevel_sx_box);
+	if (wlr_popup->base->initial_commit) {
+		wlr_xdg_popup_unconstrain_from_box(wlr_popup,
+			&output_toplevel_sx_box);
 
 		/* Prevent getting called over and over again */
-		wl_list_remove(&popup->commit.link);
-		popup->commit.notify = NULL;
+		on_commit.disconnect();
 	}
 }
 
-static void
-handle_popup_reposition(struct wl_listener *listener, void *data)
+void
+lab_layer_popup::handle_reposition(void *)
 {
-	struct lab_layer_popup *popup =
-		wl_container_of(listener, popup, reposition);
-	wlr_xdg_popup_unconstrain_from_box(popup->wlr_popup,
-		&popup->output_toplevel_sx_box);
+	wlr_xdg_popup_unconstrain_from_box(wlr_popup, &output_toplevel_sx_box);
 }
-
-static void handle_popup_new_popup(struct wl_listener *listener, void *data);
 
 static struct lab_layer_popup *
 create_popup(struct wlr_xdg_popup *wlr_popup, struct wlr_scene_tree *parent)
 {
-	struct lab_layer_popup *popup = znew(*popup);
+	auto popup = new lab_layer_popup();
 	popup->wlr_popup = wlr_popup;
 	popup->scene_tree =
 		wlr_scene_xdg_surface_create(parent, wlr_popup->base);
@@ -463,33 +426,22 @@ create_popup(struct wlr_xdg_popup *wlr_popup, struct wlr_scene_tree *parent)
 	node_descriptor_create(&popup->scene_tree->node,
 		LAB_NODE_LAYER_POPUP, /*view*/ NULL, popup);
 
-	popup->destroy.notify = handle_popup_destroy;
-	wl_signal_add(&wlr_popup->events.destroy, &popup->destroy);
-
-	popup->new_popup.notify = handle_popup_new_popup;
-	wl_signal_add(&wlr_popup->base->events.new_popup, &popup->new_popup);
-
-	popup->commit.notify = handle_popup_commit;
-	wl_signal_add(&wlr_popup->base->surface->events.commit, &popup->commit);
-
-	popup->reposition.notify = handle_popup_reposition;
-	wl_signal_add(&wlr_popup->events.reposition, &popup->reposition);
+	CONNECT_LISTENER(wlr_popup, popup, destroy);
+	CONNECT_LISTENER(wlr_popup->base, popup, new_popup);
+	CONNECT_LISTENER(wlr_popup->base->surface, popup, commit);
+	CONNECT_LISTENER(wlr_popup, popup, reposition);
 
 	return popup;
 }
 
 /* This popup's parent is a layer popup */
-static void
-handle_popup_new_popup(struct wl_listener *listener, void *data)
+void
+lab_layer_popup::handle_new_popup(void *data)
 {
-	struct lab_layer_popup *lab_layer_popup =
-		wl_container_of(listener, lab_layer_popup, new_popup);
-	struct wlr_xdg_popup *wlr_popup = data;
 	struct lab_layer_popup *new_popup =
-		create_popup(wlr_popup, lab_layer_popup->scene_tree);
+		create_popup((wlr_xdg_popup *)data, scene_tree);
 
-	new_popup->output_toplevel_sx_box =
-		lab_layer_popup->output_toplevel_sx_box;
+	new_popup->output_toplevel_sx_box = this->output_toplevel_sx_box;
 }
 
 /*
@@ -515,14 +467,12 @@ move_popup_to_top_layer(struct lab_layer_surface *toplevel,
 }
 
 /* This popup's parent is a shell-layer surface */
-static void
-handle_new_popup(struct wl_listener *listener, void *data)
+void
+lab_layer_surface::handle_new_popup(void *data)
 {
-	struct lab_layer_surface *toplevel =
-		wl_container_of(listener, toplevel, new_popup);
-	struct wlr_xdg_popup *wlr_popup = data;
-	struct wlr_scene_layer_surface_v1 *surface = toplevel->scene_layer_surface;
-	struct output *output = surface->layer_surface->output->data;
+	auto wlr_popup = (wlr_xdg_popup *)data;
+	auto surface = this->scene_layer_surface;
+	auto output = (struct output *)surface->layer_surface->output->data;
 
 	int lx, ly;
 	wlr_scene_node_coords(&surface->tree->node, &lx, &ly);
@@ -548,14 +498,14 @@ handle_new_popup(struct wl_listener *listener, void *data)
 
 	if (surface->layer_surface->current.layer
 			<= ZWLR_LAYER_SHELL_V1_LAYER_BOTTOM) {
-		move_popup_to_top_layer(toplevel, popup);
+		move_popup_to_top_layer(this, popup);
 	}
 }
 
 static void
 handle_new_layer_surface(struct wl_listener *listener, void *data)
 {
-	struct wlr_layer_surface_v1 *layer_surface = data;
+	auto layer_surface = (wlr_layer_surface_v1 *)data;
 
 	if (!layer_surface->output) {
 		struct wlr_output *output =
@@ -570,10 +520,10 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 		layer_surface->output = output;
 	}
 
-	struct lab_layer_surface *surface = znew(*surface);
+	auto surface = new lab_layer_surface();
 	surface->layer_surface = layer_surface;
 
-	struct output *output = layer_surface->output->data;
+	auto output = (struct output *)layer_surface->output->data;
 
 	wlr_fractional_scale_v1_notify_scale(layer_surface->surface,
 		output->wlr_output->scale);
@@ -593,26 +543,16 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 
 	surface->scene_layer_surface->layer_surface = layer_surface;
 
-	surface->surface_commit.notify = handle_surface_commit;
-	wl_signal_add(&layer_surface->surface->events.commit,
-		&surface->surface_commit);
+	CONNECT_LISTENER(layer_surface->surface, surface, commit);
+	CONNECT_LISTENER(layer_surface->surface, surface, map);
+	CONNECT_LISTENER(layer_surface->surface, surface, unmap);
+	CONNECT_LISTENER(layer_surface, surface, new_popup);
 
-	surface->map.notify = handle_map;
-	wl_signal_add(&layer_surface->surface->events.map, &surface->map);
+	surface->on_output_destroy.connect(
+		&layer_surface->output->events.destroy);
 
-	surface->unmap.notify = handle_unmap;
-	wl_signal_add(&layer_surface->surface->events.unmap, &surface->unmap);
-
-	surface->new_popup.notify = handle_new_popup;
-	wl_signal_add(&layer_surface->events.new_popup, &surface->new_popup);
-
-	surface->output_destroy.notify = handle_output_destroy;
-	wl_signal_add(&layer_surface->output->events.destroy,
-		&surface->output_destroy);
-
-	surface->node_destroy.notify = handle_node_destroy;
-	wl_signal_add(&surface->scene_layer_surface->tree->node.events.destroy,
-		&surface->node_destroy);
+	CONNECT_LISTENER(&surface->scene_layer_surface->tree->node, surface,
+		destroy);
 }
 
 void
