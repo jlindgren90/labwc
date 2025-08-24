@@ -1141,17 +1141,19 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 	 */
 	cairo_set_line_width(cairo, 0.0);
 	cairo_new_sub_path(cairo);
-	if (ctx->corner == ROUNDED_CORNER_TOP_LEFT) {
+	switch (ctx->corner) {
+	case ROUNDED_CORNER_TOP_LEFT:
 		cairo_arc(cairo, r, r, r, 180 * deg, 270 * deg);
 		cairo_line_to(cairo, w, 0);
 		cairo_line_to(cairo, w, h);
 		cairo_line_to(cairo, 0, h);
-	} else {
-		/* ROUNDED_CORNER_TOP_RIGHT */
+		break;
+	case ROUNDED_CORNER_TOP_RIGHT:
 		cairo_arc(cairo, w - r, r, r, -90 * deg, 0 * deg);
 		cairo_line_to(cairo, w, h);
 		cairo_line_to(cairo, 0, h);
 		cairo_line_to(cairo, 0, 0);
+		break;
 	}
 	cairo_close_path(cairo);
 	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
@@ -1193,17 +1195,19 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 	set_cairo_color(cairo, ctx->border_color);
 	cairo_set_line_width(cairo, ctx->line_width);
 	double half_line_width = ctx->line_width / 2.0;
-	if (ctx->corner == ROUNDED_CORNER_TOP_LEFT) {
+	switch (ctx->corner) {
+	case ROUNDED_CORNER_TOP_LEFT:
 		cairo_move_to(cairo, half_line_width, h);
 		cairo_line_to(cairo, half_line_width, r);
 		cairo_move_to(cairo, r, half_line_width);
 		cairo_line_to(cairo, w, half_line_width);
-	} else {
-		/* ROUNDED_CORNER_TOP_RIGHT */
+		break;
+	case ROUNDED_CORNER_TOP_RIGHT:
 		cairo_move_to(cairo, 0, half_line_width);
 		cairo_line_to(cairo, w - r, half_line_width);
 		cairo_move_to(cairo, w - half_line_width, r);
 		cairo_line_to(cairo, w - half_line_width, h);
+		break;
 	}
 	cairo_stroke(cairo);
 
@@ -1250,13 +1254,15 @@ rounded_rect(struct rounded_corner_ctx *ctx)
 	double line_width = MIN(ctx->line_width, r);
 	cairo_set_line_width(cairo, line_width);
 	half_line_width = line_width / 2.0;
-	if (ctx->corner == ROUNDED_CORNER_TOP_LEFT) {
+	switch (ctx->corner) {
+	case ROUNDED_CORNER_TOP_LEFT:
 		cairo_move_to(cairo, half_line_width, r);
 		cairo_arc(cairo, r, r, r - half_line_width, 180 * deg, 270 * deg);
-	} else {
-		/* ROUNDED_CORNER_TOP_RIGHT */
+		break;
+	case ROUNDED_CORNER_TOP_RIGHT:
 		cairo_move_to(cairo, w - r, half_line_width);
 		cairo_arc(cairo, w - r, r, r - half_line_width, -90 * deg, 0 * deg);
+		break;
 	}
 	cairo_stroke(cairo);
 
