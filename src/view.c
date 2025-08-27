@@ -77,7 +77,7 @@ struct view_query *
 view_query_create(void)
 {
 	struct view_query *query = znew(*query);
-	query->window_type = -1;
+	query->window_type = LAB_WINDOW_TYPE_INVALID;
 	query->maximized = VIEW_AXIS_INVALID;
 	return query;
 }
@@ -129,7 +129,8 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (query->window_type >= 0 && !view_contains_window_type(view, query->window_type)) {
+	if (query->window_type != LAB_WINDOW_TYPE_INVALID
+			&& !view_contains_window_type(view, query->window_type)) {
 		return false;
 	}
 

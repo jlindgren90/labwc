@@ -84,11 +84,11 @@ enum font_place {
 static void load_default_key_bindings(void);
 static void load_default_mouse_bindings(void);
 
-static int
+static enum lab_window_type
 parse_window_type(const char *type)
 {
 	if (!type) {
-		return -1;
+		return LAB_WINDOW_TYPE_INVALID;
 	}
 	if (!strcasecmp(type, "desktop")) {
 		return LAB_WINDOW_TYPE_DESKTOP;
@@ -119,7 +119,7 @@ parse_window_type(const char *type)
 	} else if (!strcasecmp(type, "normal")) {
 		return LAB_WINDOW_TYPE_NORMAL;
 	} else {
-		return -1;
+		return LAB_WINDOW_TYPE_INVALID;
 	}
 }
 
@@ -290,7 +290,7 @@ fill_window_rule(char *nodename, char *content, struct parser_state *state)
 {
 	if (!strcasecmp(nodename, "windowRule.windowRules")) {
 		state->current_window_rule = znew(*state->current_window_rule);
-		state->current_window_rule->window_type = -1; // Window types are >= 0
+		state->current_window_rule->window_type = LAB_WINDOW_TYPE_INVALID;
 		wl_list_append(&rc.window_rules, &state->current_window_rule->link);
 		wl_list_init(&state->current_window_rule->actions);
 		return;
@@ -1577,7 +1577,7 @@ rcxml_init(void)
 
 	rc.tablet.force_mouse_emulation = false;
 	rc.tablet.output_name = NULL;
-	rc.tablet.rotation = 0;
+	rc.tablet.rotation = LAB_ROTATE_NONE;
 	rc.tablet.box = (struct wlr_fbox){0};
 	tablet_load_default_button_mappings();
 	rc.tablet_tool.motion = LAB_MOTION_ABSOLUTE;
