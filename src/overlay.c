@@ -96,7 +96,7 @@ inactivate_overlay(struct overlay *overlay)
 			&overlay->edge_rect.tree->node, false);
 	}
 	overlay->active.region = NULL;
-	overlay->active.edge = LAB_EDGE_INVALID;
+	overlay->active.edge = LAB_EDGE_NONE;
 	overlay->active.output = NULL;
 	if (overlay->timer) {
 		wl_event_source_timer_update(overlay->timer, 0);
@@ -126,10 +126,10 @@ static struct wlr_box get_edge_snap_box(enum lab_edge edge, struct output *outpu
 	case LAB_EDGE_LEFT:
 		box.width /= 2;
 		break;
-	case LAB_EDGE_DOWN:
+	case LAB_EDGE_BOTTOM:
 		box.y += box.height / 2;
 		/* fallthrough */
-	case LAB_EDGE_UP:
+	case LAB_EDGE_TOP:
 		box.height /= 2;
 		break;
 	case LAB_EDGE_CENTER:
@@ -146,7 +146,7 @@ static int
 handle_edge_overlay_timeout(void *data)
 {
 	struct seat *seat = data;
-	assert(seat->overlay.active.edge != LAB_EDGE_INVALID
+	assert(seat->overlay.active.edge != LAB_EDGE_NONE
 		&& seat->overlay.active.output);
 	struct wlr_box box = get_edge_snap_box(seat->overlay.active.edge,
 		seat->overlay.active.output);
@@ -154,32 +154,17 @@ handle_edge_overlay_timeout(void *data)
 	return 0;
 }
 
-static enum wlr_direction
-get_wlr_direction(enum lab_edge edge)
-{
-	switch (edge) {
-	case LAB_EDGE_LEFT:
-		return WLR_DIRECTION_LEFT;
-	case LAB_EDGE_RIGHT:
-		return WLR_DIRECTION_RIGHT;
-	case LAB_EDGE_UP:
-	case LAB_EDGE_CENTER:
-		return WLR_DIRECTION_UP;
-	case LAB_EDGE_DOWN:
-		return WLR_DIRECTION_DOWN;
-	default:
-		/* not reached */
-		assert(false);
-		return 0;
-	}
-}
-
 static bool
 edge_has_adjacent_output_from_cursor(struct seat *seat, struct output *output,
 		enum lab_edge edge)
 {
+	/* Allow only up/down/left/right */
+	if (!lab_edge_is_cardinal(edge)) {
+		return false;
+	}
+	/* Cast from enum lab_edge to enum wlr_direction is safe */
 	return wlr_output_layout_adjacent_output(
-		seat->server->output_layout, get_wlr_direction(edge),
+		seat->server->output_layout, (enum wlr_direction)edge,
 		output->wlr_output, seat->cursor->x, seat->cursor->y);
 }
 
@@ -238,7 +223,7 @@ overlay_update(struct seat *seat)
 	/* Edge-snapping overlay */
 	struct output *output;
 	enum lab_edge edge = edge_from_cursor(seat, &output);
-	if (edge != LAB_EDGE_INVALID) {
+	if (edge != LAB_EDGE_NONE) {
 		show_edge_overlay(seat, edge, output);
 		return;
 	}

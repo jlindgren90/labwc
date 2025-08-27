@@ -55,7 +55,7 @@ interactive_anchor_to_cursor(struct server *server, struct wlr_box *geo)
 }
 
 void
-interactive_begin(struct view *view, enum input_mode mode, uint32_t edges)
+interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 {
 	/*
 	 * This function sets up an interactive move or resize operation, where
@@ -169,18 +169,18 @@ enum lab_edge
 edge_from_cursor(struct seat *seat, struct output **dest_output)
 {
 	if (!view_is_floating(seat->server->grabbed_view)) {
-		return LAB_EDGE_INVALID;
+		return LAB_EDGE_NONE;
 	}
 
 	int snap_range = rc.snap_edge_range;
 	if (!snap_range) {
-		return LAB_EDGE_INVALID;
+		return LAB_EDGE_NONE;
 	}
 
 	struct output *output = output_nearest_to_cursor(seat->server);
 	if (!output_is_usable(output)) {
 		wlr_log(WLR_ERROR, "output at cursor is unusable");
-		return LAB_EDGE_INVALID;
+		return LAB_EDGE_NONE;
 	}
 	*dest_output = output;
 
@@ -199,13 +199,13 @@ edge_from_cursor(struct seat *seat, struct output **dest_output)
 		if (rc.snap_top_maximize) {
 			return LAB_EDGE_CENTER;
 		} else {
-			return LAB_EDGE_UP;
+			return LAB_EDGE_TOP;
 		}
 	} else if (cursor_y >= area->y + area->height - snap_range) {
-		return LAB_EDGE_DOWN;
+		return LAB_EDGE_BOTTOM;
 	} else {
 		/* Not close to any edge */
-		return LAB_EDGE_INVALID;
+		return LAB_EDGE_NONE;
 	}
 }
 
@@ -215,7 +215,7 @@ snap_to_edge(struct view *view)
 {
 	struct output *output;
 	enum lab_edge edge = edge_from_cursor(&view->server->seat, &output);
-	if (edge == LAB_EDGE_INVALID) {
+	if (edge == LAB_EDGE_NONE) {
 		return false;
 	}
 
