@@ -5,7 +5,6 @@
 #include <string.h>
 #include <wlr/render/pixman.h>
 #include <wlr/types/wlr_scene.h>
-#include "buffer.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
@@ -43,12 +42,9 @@ ssd_titlebar_create(struct ssd *ssd)
 		wlr_scene_node_set_position(&parent->node, 0,
 			-g_theme.titlebar_height);
 
-		struct wlr_buffer *titlebar_fill =
-			&g_theme.window[active].titlebar_fill->base;
-		struct wlr_buffer *corner_top_left =
-			&g_theme.window[active].corner_top_left_normal->base;
-		struct wlr_buffer *corner_top_right =
-			&g_theme.window[active].corner_top_right_normal->base;
+		ASSERT_PTR(g_theme.window[active].titlebar_fill, titlebar_fill);
+		ASSERT_PTR(g_theme.window[active].corner_top_left_normal, corner_top_left);
+		ASSERT_PTR(g_theme.window[active].corner_top_right_normal, corner_top_right);
 
 		/* Background */
 		subtree->bar = wlr_scene_buffer_create(parent, titlebar_fill);

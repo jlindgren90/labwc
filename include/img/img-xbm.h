@@ -2,7 +2,7 @@
 #ifndef LABWC_IMG_XBM_H
 #define LABWC_IMG_XBM_H
 
-struct lab_data_buffer;
+#include "buffer.h"
 
 /**
  * img_xbm_load_from_bitmap() - create button from monochrome bitmap
@@ -11,9 +11,10 @@ struct lab_data_buffer;
  *
  * Example bitmap: char button[6] = { 0x3f, 0x3f, 0x21, 0x21, 0x21, 0x3f };
  */
-struct lab_data_buffer *img_xbm_load_from_bitmap(const char *bitmap, float *rgba);
+refptr<lab_data_buffer> img_xbm_load_from_bitmap(const char *bitmap,
+	float *rgba);
 
 /* img_xbm_load - Convert xbm file to buffer with cairo surface */
-struct lab_data_buffer *img_xbm_load(const char *filename, float *rgba);
+refptr<lab_data_buffer> img_xbm_load(const char *filename, float *rgba);
 
 #endif /* LABWC_IMG_XBM_H */
