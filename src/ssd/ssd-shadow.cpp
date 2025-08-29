@@ -190,8 +190,10 @@ set_shadow_geometry(struct ssd *ssd)
 		 * portion.  Top and bottom are the same size (only the cutout
 		 * is different).  The buffers are square so width == height.
 		 */
-		int corner_size =
-			g_theme.window[active].shadow_corner_top->logical_height;
+		int corner_size = 0;
+		if (CHECK_PTR(g_theme.window[active].shadow_corner_top, corner)) {
+			corner_size = corner->logical_height;
+		}
 
 		wl_list_for_each(part, &subtree->parts, link) {
 			set_shadow_part_geometry(part, width, height,
@@ -227,9 +229,6 @@ ssd_shadow_create(struct ssd *ssd)
 
 	ssd->shadow.tree = wlr_scene_tree_create(ssd->tree);
 
-	struct wlr_buffer *corner_top_buffer;
-	struct wlr_buffer *corner_bottom_buffer;
-	struct wlr_buffer *edge_buffer;
 	struct ssd_sub_tree *subtree;
 	struct wlr_scene_tree *parent;
 	int active;
@@ -250,29 +249,32 @@ ssd_shadow_create(struct ssd *ssd)
 
 		subtree->tree = wlr_scene_tree_create(ssd->shadow.tree);
 		parent = subtree->tree;
-		corner_top_buffer =
-			&g_theme.window[active].shadow_corner_top->base;
-		corner_bottom_buffer =
-			&g_theme.window[active].shadow_corner_bottom->base;
-		edge_buffer = &g_theme.window[active].shadow_edge->base;
+		auto corner_top_buffer =
+			g_theme.window[active].shadow_corner_top;
+		auto corner_bottom_buffer =
+			g_theme.window[active].shadow_corner_bottom;
+		auto edge_buffer = g_theme.window[active].shadow_edge;
 
 		make_shadow(&subtree->parts, LAB_NODE_CORNER_BOTTOM_RIGHT,
-			parent, corner_bottom_buffer, WL_OUTPUT_TRANSFORM_NORMAL);
+			parent, corner_bottom_buffer.get(),
+			WL_OUTPUT_TRANSFORM_NORMAL);
 		make_shadow(&subtree->parts, LAB_NODE_CORNER_BOTTOM_LEFT,
-			parent, corner_bottom_buffer, WL_OUTPUT_TRANSFORM_FLIPPED);
+			parent, corner_bottom_buffer.get(),
+			WL_OUTPUT_TRANSFORM_FLIPPED);
 		make_shadow(&subtree->parts, LAB_NODE_CORNER_TOP_LEFT,
-			parent, corner_top_buffer, WL_OUTPUT_TRANSFORM_180);
+			parent, corner_top_buffer.get(),
+			WL_OUTPUT_TRANSFORM_180);
 		make_shadow(&subtree->parts, LAB_NODE_CORNER_TOP_RIGHT,
-			parent, corner_top_buffer, WL_OUTPUT_TRANSFORM_FLIPPED_180);
+			parent, corner_top_buffer.get(),
+			WL_OUTPUT_TRANSFORM_FLIPPED_180);
 		make_shadow(&subtree->parts, LAB_NODE_EDGE_RIGHT, parent,
-			edge_buffer, WL_OUTPUT_TRANSFORM_NORMAL);
+			edge_buffer.get(), WL_OUTPUT_TRANSFORM_NORMAL);
 		make_shadow(&subtree->parts, LAB_NODE_EDGE_BOTTOM, parent,
-			edge_buffer, WL_OUTPUT_TRANSFORM_90);
+			edge_buffer.get(), WL_OUTPUT_TRANSFORM_90);
 		make_shadow(&subtree->parts, LAB_NODE_EDGE_LEFT, parent,
-			edge_buffer, WL_OUTPUT_TRANSFORM_180);
+			edge_buffer.get(), WL_OUTPUT_TRANSFORM_180);
 		make_shadow(&subtree->parts, LAB_NODE_EDGE_TOP, parent,
-			edge_buffer, WL_OUTPUT_TRANSFORM_270);
-
+			edge_buffer.get(), WL_OUTPUT_TRANSFORM_270);
 	} FOR_EACH_END
 
 	ssd_shadow_update(ssd);

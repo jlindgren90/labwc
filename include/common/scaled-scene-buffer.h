@@ -3,6 +3,7 @@
 #define LABWC_SCALED_SCENE_BUFFER_H
 
 #include <wayland-server-core.h>
+#include "buffer.h"
 
 #define LAB_SCALED_BUFFER_MAX_CACHE 2
 
@@ -13,8 +14,8 @@ struct scaled_scene_buffer;
 
 struct scaled_scene_buffer_impl {
 	/* Return a new buffer optimized for the new scale */
-	struct lab_data_buffer *(*create_buffer)
-		(struct scaled_scene_buffer *scaled_buffer, double scale);
+	refptr<lab_data_buffer> (*create_buffer)(
+		struct scaled_scene_buffer *scaled_buffer, double scale);
 	/* Might be NULL or used for cleaning up */
 	void (*destroy)(struct scaled_scene_buffer *scaled_buffer);
 	/* Returns true if the two buffers are visually the same */
@@ -29,7 +30,6 @@ struct scaled_scene_buffer {
 	void *data;  /* opaque user data */
 
 	/* Private */
-	bool drop_buffer;
 	double active_scale;
 	/* cached wlr_buffers for each scale */
 	struct wl_list cache;  /* struct scaled_buffer_cache_entry.link */
@@ -88,33 +88,14 @@ struct scaled_scene_buffer {
  * in order to reuse backing buffers for visually duplicated
  * scaled_scene_buffers found via impl->equal().
  *
- * All requested lab_data_buffers via impl->create_buffer() will be locked
- * during the lifetime of the buffer in the internal cache and unlocked
- * when being evacuated from the cache (due to LAB_SCALED_BUFFER_MAX_CACHE
+ * All requested lab_data_buffers via impl->create_buffer() will be stored
+ * in the cache via refptr (thus prevented by refcount from being destroyed)
+ * until evacuated from the cache (due to LAB_SCALED_BUFFER_MAX_CACHE
  * or the internal wlr_scene_buffer being destroyed).
- *
- * If drop_buffer was set during creation of the scaled_scene_buffer, the
- * backing wlr_buffer behind a lab_data_buffer will also get dropped
- * (via wlr_buffer_drop). If there are no more locks (consumers) of the
- * respective buffer this will then cause the lab_data_buffer to be free'd.
- *
- * In the case of the buffer provider dropping the buffer itself (due to
- * for example a Reconfigure event) the lock prevents the buffer from being
- * destroyed until the buffer is evacuated from the internal cache and thus
- * unlocked.
- *
- * This allows using scaled_scene_buffer for an autoscaling font_buffer
- * (which gets free'd automatically) and also for theme components like
- * rounded corner images or button icons whose buffers only exist once but
- * are references by multiple windows with their own scaled_scene_buffers.
- *
- * The rough idea is: use drop_buffer = true for one-shot buffers and false
- * for buffers that should outlive the scaled_scene_buffer instance itself.
  */
 struct scaled_scene_buffer *scaled_scene_buffer_create(
 	struct wlr_scene_tree *parent,
-	const struct scaled_scene_buffer_impl *implementation,
-	bool drop_buffer);
+	const struct scaled_scene_buffer_impl *impl);
 
 /**
  * scaled_scene_buffer_request_update - mark the buffer that needs to be
@@ -139,7 +120,7 @@ void scaled_scene_buffer_invalidate_sharing(void);
 /* Private */
 struct scaled_scene_buffer_cache_entry {
 	struct wl_list link;   /* struct scaled_scene_buffer.cache */
-	struct wlr_buffer *buffer;
+	refptr<lab_data_buffer> buffer;
 	double scale;
 };
 
