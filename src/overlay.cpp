@@ -49,11 +49,11 @@ show_overlay(struct theme_snapping_overlay *overlay_theme, struct wlr_box *box)
 static void
 show_region_overlay(struct region *region)
 {
-	if (region == g_seat.overlay.active.region) {
+	if (g_seat.overlay.active.region == region) {
 		return;
 	}
 	overlay_finish();
-	g_seat.overlay.active.region = region;
+	g_seat.overlay.active.region = weakptr(region);
 
 	struct wlr_box geo = view_get_region_snap_box(NULL, region);
 	show_overlay(&g_theme.snapping_overlay_region, &geo);
@@ -135,9 +135,9 @@ overlay_update(void)
 {
 	/* Region-snapping overlay */
 	if (regions_should_snap()) {
-		struct region *region = regions_from_cursor();
+		auto region = regions_from_cursor();
 		if (region) {
-			show_region_overlay(region);
+			show_region_overlay(region.get());
 			return;
 		}
 	}
