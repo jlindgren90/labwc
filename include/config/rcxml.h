@@ -43,6 +43,7 @@ enum tiling_events_mode {
 struct buf;
 struct keybind;
 struct mousebind;
+struct region_cfg;
 struct window_rule;
 
 struct button_map_entry {
@@ -158,7 +159,7 @@ struct rcxml {
 	} workspace_config;
 
 	/* Regions */
-	struct wl_list regions;  /* struct region.link */
+	std::vector<region_cfg> regions;
 
 	/* Window Switcher */
 	struct {

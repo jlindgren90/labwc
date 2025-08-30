@@ -241,9 +241,9 @@ snap_to_region(struct view *view)
 		return false;
 	}
 
-	struct region *region = regions_from_cursor();
+	auto region = regions_from_cursor();
 	if (region) {
-		view_snap_to_region(view, region,
+		view_snap_to_region(view, region.get(),
 			/*store_natural_geometry*/ false);
 		return true;
 	}

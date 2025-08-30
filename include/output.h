@@ -4,8 +4,11 @@
 
 #include <wlr/types/wlr_output.h>
 #include "common/edge.h"
+#include "common/reflist.h"
 
 #define LAB_NR_LAYERS (4)
+
+struct region;
 
 struct output {
 	struct wl_list link; /* server.outputs */
@@ -26,7 +29,7 @@ struct output {
 	/* In output-relative scene coordinates */
 	struct wlr_box usable_area;
 
-	struct wl_list regions;  /* struct region.link */
+	reflist<region> regions;
 
 	struct wl_listener destroy;
 	struct wl_listener frame;

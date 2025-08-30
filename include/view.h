@@ -166,9 +166,9 @@ struct view_data {
 	xkb_layout_index_t keyboard_layout;
 
 	/* Pointer to an output owned struct region, may be NULL */
-	struct region *tiled_region;
+	weakptr<region> tiled_region;
 	/* Set to region->name when tiled_region is free'd by a destroying output */
-	char *tiled_region_evacuate;
+	lab_str tiled_region_evacuate;
 
 	/*
 	 * Geometry of the wlr_surface contained within the view, as

@@ -95,7 +95,7 @@ inactivate_overlay(struct overlay *overlay)
 		wlr_scene_node_set_enabled(
 			&overlay->edge_rect.tree->node, false);
 	}
-	overlay->active.region = NULL;
+	overlay->active.region.reset();
 	overlay->active.edge = LAB_EDGE_NONE;
 	overlay->active.output = NULL;
 	if (overlay->timer) {
@@ -106,11 +106,11 @@ inactivate_overlay(struct overlay *overlay)
 static void
 show_region_overlay(struct region *region)
 {
-	if (region == g_seat.overlay.active.region) {
+	if (g_seat.overlay.active.region == region) {
 		return;
 	}
 	inactivate_overlay(&g_seat.overlay);
-	g_seat.overlay.active.region = region;
+	g_seat.overlay.active.region = weakptr(region);
 
 	show_overlay(&g_seat.overlay.region_rect, &region->geo);
 }
@@ -209,9 +209,9 @@ overlay_update(void)
 {
 	/* Region-snapping overlay */
 	if (regions_should_snap()) {
-		struct region *region = regions_from_cursor();
+		auto region = regions_from_cursor();
 		if (region) {
-			show_region_overlay(region);
+			show_region_overlay(region.get());
 			return;
 		}
 	}

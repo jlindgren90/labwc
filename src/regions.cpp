@@ -5,11 +5,7 @@
 #include <assert.h>
 #include <float.h>
 #include <math.h>
-#include <string.h>
 #include <wlr/types/wlr_cursor.h>
-#include <wlr/util/box.h>
-#include "common/list.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "input/keyboard.h"
 #include "labwc.h"
@@ -20,7 +16,7 @@ bool
 regions_should_snap(void)
 {
 	if (g_server.input_mode != LAB_INPUT_STATE_MOVE
-			|| wl_list_empty(&rc.regions)
+			|| rc.regions.empty()
 			|| g_seat.region_prevent_snap
 			|| !view_is_floating(g_server.grabbed_view)) {
 		return false;
@@ -29,21 +25,20 @@ regions_should_snap(void)
 	return keyboard_get_all_modifiers();
 }
 
-struct region *
+refptr<region>
 regions_from_name(const char *region_name, struct output *output)
 {
 	assert(region_name);
 	assert(output);
-	struct region *region;
-	wl_list_for_each(region, &output->regions, link) {
-		if (!strcmp(region->name, region_name)) {
-			return region;
+	for (auto &region : output->regions) {
+		if (region.name == region_name) {
+			return refptr(&region);
 		}
 	}
-	return NULL;
+	return {};
 }
 
-struct region *
+refptr<region>
 regions_from_cursor(void)
 {
 	double lx = g_seat.cursor->x;
@@ -53,19 +48,19 @@ regions_from_cursor(void)
 		wlr_output_layout_output_at(g_server.output_layout, lx, ly);
 	struct output *output = output_from_wlr_output(wlr_output);
 	if (!output) {
-		return NULL;
+		return {};
 	}
 
 	double dist;
 	double dist_min = DBL_MAX;
-	struct region *closest_region = NULL;
-	struct region *region;
-	wl_list_for_each(region, &output->regions, link) {
-		if (wlr_box_contains_point(&region->geo, lx, ly)) {
+	refptr<region> closest_region;
+	for (auto &region : output->regions) {
+		if (wlr_box_contains_point(&region.geo, lx, ly)) {
 			/* No need for sqrt((x1 - x2)^2 + (y1 - y2)^2) as we just compare */
-			dist = pow(region->center.x - lx, 2) + pow(region->center.y - ly, 2);
+			dist = pow(region.center.x - lx, 2)
+				+ pow(region.center.y - ly, 2);
 			if (dist < dist_min) {
-				closest_region = region;
+				closest_region.reset(&region);
 				dist_min = dist;
 			}
 		}
@@ -79,20 +74,19 @@ regions_reconfigure_output(struct output *output)
 	assert(output);
 
 	/* Evacuate views and destroy current regions */
-	if (!wl_list_empty(&output->regions)) {
+	if (!output->regions.empty()) {
 		regions_evacuate_output(output);
-		regions_destroy(&output->regions);
+		output->regions.clear();
 	}
 
 	/* Initialize regions from config */
-	struct region *region;
-	wl_list_for_each(region, &rc.regions, link) {
-		struct region *region_new = znew(*region_new);
+	for (auto &region : rc.regions) {
 		/* Create a copy */
-		region_new->output = output;
-		region_new->name = xstrdup(region->name);
-		region_new->percentage = region->percentage;
-		wl_list_append(&output->regions, &region_new->link);
+		output->regions.append(new ::region{
+			.output = output,
+			.name = region.name,
+			.percentage = region.percentage,
+		});
 	}
 
 	/* Update region geometries */
@@ -118,14 +112,13 @@ regions_update_geometry(struct output *output)
 {
 	assert(output);
 
-	struct region *region;
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
 
 	/* Update regions */
 	struct wlr_box *perc, *geo;
-	wl_list_for_each(region, &output->regions, link) {
-		geo = &region->geo;
-		perc = &region->percentage;
+	for (auto &region : output->regions) {
+		geo = &region.geo;
+		perc = &region.percentage;
 		/*
 		 * Add percentages (x + width, y + height) before scaling
 		 * so that there is no gap between regions due to rounding
@@ -139,8 +132,8 @@ regions_update_geometry(struct output *output)
 		geo->y = usable.y + top;
 		geo->width = right - left;
 		geo->height = bottom - top;
-		region->center.x = geo->x + geo->width / 2;
-		region->center.y = geo->y + geo->height / 2;
+		region.center.x = geo->x + geo->width / 2;
+		region.center.y = geo->y + geo->height / 2;
 	}
 }
 
@@ -149,24 +142,21 @@ regions_evacuate_output(struct output *output)
 {
 	assert(output);
 	for (auto &view : g_views) {
-		if (view.tiled_region && view.tiled_region->output == output) {
+		if (CHECK_PTR(view.tiled_region, region)
+				&& region->output == output) {
 			view_evacuate_region(&view);
 		}
 	}
 }
 
 void
-regions_destroy(struct wl_list *regions)
+regions_destroy(reflist<region> &regions)
 {
-	assert(regions);
-	struct region *region, *region_tmp;
-	wl_list_for_each_safe(region, region_tmp, regions, link) {
-		wl_list_remove(&region->link);
-		if (g_seat.overlay.active.region == region) {
+	for (auto &region : regions) {
+		if (g_seat.overlay.active.region == &region) {
 			overlay_hide();
 		}
-		zfree(region->name);
-		zfree(region);
 	}
+	regions.clear();
 }
 

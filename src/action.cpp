@@ -1056,7 +1056,7 @@ actions_run(struct view *activator, std::vector<action> &actions,
 					view_apply_natural_geometry(view);
 					break;
 				}
-				view_snap_to_region(view, region,
+				view_snap_to_region(view, region.get(),
 					/*store_natural_geometry*/ true);
 			} else {
 				wlr_log(WLR_ERROR,

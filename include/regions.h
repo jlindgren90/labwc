@@ -3,6 +3,8 @@
 #define LABWC_REGIONS_H
 
 #include <wlr/util/box.h>
+#include "common/reflist.h"
+#include "common/str.h"
 
 struct seat;
 struct view;
@@ -12,11 +14,14 @@ struct wl_list;
 struct wlr_box;
 struct multi_rect;
 
-/* Double use: rcxml.c for config and output.c for usage */
-struct region {
-	struct wl_list link; /* struct rcxml.regions, struct output.regions */
+struct region_cfg {
+	lab_str name;
+	struct wlr_box percentage;
+};
+
+struct region : public ref_owned<region>, public weak_target<region> {
 	struct output *output;
-	char *name;
+	lab_str name;
 	struct wlr_box geo;
 	struct wlr_box percentage;
 	struct {
@@ -58,11 +63,12 @@ void regions_update_geometry(struct output *output);
  */
 void regions_evacuate_output(struct output *output);
 
-/* Free all regions in given wl_list pointer */
-void regions_destroy(struct wl_list *regions);
+/* Free all regions in given list */
+void regions_destroy(reflist<region> &regions);
 
 /* Get output local region from cursor or name, may be NULL */
-struct region *regions_from_cursor(void);
-struct region *regions_from_name(const char *region_name, struct output *output);
+refptr<region> regions_from_cursor(void);
+refptr<region> regions_from_name(const char *region_name,
+	struct output *output);
 
 #endif /* LABWC_REGIONS_H */
