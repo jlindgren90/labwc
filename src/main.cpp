@@ -20,6 +20,7 @@
 #include "regions.h"
 #include "theme.h"
 #include "window-rules.h"
+#include "workspaces.h"
 #include "xwayland.h"
 
 /*

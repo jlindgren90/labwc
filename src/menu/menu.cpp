@@ -727,7 +727,7 @@ menu_reposition(struct menu *menu, struct wlr_box anchor_rect)
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
 
 	/* Policy for menu placement */
-	struct wlr_xdg_positioner_rules rules = {0};
+	struct wlr_xdg_positioner_rules rules{};
 	rules.size.width = menu->size.width;
 	rules.size.height = menu->size.height;
 	/* A rectangle next to which the menu is opened */
@@ -802,24 +802,22 @@ update_client_send_to_menu(void)
 
 	reset_menu(menu);
 
-	struct workspace *workspace;
-
 	/*
 	 * <action name="SendToDesktop"><follow> is true by default so
 	 * GoToDesktop will be called as part of the action.
 	 */
 	struct buf buf = BUF_INIT;
-	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
-		if (workspace == g_server.workspaces.current) {
-			buf_add_fmt(&buf, ">%s<", workspace->name);
+	for (auto &workspace : g_server.workspaces.all) {
+		if (&workspace == g_server.workspaces.current) {
+			buf_add_fmt(&buf, ">%s<", workspace.name.c());
 		} else {
-			buf_add(&buf, workspace->name);
+			buf_add(&buf, workspace.name.c());
 		}
 		struct menuitem *item = item_create(menu, buf.data,
 			NULL, /*show arrow*/ false);
 
 		struct action *action = item_add_action(item, "SendToDesktop");
-		action->add_str("to", workspace->name);
+		action->add_str("to", workspace.name.c());
 
 		buf_clear(&buf);
 	}
@@ -850,18 +848,17 @@ update_client_list_combined_menu(void)
 	reset_menu(menu);
 
 	struct menuitem *item;
-	struct workspace *workspace;
 	struct buf buffer = BUF_INIT;
 
-	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
+	for (auto &workspace : g_server.workspaces.all) {
 		buf_add_fmt(&buffer,
-			workspace == g_server.workspaces.current ? ">%s<" : "%s",
-			workspace->name);
+			&workspace == g_server.workspaces.current ? ">%s<" : "%s",
+			workspace.name.c());
 		separator_create(menu, buffer.data);
 		buf_clear(&buffer);
 
 		for (auto &view : g_views) {
-			if (view.workspace == workspace) {
+			if (view.workspace.get() == &workspace) {
 				const char *title =
 					view_get_string_prop(&view, "title");
 				if (!view.foreign_toplevel
@@ -889,7 +886,7 @@ update_client_list_combined_menu(void)
 		item = item_create(menu, _("Go there..."), NULL,
 			/*show arrow*/ false);
 		struct action *action = item_add_action(item, "GoToDesktop");
-		action->add_str("to", workspace->name);
+		action->add_str("to", workspace.name.c());
 	}
 	buf_reset(&buffer);
 	menu_create_scene(menu);
@@ -948,7 +945,7 @@ init_windowmenu(void)
 		item_add_action(item, "Close");
 	}
 
-	if (wl_list_length(&rc.workspace_config.workspaces) == 1) {
+	if (rc.workspace_config.names.size() == 1) {
 		menu_hide_submenu("workspaces");
 	}
 }
