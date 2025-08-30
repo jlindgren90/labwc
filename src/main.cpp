@@ -21,6 +21,7 @@
 #include "theme.h"
 #include "translate.h"
 #include "window-rules.h"
+#include "workspaces.h"
 #include "xwayland.h"
 
 /*
