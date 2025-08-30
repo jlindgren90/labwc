@@ -10,20 +10,59 @@
 #include "node.h"
 #include "output.h"
 
-struct session_lock_output {
+struct session_lock : public destroyable, public weak_target<session_lock> {
+	session_lock_manager *const manager;
+	wlr_session_lock_v1 *const lock;
+
+	session_lock(session_lock_manager *manager, wlr_session_lock_v1 *lock)
+		: manager(manager), lock(lock)
+	{
+		CONNECT_LISTENER(lock, this, destroy);
+		CONNECT_LISTENER(lock, this, new_surface);
+		CONNECT_LISTENER(lock, this, unlock);
+	}
+
+	DECLARE_HANDLER(session_lock, new_surface);
+	DECLARE_HANDLER(session_lock, unlock);
+};
+
+struct session_lock_surface : public destroyable,
+		public weak_target<session_lock_surface>
+{
+	session_lock_output *const output;
+	wlr_session_lock_surface_v1 *const surface;
+
+	session_lock_surface(session_lock_output *output,
+			wlr_session_lock_surface_v1 *surface)
+		: output(output), surface(surface)
+	{
+		CONNECT_LISTENER(surface, this, destroy);
+		CONNECT_LISTENER(surface->surface, this, map);
+	}
+
+	~session_lock_surface();
+
+	DECLARE_HANDLER(session_lock_surface, map);
+};
+
+struct session_lock_output : public destroyable,
+		public ref_guarded<session_lock_output>
+{
 	struct wlr_scene_tree *tree;
 	struct wlr_scene_rect *background;
 	struct session_lock_manager *manager;
 	struct output *output;
-	struct wlr_session_lock_surface_v1 *surface;
+	weak_owner<session_lock_surface> surface;
 	struct wl_event_source *blank_timer;
 
-	struct wl_list link; /* session_lock_manager.lock_outputs */
+	~session_lock_output();
 
-	struct wl_listener destroy;
-	struct wl_listener commit;
-	struct wl_listener surface_destroy;
-	struct wl_listener surface_map;
+	::wlr_surface *wlr_surface() {
+		CHECK_PTR_OR_RET_VAL(surface, s, nullptr);
+		return s->surface->surface;
+	}
+
+	DECLARE_HANDLER(session_lock_output, commit);
 };
 
 static void
@@ -33,21 +72,20 @@ focus_surface(struct session_lock_manager *manager, struct wlr_surface *focused)
 	seat_focus_lock_surface(focused);
 }
 
-static void
-refocus_output(struct session_lock_output *output)
+session_lock_surface::~session_lock_surface()
 {
 	/* Try to focus another session-lock surface */
-	if (output->manager->focused != output->surface->surface) {
+	if (output->manager->focused != this->surface->surface) {
 		return;
 	}
 
-	struct session_lock_output *iter;
-	wl_list_for_each(iter, &output->manager->lock_outputs, link) {
-		if (iter == output || !iter->surface || !iter->surface->surface) {
+	for (auto &iter : output->manager->lock_outputs) {
+		if (&iter == output) {
 			continue;
 		}
-		if (iter->surface->surface->mapped) {
-			focus_surface(output->manager, iter->surface->surface);
+		auto wlr_surface = iter.wlr_surface();
+		if (wlr_surface && wlr_surface->mapped) {
+			focus_surface(output->manager, wlr_surface);
 			return;
 		}
 	}
@@ -57,18 +95,16 @@ refocus_output(struct session_lock_output *output)
 static void
 update_focus(void *data)
 {
-	struct session_lock_output *output = data;
+	auto output = (session_lock_output *)data;
 	cursor_update_focus();
 	if (!output->manager->focused) {
-		focus_surface(output->manager, output->surface->surface);
+		focus_surface(output->manager, output->wlr_surface());
 	}
 }
 
-static void
-handle_surface_map(struct wl_listener *listener, void *data)
+void
+session_lock_surface::handle_map(void *)
 {
-	struct session_lock_output *output =
-		wl_container_of(listener, output, surface_map);
 	/*
 	 * In order to update cursor shape on map, the call to
 	 * cursor_update_focus() should be delayed because only the
@@ -80,28 +116,15 @@ handle_surface_map(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_surface_destroy(struct wl_listener *listener, void *data)
-{
-	struct session_lock_output *output =
-		wl_container_of(listener, output, surface_destroy);
-	refocus_output(output);
-
-	assert(output->surface);
-	output->surface = NULL;
-	wl_list_remove(&output->surface_destroy.link);
-	wl_list_remove(&output->surface_map.link);
-}
-
-static void
 lock_output_reconfigure(struct session_lock_output *output)
 {
 	struct wlr_box box;
 	wlr_output_layout_get_box(g_server.output_layout,
 		output->output->wlr_output, &box);
 	wlr_scene_rect_set_size(output->background, box.width, box.height);
-	if (output->surface) {
-		wlr_session_lock_surface_v1_configure(
-			output->surface, box.width, box.height);
+	if (CHECK_PTR(output->surface, s)) {
+		wlr_session_lock_surface_v1_configure(s->surface, box.width,
+			box.height);
 	}
 }
 
@@ -109,22 +132,19 @@ static struct session_lock_output *
 lock_output_for_output(struct session_lock_manager *manager,
 		struct output *output)
 {
-	struct session_lock_output *lock_output;
-	wl_list_for_each(lock_output, &manager->lock_outputs, link) {
-		if (lock_output->output == output) {
-			return lock_output;
+	for (auto &lock_output : manager->lock_outputs) {
+		if (lock_output.output == output) {
+			return &lock_output;
 		}
 	}
 	return NULL;
 }
 
-static void
-handle_new_surface(struct wl_listener *listener, void *data)
+void
+session_lock::handle_new_surface(void *data)
 {
-	struct session_lock_manager *manager =
-		wl_container_of(listener, manager, lock_new_surface);
-	struct wlr_session_lock_surface_v1 *lock_surface = data;
-	struct output *output = lock_surface->output->data;
+	auto lock_surface = (wlr_session_lock_surface_v1 *)data;
+	auto output = (::output *)lock_surface->output->data;
 	struct session_lock_output *lock_output =
 		lock_output_for_output(manager, output);
 	if (!lock_output) {
@@ -133,52 +153,31 @@ handle_new_surface(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	lock_output->surface = lock_surface;
 	struct wlr_scene_tree *surface_tree =
 		wlr_scene_subsurface_tree_create(lock_output->tree, lock_surface->surface);
 	node_descriptor_create(&surface_tree->node,
 		LAB_NODE_DESC_SESSION_LOCK_SURFACE, NULL);
 
-	lock_output->surface_destroy.notify = handle_surface_destroy;
-	wl_signal_add(&lock_surface->events.destroy, &lock_output->surface_destroy);
-
-	lock_output->surface_map.notify = handle_surface_map;
-	wl_signal_add(&lock_surface->surface->events.map, &lock_output->surface_map);
-
+	lock_output->surface.reset(new session_lock_surface(lock_output,
+		lock_surface));
 	lock_output_reconfigure(lock_output);
 }
 
-static void
-session_lock_output_destroy(struct session_lock_output *output)
+session_lock_output::~session_lock_output()
 {
-	if (output->surface) {
-		refocus_output(output);
-		wl_list_remove(&output->surface_destroy.link);
-		wl_list_remove(&output->surface_map.link);
-	}
-	wl_list_remove(&output->commit.link);
-	wl_list_remove(&output->destroy.link);
-	wl_list_remove(&output->link);
-	wl_event_source_remove(output->blank_timer);
-	free(output);
+	// cleanup of this->surface may focus another surface
+	this->manager->lock_outputs.remove(this);
+	wl_event_source_remove(this->blank_timer);
 }
 
-static void
-handle_output_destroy(struct wl_listener *listener, void *data)
+void
+session_lock_output::handle_commit(void *data)
 {
-	struct session_lock_output *output = wl_container_of(listener, output, destroy);
-	session_lock_output_destroy(output);
-}
-
-static void
-handle_output_commit(struct wl_listener *listener, void *data)
-{
-	struct wlr_output_event_commit *event = data;
-	struct session_lock_output *output = wl_container_of(listener, output, commit);
+	auto event = (wlr_output_event_commit *)data;
 	uint32_t require_reconfigure = WLR_OUTPUT_STATE_MODE
 		| WLR_OUTPUT_STATE_SCALE | WLR_OUTPUT_STATE_TRANSFORM;
 	if (event->state->committed & require_reconfigure) {
-		lock_output_reconfigure(output);
+		lock_output_reconfigure(this);
 	}
 }
 
@@ -194,7 +193,7 @@ align_session_lock_tree(struct output *output)
 static int
 handle_output_blank_timeout(void *data)
 {
-	struct session_lock_output *lock_output = data;
+	auto lock_output = (session_lock_output *)data;
 	wlr_scene_node_set_enabled(&lock_output->background->node, true);
 	return 0;
 }
@@ -206,7 +205,7 @@ session_lock_output_create(struct session_lock_manager *manager, struct output *
 		return; /* already created */
 	}
 
-	struct session_lock_output *lock_output = znew(*lock_output);
+	auto lock_output = new session_lock_output();
 
 	struct wlr_scene_tree *tree = wlr_scene_tree_create(output->session_lock_tree);
 	die_if_null(tree);
@@ -239,39 +238,30 @@ session_lock_output_create(struct session_lock_manager *manager, struct output *
 	lock_output->background = background;
 	lock_output->manager = manager;
 
-	lock_output->destroy.notify = handle_output_destroy;
-	wl_signal_add(&tree->node.events.destroy, &lock_output->destroy);
-
-	lock_output->commit.notify = handle_output_commit;
-	wl_signal_add(&output->wlr_output->events.commit, &lock_output->commit);
+	CONNECT_LISTENER(&tree->node, lock_output, destroy);
+	CONNECT_LISTENER(output->wlr_output, lock_output, commit);
 
 	lock_output_reconfigure(lock_output);
 
-	wl_list_insert(&manager->lock_outputs, &lock_output->link);
-	return;
+	manager->lock_outputs.append(lock_output);
 }
 
 static void
 session_lock_destroy(struct session_lock_manager *manager)
 {
-	struct session_lock_output *lock_output, *next;
-	wl_list_for_each_safe(lock_output, next, &manager->lock_outputs, link) {
-		wlr_scene_node_destroy(&lock_output->tree->node);
+	for (auto iter = manager->lock_outputs.begin(); iter;) {
+		auto node = &iter->tree->node;
+		++iter; // release ref held by iter
+		wlr_scene_node_destroy(node);
 	}
-	if (manager->lock) {
-		wl_list_remove(&manager->lock_destroy.link);
-		wl_list_remove(&manager->lock_unlock.link);
-		wl_list_remove(&manager->lock_new_surface.link);
-	}
-	manager->lock = NULL;
+	manager->lock.reset();
 }
 
-static void
-handle_lock_unlock(struct wl_listener *listener, void *data)
+void
+session_lock::handle_unlock(void *)
 {
-	struct session_lock_manager *manager =
-		wl_container_of(listener, manager, lock_unlock);
-	session_lock_destroy(manager);
+	auto manager = this->manager;
+	session_lock_destroy(manager); // deletes "this"
 	manager->locked = false;
 
 	if (manager->last_active_view) {
@@ -284,29 +274,11 @@ handle_lock_unlock(struct wl_listener *listener, void *data)
 	cursor_update_focus();
 }
 
-/* Called when session-lock is destroyed without unlock */
-static void
-handle_lock_destroy(struct wl_listener *listener, void *data)
+void
+session_lock_manager::handle_new_lock(void *data)
 {
-	struct session_lock_manager *manager =
-		wl_container_of(listener, manager, lock_destroy);
-
-	/*
-	 * Destroy session-lock, but manager->locked remains true and
-	 * lock_outputs still hides the screens.
-	 */
-	wl_list_remove(&manager->lock_destroy.link);
-	wl_list_remove(&manager->lock_unlock.link);
-	wl_list_remove(&manager->lock_new_surface.link);
-	manager->lock = NULL;
-}
-
-static void
-handle_new_session_lock(struct wl_listener *listener, void *data)
-{
-	struct session_lock_manager *manager =
-		wl_container_of(listener, manager, new_lock);
-	struct wlr_session_lock_v1 *lock = data;
+	auto manager = this;
+	auto lock = (wlr_session_lock_v1 *)data;
 
 	if (manager->lock) {
 		wlr_log(WLR_ERROR, "session already locked");
@@ -318,7 +290,7 @@ handle_new_session_lock(struct wl_listener *listener, void *data)
 		/* clear manager->lock_outputs */
 		session_lock_destroy(manager);
 	}
-	assert(wl_list_empty(&manager->lock_outputs));
+	assert(manager->lock_outputs.empty());
 
 	/* Remember the focused view to restore it on unlock */
 	manager->last_active_view = g_server.active_view;
@@ -328,46 +300,27 @@ handle_new_session_lock(struct wl_listener *listener, void *data)
 		session_lock_output_create(manager, &output);
 	}
 
-	manager->lock_new_surface.notify = handle_new_surface;
-	wl_signal_add(&lock->events.new_surface, &manager->lock_new_surface);
-
-	manager->lock_unlock.notify = handle_lock_unlock;
-	wl_signal_add(&lock->events.unlock, &manager->lock_unlock);
-
-	manager->lock_destroy.notify = handle_lock_destroy;
-	wl_signal_add(&lock->events.destroy, &manager->lock_destroy);
-
 	manager->locked = true;
-	manager->lock = lock;
+	manager->lock.reset(new session_lock(this, lock));
 	wlr_session_lock_v1_send_locked(lock);
 }
 
-static void
-handle_manager_destroy(struct wl_listener *listener, void *data)
+session_lock_manager::~session_lock_manager()
 {
-	struct session_lock_manager *manager =
-		wl_container_of(listener, manager, destroy);
-	session_lock_destroy(manager);
-	wl_list_remove(&manager->new_lock.link);
-	wl_list_remove(&manager->destroy.link);
+	session_lock_destroy(this);
 	g_server.session_lock_manager = NULL;
-	free(manager);
 }
 
 void
 session_lock_init(void)
 {
-	struct session_lock_manager *manager = znew(*manager);
+	auto manager = new session_lock_manager();
 	g_server.session_lock_manager = manager;
 	manager->wlr_manager =
 		wlr_session_lock_manager_v1_create(g_server.wl_display);
-	wl_list_init(&manager->lock_outputs);
 
-	manager->new_lock.notify = handle_new_session_lock;
-	wl_signal_add(&manager->wlr_manager->events.new_lock, &manager->new_lock);
-
-	manager->destroy.notify = handle_manager_destroy;
-	wl_signal_add(&manager->wlr_manager->events.destroy, &manager->destroy);
+	CONNECT_LISTENER(manager->wlr_manager, manager, new_lock);
+	CONNECT_LISTENER(manager->wlr_manager, manager, destroy);
 }
 
 void
@@ -382,8 +335,7 @@ session_lock_update_for_layout_change(void)
 	}
 
 	struct session_lock_manager *manager = g_server.session_lock_manager;
-	struct session_lock_output *lock_output;
-	wl_list_for_each(lock_output, &manager->lock_outputs, link) {
-		lock_output_reconfigure(lock_output);
+	for (auto &lock_output : manager->lock_outputs) {
+		lock_output_reconfigure(&lock_output);
 	}
 }
