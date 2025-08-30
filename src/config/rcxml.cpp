@@ -357,22 +357,20 @@ fill_window_switcher_fields(xmlNode *node)
 static void
 fill_region(xmlNode *node)
 {
-	struct region *region = znew(*region);
-	wl_list_append(&rc.regions, &region->link);
+	rc.regions.push_back(region_cfg());
+	auto region = &rc.regions.back();
 
 	xmlNode *child;
 	char *key, *content;
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		if (!strcasecmp(key, "name")) {
-			xstrdup_replace(region->name, content);
+			region->name = lab_str(content);
 		} else if (strstr("xywidtheight", key)
 				&& !strchr(content, '%')) {
 			wlr_log(WLR_ERROR, "Removing invalid region "
 				"'%s': %s='%s' misses a trailing %%",
-				region->name, key, content);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			zfree(region);
+				region->name.c(), key, content);
+			rc.regions.pop_back();
 			return;
 		} else if (!strcmp(key, "x")) {
 			region->percentage.x = atoi(content);
@@ -1341,7 +1339,6 @@ rcxml_init(void)
 	if (!has_run) {
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
-		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.fields);
 		wl_list_init(&rc.touch_configs);
 	}
@@ -1748,28 +1745,28 @@ is_invalid_rule(window_rule &rule)
 	return false; // valid
 }
 
+static bool
+is_invalid_region(region_cfg &region)
+{
+	struct wlr_box box = region.percentage;
+	bool invalid = !region.name
+		|| box.x < 0 || box.x > 100
+		|| box.y < 0 || box.y > 100
+		|| box.width <= 0 || box.width > 100
+		|| box.height <= 0 || box.height > 100;
+	if (invalid) {
+		wlr_log(WLR_ERROR,
+			"Removing invalid region '%s': %d%% x %d%% @ %d%%,%d%%",
+			region.name.c(), box.width, box.height, box.x, box.y);
+	}
+	return invalid;
+}
+
 static void
 validate(void)
 {
 	/* Regions */
-	struct region *region, *region_tmp;
-	wl_list_for_each_safe(region, region_tmp, &rc.regions, link) {
-		struct wlr_box box = region->percentage;
-		bool invalid = !region->name
-			|| box.x < 0 || box.x > 100
-			|| box.y < 0 || box.y > 100
-			|| box.width <= 0 || box.width > 100
-			|| box.height <= 0 || box.height > 100;
-		if (invalid) {
-			wlr_log(WLR_ERROR,
-				"Removing invalid region '%s': %d%% x %d%% @ %d%%,%d%%",
-				region->name, box.width, box.height, box.x, box.y);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			free(region);
-		}
-	}
-
+	lab::remove_if(rc.regions, is_invalid_region);
 	/* Window-rule criteria */
 	lab::remove_if(rc.window_rules, is_invalid_rule);
 
@@ -1895,7 +1892,7 @@ rcxml_finish(void)
 		zfree(w);
 	}
 
-	regions_destroy(&rc.regions);
+	rc.regions.clear();
 
 	clear_window_switcher_fields();
 
