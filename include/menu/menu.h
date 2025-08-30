@@ -2,10 +2,12 @@
 #ifndef LABWC_MENU_H
 #define LABWC_MENU_H
 
-#include <wayland-server.h>
 #include "action.h"
+#include "common/reflist.h"
 
 /* forward declare arguments */
+struct menu;
+struct menu_pipe_context;
 struct view;
 struct server;
 struct wl_list;
@@ -19,13 +21,13 @@ enum menuitem_type {
 	LAB_MENU_TITLE,
 };
 
-struct menuitem {
+struct menuitem : public ref_guarded<menuitem>, public weak_target<menuitem> {
+	menu &parent;
 	std::vector<action> actions;
-	char *text;
-	char *icon_name;
+	lab_str text;
+	lab_str icon_name;
 	const char *arrow;
-	struct menu *parent;
-	struct menu *submenu;
+	weakptr<menu> submenu;
 	bool selectable;
 	enum menuitem_type type;
 	int native_width;
@@ -33,26 +35,27 @@ struct menuitem {
 	struct wlr_scene_tree *normal_tree;
 	struct wlr_scene_tree *selected_tree;
 	struct view *client_list_view;  /* used by internal client-list */
-	struct wl_list link; /* menu.menuitems */
+
+	~menuitem();
 };
 
 /* This could be the root-menu or a submenu */
-struct menu {
-	char *id;
-	char *label;
-	char *icon_name;
-	char *execute;
-	struct menu *parent;
-	struct menu_pipe_context *pipe_ctx;
+struct menu : public ref_guarded<menu>, public weak_target<menu> {
+	lab_str id;
+	lab_str label;
+	lab_str icon_name;
+	lab_str execute;
+	weakptr<menu> parent;
+	ownptr<menu_pipe_context> pipe_ctx;
 
 	struct {
 		int width;
 		int height;
 	} size;
-	struct wl_list menuitems;
+	ownlist<menuitem> menuitems;
 	struct {
-		struct menu *menu;
-		struct menuitem *item;
+		weakptr<::menu> menu;
+		weakptr<menuitem> item;
 	} selection;
 	struct wlr_scene_tree *scene_tree;
 	bool is_pipemenu_child;
@@ -61,7 +64,8 @@ struct menu {
 
 	/* Used to match a window-menu to the view that triggered it. */
 	struct view *triggered_by_view;  /* may be NULL */
-	struct wl_list link; /* server.menus */
+
+	~menu();
 };
 
 /* For keyboard support */
