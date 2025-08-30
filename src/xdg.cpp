@@ -718,7 +718,7 @@ static void
 init_foreign_toplevel(struct view *view)
 {
 	assert(!view->foreign_toplevel);
-	view->foreign_toplevel = foreign_toplevel_create(view);
+	auto foreign_toplevel = view->foreign_toplevel.set_new(view);
 
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 	if (!toplevel->parent) {
@@ -726,10 +726,9 @@ init_foreign_toplevel(struct view *view)
 	}
 	struct wlr_xdg_surface *surface = toplevel->parent->base;
 	auto parent = (struct view *)surface->data;
-	if (!parent->foreign_toplevel) {
-		return;
+	if (CHECK_PTR(parent->foreign_toplevel, parent_foreign_toplevel)) {
+		foreign_toplevel->set_parent(*parent_foreign_toplevel);
 	}
-	foreign_toplevel_set_parent(view->foreign_toplevel, parent->foreign_toplevel);
 }
 
 void
@@ -811,9 +810,8 @@ xdg_toplevel_view::unmap(bool client_request)
 	 * than just minimized), destroy the foreign toplevel handle so
 	 * the unmapped view doesn't show up in panels and the like.
 	 */
-	if (client_request && view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
+	if (client_request) {
+		view->foreign_toplevel.reset();
 	}
 }
 
