@@ -3,11 +3,14 @@
 #define LABWC_SESSION_LOCK_H
 
 #include <wayland-server-core.h>
+#include "common/listener.h"
+#include "common/reflist.h"
 
 struct output;
-struct server;
+struct session_lock;
+struct session_lock_output;
 
-struct session_lock_manager {
+struct session_lock_manager : public destroyable {
 	struct wlr_session_lock_manager_v1 *wlr_manager;
 	/* View re-focused on unlock */
 	struct view *last_active_view;
@@ -17,17 +20,14 @@ struct session_lock_manager {
 	 * When locked: lock=non-NULL, locked=true
 	 * When lock is destroyed without being unlocked: lock=NULL, locked=true
 	 */
-	struct wlr_session_lock_v1 *lock;
+	weak_owner<session_lock> lock;
 	bool locked;
 
-	struct wl_list lock_outputs;
+	reflist<session_lock_output> lock_outputs;
 
-	struct wl_listener new_lock;
-	struct wl_listener destroy;
+	~session_lock_manager();
 
-	struct wl_listener lock_new_surface;
-	struct wl_listener lock_unlock;
-	struct wl_listener lock_destroy;
+	DECLARE_HANDLER(session_lock_manager, new_lock);
 };
 
 void session_lock_init(void);
