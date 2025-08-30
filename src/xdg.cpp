@@ -920,7 +920,8 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 
 	wlr_xdg_surface_ping(xdg_surface);
 
-	auto view = new xdg_toplevel_view(xdg_surface);
+	ASSERT_PTR(g_server.workspaces.current, workspace);
+	auto view = new xdg_toplevel_view(xdg_surface, *workspace);
 
 	/*
 	 * Pick an output for the surface as soon as its created, so that the
@@ -933,7 +934,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 			view->output->wlr_output->scale);
 	}
 
-	view->workspace = g_server.workspaces.current;
 	view->scene_tree = wlr_scene_tree_create(view->workspace->tree);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 

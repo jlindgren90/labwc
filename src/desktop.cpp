@@ -96,7 +96,8 @@ desktop_focus_view(struct view *view, bool raise)
 	 * (unnecessary for "always on {top,bottom}" views).
 	 */
 	if (!view_is_always_on_top(view) && !view_is_always_on_bottom(view)) {
-		workspaces_switch_to(view->workspace, /*update_focus*/ false);
+		workspaces_switch_to(view->workspace.get(),
+			/*update_focus*/ false);
 	}
 
 	if (raise) {
@@ -134,16 +135,14 @@ desktop_focus_view_or_surface(struct view *view, struct wlr_surface *surface,
 struct view *
 desktop_topmost_focusable_view(void)
 {
-	struct view *view;
-	struct wl_list *node_list;
+	ASSERT_PTR(g_server.workspaces.current, current);
 	struct wlr_scene_node *node;
-	node_list = &g_server.workspaces.current->tree->children;
-	wl_list_for_each_reverse(node, node_list, link) {
+	wl_list_for_each_reverse(node, &current->tree->children, link) {
 		if (!node->data) {
 			/* We found some non-view, most likely the region overlay */
 			continue;
 		}
-		view = node_view_from_node(node);
+		auto view = node_view_from_node(node);
 		if (view->mapped && view_is_focusable(view)) {
 			return view;
 		}
@@ -173,20 +172,17 @@ desktop_focus_output(struct output *output)
 			|| g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		return;
 	}
-	struct view *view;
+	ASSERT_PTR(g_server.workspaces.current, current);
 	struct wlr_scene_node *node;
-	struct wlr_output_layout *layout = g_server.output_layout;
-	struct wl_list *list_head =
-		&g_server.workspaces.current->tree->children;
-	wl_list_for_each_reverse(node, list_head, link) {
+	wl_list_for_each_reverse(node, &current->tree->children, link) {
 		if (!node->data) {
 			continue;
 		}
-		view = node_view_from_node(node);
+		auto view = node_view_from_node(node);
 		if (!view_is_focusable(view)) {
 			continue;
 		}
-		if (wlr_output_layout_intersects(layout,
+		if (wlr_output_layout_intersects(g_server.output_layout,
 				output->wlr_output, &view->current)) {
 			desktop_focus_view(view, /*raise*/ false);
 			wlr_cursor_warp(g_seat.cursor, NULL,

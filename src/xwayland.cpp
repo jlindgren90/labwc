@@ -920,7 +920,8 @@ xwayland_view::get_pid()
 void
 xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 {
-	auto view = new xwayland_view(xsurface);
+	ASSERT_PTR(g_server.workspaces.current, workspace);
+	auto view = new xwayland_view(xsurface, *workspace);
 
 	/*
 	 * Set two-way view <-> xsurface association.  Usually the association
@@ -931,7 +932,6 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	 */
 	xsurface->data = view;
 
-	view->workspace = g_server.workspaces.current;
 	view->scene_tree = wlr_scene_tree_create(view->workspace->tree);
 	node_descriptor_create(&view->scene_tree->node, LAB_NODE_DESC_VIEW, view);
 

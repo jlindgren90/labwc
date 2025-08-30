@@ -909,19 +909,19 @@ update_client_send_to_menu(void)
 	reset_menu(menu);
 
 	struct menu_parse_context ctx = {0};
-	struct workspace *workspace;
 
-	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
-		if (workspace == g_server.workspaces.current) {
-			lab_str label = strdup_printf(">%s<", workspace->name);
+	for (auto &workspace : g_server.workspaces.all) {
+		if (g_server.workspaces.current == &workspace) {
+			lab_str label =
+				strdup_printf(">%s<", workspace.name.c());
 			ctx.item = item_create(menu, label.c(),
 				/*show arrow*/ false);
 		} else {
-			ctx.item = item_create(menu, workspace->name,
+			ctx.item = item_create(menu, workspace.name.c(),
 				/*show arrow*/ false);
 		}
 		fill_item(&ctx, "name.action", "SendToDesktop");
-		fill_item(&ctx, "to.action", workspace->name);
+		fill_item(&ctx, "to.action", workspace.name.c());
 	}
 
 	menu_create_scene(menu);
@@ -951,18 +951,17 @@ update_client_list_combined_menu(void)
 	reset_menu(menu);
 
 	struct menu_parse_context ctx = {0};
-	struct workspace *workspace;
 	struct buf buffer = BUF_INIT;
 
-	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
+	for (auto &workspace : g_server.workspaces.all) {
 		buf_add_fmt(&buffer,
-			workspace == g_server.workspaces.current ? ">%s<" : "%s",
-			workspace->name);
+			&workspace == g_server.workspaces.current ? ">%s<" : "%s",
+			workspace.name.c());
 		ctx.item = separator_create(menu, buffer.data);
 		buf_clear(&buffer);
 
 		for (auto &view : g_views) {
-			if (view.workspace == workspace) {
+			if (view.workspace.get() == &workspace) {
 				const char *title =
 					view_get_string_prop(&view, "title");
 				if (!view.foreign_toplevel
@@ -987,7 +986,7 @@ update_client_list_combined_menu(void)
 		ctx.item = item_create(menu, _("Go there..."),
 			/*show arrow*/ false);
 		fill_item(&ctx, "name.action", "GoToDesktop");
-		fill_item(&ctx, "to.action", workspace->name);
+		fill_item(&ctx, "to.action", workspace.name.c());
 	}
 	buf_reset(&buffer);
 	menu_create_scene(menu);
@@ -1063,7 +1062,7 @@ init_windowmenu(void)
 		fill_item(&ctx, "name.action", "Close");
 	}
 
-	if (wl_list_length(&rc.workspace_config.workspaces) == 1) {
+	if (rc.workspace_config.names.size() == 1) {
 		menu_hide_submenu("workspaces");
 	}
 }

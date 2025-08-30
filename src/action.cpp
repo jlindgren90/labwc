@@ -991,9 +991,9 @@ actions_run(struct view *activator, std::vector<action> &actions,
 			 * removed the action during the initial parsing step as it is
 			 * a required argument for both SendToDesktop and GoToDesktop.
 			 */
+			ASSERT_PTR(g_server.workspaces.current, current);
 			struct workspace *target_workspace =
-				workspaces_find(g_server.workspaces.current,
-					to.c(), wrap);
+				workspaces_find(current, to.c(), wrap);
 			if (!target_workspace) {
 				break;
 			}

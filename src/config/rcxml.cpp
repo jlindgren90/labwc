@@ -14,7 +14,6 @@
 #include "action.h"
 #include "common/buf.h"
 #include "common/dir.h"
-#include "common/list.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "common/nodename.h"
@@ -34,7 +33,6 @@
 #include "ssd.h"
 #include "view.h"
 #include "window-rules.h"
-#include "workspaces.h"
 
 struct parser_state {
 	bool in_regions;
@@ -203,7 +201,7 @@ clear_title_layout(void)
 }
 
 static void
-fill_title_layout(char *content)
+fill_title_layout(const char *content)
 {
 	clear_title_layout();
 
@@ -1289,9 +1287,7 @@ entry(xmlNode *node, char *nodename, char *content, struct parser_state *state)
 			" Use <windowSwitcher outlines=\"\" />");
 
 	} else if (!strcasecmp(nodename, "name.names.desktops")) {
-		struct workspace *workspace = znew(*workspace);
-		workspace->name = xstrdup(content);
-		wl_list_append(&rc.workspace_config.workspaces, &workspace->link);
+		rc.workspace_config.names.push_back(lab_str(content));
 	} else if (!strcasecmp(nodename, "popupTime.desktops")) {
 		rc.workspace_config.popuptime = atoi(content);
 	} else if (!strcasecmp(nodename, "number.desktops")) {
@@ -1502,13 +1498,6 @@ init_font_defaults(struct font *font)
 static void
 rcxml_init(void)
 {
-	static bool has_run;
-
-	if (!has_run) {
-		wl_list_init(&rc.workspace_config.workspaces);
-	}
-	has_run = true;
-
 	rc.placement_policy = LAB_PLACE_CASCADE;
 	rc.placement_cascade_offset_x = 0;
 	rc.placement_cascade_offset_y = 0;
@@ -1822,23 +1811,20 @@ post_processing(void)
 		}
 	}
 
-	int nr_workspaces = wl_list_length(&rc.workspace_config.workspaces);
+	int nr_workspaces = rc.workspace_config.names.size();
 	if (nr_workspaces < rc.workspace_config.min_nr_workspaces) {
 		if (!rc.workspace_config.prefix) {
 			rc.workspace_config.prefix = lab_str(_("Workspace"));
 		}
 
 		struct buf b = BUF_INIT;
-		struct workspace *workspace;
 		for (int i = nr_workspaces; i < rc.workspace_config.min_nr_workspaces; i++) {
-			workspace = znew(*workspace);
 			if (rc.workspace_config.prefix) {
 				buf_add_fmt(&b, "%s ",
 					rc.workspace_config.prefix.c());
 			}
 			buf_add_fmt(&b, "%d", i + 1);
-			workspace->name = xstrdup(b.data);
-			wl_list_append(&rc.workspace_config.workspaces, &workspace->link);
+			rc.workspace_config.names.push_back(lab_str(b.data));
 			buf_clear(&b);
 		}
 		buf_reset(&b);
@@ -2010,14 +1996,7 @@ rcxml_finish(void)
 	rc.mousebinds.clear();
 	rc.touch_configs.clear();
 	rc.libinput_categories.clear();
-
-	struct workspace *w, *w_tmp;
-	wl_list_for_each_safe(w, w_tmp, &rc.workspace_config.workspaces, link) {
-		wl_list_remove(&w->link);
-		zfree(w->name);
-		zfree(w);
-	}
-
+	rc.workspace_config.names.clear();
 	rc.regions.clear();
 	rc.window_switcher.fields.clear();
 	rc.window_rules.clear();

@@ -143,7 +143,6 @@ struct view_data {
 	 */
 	uint64_t outputs;
 
-	struct workspace *workspace;
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree;
@@ -233,8 +232,9 @@ struct view_data {
 /* C++ class representing a view (constructor-initialized) */
 struct view : public destroyable, public ref_guarded<view>, public view_data {
 	const view_type type;
+	ref<::workspace> workspace;
 
-	view(view_type type);
+	view(view_type type, ::workspace &workspace);
 	virtual ~view();
 
 	virtual void map() = 0;
@@ -316,8 +316,8 @@ struct view_query {
 struct xdg_toplevel_view : public view {
 	wlr_xdg_surface *const xdg_surface;
 
-	xdg_toplevel_view(wlr_xdg_surface *xdg_surface)
-		: view(LAB_XDG_SHELL_VIEW), xdg_surface(xdg_surface) {}
+	xdg_toplevel_view(wlr_xdg_surface *xdg_surface, ::workspace &workspace)
+		: view(LAB_XDG_SHELL_VIEW, workspace), xdg_surface(xdg_surface) {}
 	~xdg_toplevel_view();
 
 	void map() override;

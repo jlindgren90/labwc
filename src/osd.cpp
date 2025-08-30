@@ -264,9 +264,7 @@ preview_cycled_view(struct view *view)
 static void
 create_osd_scene(struct output *output, view_list &views)
 {
-	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
-	const char *workspace_name = g_server.workspaces.current->name;
-
+	bool show_workspace = rc.workspace_config.names.size() > 1;
 	int w = g_theme.osd_window_switcher_width;
 	if (g_theme.osd_window_switcher_width_is_percent) {
 		w = output->wlr_output->width
@@ -305,7 +303,8 @@ create_osd_scene(struct output *output, view_list &views)
 		font.weight = PANGO_WEIGHT_BOLD;
 
 		/* Center workspace indicator on the x axis */
-		int x = (w - font_width(&font, workspace_name)) / 2;
+		ASSERT_PTR(g_server.workspaces.current, current);
+		int x = (w - font_width(&font, current->name.c())) / 2;
 		if (x < 0) {
 			wlr_log(WLR_ERROR,
 				"not enough space for workspace name in osd");
@@ -317,7 +316,7 @@ create_osd_scene(struct output *output, view_list &views)
 		wlr_scene_node_set_position(&font_buffer->scene_buffer->node, x,
 			y + (g_theme.osd_window_switcher_item_height
 				- font_height(&font)) / 2);
-		scaled_font_buffer_update(font_buffer, workspace_name, 0,
+		scaled_font_buffer_update(font_buffer, current->name.c(), 0,
 			&font, text_color, bg_color);
 		y += g_theme.osd_window_switcher_item_height;
 	}

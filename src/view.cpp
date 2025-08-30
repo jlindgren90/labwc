@@ -11,7 +11,6 @@
 #include "buffer.h"
 #include "common/box.h"
 #include "common/match.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "foreign-toplevel/foreign.h"
 #include "input/keyboard.h"
@@ -162,19 +161,20 @@ view_matches_query(struct view *view, struct view_query *query)
 	}
 
 	if (query->desktop) {
-		const char *view_workspace = view->workspace->name;
-		struct workspace *current = g_server.workspaces.current;
+		const char *view_workspace = view->workspace->name.c();
+		ASSERT_PTR(g_server.workspaces.current, current);
 
 		if (!strcasecmp(query->desktop.c(), "other")) {
 			/* "other" means the view is NOT on the current desktop */
-			if (!strcasecmp(view_workspace, current->name)) {
+			if (!strcasecmp(view_workspace, current->name.c())) {
 				return false;
 			}
 		} else {
 			// TODO: perhaps wrap "left" and "right" workspaces
 			struct workspace *target = workspaces_find(current,
 				query->desktop.c(), /* wrap */ false);
-			if (!target || strcasecmp(view_workspace, target->name)) {
+			if (!target || strcasecmp(view_workspace,
+					target->name.c())) {
 				return false;
 			}
 		}
@@ -221,8 +221,8 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 		 * Always-on-top views are always on the current desktop and are
 		 * special in that they live in a different tree.
 		 */
-		if (view->scene_tree->node.parent
-				!= g_server.workspaces.current->tree
+		ASSERT_PTR(g_server.workspaces.current, current);
+		if (view->scene_tree->node.parent != current->tree
 				&& !view_is_always_on_top(view)) {
 			return false;
 		}
@@ -1475,7 +1475,8 @@ view_toggle_always_on_top(struct view *view)
 {
 	assert(view);
 	if (view_is_always_on_top(view)) {
-		view->workspace = g_server.workspaces.current;
+		ASSERT_PTR(g_server.workspaces.current, current);
+		view->workspace.reset(*current);
 		wlr_scene_node_reparent(&view->scene_tree->node,
 			view->workspace->tree);
 	} else {
@@ -1497,7 +1498,8 @@ view_toggle_always_on_bottom(struct view *view)
 {
 	assert(view);
 	if (view_is_always_on_bottom(view)) {
-		view->workspace = g_server.workspaces.current;
+		ASSERT_PTR(g_server.workspaces.current, current);
+		view->workspace.reset(*current);
 		wlr_scene_node_reparent(&view->scene_tree->node,
 			view->workspace->tree);
 	} else {
@@ -1519,8 +1521,8 @@ view_move_to_workspace(struct view *view, struct workspace *workspace)
 {
 	assert(view);
 	assert(workspace);
-	if (view->workspace != workspace) {
-		view->workspace = workspace;
+	if (view->workspace.get() != workspace) {
+		view->workspace.reset(*workspace);
 		wlr_scene_node_reparent(&view->scene_tree->node,
 			workspace->tree);
 	}
@@ -2337,7 +2339,8 @@ view_set_icon(struct view *view, const char *icon_name,
 	wl_signal_emit_mutable(&view->events.set_icon, NULL);
 }
 
-view::view(view_type type) : view_data(), type(type)
+view::view(view_type type, ::workspace &workspace)
+	: view_data(), type(type), workspace(workspace)
 {
 	auto view = this;
 
