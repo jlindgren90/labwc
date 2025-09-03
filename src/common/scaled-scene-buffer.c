@@ -198,7 +198,7 @@ scaled_scene_buffer_create(struct wlr_scene_tree *parent,
 		return NULL;
 	}
 	node_descriptor_create(&self->scene_buffer->node,
-		LAB_NODE_DESC_SCALED_SCENE_BUFFER, self);
+		LAB_NODE_SCALED_SCENE_BUFFER, /*view*/ NULL, self);
 
 	self->impl = impl;
 	/*

@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdlib.h>
 #include "common/mem.h"
+#include "ssd.h"
 
 static void
 descriptor_destroy(struct node_descriptor *node_descriptor)
@@ -10,6 +11,12 @@ descriptor_destroy(struct node_descriptor *node_descriptor)
 	if (!node_descriptor) {
 		return;
 	}
+
+	if (node_descriptor->type >= LAB_NODE_BUTTON_FIRST
+			&& node_descriptor->type <= LAB_NODE_BUTTON_LAST) {
+		ssd_button_free(node_descriptor->data);
+	}
+
 	wl_list_remove(&node_descriptor->destroy.link);
 	free(node_descriptor);
 }
@@ -24,10 +31,11 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 
 void
 node_descriptor_create(struct wlr_scene_node *scene_node,
-		enum node_descriptor_type type, void *data)
+		enum lab_node_type type, struct view *view, void *data)
 {
 	struct node_descriptor *node_descriptor = znew(*node_descriptor);
 	node_descriptor->type = type;
+	node_descriptor->view = view;
 	node_descriptor->data = data;
 	node_descriptor->destroy.notify = handle_node_destroy;
 	wl_signal_add(&scene_node->events.destroy, &node_descriptor->destroy);
@@ -39,9 +47,7 @@ node_view_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	assert(node_descriptor->type == LAB_NODE_DESC_VIEW
-		|| node_descriptor->type == LAB_NODE_DESC_XDG_POPUP);
-	return (struct view *)node_descriptor->data;
+	return node_descriptor->view;
 }
 
 struct lab_layer_surface *
@@ -49,7 +55,7 @@ node_layer_surface_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	assert(node_descriptor->type == LAB_NODE_DESC_LAYER_SURFACE);
+	assert(node_descriptor->type == LAB_NODE_LAYER_SURFACE);
 	return (struct lab_layer_surface *)node_descriptor->data;
 }
 
@@ -58,7 +64,7 @@ node_layer_popup_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	assert(node_descriptor->type == LAB_NODE_DESC_LAYER_POPUP);
+	assert(node_descriptor->type == LAB_NODE_LAYER_POPUP);
 	return (struct lab_layer_popup *)node_descriptor->data;
 }
 
@@ -67,17 +73,8 @@ node_menuitem_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	assert(node_descriptor->type == LAB_NODE_DESC_MENUITEM);
+	assert(node_descriptor->type == LAB_NODE_MENUITEM);
 	return (struct menuitem *)node_descriptor->data;
-}
-
-struct ssd_part *
-node_ssd_part_from_node(struct wlr_scene_node *wlr_scene_node)
-{
-	assert(wlr_scene_node->data);
-	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	assert(node_descriptor->type == LAB_NODE_DESC_SSD_PART);
-	return (struct ssd_part *)node_descriptor->data;
 }
 
 struct scaled_scene_buffer *
@@ -85,6 +82,20 @@ node_scaled_scene_buffer_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	assert(node_descriptor->type == LAB_NODE_DESC_SCALED_SCENE_BUFFER);
+	assert(node_descriptor->type == LAB_NODE_SCALED_SCENE_BUFFER);
 	return (struct scaled_scene_buffer *)node_descriptor->data;
+}
+
+struct ssd_button *
+node_try_ssd_button_from_node(struct wlr_scene_node *wlr_scene_node)
+{
+	assert(wlr_scene_node->data);
+	struct node_descriptor *node_descriptor = wlr_scene_node->data;
+
+	if (node_descriptor->type >= LAB_NODE_BUTTON_FIRST
+			&& node_descriptor->type <= LAB_NODE_BUTTON_LAST) {
+		return (struct ssd_button *)node_descriptor->data;
+	}
+
+	return NULL;
 }
