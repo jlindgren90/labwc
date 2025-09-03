@@ -131,7 +131,7 @@ fill_section(const char *content, struct wl_list *list, uint32_t *found_buttons)
 #else
 			wlr_log(WLR_ERROR, "libsfdo is not linked. "
 				"Replacing 'icon' in titlebar layout with 'menu'.");
-			type = LAB_SSD_BUTTON_WINDOW_MENU;
+			type = LAB_NODE_BUTTON_WINDOW_MENU;
 #endif
 		} else if (!strcmp(identifier, "menu")) {
 			type = LAB_NODE_BUTTON_WINDOW_MENU;
