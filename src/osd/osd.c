@@ -1,23 +1,17 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include "osd.h"
 #include <assert.h>
-#include <cairo.h>
-#include <wlr/util/log.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include "common/array.h"
 #include "common/lab-scene-rect.h"
-#include "common/scaled-font-buffer.h"
-#include "common/scaled-icon-buffer.h"
 #include "common/scene-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
-#include "node.h"
 #include "output.h"
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"
-#include "window-rules.h"
-#include "workspaces.h"
 
 static void update_osd(struct server *server);
 

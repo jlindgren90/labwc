@@ -3,7 +3,6 @@
 #include "menu/menu.h"
 #include <assert.h>
 #include <libxml/parser.h>
-#include <libxml/tree.h>
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -22,7 +21,6 @@
 #include "common/mem.h"
 #include "common/scaled-font-buffer.h"
 #include "common/scaled-icon-buffer.h"
-#include "common/scene-helpers.h"
 #include "common/spawn.h"
 #include "common/string-helpers.h"
 #include "common/xml.h"
