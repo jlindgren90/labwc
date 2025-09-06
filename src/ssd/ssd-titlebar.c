@@ -493,23 +493,23 @@ ssd_update_title(struct ssd *ssd)
 }
 
 void
-ssd_update_button_hover(struct server *server, struct wlr_scene_node *node)
+ssd_update_hovered_button(struct server *server, struct wlr_scene_node *node)
 {
 	struct ssd_button *button = NULL;
 
 	if (node && node->data) {
 		button = node_try_ssd_button_from_node(node);
-		if (button == server->hover_button) {
+		if (button == server->hovered_button) {
 			/* Cursor is still on the same button */
 			return;
 		}
 	}
 
 	/* Disable old hover */
-	if (server->hover_button) {
-		update_button_state(server->hover_button, LAB_BS_HOVERD, false);
+	if (server->hovered_button) {
+		update_button_state(server->hovered_button, LAB_BS_HOVERD, false);
 	}
-	server->hover_button = button;
+	server->hovered_button = button;
 	if (button) {
 		update_button_state(button, LAB_BS_HOVERD, true);
 	}

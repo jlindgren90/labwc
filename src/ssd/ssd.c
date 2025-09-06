@@ -267,9 +267,9 @@ ssd_destroy(struct ssd *ssd)
 	/* Maybe reset hover view */
 	struct view *view = ssd->view;
 	struct server *server = view->server;
-	if (server->hover_button && node_view_from_node(
-			server->hover_button->node) == view) {
-		server->hover_button = NULL;
+	if (server->hovered_button && node_view_from_node(
+			server->hovered_button->node) == view) {
+		server->hovered_button = NULL;
 	}
 
 	/* Destroy subcomponents */
