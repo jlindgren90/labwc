@@ -6,27 +6,17 @@
 #include "ssd.h"
 
 static void
-descriptor_destroy(struct node_descriptor *node_descriptor)
+handle_node_destroy(struct wl_listener *listener, void *data)
 {
-	if (!node_descriptor) {
-		return;
-	}
+	struct node_descriptor *node_descriptor =
+		wl_container_of(listener, node_descriptor, destroy);
 
-	if (node_descriptor->type >= LAB_NODE_BUTTON_FIRST
-			&& node_descriptor->type <= LAB_NODE_BUTTON_LAST) {
+	if (node_type_contains(LAB_NODE_BUTTON, node_descriptor->type)) {
 		ssd_button_free(node_descriptor->data);
 	}
 
 	wl_list_remove(&node_descriptor->destroy.link);
 	free(node_descriptor);
-}
-
-static void
-handle_node_destroy(struct wl_listener *listener, void *data)
-{
-	struct node_descriptor *node_descriptor =
-		wl_container_of(listener, node_descriptor, destroy);
-	descriptor_destroy(node_descriptor);
 }
 
 void
@@ -92,8 +82,7 @@ node_try_ssd_button_from_node(struct wlr_scene_node *wlr_scene_node)
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
 
-	if (node_descriptor->type >= LAB_NODE_BUTTON_FIRST
-			&& node_descriptor->type <= LAB_NODE_BUTTON_LAST) {
+	if (node_type_contains(LAB_NODE_BUTTON, node_descriptor->type)) {
 		return (struct ssd_button *)node_descriptor->data;
 	}
 
