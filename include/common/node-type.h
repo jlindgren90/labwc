@@ -9,9 +9,12 @@
  * overall desktop. It also maps more-or-less to the openbox concept of
  * "context" (as used when defining mouse bindings).
  *
- * Node types are defined in the order they should be processed for press
- * and hover events. Note that some of their respective interactive areas
- * overlap, so for example buttons need to come before title.
+ * Some types (BUTTON, BORDER, etc.) refer to groups or categories of
+ * other node types rather than individual nodes. These categories are
+ * defined as ranges (e.g. BUTTON means anything from BUTTON_FIRST to
+ * BUTTON_LAST), therefore order is significant.
+ *
+ * Be sure to keep node_type_contains() in sync with any changes!
  */
 enum lab_node_type {
 	LAB_NODE_NONE = 0,
