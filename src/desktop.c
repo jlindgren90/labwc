@@ -338,7 +338,7 @@ get_cursor_context(struct server *server)
 			default:
 				/*
 				 * All other node descriptors (buttons, title,
-				 * frame, etc.) should have an associated view.
+				 * borders etc.) should have an associated view.
 				 */
 				if (!desc->view) {
 					wlr_log(WLR_ERROR, "cursor not on any view "
