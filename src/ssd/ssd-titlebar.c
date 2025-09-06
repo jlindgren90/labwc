@@ -507,11 +507,11 @@ ssd_update_hovered_button(struct server *server, struct wlr_scene_node *node)
 
 	/* Disable old hover */
 	if (server->hovered_button) {
-		update_button_state(server->hovered_button, LAB_BS_HOVERD, false);
+		update_button_state(server->hovered_button, LAB_BS_HOVERED, false);
 	}
 	server->hovered_button = button;
 	if (button) {
-		update_button_state(button, LAB_BS_HOVERD, true);
+		update_button_state(button, LAB_BS_HOVERED, true);
 	}
 }
 
