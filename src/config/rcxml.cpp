@@ -318,20 +318,10 @@ fill_window_rules(xmlNode *node)
 }
 
 static void
-clear_window_switcher_fields(void)
-{
-	struct window_switcher_field *field, *field_tmp;
-	wl_list_for_each_safe(field, field_tmp, &rc.window_switcher.fields, link) {
-		wl_list_remove(&field->link);
-		osd_field_free(field);
-	}
-}
-
-static void
 fill_window_switcher_field(xmlNode *node)
 {
-	struct window_switcher_field *field = znew(*field);
-	wl_list_append(&rc.window_switcher.fields, &field->link);
+	rc.window_switcher.fields.push_back(window_switcher_field());
+	auto field = &rc.window_switcher.fields.back();
 
 	xmlNode *child;
 	char *key, *content;
@@ -343,7 +333,7 @@ fill_window_switcher_field(xmlNode *node)
 static void
 fill_window_switcher_fields(xmlNode *node)
 {
-	clear_window_switcher_fields();
+	rc.window_switcher.fields.clear();
 
 	xmlNode *child;
 	char *key, *content;
@@ -1339,7 +1329,6 @@ rcxml_init(void)
 	if (!has_run) {
 		wl_list_init(&rc.libinput_categories);
 		wl_list_init(&rc.workspace_config.workspaces);
-		wl_list_init(&rc.window_switcher.fields);
 		wl_list_init(&rc.touch_configs);
 	}
 	has_run = true;
@@ -1577,12 +1566,11 @@ load_default_window_switcher_fields(void)
 #endif
 	};
 
-	struct window_switcher_field *field;
 	for (size_t i = 0; i < ARRAY_SIZE(fields); i++) {
-		field = znew(*field);
-		field->content = fields[i].content;
-		field->width = fields[i].width;
-		wl_list_append(&rc.window_switcher.fields, &field->link);
+		rc.window_switcher.fields.push_back({
+			.content = fields[i].content,
+			.width = fields[i].width
+		});
 	}
 }
 
@@ -1702,7 +1690,7 @@ post_processing(void)
 	if (rc.workspace_config.popuptime == INT_MIN) {
 		rc.workspace_config.popuptime = 1000;
 	}
-	if (!wl_list_length(&rc.window_switcher.fields)) {
+	if (rc.window_switcher.fields.empty()) {
 		wlr_log(WLR_INFO, "load default window switcher fields");
 		load_default_window_switcher_fields();
 	}
@@ -1774,15 +1762,15 @@ validate(void)
 
 	/* OSD fields */
 	int field_width_sum = 0;
-	struct window_switcher_field *field, *field_tmp;
-	wl_list_for_each_safe(field, field_tmp, &rc.window_switcher.fields, link) {
-		field_width_sum += field->width;
-		if (!osd_field_is_valid(field) || field_width_sum > 100) {
-			wlr_log(WLR_ERROR, "Deleting invalid window switcher field %p", field);
-			wl_list_remove(&field->link);
-			osd_field_free(field);
+	lab::remove_if(rc.window_switcher.fields, [&](auto &field) {
+		field_width_sum += field.width;
+		if (!osd_field_is_valid(&field) || field_width_sum > 100) {
+			wlr_log(WLR_ERROR,
+				"Deleting invalid window switcher field");
+			return true; // invalid
 		}
-	}
+		return false; // valid
+	});
 }
 
 void
@@ -1893,9 +1881,7 @@ rcxml_finish(void)
 	}
 
 	rc.regions.clear();
-
-	clear_window_switcher_fields();
-
+	rc.window_switcher.fields.clear();
 	rc.window_rules.clear();
 
 	/* Reset state vars for starting fresh when Reload is triggered */
