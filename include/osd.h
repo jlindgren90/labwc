@@ -2,9 +2,8 @@
 #ifndef LABWC_OSD_H
 #define LABWC_OSD_H
 
-#include <stdbool.h>
-#include <wayland-server-core.h>
 #include "common/reflist.h"
+#include "common/str.h"
 
 struct output;
 
@@ -39,13 +38,11 @@ enum window_switcher_field_content {
 struct window_switcher_field {
 	enum window_switcher_field_content content;
 	int width;
-	char *format;
-	struct wl_list link; /* struct rcxml.window_switcher.fields */
+	lab_str format;
 };
 
 struct buf;
 struct view;
-struct server;
 
 /* Begin window switcher */
 void osd_begin(enum lab_cycle_dir direction);
@@ -67,7 +64,6 @@ void osd_field_get_content(struct window_switcher_field *field,
 void osd_field_arg_from_xml_node(struct window_switcher_field *field,
 	const char *nodename, const char *content);
 bool osd_field_is_valid(struct window_switcher_field *field);
-void osd_field_free(struct window_switcher_field *field);
 
 /* Internal API */
 struct osd_impl {

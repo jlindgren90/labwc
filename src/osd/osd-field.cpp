@@ -4,7 +4,6 @@
 #include <wlr/util/log.h>
 #include "common/buf.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "view.h"
 #include "workspaces.h"
@@ -324,8 +323,7 @@ osd_field_arg_from_xml_node(struct window_switcher_field *field,
 			wlr_log(WLR_ERROR, "bad windowSwitcher field '%s'", content);
 		}
 	} else if (!strcmp(nodename, "format")) {
-		zfree(field->format);
-		field->format = xstrdup(content);
+		field->format = lab_str(content);
 	} else if (!strcmp(nodename, "width") && !strchr(content, '%')) {
 		wlr_log(WLR_ERROR, "Invalid osd field width: %s, misses trailing %%", content);
 	} else if (!strcmp(nodename, "width")) {
@@ -364,12 +362,5 @@ osd_field_get_content(struct window_switcher_field *field,
 	}
 	assert(field->content < LAB_FIELD_COUNT && field_converter[field->content].fn);
 
-	field_converter[field->content].fn(buf, view, field->format);
-}
-
-void
-osd_field_free(struct window_switcher_field *field)
-{
-	zfree(field->format);
-	zfree(field);
+	field_converter[field->content].fn(buf, view, field->format.c());
 }

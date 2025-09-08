@@ -13,6 +13,7 @@
 #include "config/session.h"
 #include "labwc.h"
 #include "menu/menu.h"
+#include "osd.h"
 #include "regions.h"
 #include "theme.h"
 #include "translate.h"
