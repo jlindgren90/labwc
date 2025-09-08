@@ -3,10 +3,8 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
-#include "common/buf.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
-#include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "osd.h"
@@ -16,11 +14,6 @@
 #include "theme.h"
 #include "view.h"
 #include "workspaces.h"
-
-struct osd_classic_scene_item {
-	struct view *view;
-	struct wlr_scene_node *highlight_outline;
-};
 
 static void
 osd_classic_create(struct output *output, reflist<view> &views)
@@ -100,8 +93,8 @@ osd_classic_create(struct output *output, reflist<view> &views)
 { /* !goto */
 	/* Draw text for each node */
 	for (auto &view : views) {
-		struct osd_classic_scene_item *item =
-			wl_array_add(&output->osd_scene.items, sizeof(*item));
+		output->osd_scene.classic_items.push_back({});
+		auto item = &output->osd_scene.classic_items.back();
 		item->view = &view;
 		/*
 		 *    OSD border
@@ -193,10 +186,9 @@ osd_classic_create(struct output *output, reflist<view> &views)
 static void
 osd_classic_update(struct output *output)
 {
-	struct osd_classic_scene_item *item;
-	wl_array_for_each(item, &output->osd_scene.items) {
-		wlr_scene_node_set_enabled(item->highlight_outline,
-			item->view == g_server.osd_state.cycle_view);
+	for (auto &item : output->osd_scene.classic_items) {
+		wlr_scene_node_set_enabled(item.highlight_outline,
+			item.view == g_server.osd_state.cycle_view);
 	}
 }
 
