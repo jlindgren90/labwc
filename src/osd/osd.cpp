@@ -22,8 +22,8 @@ destroy_osd_scenes(void)
 			wlr_scene_node_destroy(&output.osd_scene.tree->node);
 			output.osd_scene.tree = NULL;
 		}
-		wl_array_release(&output.osd_scene.items);
-		wl_array_init(&output.osd_scene.items);
+		output.osd_scene.classic_items.clear();
+		output.osd_scene.thumbnail_items.clear();
 	}
 }
 
