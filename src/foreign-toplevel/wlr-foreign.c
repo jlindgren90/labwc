@@ -203,8 +203,8 @@ wlr_foreign_toplevel_init(struct wlr_foreign_toplevel *wlr_toplevel,
 	handle_maximized(&wlr_toplevel->on_view.maximized, NULL);
 	handle_minimized(&wlr_toplevel->on_view.minimized, NULL);
 	handle_fullscreened(&wlr_toplevel->on_view.fullscreened, NULL);
-	handle_activated(&wlr_toplevel->on_view.activated,
-		&(bool){view == g_server.active_view});
+	bool activated = view == g_server.active_view;
+	handle_activated(&wlr_toplevel->on_view.activated, &activated);
 
 	/* Client side requests */
 	CONNECT_SIGNAL(wlr_toplevel->handle, &wlr_toplevel->on, request_maximize);

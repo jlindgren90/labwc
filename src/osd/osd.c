@@ -2,8 +2,6 @@
 #include "osd.h"
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include <wlr/util/box.h>
-#include <wlr/util/log.h>
 #include "common/array.h"
 #include "common/lab-scene-rect.h"
 #include "common/scene-helpers.h"
@@ -38,12 +36,13 @@ osd_update_preview_outlines(struct view *view)
 	/* Create / Update preview outline tree */
 	struct lab_scene_rect *rect = g_server.osd_state.preview_outline;
 	if (!rect) {
+		float *border_colors[3] = {
+			g_theme.osd_window_switcher_preview_border_color[0],
+			g_theme.osd_window_switcher_preview_border_color[1],
+			g_theme.osd_window_switcher_preview_border_color[2],
+		};
 		struct lab_scene_rect_options opts = {
-			.border_colors = (float *[3]){
-				g_theme.osd_window_switcher_preview_border_color[0],
-				g_theme.osd_window_switcher_preview_border_color[1],
-				g_theme.osd_window_switcher_preview_border_color[2],
-			},
+			.border_colors = border_colors,
 			.nr_borders = 3,
 			.border_width =
 				g_theme.osd_window_switcher_preview_border_width,
