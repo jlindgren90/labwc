@@ -45,12 +45,13 @@ osd_classic_create(struct output *output, struct wl_array *views)
 
 	output->osd_scene.tree = wlr_scene_tree_create(output->osd_tree);
 
-	float *text_color = g_theme.osd_label_text_color;
 	float *bg_color = g_theme.osd_bg_color;
+	float *border_color = g_theme.osd_border_color;
+	float *text_color = g_theme.osd_label_text_color;
 
 	/* Draw background */
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]){g_theme.osd_border_color},
+		.border_colors = &border_color,
 		.nr_borders = 1,
 		.border_width = g_theme.osd_border_width,
 		.bg_color = bg_color,
@@ -169,7 +170,7 @@ osd_classic_create(struct output *output, struct wl_array *views)
 		int highlight_x = g_theme.osd_border_width
 				+ switcher_theme->padding;
 		struct lab_scene_rect_options highlight_opts = {
-			.border_colors = (float *[1]){text_color},
+			.border_colors = &text_color,
 			.nr_borders = 1,
 			.border_width = switcher_theme->item_active_border_width,
 			.width = w - 2 * g_theme.osd_border_width
