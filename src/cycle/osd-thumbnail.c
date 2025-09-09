@@ -51,7 +51,7 @@ render_node(struct wlr_render_pass *pass, struct wlr_scene_node *node,
 		if (!texture) {
 			break;
 		}
-		wlr_render_pass_add_texture(pass, &(struct wlr_render_texture_options){
+		struct wlr_render_texture_options opts = {
 			.texture = texture,
 			.src_box = scene_buffer->src_box,
 			.dst_box = {
@@ -61,7 +61,8 @@ render_node(struct wlr_render_pass *pass, struct wlr_scene_node *node,
 				.height = scene_buffer->dst_height,
 			},
 			.transform = scene_buffer->transform,
-		});
+		};
+		wlr_render_pass_add_texture(pass, &opts);
 		wlr_texture_destroy(texture);
 		break;
 	}
@@ -143,8 +144,9 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 	item->base.view = view;
 
 	/* background for selected item */
+	float *border_color = switcher_theme->item_active_border_color;
 	struct lab_scene_rect_options opts = {
-		.border_colors = (float *[1]) { switcher_theme->item_active_border_color },
+		.border_colors = &border_color,
 		.nr_borders = 1,
 		.border_width = switcher_theme->item_active_border_width,
 		.bg_color = switcher_theme->item_active_bg_color,
@@ -256,8 +258,9 @@ cycle_osd_thumbnail_create(struct output *output)
 	}
 
 	/* background */
+	float *border_color = g_theme.osd_border_color;
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]){g_theme.osd_border_color},
+		.border_colors = &border_color,
 		.nr_borders = 1,
 		.border_width = g_theme.osd_border_width,
 		.bg_color = g_theme.osd_bg_color,
