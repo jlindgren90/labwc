@@ -250,13 +250,14 @@ update_popup_position(struct input_method_popup *popup)
 	/* Make sure IME popups are always on top, above layer-shell surfaces */
 	wlr_scene_node_raise_to_top(&relay->popup_tree->node);
 
+	struct wlr_box rect = {
+		.x = cursor_rect.x - popup_box.x,
+		.y = cursor_rect.y - popup_box.y,
+		.width = cursor_rect.width,
+		.height = cursor_rect.height,
+	};
 	wlr_input_popup_surface_v2_send_text_input_rectangle(
-		popup->popup_surface, &(struct wlr_box){
-			.x = cursor_rect.x - popup_box.x,
-			.y = cursor_rect.y - popup_box.y,
-			.width = cursor_rect.width,
-			.height = cursor_rect.height,
-		});
+		popup->popup_surface, &rect);
 }
 
 static void

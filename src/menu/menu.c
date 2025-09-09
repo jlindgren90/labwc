@@ -450,8 +450,9 @@ menu_create_scene(struct menu *menu)
 	}
 	menu->size.height = item_y + g_theme.menu_border_width;
 
+	float *border_color = g_theme.menu_border_color;
 	struct lab_scene_rect_options opts = {
-		.border_colors = (float *[1]){g_theme.menu_border_color},
+		.border_colors = &border_color,
 		.nr_borders = 1,
 		.border_width = g_theme.menu_border_width,
 		.width = menu->size.width,
