@@ -678,7 +678,7 @@ static void
 action_prompt_create(struct view *view, action &action)
 {
 	struct buf command = BUF_INIT;
-	action_prompt_command(&command, rc.prompt_command, action);
+	action_prompt_command(&command, rc.prompt_command.c(), action);
 
 	wlr_log(WLR_INFO, "prompt command: '%s'", command.data);
 
