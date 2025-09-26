@@ -18,10 +18,10 @@ static struct key_combos {
 	}, {
 		.binding = "W-Return",
 		.action = "Execute",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "command",
 			.value = "lab-sensible-terminal",
-		},
+		} },
 	}, {
 		.binding = "A-F4",
 		.action = "Close",
@@ -31,93 +31,93 @@ static struct key_combos {
 	}, {
 		.binding = "W-Left",
 		.action = "SnapToEdge",
-		.attributes[0] = {
-			.name = "direction",
-			.value = "left",
-		},
-		.attributes[1] = {
-			.name = "combine",
-			.value = "yes",
+		.attributes = { {
+				.name = "direction",
+				.value = "left",
+			}, {
+				.name = "combine",
+				.value = "yes",
+			},
 		},
 	}, {
 		.binding = "W-Right",
 		.action = "SnapToEdge",
-		.attributes[0] = {
-			.name = "direction",
-			.value = "right",
-		},
-		.attributes[1] = {
-			.name = "combine",
-			.value = "yes",
+		.attributes = { {
+				.name = "direction",
+				.value = "right",
+			}, {
+				.name = "combine",
+				.value = "yes",
+			},
 		},
 	}, {
 		.binding = "W-Up",
 		.action = "SnapToEdge",
-		.attributes[0] = {
-			.name = "direction",
-			.value = "up",
-		},
-		.attributes[1] = {
-			.name = "combine",
-			.value = "yes",
+		.attributes = { {
+				.name = "direction",
+				.value = "up",
+			}, {
+				.name = "combine",
+				.value = "yes",
+			},
 		},
 	}, {
 		.binding = "W-Down",
 		.action = "SnapToEdge",
-		.attributes[0] = {
-			.name = "direction",
-			.value = "down",
-		},
-		.attributes[1] = {
-			.name = "combine",
-			.value = "yes",
+		.attributes = { {
+				.name = "direction",
+				.value = "down",
+			}, {
+				.name = "combine",
+				.value = "yes",
+			},
 		},
 	}, {
 		.binding = "A-Space",
 		.action = "ShowMenu",
-		.attributes[0] = {
-			.name = "menu",
-			.value = "client-menu"
-		},
-		.attributes[1] = {
-			.name = "atCursor",
-			.value = "no",
+		.attributes = { {
+				.name = "menu",
+				.value = "client-menu"
+			}, {
+				.name = "atCursor",
+				.value = "no",
+			},
 		},
 	}, {
 		.binding = "XF86_AudioLowerVolume",
 		.action = "Execute",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "command",
 			.value = "amixer sset Master 5%-",
-		},
+		} },
 	}, {
 		.binding = "XF86_AudioRaiseVolume",
 		.action = "Execute",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "command",
 			.value = "amixer sset Master 5%+",
-		},
+		} },
 	}, {
 		.binding = "XF86_AudioMute",
 		.action = "Execute",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "command",
 			.value = "amixer sset Master toggle",
-		},
+		} },
 	}, {
 		.binding = "XF86_MonBrightnessUp",
 		.action = "Execute",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "command",
 			.value = "brightnessctl set +10%",
-		},
+		} },
 	}, {
 		.binding = "XF86_MonBrightnessDown",
 		.action = "Execute",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "command",
 			.value = "brightnessctl set 10%-",
-		},
+		} },
 	}, {
 		.binding = NULL,
 	},
@@ -258,13 +258,13 @@ static struct mouse_combos {
 		.button = "Right",
 		.event = "Click",
 		.action = "ShowMenu",
-		.attributes[0] = {
-			.name = "menu",
-			.value = "client-menu",
-		},
-		.attributes[1] = {
-			.name = "atCursor",
-			.value = "yes",
+		.attributes = { {
+				.name = "menu",
+				.value = "client-menu",
+			}, {
+				.name = "atCursor",
+				.value = "yes",
+			},
 		},
 	}, {
 		.context = "Close",
@@ -296,116 +296,116 @@ static struct mouse_combos {
 		.button = "Right",
 		.event = "Click",
 		.action = "ToggleMaximize",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "direction",
 			.value = "horizontal",
-		},
+		} },
 	}, {
 		.context = "Maximize",
 		.button = "Middle",
 		.event = "Click",
 		.action = "ToggleMaximize",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "direction",
 			.value = "vertical",
-		},
+		} },
 	}, {
 		.context = "WindowMenu",
 		.button = "Left",
 		.event = "Click",
 		.action = "ShowMenu",
-		.attributes[0] = {
-			.name = "menu",
-			.value = "client-menu",
-		},
-		.attributes[1] = {
-			.name = "atCursor",
-			.value = "no",
+		.attributes = { {
+				.name = "menu",
+				.value = "client-menu",
+			}, {
+				.name = "atCursor",
+				.value = "no",
+			},
 		},
 	}, {
 		.context = "WindowMenu",
 		.button = "Right",
 		.event = "Click",
 		.action = "ShowMenu",
-		.attributes[0] = {
-			.name = "menu",
-			.value = "client-menu",
-		},
-		.attributes[1] = {
-			.name = "atCursor",
-			.value = "no",
+		.attributes = { {
+				.name = "menu",
+				.value = "client-menu",
+			}, {
+				.name = "atCursor",
+				.value = "no",
+			},
 		},
 	}, {
 		.context = "Icon",
 		.button = "Left",
 		.event = "Click",
 		.action = "ShowMenu",
-		.attributes[0] = {
-			.name = "menu",
-			.value = "client-menu",
-		},
-		.attributes[1] = {
-			.name = "atCursor",
-			.value = "no",
+		.attributes = { {
+				.name = "menu",
+				.value = "client-menu",
+			}, {
+				.name = "atCursor",
+				.value = "no",
+			},
 		},
 	}, {
 		.context = "Icon",
 		.button = "Right",
 		.event = "Click",
 		.action = "ShowMenu",
-		.attributes[0] = {
-			.name = "menu",
-			.value = "client-menu",
-		},
-		.attributes[1] = {
-			.name = "atCursor",
-			.value = "no",
+		.attributes = { {
+				.name = "menu",
+				.value = "client-menu",
+			}, {
+				.name = "atCursor",
+				.value = "no",
+			},
 		},
 	}, {
 		.context = "Root",
 		.button = "Left",
 		.event = "Press",
 		.action = "ShowMenu",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "menu",
 			.value = "root-menu",
-		},
+		} },
 	}, {
 		.context = "Root",
 		.button = "Right",
 		.event = "Press",
 		.action = "ShowMenu",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "menu",
 			.value = "root-menu",
-		},
+		} },
 	}, {
 		.context = "Root",
 		.button = "Middle",
 		.event = "Press",
 		.action = "ShowMenu",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "menu",
 			.value = "root-menu",
-		},
+		} },
 	}, {
 		.context = "Root",
 		.button = "Up",
 		.event = "Scroll",
 		.action = "GoToDesktop",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "to",
 			.value = "left",
-		},
+		} },
 	}, {
 		.context = "Root",
 		.button = "Down",
 		.event = "Scroll",
 		.action = "GoToDesktop",
-		.attributes[0] = {
+		.attributes = { {
 			.name = "to",
 			.value = "right",
-		},
+		} },
 	}, {
 		.context = "Client",
 		.button = "Left",
