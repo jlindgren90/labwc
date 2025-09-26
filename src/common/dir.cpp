@@ -10,8 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "common/buf.h"
-#include "common/list.h"
-#include "common/mem.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
 
@@ -59,7 +57,7 @@ struct ctx {
 	size_t len;
 	struct dir *dirs;
 	const char *theme_name;
-	struct wl_list *list;
+	std::vector<lab_str> &list;
 };
 
 struct wl_list *paths_get_prev(struct wl_list *elm) { return elm->prev; }
@@ -130,20 +128,18 @@ find_dir(struct ctx *ctx)
 			 * wanted to only respect only the first hit, but feels
 			 * like it is probably overkill.
 			 */
-			struct path *path = znew(*path);
-			path->string = xstrdup(ctx->buf);
-			wl_list_append(ctx->list, &path->link);
+			ctx->list.push_back(lab_str(ctx->buf));
 		}
 		g_strfreev(prefixes);
 	}
 	buf_reset(&prefix);
 }
 
-void
-paths_config_create(struct wl_list *paths, const char *filename)
+std::vector<lab_str>
+paths_config_create(const char *filename)
 {
 	char buf[4096] = { 0 };
-	wl_list_init(paths);
+	std::vector<lab_str> paths;
 
 	/*
 	 * If user provided a config directory with the -C command line option,
@@ -151,10 +147,9 @@ paths_config_create(struct wl_list *paths, const char *filename)
 	 * XDG-Base-Dir list.
 	 */
 	if (rc.config_dir) {
-		struct path *path = znew(*path);
-		path->string = strdup_printf("%s/%s", rc.config_dir, filename);
-		wl_list_append(paths, &path->link);
-		return;
+		paths.push_back(strdup_printf("%s/%s", rc.config_dir,
+			filename));
+		return paths;
 	}
 
 	struct ctx ctx = {
@@ -166,14 +161,14 @@ paths_config_create(struct wl_list *paths, const char *filename)
 		.list = paths,
 	};
 	find_dir(&ctx);
+	return paths;
 }
 
-void
-paths_theme_create(struct wl_list *paths, const char *theme_name,
-		const char *filename)
+std::vector<lab_str>
+paths_theme_create(const char *theme_name, const char *filename)
 {
 	static char buf[4096] = { 0 };
-	wl_list_init(paths);
+	std::vector<lab_str> paths;
 	struct ctx ctx = {
 		.build_path_fn = build_theme_path_labwc,
 		.filename = filename,
@@ -187,15 +182,5 @@ paths_theme_create(struct wl_list *paths, const char *theme_name,
 
 	ctx.build_path_fn = build_theme_path_openbox;
 	find_dir(&ctx);
-}
-
-void
-paths_destroy(struct wl_list *paths)
-{
-	struct path *path, *next;
-	wl_list_for_each_safe(path, next, paths, link) {
-		free(path->string);
-		wl_list_remove(&path->link);
-		free(path);
-	}
+	return paths;
 }
