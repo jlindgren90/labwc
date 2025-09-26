@@ -310,6 +310,7 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 		goto error;
 	}
 
+{ /* !goto */
 	/* Item background nodes */
 	wlr_scene_rect_create(menuitem->normal_tree, bg_width, bg_height,
 		g_theme.menu_items_bg_color);
@@ -324,7 +325,7 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 	wlr_scene_node_set_position(&line_rect->node,
 		g_theme.menu_separator_padding_width,
 		g_theme.menu_separator_padding_height);
-error:
+} error:
 	wlr_scene_node_set_position(&menuitem->tree->node,
 		g_theme.menu_border_width, *item_y);
 	*item_y += bg_height;
@@ -355,6 +356,7 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 		goto error;
 	}
 
+{ /* !goto */
 	/* Background */
 	wlr_scene_rect_create(menuitem->normal_tree, bg_width,
 		g_theme.menu_header_height, bg_color);
@@ -383,7 +385,7 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 	int title_y = (g_theme.menu_header_height - title_font_buffer->height) / 2;
 	wlr_scene_node_set_position(&title_font_buffer->scene_buffer->node,
 		title_x, title_y);
-error:
+} error:
 	wlr_scene_node_set_position(&menuitem->tree->node,
 		g_theme.menu_border_width, *item_y);
 	*item_y += g_theme.menu_header_height;
@@ -478,11 +480,12 @@ fill_item(struct menu *menu, xmlNode *node)
 		goto out;
 	}
 
+{ /* !goto */
 	struct menuitem *item = item_create(menu, label, icon_name, false);
 	lab_xml_expand_dotted_attributes(node);
 	append_parsed_actions(node, &item->actions);
 
-out:
+} out:
 	xmlFree(label);
 	xmlFree(icon_name);
 }

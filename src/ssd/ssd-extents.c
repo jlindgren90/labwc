@@ -53,6 +53,7 @@ resize_extent_within_usable(struct wlr_scene_rect *rect,
 		goto out;
 	}
 
+{ /* !goto */
 	/*
 	 * For each edge, the invisible grab area is resized
 	 * to not cover layer-shell clients such as panels.
@@ -79,7 +80,7 @@ resize_extent_within_usable(struct wlr_scene_rect *rect,
 	wlr_scene_node_set_position(&rect->node, result_box.x, result_box.y);
 	wlr_scene_rect_set_size(rect, result_box.width, result_box.height);
 
-out:
+} out:
 	pixman_region32_fini(&intersection);
 }
 

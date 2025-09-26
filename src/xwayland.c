@@ -590,6 +590,7 @@ update_icon(struct xwayland_view *xwayland_view)
 		goto out;
 	}
 
+{ /* !goto */
 	xcb_ewmh_wm_icon_iterator_t iter = xcb_ewmh_get_wm_icon_iterator(&icon);
 	struct wl_array buffers;
 	wl_array_init(&buffers);
@@ -619,7 +620,7 @@ update_icon(struct xwayland_view *xwayland_view)
 	view_set_icon(&xwayland_view->base, NULL, &buffers);
 	wl_array_release(&buffers);
 
-out:
+} out:
 	free(reply);
 }
 
