@@ -144,6 +144,7 @@ cycle_osd_classic_create(struct output *output)
 		y += switcher_theme->item_height;
 	}
 
+{ /* !goto */
 	int nr_fields = wl_list_length(&rc.window_switcher.fields);
 
 	/* This is the width of the area available for text fields */
@@ -155,6 +156,7 @@ cycle_osd_classic_create(struct output *output)
 		goto error;
 	}
 
+{ /* !goto */
 	/* Draw text for each node */
 	struct view *view;
 	wl_list_for_each(view, &server->cycle.views, cycle_link) {
@@ -216,7 +218,7 @@ cycle_osd_classic_create(struct output *output)
 		y += switcher_theme->item_height;
 	}
 
-error:;
+} } error:;
 	/* Center OSD */
 	wlr_scene_node_set_position(&output->cycle_osd.tree->node,
 		output_box.x + (output_box.width - w) / 2,
