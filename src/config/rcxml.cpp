@@ -1778,22 +1778,18 @@ rcxml_read(const char *filename)
 {
 	rcxml_init();
 
-	struct wl_list paths;
+	std::vector<lab_str> paths;
 
 	if (filename) {
 		/* Honour command line argument -c <filename> */
-		wl_list_init(&paths);
-		struct path *path = znew(*path);
-		path->string = xstrdup(filename);
-		wl_list_append(&paths, &path->link);
+		paths.push_back(lab_str(filename));
 	} else {
-		paths_config_create(&paths, "rc.xml");
+		paths = paths_config_create("rc.xml");
 	}
 
 	/* Reading file into buffer before parsing - better for unit tests */
+	int num_paths = paths.size();
 	bool should_merge_config = rc.merge_config;
-	struct wl_list *(*iter)(struct wl_list *list);
-	iter = should_merge_config ? paths_get_prev : paths_get_next;
 
 	/*
 	 * This is the equivalent of a wl_list_for_each() which optionally
@@ -1805,14 +1801,15 @@ rcxml_read(const char *filename)
 	 * If merging, we iterate backwards (least important XDG Base Dir first)
 	 * and keep going.
 	 */
-	for (struct wl_list *elm = iter(&paths); elm != &paths; elm = iter(elm)) {
-		struct path *path = wl_container_of(elm, path, link);
-		FILE *stream = fopen(path->string, "r");
+	for (int idx = 0; idx < num_paths; idx++) {
+		auto &path = should_merge_config ?
+			paths[(num_paths - 1) - idx] : paths[idx];
+		FILE *stream = fopen(path.c(), "r");
 		if (!stream) {
 			continue;
 		}
 
-		wlr_log(WLR_INFO, "read config file %s", path->string);
+		wlr_log(WLR_INFO, "read config file %s", path.c());
 
 		struct buf b = BUF_INIT;
 		char *line = NULL;
@@ -1832,7 +1829,6 @@ rcxml_read(const char *filename)
 			break;
 		}
 	};
-	paths_destroy(&paths);
 	post_processing();
 	validate();
 }
