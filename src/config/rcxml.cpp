@@ -247,9 +247,8 @@ set_property(const char *str, enum property *variable)
 static void
 fill_window_rule(xmlNode *node)
 {
-	auto window_rule = new struct window_rule();
-	window_rule->window_type = LAB_WINDOW_TYPE_INVALID;
-	wl_list_append(&rc.window_rules, &window_rule->link);
+	rc.window_rules.push_back({.window_type = LAB_WINDOW_TYPE_INVALID});
+	auto window_rule = &rc.window_rules.back();
 
 	xmlNode *child;
 	char *key, *content;
@@ -1405,7 +1404,6 @@ rcxml_init(void)
 		wl_list_init(&rc.workspace_config.workspaces);
 		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.fields);
-		wl_list_init(&rc.window_rules);
 		wl_list_init(&rc.touch_configs);
 	}
 	has_run = true;
@@ -1780,13 +1778,6 @@ post_processing(void)
 	}
 }
 
-static void
-rule_destroy(struct window_rule *rule)
-{
-	wl_list_remove(&rule->link);
-	delete rule;
-}
-
 static bool
 is_invalid_action(action &action)
 {
@@ -1808,10 +1799,20 @@ validate_actions(void)
 		lab::remove_if(mousebind.actions, is_invalid_action);
 	}
 
-	struct window_rule *rule;
-	wl_list_for_each(rule, &rc.window_rules, link) {
-		lab::remove_if(rule->actions, is_invalid_action);
+	for (auto &rule : rc.window_rules) {
+		lab::remove_if(rule.actions, is_invalid_action);
 	}
+}
+
+static bool
+is_invalid_rule(window_rule &rule)
+{
+	if (!rule.identifier && !rule.title && rule.window_type < 0
+			&& !rule.sandbox_engine && !rule.sandbox_app_id) {
+		wlr_log(WLR_ERROR, "Deleting rule as it has no criteria");
+		return true; // invalid
+	}
+	return false; // valid
 }
 
 static void
@@ -1837,16 +1838,7 @@ validate(void)
 	}
 
 	/* Window-rule criteria */
-	struct window_rule *rule, *rule_tmp;
-	wl_list_for_each_safe(rule, rule_tmp, &rc.window_rules, link) {
-		if (rule->identifier.empty() && rule->title.empty()
-				&& rule->window_type < 0
-				&& rule->sandbox_engine.empty()
-				&& rule->sandbox_app_id.empty()) {
-			wlr_log(WLR_ERROR, "Deleting rule %p as it has no criteria", rule);
-			rule_destroy(rule);
-		}
-	}
+	lab::remove_if(rc.window_rules, is_invalid_rule);
 
 	validate_actions();
 
@@ -1969,10 +1961,7 @@ rcxml_finish(void)
 
 	clear_window_switcher_fields();
 
-	struct window_rule *rule, *rule_tmp;
-	wl_list_for_each_safe(rule, rule_tmp, &rc.window_rules, link) {
-		rule_destroy(rule);
-	}
+	rc.window_rules.clear();
 
 	/* Reset state vars for starting fresh when Reload is triggered */
 	mouse_scroll_factor = -1;
