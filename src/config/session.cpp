@@ -105,24 +105,23 @@ read_environment_file(const char *filename)
 	return true;
 }
 
-static char *
+static lab_str
 strdup_env_path_validate(const char *prefix, struct dirent *dirent)
 {
 	assert(prefix);
 
-	char *full_path = strdup_printf("%s/%s", prefix, dirent->d_name);
+	lab_str full_path = strdup_printf("%s/%s", prefix, dirent->d_name);
 	if (!full_path) {
-		return NULL;
+		return lab_str();
 	}
 
 	/* Valid environment files must be regular files */
 	struct stat statbuf;
-	if (stat(full_path, &statbuf) == 0 && S_ISREG(statbuf.st_mode)) {
+	if (stat(full_path.c(), &statbuf) == 0 && S_ISREG(statbuf.st_mode)) {
 		return full_path;
 	}
 
-	free(full_path);
-	return NULL;
+	return lab_str();
 }
 
 static int
@@ -136,12 +135,13 @@ static bool
 read_environment_dir(const char *path_prefix)
 {
 	bool success = false;
-	char *path = strdup_printf("%s.d", path_prefix);
+	lab_str path = strdup_printf("%s.d", path_prefix);
 
 	struct dirent **dirlist = NULL;
 
 	errno = 0;
-	int num_entries = scandir(path, &dirlist, env_file_filter, alphasort);
+	int num_entries =
+		scandir(path.c(), &dirlist, env_file_filter, alphasort);
 
 	if (num_entries < 0) {
 		if (errno != ENOENT) {
@@ -155,24 +155,22 @@ read_environment_dir(const char *path_prefix)
 	}
 
 	for (int i = 0; i < num_entries; i++) {
-		char *env_file_path = strdup_env_path_validate(path, dirlist[i]);
+		lab_str env_file_path =
+			strdup_env_path_validate(path.c(), dirlist[i]);
 		free(dirlist[i]);
 
 		if (!env_file_path) {
 			continue;
 		}
 
-		if (read_environment_file(env_file_path)) {
+		if (read_environment_file(env_file_path.c())) {
 			success = true;
 		}
-
-		free(env_file_path);
 	}
 
 	free(dirlist);
 
 env_dir_cleanup:
-	free(path);
 	return success;
 }
 
@@ -225,22 +223,18 @@ update_activation_env(bool initialize)
 
 	wlr_log(WLR_INFO, "Updating dbus execution environment");
 
-	char *env_keys = str_join(env_vars, "%s", " ");
-	char *env_unset_keys = initialize ? NULL : str_join(env_vars, "%s=", " ");
+	lab_str env_keys = str_join(env_vars, "%s", " ");
+	lab_str env_unset_keys =
+		initialize ? lab_str() : str_join(env_vars, "%s=", " ");
 
-	char *cmd =
-		strdup_printf("dbus-update-activation-environment %s",
-			initialize ? env_keys : env_unset_keys);
-	spawn_async_no_shell(cmd);
-	free(cmd);
+	lab_str cmd = strdup_printf("dbus-update-activation-environment %s",
+		initialize ? env_keys.c() : env_unset_keys.c());
+	spawn_async_no_shell(cmd.c());
 
 	cmd = strdup_printf("systemctl --user %s %s",
-		initialize ? "import-environment" : "unset-environment", env_keys);
-	spawn_async_no_shell(cmd);
-	free(cmd);
-
-	free(env_keys);
-	free(env_unset_keys);
+		initialize ? "import-environment" : "unset-environment",
+		env_keys.c());
+	spawn_async_no_shell(cmd.c());
 }
 
 void
@@ -262,54 +256,49 @@ session_environment_init(void)
 	 */
 	setenv("_JAVA_AWT_WM_NONREPARENTING", "1", 0);
 
-	struct wl_list paths;
-	paths_config_create(&paths, "environment");
+	auto paths = paths_config_create("environment");
+	int num_paths = paths.size();
 
 	bool should_merge_config = rc.merge_config;
-	struct wl_list *(*iter)(struct wl_list *list);
-	iter = should_merge_config ? paths_get_prev : paths_get_next;
 
-	for (struct wl_list *elm = iter(&paths); elm != &paths; elm = iter(elm)) {
-		struct path *path = wl_container_of(elm, path, link);
+	for (int idx = 0; idx < num_paths; idx++) {
+		auto &path = should_merge_config ?
+			paths[(num_paths - 1) - idx] : paths[idx];
 
 		/* Process an environment file itself */
-		bool success = read_environment_file(path->string);
+		bool success = read_environment_file(path.c());
 
 		/* Process a corresponding environment.d directory */
-		success |= read_environment_dir(path->string);
+		success |= read_environment_dir(path.c());
 
 		if (success && !should_merge_config) {
 			break;
 		}
 	}
-	paths_destroy(&paths);
 }
 
 void
 session_run_script(const char *script)
 {
-	struct wl_list paths;
-	paths_config_create(&paths, script);
+	auto paths = paths_config_create(script);
+	int num_paths = paths.size();
 
 	bool should_merge_config = rc.merge_config;
-	struct wl_list *(*iter)(struct wl_list *list);
-	iter = should_merge_config ? paths_get_prev : paths_get_next;
 
-	for (struct wl_list *elm = iter(&paths); elm != &paths; elm = iter(elm)) {
-		struct path *path = wl_container_of(elm, path, link);
-		if (!file_exists(path->string)) {
+	for (int idx = 0; idx < num_paths; idx++) {
+		auto &path = should_merge_config ?
+			paths[(num_paths - 1) - idx] : paths[idx];
+		if (!file_exists(path.c())) {
 			continue;
 		}
-		wlr_log(WLR_INFO, "run session script %s", path->string);
-		char *cmd = strdup_printf("sh %s", path->string);
-		spawn_async_no_shell(cmd);
-		free(cmd);
+		wlr_log(WLR_INFO, "run session script %s", path.c());
+		lab_str cmd = strdup_printf("sh %s", path.c());
+		spawn_async_no_shell(cmd.c());
 
 		if (!should_merge_config) {
 			break;
 		}
 	}
-	paths_destroy(&paths);
 }
 
 void

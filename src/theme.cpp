@@ -135,21 +135,18 @@ get_button_filename(char *buf, size_t len, const char *name, const char *postfix
 	char filename[4096];
 	snprintf(filename, sizeof(filename), "%s%s", name, postfix);
 
-	struct wl_list paths;
-	paths_theme_create(&paths, rc.theme_name.c(), filename);
+	auto paths = paths_theme_create(rc.theme_name.c(), filename);
 
 	/*
 	 * You can't really merge buttons, so let's just iterate forwards
 	 * and stop on the first hit
 	 */
-	struct path *path;
-	wl_list_for_each(path, &paths, link) {
-		if (access(path->string, R_OK) == 0) {
-			snprintf(buf, len, "%s", path->string);
+	for (auto &path : paths) {
+		if (access(path.c(), R_OK) == 0) {
+			snprintf(buf, len, "%s", path.c());
 			break;
 		}
 	}
-	paths_destroy(&paths);
 }
 
 static void
@@ -1127,20 +1124,20 @@ process_line(char *line)
 }
 
 static void
-theme_read(struct wl_list *paths)
+theme_read(const std::vector<lab_str> &paths)
 {
+	int num_paths = paths.size();
 	bool should_merge_config = rc.merge_config;
-	struct wl_list *(*iter)(struct wl_list *list);
-	iter = should_merge_config ? paths_get_prev : paths_get_next;
 
-	for (struct wl_list *elm = iter(paths); elm != paths; elm = iter(elm)) {
-		struct path *path = wl_container_of(elm, path, link);
-		FILE *stream = fopen(path->string, "r");
+	for (int idx = 0; idx < num_paths; idx++) {
+		auto &path = should_merge_config ?
+			paths[(num_paths - 1) - idx] : paths[idx];
+		FILE *stream = fopen(path.c(), "r");
 		if (!stream) {
 			continue;
 		}
 
-		wlr_log(WLR_INFO, "read theme %s", path->string);
+		wlr_log(WLR_INFO, "read theme %s", path.c());
 
 		char *line = NULL;
 		size_t len = 0;
@@ -1815,23 +1812,17 @@ theme_init(const char *theme_name)
 	 */
 	theme_builtin();
 
-	struct wl_list paths;
-
 	if (theme_name) {
 		/*
 		 * Read
 		 *   - <data-dir>/share/themes/$theme_name/labwc/themerc
 		 *   - <data-dir>/share/themes/$theme_name/openbox-3/themerc
 		 */
-		paths_theme_create(&paths, theme_name, "themerc");
-		theme_read(&paths);
-		paths_destroy(&paths);
+		theme_read(paths_theme_create(theme_name, "themerc"));
 	}
 
 	/* Read <config-dir>/labwc/themerc-override */
-	paths_config_create(&paths, "themerc-override");
-	theme_read(&paths);
-	paths_destroy(&paths);
+	theme_read(paths_config_create("themerc-override"));
 
 	post_processing();
 	create_backgrounds();
