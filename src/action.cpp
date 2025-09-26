@@ -674,18 +674,16 @@ handle_view_destroy(struct wl_listener *listener, void *data)
 static void
 action_prompt_create(struct view *view, action &action)
 {
-	struct buf command = BUF_INIT;
-	action_prompt_command(&command, rc.prompt_command.c(), action);
+	lab_str command = action_prompt_command(rc.prompt_command.c(), action);
 
-	wlr_log(WLR_INFO, "prompt command: '%s'", command.data);
+	wlr_log(WLR_INFO, "prompt command: '%s'", command.c());
 
 	int pipe_fd;
-	pid_t prompt_pid = spawn_piped(command.data, &pipe_fd);
+	pid_t prompt_pid = spawn_piped(command.c(), &pipe_fd);
 	if (prompt_pid < 0) {
 		wlr_log(WLR_ERROR, "Failed to create action prompt");
-		goto cleanup;
+		return;
 	}
-{ /* !goto */
 	/* FIXME: closing stdout might confuse clients */
 	close(pipe_fd);
 
@@ -702,9 +700,6 @@ action_prompt_create(struct view *view, action &action)
 	}
 
 	wl_list_insert(&prompts, &prompt->link);
-
-} cleanup:
-	buf_reset(&command);
 }
 
 bool
@@ -841,11 +836,9 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 		debug_dump_scene();
 		break;
 	case ACTION_TYPE_EXECUTE: {
-		auto cmd = BUF_INIT;
-		buf_add(&cmd, action.get_str("command", NULL).c());
-		buf_expand_tilde(&cmd);
-		spawn_async_no_shell(cmd.data);
-		buf_reset(&cmd);
+		lab_str cmd = action.get_str("command", NULL);
+		cmd = buf_expand_tilde(cmd.c());
+		spawn_async_no_shell(cmd.c());
 		break;
 	}
 	case ACTION_TYPE_EXIT:

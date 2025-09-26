@@ -2,9 +2,10 @@
 #ifndef LABWC_ACTION_PROMPT_COMMAND_H
 #define LABWC_ACTION_PROMPT_COMMAND_H
 
-struct buf;
+#include "common/str.h"
+
 struct action;
 
-void action_prompt_command(struct buf *buf, const char *format, action &action);
+lab_str action_prompt_command(const char *format, action &action);
 
 #endif /* LABWC_ACTION_PROMPT_COMMAND_H */

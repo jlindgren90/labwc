@@ -7,21 +7,22 @@
 #include "theme.h"
 #include "translate.h"
 
-void
-action_prompt_command(struct buf *buf, const char *format, action &action)
+lab_str
+action_prompt_command(const char *format, action &action)
 {
 	if (!format) {
 		wlr_log(WLR_ERROR, "missing format");
-		return;
+		return lab_str();
 	}
 
+	lab_str buf;
 	for (const char *p = format; *p; p++) {
 		/*
 		 * If we're not on a conversion specifier (like %m) then just
 		 * keep adding it to the buffer
 		 */
 		if (*p != '%') {
-			buf_add_char(buf, *p);
+			buf += *p;
 			continue;
 		}
 
@@ -30,22 +31,21 @@ action_prompt_command(struct buf *buf, const char *format, action &action)
 
 		switch (*p) {
 		case 'm': {
-			lab_str str = action.get_str("message.prompt",
+			buf += action.get_str("message.prompt",
 				"Choose wisely");
-			buf_add(buf, str.c());
 			break;
 		}
 		case 'n':
-			buf_add(buf, _("No"));
+			buf += _("No");
 			break;
 		case 'y':
-			buf_add(buf, _("Yes"));
+			buf += _("Yes");
 			break;
 		case 'b':
-			buf_add_hex_color(buf, g_theme.osd_bg_color);
+			buf += hex_color_to_str(g_theme.osd_bg_color);
 			break;
 		case 't':
-			buf_add_hex_color(buf, g_theme.osd_label_text_color);
+			buf += hex_color_to_str(g_theme.osd_label_text_color);
 			break;
 		default:
 			wlr_log(WLR_ERROR,
@@ -53,4 +53,5 @@ action_prompt_command(struct buf *buf, const char *format, action &action)
 			break;
 		}
 	}
+	return buf;
 }
