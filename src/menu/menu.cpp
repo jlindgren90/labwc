@@ -889,7 +889,6 @@ update_client_list_combined_menu(void)
 
 	struct menuitem *item;
 	struct workspace *workspace;
-	struct view *view;
 	struct buf buffer = BUF_INIT;
 
 	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
@@ -899,24 +898,26 @@ update_client_list_combined_menu(void)
 		separator_create(menu, buffer.data);
 		buf_clear(&buffer);
 
-		wl_list_for_each(view, &g_server.views, link) {
-			if (view->workspace == workspace) {
-				const char *title = view_get_string_prop(view, "title");
-				if (!view->foreign_toplevel || string_null_or_empty(title)) {
+		for (auto &view : g_views) {
+			if (view.workspace == workspace) {
+				const char *title =
+					view_get_string_prop(&view, "title");
+				if (!view.foreign_toplevel
+						|| string_null_or_empty(title)) {
 					continue;
 				}
 
-				if (view == g_server.active_view) {
+				if (&view == g_server.active_view) {
 					buf_add(&buffer, "*");
 				}
-				if (view->minimized) {
+				if (view.minimized) {
 					buf_add_fmt(&buffer, "(%s)", title);
 				} else {
 					buf_add(&buffer, title);
 				}
 				item = item_create(menu, buffer.data, NULL,
 					/*show arrow*/ false);
-				item->client_list_view = view;
+				item->client_list_view = &view;
 				item_add_action(item, "Focus");
 				item_add_action(item, "Raise");
 				buf_clear(&buffer);
