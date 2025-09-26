@@ -8,8 +8,7 @@
 #include "translate.h"
 
 void
-action_prompt_command(struct buf *buf, const char *format,
-		struct action *action)
+action_prompt_command(struct buf *buf, const char *format, action &action)
 {
 	if (!format) {
 		wlr_log(WLR_ERROR, "missing format");
@@ -30,10 +29,12 @@ action_prompt_command(struct buf *buf, const char *format,
 		++p;
 
 		switch (*p) {
-		case 'm':
-			buf_add(buf, action_get_str(action, "message.prompt",
-				"Choose wisely"));
+		case 'm': {
+			lab_str str = action.get_str("message.prompt",
+				"Choose wisely");
+			buf_add(buf, str.c());
 			break;
+		}
 		case 'n':
 			buf_add(buf, _("No"));
 			break;

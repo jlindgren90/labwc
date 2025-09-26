@@ -5,7 +5,6 @@
 struct buf;
 struct action;
 
-void action_prompt_command(struct buf *buf, const char *format,
-	struct action *action);
+void action_prompt_command(struct buf *buf, const char *format, action &action);
 
 #endif /* LABWC_ACTION_PROMPT_COMMAND_H */
