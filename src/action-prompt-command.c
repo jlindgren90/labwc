@@ -9,7 +9,7 @@
 
 void
 action_prompt_command(struct buf *buf, const char *format,
-		struct action *action, struct theme *theme)
+		struct action *action)
 {
 	if (!format) {
 		wlr_log(WLR_ERROR, "missing format");
@@ -41,10 +41,10 @@ action_prompt_command(struct buf *buf, const char *format,
 			buf_add(buf, _("Yes"));
 			break;
 		case 'b':
-			buf_add_hex_color(buf, theme->osd_bg_color);
+			buf_add_hex_color(buf, g_theme.osd_bg_color);
 			break;
 		case 't':
-			buf_add_hex_color(buf, theme->osd_label_text_color);
+			buf_add_hex_color(buf, g_theme.osd_label_text_color);
 			break;
 		default:
 			wlr_log(WLR_ERROR,

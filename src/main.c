@@ -21,6 +21,7 @@
 struct rcxml rc;
 struct seat g_seat;
 struct server g_server;
+struct theme g_theme;
 
 static const struct option long_options[] = {
 	{"config", required_argument, NULL, 'c'},
@@ -255,10 +256,7 @@ main(int argc, char *argv[])
 	server_init();
 	server_start();
 
-	struct theme theme = { 0 };
-	theme_init(&theme, rc.theme_name);
-	rc.theme = &theme;
-	g_server.theme = &theme;
+	theme_init(rc.theme_name);
 
 	menu_init();
 
@@ -275,7 +273,7 @@ main(int argc, char *argv[])
 	session_shutdown();
 
 	menu_finish();
-	theme_finish(&theme);
+	theme_finish();
 	rcxml_finish();
 	font_finish();
 

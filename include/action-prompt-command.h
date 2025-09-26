@@ -4,9 +4,8 @@
 
 struct buf;
 struct action;
-struct theme;
 
 void action_prompt_command(struct buf *buf, const char *format,
-	struct action *action, struct theme *theme);
+	struct action *action);
 
 #endif /* LABWC_ACTION_PROMPT_COMMAND_H */

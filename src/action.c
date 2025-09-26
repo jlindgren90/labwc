@@ -721,7 +721,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 			int lx, ly;
 			wlr_scene_node_coords(ctx->node, &lx, &ly);
 			/* MAX() prevents negative x when the window is maximized */
-			x = MAX(x, lx - g_server.theme->menu_border_width);
+			x = MAX(x, lx - g_theme.menu_border_width);
 		}
 	}
 
@@ -833,7 +833,7 @@ static void
 action_prompt_create(struct view *view, struct action *action)
 {
 	struct buf command = BUF_INIT;
-	action_prompt_command(&command, rc.prompt_command, action, rc.theme);
+	action_prompt_command(&command, rc.prompt_command, action);
 
 	wlr_log(WLR_INFO, "prompt command: '%s'", command.data);
 
