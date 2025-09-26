@@ -845,6 +845,7 @@ action_prompt_create(struct view *view, struct server *server, struct action *ac
 		wlr_log(WLR_ERROR, "Failed to create action prompt");
 		goto cleanup;
 	}
+{ /* !goto */
 	/* FIXME: closing stdout might confuse clients */
 	close(pipe_fd);
 
@@ -863,7 +864,7 @@ action_prompt_create(struct view *view, struct server *server, struct action *ac
 
 	wl_list_insert(&prompts, &prompt->link);
 
-cleanup:
+} cleanup:
 	buf_reset(&command);
 }
 
