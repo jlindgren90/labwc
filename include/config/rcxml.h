@@ -49,6 +49,7 @@ struct action;
 struct buf;
 struct keybind;
 struct mousebind;
+struct window_rule;
 
 struct button_map_entry {
 	uint32_t from;
@@ -185,7 +186,7 @@ struct rcxml {
 		enum window_switcher_style style;
 	} window_switcher;
 
-	struct wl_list window_rules; /* struct window_rule.link */
+	std::vector<window_rule> window_rules;
 
 	/* Menu */
 	unsigned int menu_ignore_button_release_period;
