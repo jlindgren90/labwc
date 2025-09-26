@@ -20,20 +20,20 @@ other_instances_exist(struct view *self, struct view_query *query)
 }
 
 static bool
-view_matches_criteria(struct window_rule *rule, struct view *view)
+view_matches_criteria(window_rule &rule, struct view *view)
 {
 	struct view_query query = {
-		.identifier = rule->identifier,
-		.title = rule->title,
-		.window_type = rule->window_type,
-		.sandbox_engine = rule->sandbox_engine,
-		.sandbox_app_id = rule->sandbox_app_id,
+		.identifier = rule.identifier,
+		.title = rule.title,
+		.window_type = rule.window_type,
+		.sandbox_engine = rule.sandbox_engine,
+		.sandbox_app_id = rule.sandbox_app_id,
 		/* Must be synced with view_query_create() */
 		.maximized = VIEW_AXIS_INVALID,
 		.decoration = LAB_SSD_MODE_INVALID,
 	};
 
-	if (rule->match_once && other_instances_exist(view, &query)) {
+	if (rule.match_once && other_instances_exist(view, &query)) {
 		return false;
 	}
 
@@ -43,13 +43,12 @@ view_matches_criteria(struct window_rule *rule, struct view *view)
 void
 window_rules_apply(struct view *view, enum window_rule_event event)
 {
-	struct window_rule *rule;
-	wl_list_for_each(rule, &rc.window_rules, link) {
-		if (rule->event != event) {
+	for (auto &rule : rc.window_rules) {
+		if (rule.event != event) {
 			continue;
 		}
 		if (view_matches_criteria(rule, view)) {
-			actions_run(view, rule->actions, NULL);
+			actions_run(view, rule.actions, NULL);
 		}
 	}
 }
@@ -69,15 +68,15 @@ window_rules_get_property(struct view *view, const char *property)
 	 *       <windowRule identifier="foot" serverDecoration="default"/>
 	 *     </windowRules>
 	 */
-	struct window_rule *rule;
-	wl_list_for_each_reverse(rule, &rc.window_rules, link) {
+	for (auto rule = rc.window_rules.rbegin(), end = rc.window_rules.rend();
+			rule != end; ++rule) {
 		/*
 		 * Only return if property != LAB_PROP_UNSPECIFIED otherwise a
 		 * <windowRule> which does not set a particular property
 		 * attribute would still return here if that property was asked
 		 * for.
 		 */
-		if (view_matches_criteria(rule, view)) {
+		if (view_matches_criteria(*rule, view)) {
 			if (rule->server_decoration
 					&& !strcasecmp(property, "serverDecoration")) {
 				return rule->server_decoration;

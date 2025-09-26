@@ -16,6 +16,7 @@
 #include "regions.h"
 #include "theme.h"
 #include "translate.h"
+#include "window-rules.h"
 #include "xwayland.h"
 
 /*
