@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <strings.h>
-#include "common/mem.h"
 
 enum str_flags {
 	STR_FLAG_NONE = 0,
@@ -54,36 +53,33 @@ string_truncate_at_pattern(char *buf, const char *pattern)
 	*p = '\0';
 }
 
-char *
+lab_str
 strdup_printf(const char *fmt, ...)
 {
-	size_t size = 0;
-	char *p = NULL;
 	va_list ap;
 
 	va_start(ap, fmt);
-	int n = vsnprintf(p, size, fmt, ap);
+	int n = vsnprintf(NULL, 0, fmt, ap);
 	va_end(ap);
 
 	if (n < 0) {
-		return NULL;
+		return lab_str();
 	}
 
-	size = (size_t)n + 1;
-	p = xzalloc(size);
+	lab_str buf;
+	buf.resize(n); // not including '\0'
 
 	va_start(ap, fmt);
-	n = vsnprintf(p, size, fmt, ap);
+	n = vsnprintf(buf.data(), n + 1, fmt, ap);
 	va_end(ap);
 
 	if (n < 0) {
-		free(p);
-		return NULL;
+		return lab_str();
 	}
-	return p;
+	return buf;
 }
 
-char *
+lab_str
 str_join(const char *const parts[], const char *fmt, const char *sep)
 {
 	assert(parts);
@@ -105,47 +101,41 @@ str_join(const char *const parts[], const char *fmt, const char *sep)
 	for (const char *const *s = parts; *s; ++s) {
 		int n = snprintf(NULL, 0, fmt, *s);
 		if (n < 0) {
-			return NULL;
+			return lab_str();
 		}
 		size += (size_t)n;
 		++n_parts;
 	}
 
 	if (n_parts < 1) {
-		return NULL;
+		return lab_str();
 	}
 
 	/* Need (n_parts - 1) separators, plus one NULL terminator */
 	size += (n_parts - 1) * sep_len + 1;
 
 	/* Concatenate the strings and separators */
-	char *buf = xzalloc(size);
-	char *p = buf;
+	lab_str buf;
+	buf.resize(size - 1); // not including '\0'
+	size_t idx = 0;
 	for (const char *const *s = parts; *s; ++s) {
 		int n = 0;
 
-		if (p != buf) {
-			n = snprintf(p, size, "%s", sep);
+		if (idx > 0) {
+			n = snprintf(&buf[idx], size, "%s", sep);
 			if (n < 0 || (size_t)n >= size) {
-				p = NULL;
-				break;
+				return lab_str();
 			}
 			size -= (size_t)n;
-			p += (size_t)n;
+			idx += (size_t)n;
 		}
 
-		n = snprintf(p, size, fmt, *s);
+		n = snprintf(&buf[idx], size, fmt, *s);
 		if (n < 0 || (size_t)n >= size) {
-			p = NULL;
-			break;
+			return lab_str();
 		}
 		size -= (size_t)n;
-		p += (size_t)n;
-	}
-
-	if (!p) {
-		free(buf);
-		return NULL;
+		idx += (size_t)n;
 	}
 
 	return buf;
