@@ -678,27 +678,25 @@ parse_stream(FILE *stream)
 static void
 parse_xml(const char *filename)
 {
-	struct wl_list paths;
-	paths_config_create(&paths, filename);
+	auto paths = paths_config_create(filename);
+	int num_paths = paths.size();
 
 	bool should_merge_config = rc.merge_config;
-	struct wl_list *(*iter)(struct wl_list *list);
-	iter = should_merge_config ? paths_get_prev : paths_get_next;
 
-	for (struct wl_list *elm = iter(&paths); elm != &paths; elm = iter(elm)) {
-		struct path *path = wl_container_of(elm, path, link);
-		FILE *stream = fopen(path->string, "r");
+	for (int idx = 0; idx < num_paths; idx++) {
+		auto &path = should_merge_config ?
+			paths[(num_paths - 1) - idx] : paths[idx];
+		FILE *stream = fopen(path.c(), "r");
 		if (!stream) {
 			continue;
 		}
-		wlr_log(WLR_INFO, "read menu file %s", path->string);
+		wlr_log(WLR_INFO, "read menu file %s", path.c());
 		parse_stream(stream);
 		fclose(stream);
 		if (!should_merge_config) {
 			break;
 		}
 	}
-	paths_destroy(&paths);
 }
 
 /*
