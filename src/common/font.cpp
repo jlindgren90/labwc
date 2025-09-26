@@ -11,7 +11,7 @@ PangoFontDescription *
 font_to_pango_desc(struct font *font)
 {
 	PangoFontDescription *desc = pango_font_description_new();
-	pango_font_description_set_family(desc, font->name);
+	pango_font_description_set_family(desc, font->name.c());
 	pango_font_description_set_size(desc, font->size * PANGO_SCALE);
 	pango_font_description_set_style(desc, font->slant);
 	pango_font_description_set_weight(desc, font->weight);
