@@ -11,9 +11,8 @@
 #include "action-prompt-codes.h"
 #include "common/buf.h"
 #include "common/macros.h"
-#include "common/list.h"
-#include "common/mem.h"
 #include "common/parse-bool.h"
+#include "common/reflist.h"
 #include "common/spawn.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
@@ -638,37 +637,26 @@ view_for_action(struct view *activator, action &action,
 	}
 }
 
-struct action_prompt {
+struct action_prompt : public ref_guarded<action_prompt> {
 	/* Set when created */
 	struct action *action;
-	struct view *view;
+	refptr<::view> view;
 
 	/* Set when executed */
 	pid_t pid;
 
-	struct {
-		struct wl_listener destroy;
-	} on_view;
-	struct wl_list link;
+	/* view destroyed */
+	DECLARE_HANDLER(action_prompt, destroy);
 };
 
-static struct wl_list prompts = WL_LIST_INIT(&prompts);
+static ownlist<action_prompt> prompts;
 
-static void
-action_prompt_destroy(struct action_prompt *prompt)
+void
+action_prompt::handle_destroy(void *)
 {
-	wl_list_remove(&prompt->on_view.destroy.link);
-	wl_list_remove(&prompt->link);
-	free(prompt);
-}
-
-static void
-handle_view_destroy(struct wl_listener *listener, void *data)
-{
-	struct action_prompt *prompt = wl_container_of(listener, prompt, on_view.destroy);
-	wl_list_remove(&prompt->on_view.destroy.link);
-	wl_list_init(&prompt->on_view.destroy.link);
-	prompt->view = NULL;
+	// view was destroyed
+	view.reset();
+	on_destroy.disconnect();
 }
 
 static lab_str
@@ -733,35 +721,27 @@ action_prompt_create(struct view *view, action &action)
 	/* FIXME: closing stdout might confuse clients */
 	close(pipe_fd);
 
-	struct action_prompt *prompt = znew(*prompt);
+	auto prompt = new action_prompt();
 	prompt->action = &action;
-	prompt->view = view;
+	prompt->view.reset(view);
 	prompt->pid = prompt_pid;
 	if (view) {
-		prompt->on_view.destroy.notify = handle_view_destroy;
-		wl_signal_add(&view->events.destroy, &prompt->on_view.destroy);
-	} else {
-		/* Allows removing during destroy */
-		wl_list_init(&prompt->on_view.destroy.link);
+		CONNECT_LISTENER(view, prompt, destroy);
 	}
 
-	wl_list_insert(&prompts, &prompt->link);
+	prompts.append(prompt);
 }
 
 void
 action_prompts_destroy(void)
 {
-	struct action_prompt *prompt, *tmp;
-	wl_list_for_each_safe(prompt, tmp, &prompts, link) {
-		action_prompt_destroy(prompt);
-	}
+	prompts.clear();
 }
 
 bool
 action_check_prompt_result(pid_t pid, int exit_code)
 {
-	struct action_prompt *prompt, *tmp;
-	wl_list_for_each_safe(prompt, tmp, &prompts, link) {
+	for (auto prompt = prompts.begin(); prompt; ++prompt) {
 		if (prompt->pid != pid) {
 			continue;
 		}
@@ -779,11 +759,12 @@ action_check_prompt_result(pid_t pid, int exit_code)
 		}
 		if (actions) {
 			wlr_log(WLR_INFO, "Running actions");
-			actions_run(prompt->view, *actions, /*cursor_ctx*/ NULL);
+			actions_run(prompt->view.get(), *actions,
+				/*cursor_ctx*/ NULL);
 		} else {
 			wlr_log(WLR_INFO, "No actions for selected branch");
 		}
-		action_prompt_destroy(prompt);
+		prompt.remove();
 		return true;
 	}
 	return false;
