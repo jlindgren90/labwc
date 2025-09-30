@@ -15,6 +15,8 @@
 
 struct lab_img;
 
+using cairo_pattern_ptr = ownptr<cairo_pattern_t, cairo_pattern_destroy>;
+
 /*
  * Openbox defines 7 types of Gradient background in addition to Solid.
  * Currently, labwc supports only Vertical and SplitVertical.
@@ -152,7 +154,7 @@ struct theme {
 		 * some memory vs. rendering the entire titlebar into an
 		 * image. It does not work for horizontal gradients.
 		 */
-		cairo_pattern_t *titlebar_pattern;
+		cairo_pattern_ptr titlebar_pattern;
 		refptr<lab_data_buffer> titlebar_fill;
 
 		refptr<lab_data_buffer> corner_top_left_normal;
