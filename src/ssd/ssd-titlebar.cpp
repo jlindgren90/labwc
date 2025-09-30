@@ -71,7 +71,7 @@ ssd_titlebar_create(struct ssd *ssd)
 		/* Title */
 		subtree->title = new scaled_font_buffer(subtree->tree,
 			g_theme.titlebar_height,
-			g_theme.window[active].titlebar_pattern);
+			g_theme.window[active].titlebar_pattern.get());
 		assert(subtree->title);
 		node_descriptor_create(&subtree->title->scene_buffer->node,
 			LAB_NODE_TITLE, view, /*data*/ NULL);
