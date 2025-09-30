@@ -1390,12 +1390,12 @@ static void
 create_backgrounds(void)
 {
 	for (int active = THEME_INACTIVE; active <= THEME_ACTIVE; active++) {
-		g_theme.window[active].titlebar_pattern =
+		g_theme.window[active].titlebar_pattern.reset(
 			create_titlebar_pattern(
 				&g_theme.window[active].title_bg,
-				g_theme.titlebar_height);
+				g_theme.titlebar_height));
 		g_theme.window[active].titlebar_fill = create_titlebar_fill(
-			g_theme.window[active].titlebar_pattern,
+			g_theme.window[active].titlebar_pattern.get(),
 			g_theme.titlebar_height);
 	}
 }
@@ -1417,7 +1417,8 @@ create_corners(void)
 			.box = &box,
 			.radius = rc.corner_radius,
 			.line_width = g_theme.border_width,
-			.fill_pattern = g_theme.window[active].titlebar_pattern,
+			.fill_pattern =
+				g_theme.window[active].titlebar_pattern.get(),
 			.border_color = g_theme.window[active].border_color,
 			.corner = ROUNDED_CORNER_TOP_LEFT,
 		};
@@ -1852,7 +1853,7 @@ theme_finish(void)
 	}
 
 	for (int active = THEME_INACTIVE; active <= THEME_ACTIVE; active++) {
-		zfree_pattern(g_theme.window[active].titlebar_pattern);
+		g_theme.window[active].titlebar_pattern.reset();
 		g_theme.window[active].titlebar_fill.reset();
 		g_theme.window[active].corner_top_left_normal.reset();
 		g_theme.window[active].corner_top_right_normal.reset();
