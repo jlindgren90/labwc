@@ -49,7 +49,7 @@ public:
 
 	template<typename... Args>
 	T *set_new(Args &&... args) {
-		reset(new T(std::forward<Args>(args)...));
+		reset(new T{std::forward<Args>(args)...});
 		return get();
 	}
 
