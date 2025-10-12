@@ -155,42 +155,39 @@ get_button_filename(char *buf, size_t len, const char *name, const char *postfix
 static void
 load_button(struct button *b, int active)
 {
-	struct lab_img *(*button_imgs)[LAB_BS_ALL + 1] =
-		g_theme.window[active].button_imgs;
-	struct lab_img **img = &button_imgs[b->type][b->state_set];
+	auto button_imgs = g_theme.window[active].button_imgs;
+	auto &img = button_imgs[b->type][b->state_set];
 	float *rgba = g_theme.window[active].button_colors[b->type];
 	char filename[4096];
-
-	assert(!*img);
 
 	/* PNG */
 	get_button_filename(filename, sizeof(filename), b->name,
 		active ? "-active.png" : "-inactive.png");
-	*img = lab_img_load(LAB_IMG_PNG, filename, rgba);
+	img = lab_img::load(LAB_IMG_PNG, filename, rgba);
 
 #if HAVE_RSVG
 	/* SVG */
-	if (!*img) {
+	if (!img.valid()) {
 		get_button_filename(filename, sizeof(filename), b->name,
 			active ? "-active.svg" : "-inactive.svg");
-		*img = lab_img_load(LAB_IMG_SVG, filename, rgba);
+		img = lab_img::load(LAB_IMG_SVG, filename, rgba);
 	}
 #endif
 
 	/* XBM */
-	if (!*img) {
+	if (!img.valid()) {
 		get_button_filename(filename, sizeof(filename), b->name, ".xbm");
-		*img = lab_img_load(LAB_IMG_XBM, filename, rgba);
+		img = lab_img::load(LAB_IMG_XBM, filename, rgba);
 	}
 
 	/*
 	 * XBM (alternative name)
 	 * For example max_hover_toggled instead of max_toggled_hover
 	 */
-	if (!*img && b->alt_name) {
+	if (!img.valid() && b->alt_name) {
 		get_button_filename(filename, sizeof(filename),
 			b->alt_name, ".xbm");
-		*img = lab_img_load(LAB_IMG_XBM, filename, rgba);
+		img = lab_img::load(LAB_IMG_XBM, filename, rgba);
 	}
 
 	/*
@@ -199,39 +196,35 @@ load_button(struct button *b, int active)
 	 * Applicable to basic buttons such as max, max_toggled and iconify.
 	 * There are no bitmap fallbacks for *_hover icons.
 	 */
-	if (!*img && b->fallback_button) {
-		*img = lab_img_load_from_bitmap(b->fallback_button, rgba);
+	if (!img.valid() && b->fallback_button) {
+		img = lab_img::load_from_bitmap(b->fallback_button, rgba);
 	}
 
 	/*
 	 * If hover-icons do not exist, add fallbacks by copying the non-hover
 	 * variant and then adding an overlay.
 	 */
-	if (!*img && (b->state_set & LAB_BS_HOVERED)) {
-		struct lab_img *non_hover_img =
-			button_imgs[b->type][b->state_set & ~LAB_BS_HOVERED];
-		*img = lab_img_copy(non_hover_img);
-		lab_img_add_modifier(*img,
-			draw_hover_overlay_on_button);
+	if (!img.valid() && (b->state_set & LAB_BS_HOVERED)) {
+		img = button_imgs[b->type][b->state_set & ~LAB_BS_HOVERED];
+		img.modifiers.push_back(draw_hover_overlay_on_button);
 	}
 
 	/*
 	 * If the loaded button is at the corner of the titlebar, also create
 	 * rounded variants.
 	 */
-	struct lab_img **rounded_img =
-		&button_imgs[b->type][b->state_set | LAB_BS_ROUNDED];
+	auto &rounded_img = button_imgs[b->type][b->state_set | LAB_BS_ROUNDED];
 
 	if (rc.nr_title_buttons_left > 0
 			&& b->type == rc.title_buttons_left[0]) {
-		*rounded_img = lab_img_copy(*img);
-		lab_img_add_modifier(*rounded_img, round_left_corner_button);
+		rounded_img = img;
+		rounded_img.modifiers.push_back(round_left_corner_button);
 	}
 	if (rc.nr_title_buttons_right > 0
 			&& b->type == rc.title_buttons_right
 				[rc.nr_title_buttons_right - 1]) {
-		*rounded_img = lab_img_copy(*img);
-		lab_img_add_modifier(*rounded_img, round_right_corner_button);
+		rounded_img = img;
+		rounded_img.modifiers.push_back(round_right_corner_button);
 	}
 }
 
@@ -1832,12 +1825,6 @@ theme_init(const char *theme_name)
 	create_shadows();
 }
 
-static void destroy_img(struct lab_img **img)
-{
-	lab_img_destroy(*img);
-	*img = NULL;
-}
-
 void
 theme_finish(void)
 {
@@ -1845,10 +1832,10 @@ theme_finish(void)
 			type <= LAB_NODE_BUTTON_LAST; type++) {
 		for (uint8_t state_set = LAB_BS_DEFAULT;
 				state_set <= LAB_BS_ALL; state_set++) {
-			destroy_img(&g_theme.window[THEME_INACTIVE]
-				.button_imgs[type][state_set]);
-			destroy_img(&g_theme.window[THEME_ACTIVE]
-				.button_imgs[type][state_set]);
+			g_theme.window[THEME_INACTIVE]
+				.button_imgs[type][state_set] = {};
+			g_theme.window[THEME_ACTIVE]
+				.button_imgs[type][state_set] = {};
 		}
 	}
 
