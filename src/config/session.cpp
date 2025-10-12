@@ -3,6 +3,7 @@
 #include "config/session.h"
 #include <assert.h>
 #include <dirent.h>
+#include <fstream>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -82,22 +83,14 @@ process_line(char *line)
 static bool
 read_environment_file(const char *filename)
 {
-	char *line = NULL;
-	size_t len = 0;
-	FILE *stream = fopen(filename, "r");
-	if (!stream) {
+	std::ifstream ifs(filename);
+	if (!ifs.good()) {
 		return false;
 	}
 	wlr_log(WLR_INFO, "read environment file %s", filename);
-	while (getline(&line, &len, stream) != -1) {
-		char *p = strrchr(line, '\n');
-		if (p) {
-			*p = '\0';
-		}
-		process_line(line);
+	for (std::string line; std::getline(ifs, line);) {
+		process_line(line.data());
 	}
-	free(line);
-	fclose(stream);
 	return true;
 }
 
