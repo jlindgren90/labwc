@@ -36,14 +36,6 @@ choose_best_icon_buffer(struct scaled_icon_buffer *self, int icon_size,
 	return best_buffer;
 }
 
-static refptr<lab_data_buffer>
-img_to_buffer(struct lab_img *img, int width, int height, double scale)
-{
-	auto buffer = lab_img_render(img, width, height, scale);
-	lab_img_destroy(img);
-	return buffer;
-}
-
 /*
  * Load an icon from application-supplied icon name or buffers.
  * Wayland apps can provide icon names and buffers via xdg-toplevel-icon protocol.
@@ -52,11 +44,11 @@ img_to_buffer(struct lab_img *img, int width, int height, double scale)
 static refptr<lab_data_buffer>
 load_client_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 {
-	struct lab_img *img = desktop_entry_load_icon(self->view_icon_name.c(),
-		icon_size, scale);
-	if (img) {
+	auto img = desktop_entry_load_icon(self->view_icon_name.c(), icon_size,
+		scale);
+	if (img.valid()) {
 		wlr_log(WLR_DEBUG, "loaded icon from client icon name");
-		return img_to_buffer(img, self->width, self->height, scale);
+		return img.render(self->width, self->height, scale);
 	}
 
 	auto buffer = choose_best_icon_buffer(self, icon_size, scale);
@@ -77,12 +69,11 @@ load_client_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 static refptr<lab_data_buffer>
 load_server_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 {
-	struct lab_img *img =
-		desktop_entry_load_icon_from_app_id(self->view_app_id.c(),
-			icon_size, scale);
-	if (img) {
+	auto img = desktop_entry_load_icon_from_app_id(self->view_app_id.c(),
+		icon_size, scale);
+	if (img.valid()) {
 		wlr_log(WLR_DEBUG, "loaded icon by app_id");
-		return img_to_buffer(img, self->width, self->height, scale);
+		return img.render(self->width, self->height, scale);
 	}
 
 	return {};
@@ -96,15 +87,14 @@ scaled_icon_buffer::create_buffer(double scale)
 #if HAVE_LIBSFDO
 	auto self = this;
 	int icon_size = MIN(self->width, self->height);
-	struct lab_img *img = NULL;
 
 	if (self->icon_name) {
 		/* generic icon (e.g. menu icons) */
-		img = desktop_entry_load_icon(self->icon_name.c(), icon_size,
-			scale);
-		if (img) {
+		auto img = desktop_entry_load_icon(self->icon_name.c(),
+			icon_size, scale);
+		if (img.valid()) {
 			wlr_log(WLR_DEBUG, "loaded icon by icon name");
-			return img_to_buffer(img, self->width, self->height, scale);
+			return img.render(self->width, self->height, scale);
 		}
 		return {};
 	}
@@ -130,11 +120,11 @@ scaled_icon_buffer::create_buffer(double scale)
 		}
 	}
 	/* If both client and server icons are unavailable, use the fallback icon */
-	img = desktop_entry_load_icon(rc.fallback_app_icon_name, icon_size,
+	auto img = desktop_entry_load_icon(rc.fallback_app_icon_name, icon_size,
 		scale);
-	if (img) {
+	if (img.valid()) {
 		wlr_log(WLR_DEBUG, "loaded fallback icon");
-		return img_to_buffer(img, self->width, self->height, scale);
+		return img.render(self->width, self->height, scale);
 	}
 #endif /* HAVE_LIBSFDO */
 	return {};

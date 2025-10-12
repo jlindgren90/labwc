@@ -87,8 +87,7 @@ ssd_titlebar_create(struct ssd *ssd)
 
 		for (int b = 0; b < rc.nr_title_buttons_left; b++) {
 			enum lab_node_type type = rc.title_buttons_left[b];
-			struct lab_img **imgs =
-				g_theme.window[active].button_imgs[type];
+			auto imgs = g_theme.window[active].button_imgs[type];
 			attach_ssd_button(&subtree->buttons_left, type, parent,
 				imgs, x, y, view);
 			x += g_theme.window_button_width
@@ -101,8 +100,7 @@ ssd_titlebar_create(struct ssd *ssd)
 			x -= g_theme.window_button_width
 				+ g_theme.window_button_spacing;
 			enum lab_node_type type = rc.title_buttons_right[b];
-			struct lab_img **imgs =
-				g_theme.window[active].button_imgs[type];
+			auto imgs = g_theme.window[active].button_imgs[type];
 			attach_ssd_button(&subtree->buttons_right, type, parent,
 				imgs, x, y, view);
 		}

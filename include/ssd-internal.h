@@ -181,8 +181,7 @@ struct wlr_scene_tree;
 /* SSD internal helpers to create various SSD elements */
 struct ssd_button *attach_ssd_button(struct wl_list *button_parts,
 	enum lab_node_type type, struct wlr_scene_tree *parent,
-	struct lab_img *imgs[LAB_BS_ALL + 1], int x, int y,
-	struct view *view);
+	lab_img imgs[LAB_BS_ALL + 1], int x, int y, struct view *view);
 
 /* SSD internal */
 void ssd_titlebar_create(struct ssd *ssd);
