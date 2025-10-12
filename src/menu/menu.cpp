@@ -9,7 +9,9 @@
 #include <string.h>
 #include <strings.h>
 #include <unistd.h>
+#include <fstream>
 #include <functional>
+#include <sstream>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include "action.h"
@@ -475,7 +477,7 @@ menuitem::~menuitem()
 	}
 }
 
-static bool parse_buf(struct menu *menu, const lab_str &buf);
+static bool parse_buf(struct menu *menu, const std::string &buf);
 static int handle_pipemenu_readable(int fd, uint32_t mask, void *_ctx);
 static int handle_pipemenu_timeout(void *_ctx);
 static void fill_menu_children(struct menu *parent, xmlNode *n);
@@ -633,10 +635,10 @@ fill_menu_children(struct menu *parent, xmlNode *n)
 }
 
 static bool
-parse_buf(struct menu *parent, const lab_str &buf)
+parse_buf(struct menu *parent, const std::string &buf)
 {
 	int options = 0;
-	xmlDoc *d = xmlReadMemory(buf.c(), buf.size(), NULL, NULL, options);
+	xmlDoc *d = xmlReadMemory(buf.data(), buf.size(), NULL, NULL, options);
 	if (!d) {
 		wlr_log(WLR_ERROR, "xmlParseMemory()");
 		return false;
@@ -650,29 +652,6 @@ parse_buf(struct menu *parent, const lab_str &buf)
 	return true;
 }
 
-/*
- * @stream can come from either of the following:
- *   - fopen() in the case of reading a file such as menu.xml
- *   - popen() when processing pipemenus
- */
-static void
-parse_stream(FILE *stream)
-{
-	char *line = NULL;
-	size_t len = 0;
-	lab_str buf;
-
-	while (getline(&line, &len, stream) != -1) {
-		char *p = strrchr(line, '\n');
-		if (p) {
-			*p = '\0';
-		}
-		buf += line;
-	}
-	free(line);
-	parse_buf(NULL, buf);
-}
-
 static void
 parse_xml(const char *filename)
 {
@@ -684,13 +663,14 @@ parse_xml(const char *filename)
 	for (int idx = 0; idx < num_paths; idx++) {
 		auto &path = should_merge_config ?
 			paths[(num_paths - 1) - idx] : paths[idx];
-		FILE *stream = fopen(path.c(), "r");
-		if (!stream) {
+		std::ifstream ifs(path);
+		if (!ifs.good()) {
 			continue;
 		}
 		wlr_log(WLR_INFO, "read menu file %s", path.c());
-		parse_stream(stream);
-		fclose(stream);
+		std::ostringstream oss;
+		oss << ifs.rdbuf();
+		parse_buf(nullptr, oss.str());
 		if (!should_merge_config) {
 			break;
 		}
