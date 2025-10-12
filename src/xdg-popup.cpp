@@ -16,14 +16,15 @@
 #include "output.h"
 #include "view.h"
 
-struct xdg_popup {
+struct xdg_popup : public destroyable {
 	struct view *parent_view;
 	struct wlr_xdg_popup *wlr_popup;
 
-	struct wl_listener commit;
-	struct wl_listener destroy;
-	struct wl_listener new_popup;
-	struct wl_listener reposition;
+	~xdg_popup();
+
+	DECLARE_HANDLER(xdg_popup, commit);
+	DECLARE_HANDLER(xdg_popup, new_popup);
+	DECLARE_HANDLER(xdg_popup, reposition);
 };
 
 static void
@@ -33,7 +34,7 @@ popup_unconstrain(struct xdg_popup *popup)
 
 	/* Get position of parent toplevel/popup */
 	int parent_lx, parent_ly;
-	struct wlr_scene_tree *parent_tree = popup->wlr_popup->parent->data;
+	auto parent_tree = (wlr_scene_tree *)popup->wlr_popup->parent->data;
 	wlr_scene_node_coords(&parent_tree->node, &parent_lx, &parent_ly);
 
 	/*
@@ -71,57 +72,37 @@ popup_unconstrain(struct xdg_popup *popup)
 	wlr_xdg_popup_unconstrain_from_box(popup->wlr_popup, &output_toplevel_box);
 }
 
-static void
-handle_destroy(struct wl_listener *listener, void *data)
+xdg_popup::~xdg_popup()
 {
-	struct xdg_popup *popup = wl_container_of(listener, popup, destroy);
-
 	struct wlr_xdg_popup *_popup, *tmp;
-	wl_list_for_each_safe(_popup, tmp, &popup->wlr_popup->base->popups, link) {
+	wl_list_for_each_safe(_popup, tmp, &wlr_popup->base->popups, link) {
 		wlr_xdg_popup_destroy(_popup);
 	}
 
-	wl_list_remove(&popup->destroy.link);
-	wl_list_remove(&popup->new_popup.link);
-	wl_list_remove(&popup->reposition.link);
-
-	/* Usually already removed unless there was no commit at all */
-	if (popup->commit.notify) {
-		wl_list_remove(&popup->commit.link);
-	}
-
 	cursor_update_focus();
-
-	free(popup);
 }
 
-static void
-handle_commit(struct wl_listener *listener, void *data)
+void
+xdg_popup::handle_commit(void *data)
 {
-	struct xdg_popup *popup = wl_container_of(listener, popup, commit);
-
-	if (popup->wlr_popup->base->initial_commit) {
-		popup_unconstrain(popup);
+	if (wlr_popup->base->initial_commit) {
+		popup_unconstrain(this);
 
 		/* Prevent getting called over and over again */
-		wl_list_remove(&popup->commit.link);
-		popup->commit.notify = NULL;
+		on_commit.disconnect();
 	}
 }
 
-static void
-handle_reposition(struct wl_listener *listener, void *data)
+void
+xdg_popup::handle_reposition(void *)
 {
-	struct xdg_popup *popup = wl_container_of(listener, popup, reposition);
-	popup_unconstrain(popup);
+	popup_unconstrain(this);
 }
 
-static void
-handle_new_popup(struct wl_listener *listener, void *data)
+void
+xdg_popup::handle_new_popup(void *data)
 {
-	struct xdg_popup *popup = wl_container_of(listener, popup, new_popup);
-	struct wlr_xdg_popup *wlr_popup = data;
-	xdg_popup_create(popup->parent_view, wlr_popup);
+	xdg_popup_create(parent_view, (wlr_xdg_popup *)data);
 }
 
 void
@@ -134,14 +115,14 @@ xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup)
 		return;
 	}
 
-	struct xdg_popup *popup = znew(*popup);
+	auto popup = new xdg_popup();
 	popup->parent_view = view;
 	popup->wlr_popup = wlr_popup;
 
-	CONNECT_SIGNAL(wlr_popup, popup, destroy);
-	CONNECT_SIGNAL(wlr_popup->base, popup, new_popup);
-	CONNECT_SIGNAL(wlr_popup->base->surface, popup, commit);
-	CONNECT_SIGNAL(wlr_popup, popup, reposition);
+	CONNECT_LISTENER(wlr_popup, popup, destroy);
+	CONNECT_LISTENER(wlr_popup->base, popup, new_popup);
+	CONNECT_LISTENER(wlr_popup->base->surface, popup, commit);
+	CONNECT_LISTENER(wlr_popup, popup, reposition);
 
 	/*
 	 * We must add xdg popups to the scene graph so they get rendered. The
@@ -155,7 +136,7 @@ xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup)
 	 */
 	struct wlr_scene_tree *parent_tree = NULL;
 	if (parent->role == WLR_XDG_SURFACE_ROLE_POPUP) {
-		parent_tree = parent->surface->data;
+		parent_tree = (wlr_scene_tree *)parent->surface->data;
 	} else {
 		parent_tree = g_server.xdg_popup_tree;
 		wlr_scene_node_set_position(&g_server.xdg_popup_tree->node,
@@ -165,6 +146,6 @@ xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup)
 		wlr_scene_xdg_surface_create(parent_tree, wlr_popup->base);
 	die_if_null(wlr_popup->base->surface->data);
 
-	node_descriptor_create(wlr_popup->base->surface->data,
+	node_descriptor_create((wlr_scene_node *)wlr_popup->base->surface->data,
 		LAB_NODE_XDG_POPUP, view, /*data*/ NULL);
 }
