@@ -318,8 +318,6 @@ struct server {
 	weakptr<menu> menu_current;
 	ownlist<menu> menus;
 
-	struct sfdo *sfdo;
-
 	pid_t primary_client_pid;
 };
 

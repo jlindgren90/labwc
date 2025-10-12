@@ -8,19 +8,28 @@
 #include <string.h>
 #include <strings.h>
 #include <wlr/util/log.h>
-#include "common/mem.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
-#include "labwc.h"
 
 static const char *debug_libsfdo;
 
 struct sfdo {
+	struct sfdo_basedir_ctx *basedir_ctx;
 	struct sfdo_desktop_ctx *desktop_ctx;
 	struct sfdo_icon_ctx *icon_ctx;
 	struct sfdo_desktop_db *desktop_db;
 	struct sfdo_icon_theme *icon_theme;
+
+	~sfdo() {
+		sfdo_icon_theme_destroy(icon_theme);
+		sfdo_desktop_db_destroy(desktop_db);
+		sfdo_icon_ctx_destroy(icon_ctx);
+		sfdo_desktop_ctx_destroy(desktop_ctx);
+		sfdo_basedir_ctx_destroy(basedir_ctx);
+	}
 };
+
+static ownptr<sfdo> g_sfdo;
 
 static void
 log_handler(enum sfdo_log_level level, const char *fmt, va_list args, void *tag)
@@ -53,34 +62,51 @@ log_handler(enum sfdo_log_level level, const char *fmt, va_list args, void *tag)
 	_wlr_vlog((enum wlr_log_importance)level, fmt, args);
 }
 
+static void
+print_debug_msg(void)
+{
+	if (!debug_libsfdo) {
+		wlr_log(WLR_ERROR, "Further information is available by setting "
+			"the LABWC_DEBUG_LIBSFDO=1 env var before starting labwc");
+	}
+}
+
 void
 desktop_entry_init(void)
 {
-	struct sfdo *sfdo = znew(*sfdo);
+	ownptr<::sfdo> sfdo_owner;
+	auto sfdo = sfdo_owner.set_new();
 
 	debug_libsfdo = getenv("LABWC_DEBUG_LIBSFDO");
 
-	struct sfdo_basedir_ctx *basedir_ctx = sfdo_basedir_ctx_create();
-	if (!basedir_ctx) {
-		goto err_basedir_ctx;
-	}
-	sfdo->desktop_ctx = sfdo_desktop_ctx_create(basedir_ctx);
-	if (!sfdo->desktop_ctx) {
-		goto err_desktop_ctx;
-	}
-	sfdo->icon_ctx = sfdo_icon_ctx_create(basedir_ctx);
-	if (!sfdo->icon_ctx) {
-		goto err_icon_ctx;
+	sfdo->basedir_ctx = sfdo_basedir_ctx_create();
+	if (!sfdo->basedir_ctx) {
+		wlr_log(WLR_ERROR, "Failed to initialize basedir context");
+		print_debug_msg();
+		return;
 	}
 
-{ /* !goto */
+	sfdo->desktop_ctx = sfdo_desktop_ctx_create(sfdo->basedir_ctx);
+	if (!sfdo->desktop_ctx) {
+		wlr_log(WLR_ERROR, "Failed to initialize desktop context");
+		print_debug_msg();
+		return;
+	}
+
+	sfdo->icon_ctx = sfdo_icon_ctx_create(sfdo->basedir_ctx);
+	if (!sfdo->icon_ctx) {
+		wlr_log(WLR_ERROR, "Failed to initialize icon context");
+		print_debug_msg();
+		return;
+	}
+
 	/* sfdo_log_level and wlr_log_importance are compatible */
 	enum sfdo_log_level level =
 		(enum sfdo_log_level)wlr_log_get_verbosity();
-	sfdo_desktop_ctx_set_log_handler(
-		sfdo->desktop_ctx, level, log_handler, "sfdo-desktop");
-	sfdo_icon_ctx_set_log_handler(
-		sfdo->icon_ctx, level, log_handler, "sfdo-icon");
+	sfdo_desktop_ctx_set_log_handler(sfdo->desktop_ctx, level, log_handler,
+		(void *)"sfdo-desktop");
+	sfdo_icon_ctx_set_log_handler(sfdo->icon_ctx, level, log_handler,
+		(void *)"sfdo-icon");
 
 	char *locale = NULL;
 #if HAVE_NLS
@@ -89,10 +115,11 @@ desktop_entry_init(void)
 
 	sfdo->desktop_db = sfdo_desktop_db_load(sfdo->desktop_ctx, locale);
 	if (!sfdo->desktop_db) {
-		goto err_desktop_db;
+		wlr_log(WLR_ERROR, "Failed to initialize desktop database");
+		print_debug_msg();
+		return;
 	}
 
-{ /* !goto */
 	/*
 	 * We set some relaxed load options to accommodate delinquent themes in
 	 * the wild, namely:
@@ -117,61 +144,28 @@ desktop_entry_init(void)
 		 * So manually call sfdo_icon_theme_load() again here.
 		 */
 		wlr_log(WLR_ERROR, "Failed to load icon theme %s, falling back to 'hicolor'",
-			rc.icon_theme_name);
-
-		if (!debug_libsfdo) {
-			wlr_log(WLR_ERROR, "Further information is available by setting "
-				"the LABWC_DEBUG_LIBSFDO=1 env var before starting labwc");
-		}
+			rc.icon_theme_name.c());
+		print_debug_msg();
 
 		sfdo->icon_theme = sfdo_icon_theme_load(
 			sfdo->icon_ctx, "hicolor", load_options);
-	}
-	if (!sfdo->icon_theme) {
-		goto err_icon_theme;
+		if (!sfdo->icon_theme) {
+			wlr_log(WLR_ERROR, "Failed to load hicolor icon theme");
+			return;
+		}
 	}
 
-	/* basedir_ctx is not referenced by other objects */
-	sfdo_basedir_ctx_destroy(basedir_ctx);
-
-	g_server.sfdo = sfdo;
-	return;
-
-err_icon_theme:
-	sfdo_desktop_db_destroy(sfdo->desktop_db);
-} err_desktop_db:
-	sfdo_icon_ctx_destroy(sfdo->icon_ctx);
-} err_icon_ctx:
-	sfdo_desktop_ctx_destroy(sfdo->desktop_ctx);
-err_desktop_ctx:
-	sfdo_basedir_ctx_destroy(basedir_ctx);
-err_basedir_ctx:
-	free(sfdo);
-	wlr_log(WLR_ERROR, "Failed to initialize icon loader");
-	if (!debug_libsfdo) {
-		wlr_log(WLR_ERROR, "Further information is available by setting "
-			"the LABWC_DEBUG_LIBSFDO=1 env var before starting labwc");
-	}
+	g_sfdo = std::move(sfdo_owner);
 }
 
 void
 desktop_entry_finish(void)
 {
-	struct sfdo *sfdo = g_server.sfdo;
-	if (!sfdo) {
-		return;
-	}
-
-	sfdo_icon_theme_destroy(sfdo->icon_theme);
-	sfdo_desktop_db_destroy(sfdo->desktop_db);
-	sfdo_icon_ctx_destroy(sfdo->icon_ctx);
-	sfdo_desktop_ctx_destroy(sfdo->desktop_ctx);
-	free(sfdo);
-	g_server.sfdo = NULL;
+	g_sfdo.reset();
 }
 
 struct icon_ctx {
-	char *path;
+	lab_str path;
 	enum sfdo_icon_file_format format;
 };
 
@@ -194,7 +188,6 @@ length_without_extension(const char *name)
 
 /*
  * Return 0 on success and -1 on error
- * The calling function is responsible for free()ing ctx->path
  */
 static int
 process_rel_name(struct icon_ctx *ctx, const char *icon_name,
@@ -219,7 +212,7 @@ process_rel_name(struct icon_ctx *ctx, const char *icon_name,
 		ret = -1;
 		goto out;
 	}
-	ctx->path = xstrdup(sfdo_icon_file_get_path(icon_file, NULL));
+	ctx->path = lab_str(sfdo_icon_file_get_path(icon_file, NULL));
 	ctx->format = sfdo_icon_file_get_format(icon_file);
 out:
 	sfdo_icon_file_destroy(icon_file);
@@ -229,7 +222,7 @@ out:
 static int
 process_abs_name(struct icon_ctx *ctx, const char *icon_name)
 {
-	ctx->path = xstrdup(icon_name);
+	ctx->path = lab_str(icon_name);
 	if (str_endswith_ignore_case(icon_name, ".png")) {
 		ctx->format = SFDO_ICON_FILE_FORMAT_PNG;
 	} else if (str_endswith_ignore_case(icon_name, ".svg")) {
@@ -242,7 +235,6 @@ process_abs_name(struct icon_ctx *ctx, const char *icon_name)
 	return 0;
 err:
 	wlr_log(WLR_ERROR, "'%s' has invalid file extension", icon_name);
-	free(ctx->path);
 	return -1;
 }
 
@@ -331,13 +323,10 @@ desktop_entry_load_icon(const char *icon_name, int size, float scale)
 {
 	/* static analyzer isn't able to detect the NULL check in string_null_or_empty() */
 	if (string_null_or_empty(icon_name) || !icon_name) {
-		return {};
+		return lab_img();
 	}
 
-	struct sfdo *sfdo = g_server.sfdo;
-	if (!sfdo) {
-		return {};
-	}
+	CHECK_PTR_OR_RET_VAL(g_sfdo, sfdo, lab_img());
 
 	/*
 	 * libsfdo doesn't support loading icons for fractional scales,
@@ -346,36 +335,31 @@ desktop_entry_load_icon(const char *icon_name, int size, float scale)
 	int lookup_scale = MAX((int)scale, 1);
 	int lookup_size = lroundf(size * scale / lookup_scale);
 
-	struct icon_ctx ctx = {0};
+	icon_ctx ctx = {};
 	int ret;
 	if (icon_name[0] == '/') {
 		ret = process_abs_name(&ctx, icon_name);
 	} else {
-		ret = process_rel_name(&ctx, icon_name, sfdo, lookup_size, lookup_scale);
+		ret = process_rel_name(&ctx, icon_name, sfdo, lookup_size,
+			lookup_scale);
 	}
 	if (ret < 0) {
 		wlr_log(WLR_INFO, "failed to load icon file %s", icon_name);
 		return {};
 	}
 
-	wlr_log(WLR_DEBUG, "loading icon file %s", ctx.path);
-	auto img = lab_img::load(convert_img_type(ctx.format), ctx.path, NULL);
-
-	free(ctx.path);
-	return img;
+	wlr_log(WLR_DEBUG, "loading icon file %s", ctx.path.c());
+	return lab_img::load(convert_img_type(ctx.format), ctx.path.c(), NULL);
 }
 
 lab_img
 desktop_entry_load_icon_from_app_id(const char *app_id, int size, float scale)
 {
 	if (string_null_or_empty(app_id)) {
-		return {};
+		return lab_img();
 	}
 
-	struct sfdo *sfdo = g_server.sfdo;
-	if (!sfdo) {
-		return {};
-	}
+	CHECK_PTR_OR_RET_VAL(g_sfdo, sfdo, lab_img());
 
 	const char *icon_name = NULL;
 	struct sfdo_desktop_entry *entry = get_desktop_entry(sfdo, app_id);
@@ -398,10 +382,7 @@ desktop_entry_name_lookup(const char *app_id)
 		return NULL;
 	}
 
-	struct sfdo *sfdo = g_server.sfdo;
-	if (!sfdo) {
-		return NULL;
-	}
+	CHECK_PTR_OR_RET_VAL(g_sfdo, sfdo, NULL);
 
 	struct sfdo_desktop_entry *entry = get_desktop_entry(sfdo, app_id);
 	if (!entry) {
