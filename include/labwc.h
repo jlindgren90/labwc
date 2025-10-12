@@ -4,6 +4,7 @@
 #include "config.h"
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
+#include "common/reflist.h"
 #include "common/set.h"
 #include "input/cursor.h"
 #include "overlay.h"
@@ -148,6 +149,8 @@ struct seat {
 	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard;
 	struct wl_listener new_virtual_keyboard;
 };
+
+struct menu;
 
 struct osd_state {
 	struct view *cycle_view;
@@ -310,8 +313,8 @@ struct server {
 	/* Set when in cycle (alt-tab) mode */
 	struct osd_state osd_state;
 
-	struct menu *menu_current;
-	struct wl_list menus;
+	weakptr<menu> menu_current;
+	ownlist<menu> menus;
 
 	struct sfdo *sfdo;
 
