@@ -1,6 +1,6 @@
 labwc_sources += files(
-  'scaled-font-buffer.c',
-  'scaled-icon-buffer.c',
-  'scaled-img-buffer.c',
-  'scaled-buffer.c',
+  'scaled-font-buffer.cpp',
+  'scaled-icon-buffer.cpp',
+  'scaled-img-buffer.cpp',
+  'scaled-buffer.cpp',
 )
