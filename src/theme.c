@@ -79,7 +79,7 @@ draw_hover_overlay_on_button(cairo_t *cairo, int w, int h)
 	/* Overlay (pre-multiplied alpha) */
 	float overlay_color[4] = { 0.15f, 0.15f, 0.15f, 0.3f};
 	set_cairo_color(cairo, overlay_color);
-	int r = rc.theme->window_button_hover_bg_corner_radius;
+	int r = g_theme.window_button_hover_bg_corner_radius;
 
 	cairo_new_sub_path(cairo);
 	cairo_arc(cairo, r, r, r, 180 * deg, 270 * deg);
@@ -101,10 +101,10 @@ round_left_corner_button(cairo_t *cairo, int w, int h)
 	 * Position of the topleft corner of the titlebar relative to the
 	 * leftmost button
 	 */
-	double x = -rc.theme->window_titlebar_padding_width;
-	double y = -(rc.theme->titlebar_height - rc.theme->window_button_height) / 2;
+	double x = -g_theme.window_titlebar_padding_width;
+	double y = -(g_theme.titlebar_height - g_theme.window_button_height) / 2;
 
-	double r = rc.corner_radius - (double)rc.theme->border_width / 2.0;
+	double r = rc.corner_radius - (double)g_theme.border_width / 2.0;
 
 	cairo_new_sub_path(cairo);
 	cairo_arc(cairo, x + r, y + r, r, deg * 180, deg * 270);
@@ -162,12 +162,12 @@ get_button_filename(char *buf, size_t len, const char *name, const char *postfix
 }
 
 static void
-load_button(struct theme *theme, struct button *b, int active)
+load_button(struct button *b, int active)
 {
 	struct lab_img *(*button_imgs)[LAB_BS_ALL + 1] =
-		theme->window[active].button_imgs;
+		g_theme.window[active].button_imgs;
 	struct lab_img **img = &button_imgs[b->type][b->state_set];
-	float *rgba = theme->window[active].button_colors[b->type];
+	float *rgba = g_theme.window[active].button_colors[b->type];
 	char filename[4096];
 
 	assert(!*img);
@@ -275,7 +275,7 @@ load_button(struct theme *theme, struct button *b, int active)
  * ...in the button array definition below.
  */
 static void
-load_buttons(struct theme *theme)
+load_buttons(void)
 {
 	struct button buttons[] = { {
 		.name = "menu",
@@ -374,8 +374,8 @@ load_buttons(struct theme *theme)
 
 	for (size_t i = 0; i < ARRAY_SIZE(buttons); ++i) {
 		struct button *b = &buttons[i];
-		load_button(theme, b, THEME_INACTIVE);
-		load_button(theme, b, THEME_ACTIVE);
+		load_button(b, THEME_INACTIVE);
+		load_button(b, THEME_ACTIVE);
 	}
 }
 
@@ -531,134 +531,134 @@ parse_justification(const char *str)
  * theme_builtin() applies a theme that is similar to vanilla GTK
  */
 static void
-theme_builtin(struct theme *theme)
+theme_builtin(void)
 {
-	theme->border_width = 1;
-	theme->window_titlebar_padding_height = 0;
-	theme->window_titlebar_padding_width = 0;
+	g_theme.border_width = 1;
+	g_theme.window_titlebar_padding_height = 0;
+	g_theme.window_titlebar_padding_width = 0;
 
-	parse_hexstr("#aaaaaa", theme->window[THEME_ACTIVE].border_color);
-	parse_hexstr("#aaaaaa", theme->window[THEME_INACTIVE].border_color);
+	parse_hexstr("#aaaaaa", g_theme.window[THEME_ACTIVE].border_color);
+	parse_hexstr("#aaaaaa", g_theme.window[THEME_INACTIVE].border_color);
 
-	parse_hexstr("#ff0000", theme->window_toggled_keybinds_color);
+	parse_hexstr("#ff0000", g_theme.window_toggled_keybinds_color);
 
-	theme->window[THEME_ACTIVE].title_bg.gradient = LAB_GRADIENT_NONE;
-	theme->window[THEME_INACTIVE].title_bg.gradient = LAB_GRADIENT_NONE;
-	parse_hexstr("#e1dedb", theme->window[THEME_ACTIVE].title_bg.color);
-	parse_hexstr("#f6f5f4", theme->window[THEME_INACTIVE].title_bg.color);
-	theme->window[THEME_ACTIVE].title_bg.color_split_to[0] = FLT_MIN;
-	theme->window[THEME_INACTIVE].title_bg.color_split_to[0] = FLT_MIN;
-	theme->window[THEME_ACTIVE].title_bg.color_to[0] = FLT_MIN;
-	theme->window[THEME_INACTIVE].title_bg.color_to[0] = FLT_MIN;
-	theme->window[THEME_ACTIVE].title_bg.color_to_split_to[0] = FLT_MIN;
-	theme->window[THEME_INACTIVE].title_bg.color_to_split_to[0] = FLT_MIN;
+	g_theme.window[THEME_ACTIVE].title_bg.gradient = LAB_GRADIENT_NONE;
+	g_theme.window[THEME_INACTIVE].title_bg.gradient = LAB_GRADIENT_NONE;
+	parse_hexstr("#e1dedb", g_theme.window[THEME_ACTIVE].title_bg.color);
+	parse_hexstr("#f6f5f4", g_theme.window[THEME_INACTIVE].title_bg.color);
+	g_theme.window[THEME_ACTIVE].title_bg.color_split_to[0] = FLT_MIN;
+	g_theme.window[THEME_INACTIVE].title_bg.color_split_to[0] = FLT_MIN;
+	g_theme.window[THEME_ACTIVE].title_bg.color_to[0] = FLT_MIN;
+	g_theme.window[THEME_INACTIVE].title_bg.color_to[0] = FLT_MIN;
+	g_theme.window[THEME_ACTIVE].title_bg.color_to_split_to[0] = FLT_MIN;
+	g_theme.window[THEME_INACTIVE].title_bg.color_to_split_to[0] = FLT_MIN;
 
-	parse_hexstr("#000000", theme->window[THEME_ACTIVE].label_text_color);
-	parse_hexstr("#000000", theme->window[THEME_INACTIVE].label_text_color);
-	theme->window_label_text_justify = parse_justification("Center");
+	parse_hexstr("#000000", g_theme.window[THEME_ACTIVE].label_text_color);
+	parse_hexstr("#000000", g_theme.window[THEME_INACTIVE].label_text_color);
+	g_theme.window_label_text_justify = parse_justification("Center");
 
-	theme->window_button_width = 26;
-	theme->window_button_height = 26;
-	theme->window_button_spacing = 0;
-	theme->window_button_hover_bg_corner_radius = 0;
+	g_theme.window_button_width = 26;
+	g_theme.window_button_height = 26;
+	g_theme.window_button_spacing = 0;
+	g_theme.window_button_hover_bg_corner_radius = 0;
 
 	for (int type = LAB_NODE_BUTTON_FIRST;
 			type <= LAB_NODE_BUTTON_LAST; type++) {
 		parse_hexstr("#000000",
-			theme->window[THEME_INACTIVE].button_colors[type]);
+			g_theme.window[THEME_INACTIVE].button_colors[type]);
 		parse_hexstr("#000000",
-			theme->window[THEME_ACTIVE].button_colors[type]);
+			g_theme.window[THEME_ACTIVE].button_colors[type]);
 	}
 
-	theme->window[THEME_ACTIVE].shadow_size = 60;
-	theme->window[THEME_INACTIVE].shadow_size = 40;
-	parse_hexstr("#00000060", theme->window[THEME_ACTIVE].shadow_color);
-	parse_hexstr("#00000040", theme->window[THEME_INACTIVE].shadow_color);
+	g_theme.window[THEME_ACTIVE].shadow_size = 60;
+	g_theme.window[THEME_INACTIVE].shadow_size = 40;
+	parse_hexstr("#00000060", g_theme.window[THEME_ACTIVE].shadow_color);
+	parse_hexstr("#00000040", g_theme.window[THEME_INACTIVE].shadow_color);
 
-	theme->menu_overlap_x = 0;
-	theme->menu_overlap_y = 0;
-	theme->menu_min_width = 20;
-	theme->menu_max_width = 200;
-	theme->menu_border_width = INT_MIN;
-	theme->menu_border_color[0] = FLT_MIN;
+	g_theme.menu_overlap_x = 0;
+	g_theme.menu_overlap_y = 0;
+	g_theme.menu_min_width = 20;
+	g_theme.menu_max_width = 200;
+	g_theme.menu_border_width = INT_MIN;
+	g_theme.menu_border_color[0] = FLT_MIN;
 
-	theme->menu_items_padding_x = 7;
-	theme->menu_items_padding_y = 4;
-	parse_hexstr("#fcfbfa", theme->menu_items_bg_color);
-	parse_hexstr("#000000", theme->menu_items_text_color);
-	parse_hexstr("#e1dedb", theme->menu_items_active_bg_color);
-	parse_hexstr("#000000", theme->menu_items_active_text_color);
+	g_theme.menu_items_padding_x = 7;
+	g_theme.menu_items_padding_y = 4;
+	parse_hexstr("#fcfbfa", g_theme.menu_items_bg_color);
+	parse_hexstr("#000000", g_theme.menu_items_text_color);
+	parse_hexstr("#e1dedb", g_theme.menu_items_active_bg_color);
+	parse_hexstr("#000000", g_theme.menu_items_active_text_color);
 
-	theme->menu_separator_line_thickness = 1;
-	theme->menu_separator_padding_width = 6;
-	theme->menu_separator_padding_height = 3;
-	parse_hexstr("#888888", theme->menu_separator_color);
+	g_theme.menu_separator_line_thickness = 1;
+	g_theme.menu_separator_padding_width = 6;
+	g_theme.menu_separator_padding_height = 3;
+	parse_hexstr("#888888", g_theme.menu_separator_color);
 
-	parse_hexstr("#589bda", theme->menu_title_bg_color);
-	theme->menu_title_text_justify = parse_justification("Center");
-	parse_hexstr("#ffffff", theme->menu_title_text_color);
+	parse_hexstr("#589bda", g_theme.menu_title_bg_color);
+	g_theme.menu_title_text_justify = parse_justification("Center");
+	parse_hexstr("#ffffff", g_theme.menu_title_text_color);
 
-	theme->osd_window_switcher_classic.width = 600;
-	theme->osd_window_switcher_classic.width_is_percent = false;
-	theme->osd_window_switcher_classic.padding = 4;
-	theme->osd_window_switcher_classic.item_padding_x = 10;
-	theme->osd_window_switcher_classic.item_padding_y = 1;
-	theme->osd_window_switcher_classic.item_active_border_width = 2;
-	theme->osd_window_switcher_classic.item_icon_size = -1;
+	g_theme.osd_window_switcher_classic.width = 600;
+	g_theme.osd_window_switcher_classic.width_is_percent = false;
+	g_theme.osd_window_switcher_classic.padding = 4;
+	g_theme.osd_window_switcher_classic.item_padding_x = 10;
+	g_theme.osd_window_switcher_classic.item_padding_y = 1;
+	g_theme.osd_window_switcher_classic.item_active_border_width = 2;
+	g_theme.osd_window_switcher_classic.item_icon_size = -1;
 
-	theme->osd_window_switcher_thumbnail.max_width = 80;
-	theme->osd_window_switcher_thumbnail.max_width_is_percent = true;
-	theme->osd_window_switcher_thumbnail.padding = 4;
-	theme->osd_window_switcher_thumbnail.item_width = 300;
-	theme->osd_window_switcher_thumbnail.item_height = 250;
-	theme->osd_window_switcher_thumbnail.item_padding = 10;
-	theme->osd_window_switcher_thumbnail.item_active_border_width = 2;
-	theme->osd_window_switcher_thumbnail.item_active_border_color[0] = FLT_MIN;
-	theme->osd_window_switcher_thumbnail.item_active_bg_color[0] = FLT_MIN;
-	theme->osd_window_switcher_thumbnail.item_icon_size = 60;
-
-	/* inherit settings in post_processing() if not set elsewhere */
-	theme->osd_window_switcher_preview_border_width = INT_MIN;
-	zero_array(theme->osd_window_switcher_preview_border_color);
-	theme->osd_window_switcher_preview_border_color[0][0] = FLT_MIN;
-
-	theme->osd_workspace_switcher_boxes_width = 20;
-	theme->osd_workspace_switcher_boxes_height = 20;
-	theme->osd_workspace_switcher_boxes_border_width = 2;
+	g_theme.osd_window_switcher_thumbnail.max_width = 80;
+	g_theme.osd_window_switcher_thumbnail.max_width_is_percent = true;
+	g_theme.osd_window_switcher_thumbnail.padding = 4;
+	g_theme.osd_window_switcher_thumbnail.item_width = 300;
+	g_theme.osd_window_switcher_thumbnail.item_height = 250;
+	g_theme.osd_window_switcher_thumbnail.item_padding = 10;
+	g_theme.osd_window_switcher_thumbnail.item_active_border_width = 2;
+	g_theme.osd_window_switcher_thumbnail.item_active_border_color[0] = FLT_MIN;
+	g_theme.osd_window_switcher_thumbnail.item_active_bg_color[0] = FLT_MIN;
+	g_theme.osd_window_switcher_thumbnail.item_icon_size = 60;
 
 	/* inherit settings in post_processing() if not set elsewhere */
-	theme->osd_bg_color[0] = FLT_MIN;
-	theme->osd_border_width = INT_MIN;
-	theme->osd_border_color[0] = FLT_MIN;
-	theme->osd_label_text_color[0] = FLT_MIN;
+	g_theme.osd_window_switcher_preview_border_width = INT_MIN;
+	zero_array(g_theme.osd_window_switcher_preview_border_color);
+	g_theme.osd_window_switcher_preview_border_color[0][0] = FLT_MIN;
+
+	g_theme.osd_workspace_switcher_boxes_width = 20;
+	g_theme.osd_workspace_switcher_boxes_height = 20;
+	g_theme.osd_workspace_switcher_boxes_border_width = 2;
+
+	/* inherit settings in post_processing() if not set elsewhere */
+	g_theme.osd_bg_color[0] = FLT_MIN;
+	g_theme.osd_border_width = INT_MIN;
+	g_theme.osd_border_color[0] = FLT_MIN;
+	g_theme.osd_label_text_color[0] = FLT_MIN;
 
 	if (wlr_renderer_is_pixman(g_server.renderer)) {
 		/* Draw only outlined overlay by default to save CPU resource */
-		theme->snapping_overlay_region.bg_enabled = false;
-		theme->snapping_overlay_edge.bg_enabled = false;
-		theme->snapping_overlay_region.border_enabled = true;
-		theme->snapping_overlay_edge.border_enabled = true;
+		g_theme.snapping_overlay_region.bg_enabled = false;
+		g_theme.snapping_overlay_edge.bg_enabled = false;
+		g_theme.snapping_overlay_region.border_enabled = true;
+		g_theme.snapping_overlay_edge.border_enabled = true;
 	} else {
-		theme->snapping_overlay_region.bg_enabled = true;
-		theme->snapping_overlay_edge.bg_enabled = true;
-		theme->snapping_overlay_region.border_enabled = false;
-		theme->snapping_overlay_edge.border_enabled = false;
+		g_theme.snapping_overlay_region.bg_enabled = true;
+		g_theme.snapping_overlay_edge.bg_enabled = true;
+		g_theme.snapping_overlay_region.border_enabled = false;
+		g_theme.snapping_overlay_edge.border_enabled = false;
 	}
 
-	parse_hexstr("#8080b380", theme->snapping_overlay_region.bg_color);
-	parse_hexstr("#8080b380", theme->snapping_overlay_edge.bg_color);
+	parse_hexstr("#8080b380", g_theme.snapping_overlay_region.bg_color);
+	parse_hexstr("#8080b380", g_theme.snapping_overlay_edge.bg_color);
 
 	/* inherit settings in post_processing() if not set elsewhere */
-	theme->snapping_overlay_region.border_width = INT_MIN;
-	theme->snapping_overlay_edge.border_width = INT_MIN;
-	zero_array(theme->snapping_overlay_region.border_color);
-	theme->snapping_overlay_region.border_color[0][0] = FLT_MIN;
-	zero_array(theme->snapping_overlay_edge.border_color);
-	theme->snapping_overlay_edge.border_color[0][0] = FLT_MIN;
+	g_theme.snapping_overlay_region.border_width = INT_MIN;
+	g_theme.snapping_overlay_edge.border_width = INT_MIN;
+	zero_array(g_theme.snapping_overlay_region.border_color);
+	g_theme.snapping_overlay_region.border_color[0][0] = FLT_MIN;
+	zero_array(g_theme.snapping_overlay_edge.border_color);
+	g_theme.snapping_overlay_edge.border_color[0][0] = FLT_MIN;
 
 	/* magnifier */
-	parse_hexstr("#ff0000", theme->mag_border_color);
-	theme->mag_border_width = 1;
+	parse_hexstr("#ff0000", g_theme.mag_border_color);
+	g_theme.mag_border_width = 1;
 }
 
 static int
@@ -674,32 +674,34 @@ get_int_if_positive(const char *content, const char *field)
 }
 
 static void
-entry(struct theme *theme, const char *key, const char *value)
+entry(const char *key, const char *value)
 {
 	if (!key || !value) {
 		return;
 	}
 
 	struct window_switcher_classic_theme *switcher_classic_theme =
-		&theme->osd_window_switcher_classic;
+		&g_theme.osd_window_switcher_classic;
 	struct window_switcher_thumbnail_theme *switcher_thumb_theme =
-		&theme->osd_window_switcher_thumbnail;
+		&g_theme.osd_window_switcher_thumbnail;
 
 	/*
 	 * Note that in order for the pattern match to apply to more than just
 	 * the first instance, "else if" cannot be used throughout this function
 	 */
 	if (match_glob(key, "border.width")) {
-		theme->border_width = get_int_if_positive(
-			value, "border.width");
+		g_theme.border_width =
+			get_int_if_positive(value, "border.width");
 	}
 	if (match_glob(key, "window.titlebar.padding.width")) {
-		theme->window_titlebar_padding_width = get_int_if_positive(
-			value, "window.titlebar.padding.width");
+		g_theme.window_titlebar_padding_width =
+			get_int_if_positive(value,
+				"window.titlebar.padding.width");
 	}
 	if (match_glob(key, "window.titlebar.padding.height")) {
-		theme->window_titlebar_padding_height = get_int_if_positive(
-			value, "window.titlebar.padding.height");
+		g_theme.window_titlebar_padding_height =
+			get_int_if_positive(value,
+				"window.titlebar.padding.height");
 	}
 	if (match_glob(key, "titlebar.height")) {
 		wlr_log(WLR_ERROR, "titlebar.height is no longer supported");
@@ -709,251 +711,257 @@ entry(struct theme *theme, const char *key, const char *value)
 	}
 
 	if (match_glob(key, "window.active.border.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE].border_color);
+		parse_color(value, g_theme.window[THEME_ACTIVE].border_color);
 	}
 	if (match_glob(key, "window.inactive.border.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE].border_color);
+		parse_color(value, g_theme.window[THEME_INACTIVE].border_color);
 	}
 	/* border.color is obsolete, but handled for backward compatibility */
 	if (match_glob(key, "border.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE].border_color);
-		parse_color(value, theme->window[THEME_INACTIVE].border_color);
+		parse_color(value, g_theme.window[THEME_ACTIVE].border_color);
+		parse_color(value, g_theme.window[THEME_INACTIVE].border_color);
 	}
 
 	if (match_glob(key, "window.active.indicator.toggled-keybind.color")) {
-		parse_color(value, theme->window_toggled_keybinds_color);
+		parse_color(value, g_theme.window_toggled_keybinds_color);
 	}
 
 	if (match_glob(key, "window.active.title.bg")) {
-		theme->window[THEME_ACTIVE].title_bg.gradient = parse_gradient(value);
+		g_theme.window[THEME_ACTIVE].title_bg.gradient =
+			parse_gradient(value);
 	}
 	if (match_glob(key, "window.inactive.title.bg")) {
-		theme->window[THEME_INACTIVE].title_bg.gradient = parse_gradient(value);
+		g_theme.window[THEME_INACTIVE].title_bg.gradient =
+			parse_gradient(value);
 	}
 	if (match_glob(key, "window.active.title.bg.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE].title_bg.color);
+		parse_color(value, g_theme.window[THEME_ACTIVE].title_bg.color);
 	}
 	if (match_glob(key, "window.inactive.title.bg.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE].title_bg.color);
+		parse_color(value, g_theme.window[THEME_INACTIVE].title_bg.color);
 	}
 	if (match_glob(key, "window.active.title.bg.color.splitTo")) {
-		parse_color(value, theme->window[THEME_ACTIVE].title_bg.color_split_to);
+		parse_color(value, g_theme.window[THEME_ACTIVE].title_bg.color_split_to);
 	}
 	if (match_glob(key, "window.inactive.title.bg.color.splitTo")) {
-		parse_color(value, theme->window[THEME_INACTIVE].title_bg.color_split_to);
+		parse_color(value, g_theme.window[THEME_INACTIVE].title_bg.color_split_to);
 	}
 	if (match_glob(key, "window.active.title.bg.colorTo")) {
-		parse_color(value, theme->window[THEME_ACTIVE].title_bg.color_to);
+		parse_color(value, g_theme.window[THEME_ACTIVE].title_bg.color_to);
 	}
 	if (match_glob(key, "window.inactive.title.bg.colorTo")) {
-		parse_color(value, theme->window[THEME_INACTIVE].title_bg.color_to);
+		parse_color(value, g_theme.window[THEME_INACTIVE].title_bg.color_to);
 	}
 	if (match_glob(key, "window.active.title.bg.colorTo.splitTo")) {
-		parse_color(value, theme->window[THEME_ACTIVE].title_bg.color_to_split_to);
+		parse_color(value, g_theme.window[THEME_ACTIVE].title_bg.color_to_split_to);
 	}
 	if (match_glob(key, "window.inactive.title.bg.colorTo.splitTo")) {
-		parse_color(value, theme->window[THEME_INACTIVE].title_bg.color_to_split_to);
+		parse_color(value, g_theme.window[THEME_INACTIVE].title_bg.color_to_split_to);
 	}
 
 	if (match_glob(key, "window.active.label.text.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE].label_text_color);
+		parse_color(value, g_theme.window[THEME_ACTIVE].label_text_color);
 	}
 	if (match_glob(key, "window.inactive.label.text.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE].label_text_color);
+		parse_color(value, g_theme.window[THEME_INACTIVE].label_text_color);
 	}
 	if (match_glob(key, "window.label.text.justify")) {
-		theme->window_label_text_justify = parse_justification(value);
+		g_theme.window_label_text_justify = parse_justification(value);
 	}
 
 	if (match_glob(key, "window.button.width")) {
-		theme->window_button_width = atoi(value);
-		if (theme->window_button_width < 1) {
+		g_theme.window_button_width = atoi(value);
+		if (g_theme.window_button_width < 1) {
 			wlr_log(WLR_ERROR, "window.button.width cannot "
 				"be less than 1, clamping it to 1.");
-			theme->window_button_width = 1;
+			g_theme.window_button_width = 1;
 		}
 	}
 	if (match_glob(key, "window.button.height")) {
-		theme->window_button_height = atoi(value);
-		if (theme->window_button_height < 1) {
+		g_theme.window_button_height = atoi(value);
+		if (g_theme.window_button_height < 1) {
 			wlr_log(WLR_ERROR, "window.button.height cannot "
 				"be less than 1, clamping it to 1.");
-			theme->window_button_height = 1;
+			g_theme.window_button_height = 1;
 		}
 	}
 	if (match_glob(key, "window.button.spacing")) {
-		theme->window_button_spacing = get_int_if_positive(
-			value, "window.button.spacing");
+		g_theme.window_button_spacing =
+			get_int_if_positive(value, "window.button.spacing");
 	}
 	if (match_glob(key, "window.button.hover.bg.corner-radius")) {
-		theme->window_button_hover_bg_corner_radius = get_int_if_positive(
-			value, "window.button.hover.bg.corner-radius");
+		g_theme.window_button_hover_bg_corner_radius =
+			get_int_if_positive(value,
+				"window.button.hover.bg.corner-radius");
 	}
 
 	/* universal button */
 	if (match_glob(key, "window.active.button.unpressed.image.color")) {
 		for (int type = LAB_NODE_BUTTON_FIRST;
 				type <= LAB_NODE_BUTTON_LAST; type++) {
-			parse_color(value,
-				theme->window[THEME_ACTIVE].button_colors[type]);
+			parse_color(value, g_theme.window[THEME_ACTIVE]
+				.button_colors[type]);
 		}
 	}
 	if (match_glob(key, "window.inactive.button.unpressed.image.color")) {
 		for (int type = LAB_NODE_BUTTON_FIRST;
 				type <= LAB_NODE_BUTTON_LAST; type++) {
-			parse_color(value,
-				theme->window[THEME_INACTIVE].button_colors[type]);
+			parse_color(value, g_theme.window[THEME_INACTIVE]
+				.button_colors[type]);
 		}
 	}
 
 	/* individual buttons */
 	if (match_glob(key, "window.active.button.menu.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_WINDOW_MENU]);
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_WINDOW_ICON]);
 	}
 	if (match_glob(key, "window.active.button.iconify.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_ICONIFY]);
 	}
 	if (match_glob(key, "window.active.button.max.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_MAXIMIZE]);
 	}
 	if (match_glob(key, "window.active.button.shade.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_SHADE]);
 	}
 	if (match_glob(key, "window.active.button.desk.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_OMNIPRESENT]);
 	}
 	if (match_glob(key, "window.active.button.close.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE]
+		parse_color(value, g_theme.window[THEME_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_CLOSE]);
 	}
 	if (match_glob(key, "window.inactive.button.menu.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_WINDOW_MENU]);
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_WINDOW_ICON]);
 	}
 	if (match_glob(key, "window.inactive.button.iconify.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_ICONIFY]);
 	}
 	if (match_glob(key, "window.inactive.button.max.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_MAXIMIZE]);
 	}
 	if (match_glob(key, "window.inactive.button.shade.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_SHADE]);
 	}
 	if (match_glob(key, "window.inactive.button.desk.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_OMNIPRESENT]);
 	}
 	if (match_glob(key, "window.inactive.button.close.unpressed.image.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE]
+		parse_color(value, g_theme.window[THEME_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_CLOSE]);
 	}
 
 	/* window drop-shadows */
 	if (match_glob(key, "window.active.shadow.size")) {
-		theme->window[THEME_ACTIVE].shadow_size = get_int_if_positive(
-			value, "window.active.shadow.size");
+		g_theme.window[THEME_ACTIVE].shadow_size =
+			get_int_if_positive(value, "window.active.shadow.size");
 	}
 	if (match_glob(key, "window.inactive.shadow.size")) {
-		theme->window[THEME_INACTIVE].shadow_size = get_int_if_positive(
-			value, "window.inactive.shadow.size");
+		g_theme.window[THEME_INACTIVE].shadow_size =
+			get_int_if_positive(value,
+				"window.inactive.shadow.size");
 	}
 	if (match_glob(key, "window.active.shadow.color")) {
-		parse_color(value, theme->window[THEME_ACTIVE].shadow_color);
+		parse_color(value, g_theme.window[THEME_ACTIVE].shadow_color);
 	}
 	if (match_glob(key, "window.inactive.shadow.color")) {
-		parse_color(value, theme->window[THEME_INACTIVE].shadow_color);
+		parse_color(value, g_theme.window[THEME_INACTIVE].shadow_color);
 	}
 
 	if (match_glob(key, "menu.overlap.x")) {
-		theme->menu_overlap_x = atoi(value);
+		g_theme.menu_overlap_x = atoi(value);
 	}
 	if (match_glob(key, "menu.overlap.y")) {
-		theme->menu_overlap_y = atoi(value);
+		g_theme.menu_overlap_y = atoi(value);
 	}
 	if (match_glob(key, "menu.width.min")) {
-		theme->menu_min_width = get_int_if_positive(
-			value, "menu.width.min");
+		g_theme.menu_min_width =
+			get_int_if_positive(value, "menu.width.min");
 	}
 	if (match_glob(key, "menu.width.max")) {
-		theme->menu_max_width = get_int_if_positive(
-			value, "menu.width.max");
+		g_theme.menu_max_width =
+			get_int_if_positive(value, "menu.width.max");
 	}
 	if (match_glob(key, "menu.border.width")) {
-		theme->menu_border_width = get_int_if_positive(
-			value, "menu.border.width");
+		g_theme.menu_border_width =
+			get_int_if_positive(value, "menu.border.width");
 	}
 	if (match_glob(key, "menu.border.color")) {
-		parse_color(value, theme->menu_border_color);
+		parse_color(value, g_theme.menu_border_color);
 	}
 
 	if (match_glob(key, "menu.items.padding.x")) {
-		theme->menu_items_padding_x = get_int_if_positive(
-			value, "menu.items.padding.x");
+		g_theme.menu_items_padding_x =
+			get_int_if_positive(value, "menu.items.padding.x");
 	}
 	if (match_glob(key, "menu.items.padding.y")) {
-		theme->menu_items_padding_y = get_int_if_positive(
-			value, "menu.items.padding.y");
+		g_theme.menu_items_padding_y =
+			get_int_if_positive(value, "menu.items.padding.y");
 	}
 	if (match_glob(key, "menu.items.bg.color")) {
-		parse_color(value, theme->menu_items_bg_color);
+		parse_color(value, g_theme.menu_items_bg_color);
 	}
 	if (match_glob(key, "menu.items.text.color")) {
-		parse_color(value, theme->menu_items_text_color);
+		parse_color(value, g_theme.menu_items_text_color);
 	}
 	if (match_glob(key, "menu.items.active.bg.color")) {
-		parse_color(value, theme->menu_items_active_bg_color);
+		parse_color(value, g_theme.menu_items_active_bg_color);
 	}
 	if (match_glob(key, "menu.items.active.text.color")) {
-		parse_color(value, theme->menu_items_active_text_color);
+		parse_color(value, g_theme.menu_items_active_text_color);
 	}
 
 	if (match_glob(key, "menu.separator.width")) {
-		theme->menu_separator_line_thickness = get_int_if_positive(
-			value, "menu.separator.width");
+		g_theme.menu_separator_line_thickness =
+			get_int_if_positive(value, "menu.separator.width");
 	}
 	if (match_glob(key, "menu.separator.padding.width")) {
-		theme->menu_separator_padding_width = get_int_if_positive(
-			value, "menu.separator.padding.width");
+		g_theme.menu_separator_padding_width =
+			get_int_if_positive(value,
+				"menu.separator.padding.width");
 	}
 	if (match_glob(key, "menu.separator.padding.height")) {
-		theme->menu_separator_padding_height = get_int_if_positive(
-			value, "menu.separator.padding.height");
+		g_theme.menu_separator_padding_height =
+			get_int_if_positive(value,
+				"menu.separator.padding.height");
 	}
 	if (match_glob(key, "menu.separator.color")) {
-		parse_color(value, theme->menu_separator_color);
+		parse_color(value, g_theme.menu_separator_color);
 	}
 
 	if (match_glob(key, "menu.title.bg.color")) {
-		parse_color(value, theme->menu_title_bg_color);
+		parse_color(value, g_theme.menu_title_bg_color);
 	}
 	if (match_glob(key, "menu.title.text.justify")) {
-		theme->menu_title_text_justify = parse_justification(value);
+		g_theme.menu_title_text_justify = parse_justification(value);
 	}
 	if (match_glob(key, "menu.title.text.color")) {
-		parse_color(value, theme->menu_title_text_color);
+		parse_color(value, g_theme.menu_title_text_color);
 	}
 
 	if (match_glob(key, "osd.bg.color")) {
-		parse_color(value, theme->osd_bg_color);
+		parse_color(value, g_theme.osd_bg_color);
 	}
 	if (match_glob(key, "osd.border.width")) {
-		theme->osd_border_width = get_int_if_positive(
-			value, "osd.border.width");
+		g_theme.osd_border_width =
+			get_int_if_positive(value, "osd.border.width");
 	}
 	if (match_glob(key, "osd.border.color")) {
-		parse_color(value, theme->osd_border_color);
+		parse_color(value, g_theme.osd_border_color);
 	}
 	/* classic window switcher */
 	if (match_glob(key, "osd.window-switcher.style-classic.width")
@@ -1037,70 +1045,72 @@ entry(struct theme *theme, const char *key, const char *value)
 	}
 
 	if (match_glob(key, "osd.window-switcher.preview.border.width")) {
-		theme->osd_window_switcher_preview_border_width =
-			get_int_if_positive(
-				value, "osd.window-switcher.preview.border.width");
+		g_theme.osd_window_switcher_preview_border_width =
+			get_int_if_positive(value,
+				"osd.window-switcher.preview.border.width");
 	}
 	if (match_glob(key, "osd.window-switcher.preview.border.color")) {
-		parse_hexstrs(value, theme->osd_window_switcher_preview_border_color);
+		parse_hexstrs(value, g_theme.osd_window_switcher_preview_border_color);
 	}
 	if (match_glob(key, "osd.workspace-switcher.boxes.width")) {
-		theme->osd_workspace_switcher_boxes_width =
-			get_int_if_positive(
-				value, "osd.workspace-switcher.boxes.width");
+		g_theme.osd_workspace_switcher_boxes_width =
+			get_int_if_positive(value,
+				"osd.workspace-switcher.boxes.width");
 	}
 	if (match_glob(key, "osd.workspace-switcher.boxes.height")) {
-		theme->osd_workspace_switcher_boxes_height =
-			get_int_if_positive(
-				value, "osd.workspace-switcher.boxes.height");
+		g_theme.osd_workspace_switcher_boxes_height =
+			get_int_if_positive(value,
+				"osd.workspace-switcher.boxes.height");
 	}
 	if (match_glob(key, "osd.workspace-switcher.boxes.border.width")) {
-		theme->osd_workspace_switcher_boxes_border_width =
-			get_int_if_positive(
-				value, "osd.workspace-switcher.boxes.border.width");
+		g_theme.osd_workspace_switcher_boxes_border_width =
+			get_int_if_positive(value,
+				"osd.workspace-switcher.boxes.border.width");
 	}
 	if (match_glob(key, "osd.label.text.color")) {
-		parse_color(value, theme->osd_label_text_color);
+		parse_color(value, g_theme.osd_label_text_color);
 	}
 	if (match_glob(key, "snapping.overlay.region.bg.enabled")) {
-		set_bool(value, &theme->snapping_overlay_region.bg_enabled);
+		set_bool(value, &g_theme.snapping_overlay_region.bg_enabled);
 	}
 	if (match_glob(key, "snapping.overlay.edge.bg.enabled")) {
-		set_bool(value, &theme->snapping_overlay_edge.bg_enabled);
+		set_bool(value, &g_theme.snapping_overlay_edge.bg_enabled);
 	}
 	if (match_glob(key, "snapping.overlay.region.border.enabled")) {
-		set_bool(value, &theme->snapping_overlay_region.border_enabled);
+		set_bool(value, &g_theme.snapping_overlay_region.border_enabled);
 	}
 	if (match_glob(key, "snapping.overlay.edge.border.enabled")) {
-		set_bool(value, &theme->snapping_overlay_edge.border_enabled);
+		set_bool(value, &g_theme.snapping_overlay_edge.border_enabled);
 	}
 	if (match_glob(key, "snapping.overlay.region.bg.color")) {
-		parse_color(value, theme->snapping_overlay_region.bg_color);
+		parse_color(value, g_theme.snapping_overlay_region.bg_color);
 	}
 	if (match_glob(key, "snapping.overlay.edge.bg.color")) {
-		parse_color(value, theme->snapping_overlay_edge.bg_color);
+		parse_color(value, g_theme.snapping_overlay_edge.bg_color);
 	}
 	if (match_glob(key, "snapping.overlay.region.border.width")) {
-		theme->snapping_overlay_region.border_width = get_int_if_positive(
-			value, "snapping.overlay.region.border.width");
+		g_theme.snapping_overlay_region.border_width =
+			get_int_if_positive(value,
+				"snapping.overlay.region.border.width");
 	}
 	if (match_glob(key, "snapping.overlay.edge.border.width")) {
-		theme->snapping_overlay_edge.border_width = get_int_if_positive(
-			value, "snapping.overlay.edge.border.width");
+		g_theme.snapping_overlay_edge.border_width =
+			get_int_if_positive(value,
+				"snapping.overlay.edge.border.width");
 	}
 	if (match_glob(key, "snapping.overlay.region.border.color")) {
-		parse_hexstrs(value, theme->snapping_overlay_region.border_color);
+		parse_hexstrs(value, g_theme.snapping_overlay_region.border_color);
 	}
 	if (match_glob(key, "snapping.overlay.edge.border.color")) {
-		parse_hexstrs(value, theme->snapping_overlay_edge.border_color);
+		parse_hexstrs(value, g_theme.snapping_overlay_edge.border_color);
 	}
 
 	if (match_glob(key, "magnifier.border.width")) {
-		theme->mag_border_width = get_int_if_positive(
-			value, "magnifier.border.width");
+		g_theme.mag_border_width =
+			get_int_if_positive(value, "magnifier.border.width");
 	}
 	if (match_glob(key, "magnifier.border.color")) {
-		parse_color(value, theme->mag_border_color);
+		parse_color(value, g_theme.mag_border_color);
 	}
 }
 
@@ -1117,18 +1127,18 @@ parse_config_line(char *line, char **key, char **value)
 }
 
 static void
-process_line(struct theme *theme, char *line)
+process_line(char *line)
 {
 	if (line[0] == '\0' || line[0] == '#') {
 		return;
 	}
 	char *key = NULL, *value = NULL;
 	parse_config_line(line, &key, &value);
-	entry(theme, key, value);
+	entry(key, value);
 }
 
 static void
-theme_read(struct theme *theme, struct wl_list *paths)
+theme_read(struct wl_list *paths)
 {
 	bool should_merge_config = rc.merge_config;
 	struct wl_list *(*iter)(struct wl_list *list);
@@ -1150,7 +1160,7 @@ theme_read(struct theme *theme, struct wl_list *paths)
 			if (p) {
 				*p = '\0';
 			}
-			process_line(theme, line);
+			process_line(line);
 		}
 		zfree(line);
 		fclose(stream);
@@ -1387,42 +1397,45 @@ create_titlebar_fill(cairo_pattern_t *pattern, int height)
 }
 
 static void
-create_backgrounds(struct theme *theme)
+create_backgrounds(void)
 {
 	for (int active = THEME_INACTIVE; active <= THEME_ACTIVE; active++) {
-		theme->window[active].titlebar_pattern = create_titlebar_pattern(
-			&theme->window[active].title_bg,
-			theme->titlebar_height);
-		theme->window[active].titlebar_fill = create_titlebar_fill(
-			theme->window[active].titlebar_pattern,
-			theme->titlebar_height);
+		g_theme.window[active].titlebar_pattern =
+			create_titlebar_pattern(
+				&g_theme.window[active].title_bg,
+				g_theme.titlebar_height);
+		g_theme.window[active].titlebar_fill = create_titlebar_fill(
+			g_theme.window[active].titlebar_pattern,
+			g_theme.titlebar_height);
 	}
 }
 
 static void
-create_corners(struct theme *theme)
+create_corners(void)
 {
 	int corner_width = ssd_get_corner_width();
 
 	struct wlr_box box = {
 		.x = 0,
 		.y = 0,
-		.width = corner_width + theme->border_width,
-		.height = theme->titlebar_height + theme->border_width,
+		.width = corner_width + g_theme.border_width,
+		.height = g_theme.titlebar_height + g_theme.border_width,
 	};
 
 	for (int active = THEME_INACTIVE; active <= THEME_ACTIVE; active++) {
 		struct rounded_corner_ctx ctx = {
 			.box = &box,
 			.radius = rc.corner_radius,
-			.line_width = theme->border_width,
-			.fill_pattern = theme->window[active].titlebar_pattern,
-			.border_color = theme->window[active].border_color,
+			.line_width = g_theme.border_width,
+			.fill_pattern = g_theme.window[active].titlebar_pattern,
+			.border_color = g_theme.window[active].border_color,
 			.corner = ROUNDED_CORNER_TOP_LEFT,
 		};
-		theme->window[active].corner_top_left_normal = rounded_rect(&ctx);
+		g_theme.window[active].corner_top_left_normal =
+			rounded_rect(&ctx);
 		ctx.corner = ROUNDED_CORNER_TOP_RIGHT;
-		theme->window[active].corner_top_right_normal = rounded_rect(&ctx);
+		g_theme.window[active].corner_top_right_normal =
+			rounded_rect(&ctx);
 	}
 }
 
@@ -1541,10 +1554,10 @@ shadow_corner_gradient(struct lab_data_buffer *buffer, int visible_size,
 }
 
 static void
-create_shadow(struct theme *theme, int active)
+create_shadow(int active)
 {
 	/* Size of shadow visible extending beyond the window */
-	int visible_size = theme->window[active].shadow_size;
+	int visible_size = g_theme.window[active].shadow_size;
 	/* How far inside the window the shadow inset begins */
 	int inset = (double)visible_size * SSD_SHADOW_INSET;
 	/* Total width including visible and obscured portion */
@@ -1556,35 +1569,35 @@ create_shadow(struct theme *theme, int active)
 	 * this.
 	 */
 	if (visible_size > 0) {
-		theme->window[active].shadow_edge = buffer_create_cairo(
-			visible_size, 1, 1.0);
-		theme->window[active].shadow_corner_top = buffer_create_cairo(
-			total_size, total_size, 1.0);
-		theme->window[active].shadow_corner_bottom = buffer_create_cairo(
-			total_size, total_size, 1.0);
-		if (!theme->window[active].shadow_corner_top
-				|| !theme->window[active].shadow_corner_bottom
-				|| !theme->window[active].shadow_edge) {
+		g_theme.window[active].shadow_edge =
+			buffer_create_cairo(visible_size, 1, 1.0);
+		g_theme.window[active].shadow_corner_top =
+			buffer_create_cairo(total_size, total_size, 1.0);
+		g_theme.window[active].shadow_corner_bottom =
+			buffer_create_cairo(total_size, total_size, 1.0);
+		if (!g_theme.window[active].shadow_corner_top
+				|| !g_theme.window[active].shadow_corner_bottom
+				|| !g_theme.window[active].shadow_edge) {
 			wlr_log(WLR_ERROR, "Failed to allocate shadow buffer");
 			return;
 		}
 	}
 
-	shadow_edge_gradient(theme->window[active].shadow_edge, visible_size,
-		total_size, theme->window[active].shadow_color);
-	shadow_corner_gradient(theme->window[active].shadow_corner_top,
-		visible_size, total_size,
-		theme->titlebar_height, theme->window[active].shadow_color);
-	shadow_corner_gradient(theme->window[active].shadow_corner_bottom,
+	shadow_edge_gradient(g_theme.window[active].shadow_edge, visible_size,
+		total_size, g_theme.window[active].shadow_color);
+	shadow_corner_gradient(g_theme.window[active].shadow_corner_top,
+		visible_size, total_size, g_theme.titlebar_height,
+		g_theme.window[active].shadow_color);
+	shadow_corner_gradient(g_theme.window[active].shadow_corner_bottom,
 		visible_size, total_size, 0,
-		theme->window[active].shadow_color);
+		g_theme.window[active].shadow_color);
 }
 
 static void
-create_shadows(struct theme *theme)
+create_shadows(void)
 {
-	create_shadow(theme, THEME_INACTIVE);
-	create_shadow(theme, THEME_ACTIVE);
+	create_shadow(THEME_INACTIVE);
+	create_shadow(THEME_ACTIVE);
 }
 
 static void
@@ -1615,22 +1628,22 @@ fill_background_colors(struct theme_background *bg)
 }
 
 static void
-fill_colors_with_osd_theme(struct theme *theme, float colors[3][4])
+fill_colors_with_osd_theme(float colors[3][4])
 {
-	memcpy(colors[0], theme->osd_bg_color, sizeof(colors[0]));
-	memcpy(colors[1], theme->osd_label_text_color, sizeof(colors[1]));
-	memcpy(colors[2], theme->osd_bg_color, sizeof(colors[2]));
+	memcpy(colors[0], g_theme.osd_bg_color, sizeof(colors[0]));
+	memcpy(colors[1], g_theme.osd_label_text_color, sizeof(colors[1]));
+	memcpy(colors[2], g_theme.osd_bg_color, sizeof(colors[2]));
 }
 
 static int
-get_titlebar_height(struct theme *theme)
+get_titlebar_height(void)
 {
 	int h = MAX(font_height(&rc.font_activewindow),
 		font_height(&rc.font_inactivewindow));
-	if (h < theme->window_button_height) {
-		h = theme->window_button_height;
+	if (h < g_theme.window_button_height) {
+		h = g_theme.window_button_height;
 	}
-	h += 2 * theme->window_titlebar_padding_height;
+	h += 2 * g_theme.window_titlebar_padding_height;
 	return h;
 }
 
@@ -1660,23 +1673,23 @@ blend_color_with_bg(float *dst, float *fg, float fg_a, float *bg)
 }
 
 static void
-post_processing(struct theme *theme)
+post_processing(void)
 {
 	struct window_switcher_classic_theme *switcher_classic_theme =
-		&theme->osd_window_switcher_classic;
+		&g_theme.osd_window_switcher_classic;
 	struct window_switcher_thumbnail_theme *switcher_thumb_theme =
-		&theme->osd_window_switcher_thumbnail;
+		&g_theme.osd_window_switcher_thumbnail;
 
-	theme->titlebar_height = get_titlebar_height(theme);
+	g_theme.titlebar_height = get_titlebar_height();
 
-	fill_background_colors(&theme->window[THEME_INACTIVE].title_bg);
-	fill_background_colors(&theme->window[THEME_ACTIVE].title_bg);
+	fill_background_colors(&g_theme.window[THEME_INACTIVE].title_bg);
+	fill_background_colors(&g_theme.window[THEME_ACTIVE].title_bg);
 
-	theme->menu_item_height = font_height(&rc.font_menuitem)
-		+ 2 * theme->menu_items_padding_y;
+	g_theme.menu_item_height = font_height(&rc.font_menuitem)
+		+ 2 * g_theme.menu_items_padding_y;
 
-	theme->menu_header_height = font_height(&rc.font_menuheader)
-		+ 2 * theme->menu_items_padding_y;
+	g_theme.menu_header_height = font_height(&rc.font_menuheader)
+		+ 2 * g_theme.menu_items_padding_y;
 
 	int osd_font_height = font_height(&rc.font_osd);
 	switcher_thumb_theme->title_height = osd_font_height;
@@ -1689,51 +1702,53 @@ post_processing(struct theme *theme)
 		+ 2 * switcher_classic_theme->item_padding_y
 		+ 2 * switcher_classic_theme->item_active_border_width;
 
-	if (rc.corner_radius >= theme->titlebar_height) {
-		rc.corner_radius = theme->titlebar_height - 1;
+	if (rc.corner_radius >= g_theme.titlebar_height) {
+		rc.corner_radius = g_theme.titlebar_height - 1;
 	}
 
 	if (rc.resize_corner_range < 0) {
-		rc.resize_corner_range = theme->titlebar_height / 2;
+		rc.resize_corner_range = g_theme.titlebar_height / 2;
 	}
 
 	int min_button_hover_radius =
-		MIN(theme->window_button_width, theme->window_button_height) / 2;
-	if (theme->window_button_hover_bg_corner_radius > min_button_hover_radius) {
-		theme->window_button_hover_bg_corner_radius = min_button_hover_radius;
+		MIN(g_theme.window_button_width, g_theme.window_button_height) / 2;
+	if (g_theme.window_button_hover_bg_corner_radius
+			> min_button_hover_radius) {
+		g_theme.window_button_hover_bg_corner_radius =
+			min_button_hover_radius;
 	}
 
-	if (theme->menu_max_width < theme->menu_min_width) {
+	if (g_theme.menu_max_width < g_theme.menu_min_width) {
 		wlr_log(WLR_ERROR,
 			"Adjusting menu.width.max: .max (%d) lower than .min (%d)",
-			theme->menu_max_width, theme->menu_min_width);
-		theme->menu_max_width = theme->menu_min_width;
+			g_theme.menu_max_width, g_theme.menu_min_width);
+		g_theme.menu_max_width = g_theme.menu_min_width;
 	}
 
-	if (theme->menu_border_width == INT_MIN) {
-		theme->menu_border_width = theme->border_width;
+	if (g_theme.menu_border_width == INT_MIN) {
+		g_theme.menu_border_width = g_theme.border_width;
 	}
-	if (theme->menu_border_color[0] == FLT_MIN) {
-		memcpy(theme->menu_border_color,
-			theme->window[THEME_ACTIVE].border_color,
-			sizeof(theme->menu_border_color));
+	if (g_theme.menu_border_color[0] == FLT_MIN) {
+		memcpy(g_theme.menu_border_color,
+			g_theme.window[THEME_ACTIVE].border_color,
+			sizeof(g_theme.menu_border_color));
 	}
 
 	/* Inherit OSD settings if not set */
-	if (theme->osd_bg_color[0] == FLT_MIN) {
-		memcpy(theme->osd_bg_color,
-			theme->window[THEME_ACTIVE].title_bg.color,
-			sizeof(theme->osd_bg_color));
+	if (g_theme.osd_bg_color[0] == FLT_MIN) {
+		memcpy(g_theme.osd_bg_color,
+			g_theme.window[THEME_ACTIVE].title_bg.color,
+			sizeof(g_theme.osd_bg_color));
 	}
-	if (theme->osd_border_width == INT_MIN) {
-		theme->osd_border_width = theme->border_width;
+	if (g_theme.osd_border_width == INT_MIN) {
+		g_theme.osd_border_width = g_theme.border_width;
 	}
-	if (theme->osd_label_text_color[0] == FLT_MIN) {
-		memcpy(theme->osd_label_text_color,
-			theme->window[THEME_ACTIVE].label_text_color,
-			sizeof(theme->osd_label_text_color));
+	if (g_theme.osd_label_text_color[0] == FLT_MIN) {
+		memcpy(g_theme.osd_label_text_color,
+			g_theme.window[THEME_ACTIVE].label_text_color,
+			sizeof(g_theme.osd_label_text_color));
 	}
-	if (theme->osd_border_color[0] == FLT_MIN) {
+	if (g_theme.osd_border_color[0] == FLT_MIN) {
 		/*
 		 * As per https://openbox.org/help/Themes#osd.border.color
 		 * we should fall back to window.active.border.color but
@@ -1744,62 +1759,62 @@ post_processing(struct theme *theme)
 		 * Instead, we fall back to osd.label.text.color which in turn
 		 * falls back to window.active.label.text.color.
 		 */
-		memcpy(theme->osd_border_color, theme->osd_label_text_color,
-			sizeof(theme->osd_border_color));
+		memcpy(g_theme.osd_border_color, g_theme.osd_label_text_color,
+			sizeof(g_theme.osd_border_color));
 	}
 	if (switcher_thumb_theme->item_active_border_color[0] == FLT_MIN) {
 		blend_color_with_bg(switcher_thumb_theme->item_active_border_color,
-			theme->osd_label_text_color, 0.50, theme->osd_bg_color);
+			g_theme.osd_label_text_color, 0.50, g_theme.osd_bg_color);
 	}
 	if (switcher_thumb_theme->item_active_bg_color[0] == FLT_MIN) {
 		blend_color_with_bg(switcher_thumb_theme->item_active_bg_color,
-			theme->osd_label_text_color, 0.15, theme->osd_bg_color);
+			g_theme.osd_label_text_color, 0.15, g_theme.osd_bg_color);
 	}
-	if (theme->osd_workspace_switcher_boxes_width == 0) {
-		theme->osd_workspace_switcher_boxes_height = 0;
+	if (g_theme.osd_workspace_switcher_boxes_width == 0) {
+		g_theme.osd_workspace_switcher_boxes_height = 0;
 	}
-	if (theme->osd_workspace_switcher_boxes_height == 0) {
-		theme->osd_workspace_switcher_boxes_width = 0;
+	if (g_theme.osd_workspace_switcher_boxes_height == 0) {
+		g_theme.osd_workspace_switcher_boxes_width = 0;
 	}
 	if (switcher_classic_theme->width_is_percent) {
 		switcher_classic_theme->width =
 			MIN(switcher_classic_theme->width, 100);
 	}
-	if (theme->osd_window_switcher_preview_border_width == INT_MIN) {
-		theme->osd_window_switcher_preview_border_width =
-			theme->osd_border_width;
+	if (g_theme.osd_window_switcher_preview_border_width == INT_MIN) {
+		g_theme.osd_window_switcher_preview_border_width =
+			g_theme.osd_border_width;
 	}
-	if (theme->osd_window_switcher_preview_border_color[0][0] == FLT_MIN) {
-		fill_colors_with_osd_theme(theme,
-			theme->osd_window_switcher_preview_border_color);
+	if (g_theme.osd_window_switcher_preview_border_color[0][0] == FLT_MIN) {
+		fill_colors_with_osd_theme(
+			g_theme.osd_window_switcher_preview_border_color);
 	}
 
-	if (theme->snapping_overlay_region.border_width == INT_MIN) {
-		theme->snapping_overlay_region.border_width =
-			theme->osd_border_width;
+	if (g_theme.snapping_overlay_region.border_width == INT_MIN) {
+		g_theme.snapping_overlay_region.border_width =
+			g_theme.osd_border_width;
 	}
-	if (theme->snapping_overlay_edge.border_width == INT_MIN) {
-		theme->snapping_overlay_edge.border_width =
-			theme->osd_border_width;
+	if (g_theme.snapping_overlay_edge.border_width == INT_MIN) {
+		g_theme.snapping_overlay_edge.border_width =
+			g_theme.osd_border_width;
 	}
-	if (theme->snapping_overlay_region.border_color[0][0] == FLT_MIN) {
-		fill_colors_with_osd_theme(theme,
-			theme->snapping_overlay_region.border_color);
+	if (g_theme.snapping_overlay_region.border_color[0][0] == FLT_MIN) {
+		fill_colors_with_osd_theme(
+			g_theme.snapping_overlay_region.border_color);
 	}
-	if (theme->snapping_overlay_edge.border_color[0][0] == FLT_MIN) {
-		fill_colors_with_osd_theme(theme,
-			theme->snapping_overlay_edge.border_color);
+	if (g_theme.snapping_overlay_edge.border_color[0][0] == FLT_MIN) {
+		fill_colors_with_osd_theme(
+			g_theme.snapping_overlay_edge.border_color);
 	}
 }
 
 void
-theme_init(struct theme *theme, const char *theme_name)
+theme_init(const char *theme_name)
 {
 	/*
 	 * Set some default values. This is particularly important on
 	 * reconfigure as not all themes set all options
 	 */
-	theme_builtin(theme);
+	theme_builtin();
 
 	struct wl_list paths;
 
@@ -1810,20 +1825,20 @@ theme_init(struct theme *theme, const char *theme_name)
 		 *   - <data-dir>/share/themes/$theme_name/openbox-3/themerc
 		 */
 		paths_theme_create(&paths, theme_name, "themerc");
-		theme_read(theme, &paths);
+		theme_read(&paths);
 		paths_destroy(&paths);
 	}
 
 	/* Read <config-dir>/labwc/themerc-override */
 	paths_config_create(&paths, "themerc-override");
-	theme_read(theme, &paths);
+	theme_read(&paths);
 	paths_destroy(&paths);
 
-	post_processing(theme);
-	create_backgrounds(theme);
-	create_corners(theme);
-	load_buttons(theme);
-	create_shadows(theme);
+	post_processing();
+	create_backgrounds();
+	create_corners();
+	load_buttons();
+	create_shadows();
 }
 
 static void destroy_img(struct lab_img **img)
@@ -1833,26 +1848,26 @@ static void destroy_img(struct lab_img **img)
 }
 
 void
-theme_finish(struct theme *theme)
+theme_finish(void)
 {
 	for (int type = LAB_NODE_BUTTON_FIRST;
 			type <= LAB_NODE_BUTTON_LAST; type++) {
 		for (uint8_t state_set = LAB_BS_DEFAULT;
 				state_set <= LAB_BS_ALL; state_set++) {
-			destroy_img(&theme->window[THEME_INACTIVE]
+			destroy_img(&g_theme.window[THEME_INACTIVE]
 				.button_imgs[type][state_set]);
-			destroy_img(&theme->window[THEME_ACTIVE]
+			destroy_img(&g_theme.window[THEME_ACTIVE]
 				.button_imgs[type][state_set]);
 		}
 	}
 
 	for (int active = THEME_INACTIVE; active <= THEME_ACTIVE; active++) {
-		zfree_pattern(theme->window[active].titlebar_pattern);
-		zdrop(&theme->window[active].titlebar_fill);
-		zdrop(&theme->window[active].corner_top_left_normal);
-		zdrop(&theme->window[active].corner_top_right_normal);
-		zdrop(&theme->window[active].shadow_corner_top);
-		zdrop(&theme->window[active].shadow_corner_bottom);
-		zdrop(&theme->window[active].shadow_edge);
+		zfree_pattern(g_theme.window[active].titlebar_pattern);
+		zdrop(&g_theme.window[active].titlebar_fill);
+		zdrop(&g_theme.window[active].corner_top_left_normal);
+		zdrop(&g_theme.window[active].corner_top_right_normal);
+		zdrop(&g_theme.window[active].shadow_corner_top);
+		zdrop(&g_theme.window[active].shadow_corner_bottom);
+		zdrop(&g_theme.window[active].shadow_edge);
 	}
 }

@@ -721,7 +721,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 			int lx, ly;
 			wlr_scene_node_coords(ctx->node, &lx, &ly);
 			/* MAX() prevents negative x when the window is maximized */
-			x = MAX(x, lx - g_server.theme->menu_border_width);
+			x = MAX(x, lx - g_theme.menu_border_width);
 		}
 	}
 
@@ -831,7 +831,7 @@ handle_view_destroy(struct wl_listener *listener, void *data)
 
 static void
 print_prompt_command(struct buf *buf, const char *format,
-		struct action *action, struct theme *theme)
+		struct action *action)
 {
 	assert(format);
 
@@ -860,10 +860,10 @@ print_prompt_command(struct buf *buf, const char *format,
 			buf_add(buf, _("Yes"));
 			break;
 		case 'b':
-			buf_add_hex_color(buf, theme->osd_bg_color);
+			buf_add_hex_color(buf, g_theme.osd_bg_color);
 			break;
 		case 't':
-			buf_add_hex_color(buf, theme->osd_label_text_color);
+			buf_add_hex_color(buf, g_theme.osd_label_text_color);
 			break;
 		default:
 			wlr_log(WLR_ERROR,
@@ -877,7 +877,7 @@ static void
 action_prompt_create(struct view *view, struct action *action)
 {
 	struct buf command = BUF_INIT;
-	print_prompt_command(&command, rc.prompt_command, action, rc.theme);
+	print_prompt_command(&command, rc.prompt_command, action);
 
 	wlr_log(WLR_INFO, "prompt command: '%s'", command.data);
 

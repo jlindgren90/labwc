@@ -1023,8 +1023,7 @@ view_cascade(struct view *view)
 	/* TODO: move this logic to rcxml.c */
 	int offset_x = rc.placement_cascade_offset_x;
 	int offset_y = rc.placement_cascade_offset_y;
-	struct theme *theme = g_server.theme;
-	int default_offset = theme->titlebar_height + theme->border_width + 5;
+	int default_offset = g_theme.titlebar_height + g_theme.border_width + 5;
 	if (offset_x <= 0) {
 		offset_x = default_offset;
 	}
