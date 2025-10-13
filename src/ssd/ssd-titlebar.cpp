@@ -23,7 +23,7 @@ static void update_visible_buttons(struct ssd *ssd);
 void
 ssd_titlebar_create(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
 
@@ -149,7 +149,7 @@ update_button_state(struct ssd_button *button, enum lab_button_state state,
 static void
 set_squared_corners(struct ssd *ssd, bool enable)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
 
@@ -208,7 +208,7 @@ set_alt_button_icon(struct ssd *ssd, enum lab_node_type type, bool enable)
 static void
 update_visible_buttons(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int width = MAX(view->current.width
 		- 2 * g_theme.window_titlebar_padding_width, 0);
 	int button_width = g_theme.window_button_width;
@@ -258,7 +258,7 @@ update_visible_buttons(struct ssd *ssd)
 void
 ssd_titlebar_update(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
 
@@ -353,7 +353,7 @@ ssd_titlebar_destroy(struct ssd *ssd)
 static void
 ssd_update_title_positions(struct ssd *ssd, int offset_left, int offset_right)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int width = view->current.width;
 	int title_bg_width = width - offset_left - offset_right;
 
@@ -426,7 +426,7 @@ ssd_titlebar_update_title(struct ssd *ssd)
 		return;
 	}
 
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	if (!view->title) {
 		return;
 	}
@@ -499,7 +499,7 @@ ssd_update_hovered_button(struct wlr_scene_node *node)
 bool
 ssd_should_be_squared(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int corner_width = ssd_get_corner_width();
 
 	return (view_is_tiled_and_notify_tiled(view)

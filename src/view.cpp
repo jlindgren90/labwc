@@ -1511,7 +1511,7 @@ static void
 decorate(struct view *view)
 {
 	if (!view->ssd) {
-		view->ssd.create(view, view == g_server.active_view);
+		view->ssd.create(*view, view == g_server.active_view);
 	}
 }
 
