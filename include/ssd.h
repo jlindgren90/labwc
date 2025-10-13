@@ -43,7 +43,7 @@ struct wlr_scene_node;
 class ssd_handle
 {
 public:
-	void create(view *view, bool active);
+	void create(view &view, bool active);
 	void destroy() { impl.reset(); }
 
 	explicit operator bool() const { return (bool)impl; }

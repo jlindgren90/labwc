@@ -12,7 +12,7 @@
 void
 ssd_extents_create(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 
 	int border_width =
 		MAX(0, MAX(rc.resize_minimum_area, g_theme.border_width));
@@ -87,7 +87,7 @@ resize_extent_within_usable(struct wlr_scene_rect *rect,
 void
 ssd_extents_update(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	if (view->fullscreen || view->maximized == VIEW_AXIS_BOTH) {
 		wlr_scene_node_set_enabled(&ssd->extents.tree->node, false);
 		return;
