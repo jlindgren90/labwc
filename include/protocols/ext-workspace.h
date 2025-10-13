@@ -5,6 +5,10 @@
 #include <stdbool.h>
 #include <wayland-server-core.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct wlr_output;
 
 struct lab_ext_workspace_manager {
@@ -105,5 +109,9 @@ void lab_ext_workspace_set_coordinates(struct lab_ext_workspace *workspace,
 	struct wl_array *coordinates);
 
 void lab_ext_workspace_destroy(struct lab_ext_workspace *workspace);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LABWC_PROTOCOLS_EXT_WORKSPACES_H */

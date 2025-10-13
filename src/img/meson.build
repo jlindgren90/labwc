@@ -1,13 +1,13 @@
 labwc_sources += files(
-  'img.c',
-  'img-png.c',
-  'img-xbm.c',
-  'img-xpm.c'
+  'img.cpp',
+  'img-png.cpp',
+  'img-xbm.cpp',
+  'img-xpm.cpp'
 )
 
 if have_rsvg
   labwc_sources += files(
-    'img-svg.c',
+    'img-svg.cpp',
   )
 endif
 

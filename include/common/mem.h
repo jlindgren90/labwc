@@ -4,6 +4,10 @@
 
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * If ptr is NULL, prints an error (based on errno) and exits.
  * Suitable for checking the return value of malloc() etc.
@@ -65,5 +69,9 @@ char *xstrdup(const char *str);
 #define zfree(ptr) do { \
 	free(ptr); (ptr) = NULL; \
 } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* LABWC_MEM_H */
