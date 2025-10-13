@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
 #include "common/macros.h"
-#include "labwc.h"
 #include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
@@ -15,7 +14,7 @@ ssd_border_create(struct ssd *ssd)
 	assert(ssd);
 	assert(!ssd->border.tree);
 
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int width = view->current.width;
 	int height = view_effective_height(view, /* use_pending */ false);
 	int full_width = width + 2 * g_theme.border_width;
@@ -73,12 +72,12 @@ ssd_border_update(struct ssd *ssd)
 	assert(ssd);
 	assert(ssd->border.tree);
 
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	if (view->maximized == VIEW_AXIS_BOTH
 			&& ssd->border.tree->node.enabled) {
 		/* Disable borders on maximize */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
-		ssd->margin = ssd_thickness(ssd->view);
+		ssd->margin = ssd_thickness(view);
 	}
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
@@ -86,7 +85,7 @@ ssd_border_update(struct ssd *ssd)
 	} else if (!ssd->border.tree->node.enabled) {
 		/* And re-enabled them when unmaximized */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, true);
-		ssd->margin = ssd_thickness(ssd->view);
+		ssd->margin = ssd_thickness(view);
 	}
 
 	int width = view->current.width;

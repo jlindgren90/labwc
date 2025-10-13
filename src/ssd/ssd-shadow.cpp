@@ -142,7 +142,7 @@ set_shadow_parts_geometry(struct ssd_shadow_subtree *subtree,
 static void
 set_shadow_geometry(struct ssd *ssd)
 {
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	int titlebar_height = ssd->titlebar.height;
 	int width = view->current.width;
 	int height = view_effective_height(view, false) + titlebar_height;
@@ -202,7 +202,7 @@ ssd_shadow_create(struct ssd *ssd)
 
 	ssd->shadow.tree = wlr_scene_tree_create(ssd->tree);
 
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -251,7 +251,7 @@ ssd_shadow_update(struct ssd *ssd)
 	assert(ssd);
 	assert(ssd->shadow.tree);
 
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool tiled_shadows = false;
 	if (rc.shadows_on_tiled) {
@@ -263,7 +263,7 @@ ssd_shadow_update(struct ssd *ssd)
 		}
 	};
 	bool show_shadows = rc.shadows_enabled && !maximized
-		&& (!view_is_tiled(ssd->view) || tiled_shadows);
+		&& (!view_is_tiled(view) || tiled_shadows);
 	wlr_scene_node_set_enabled(&ssd->shadow.tree->node, show_shadows);
 	if (show_shadows) {
 		set_shadow_geometry(ssd);
