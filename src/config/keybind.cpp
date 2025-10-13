@@ -8,7 +8,6 @@
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/util/log.h>
 #include "common/list.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 
@@ -37,39 +36,21 @@ bool
 keybind_the_same(struct keybind *a, struct keybind *b)
 {
 	assert(a && b);
-	if (a->modifiers != b->modifiers || a->keysyms_len != b->keysyms_len) {
-		return false;
-	}
-	for (size_t i = 0; i < a->keysyms_len; i++) {
-		if (a->keysyms[i] != b->keysyms[i]) {
-			return false;
-		}
-	}
-	return true;
+	return (a->modifiers == b->modifiers) && (a->keysyms == b->keysyms);
 }
 
 bool
 keybind_contains_keycode(struct keybind *keybind, xkb_keycode_t keycode)
 {
 	assert(keybind);
-	for (size_t i = 0; i < keybind->keycodes_len; i++) {
-		if (keybind->keycodes[i] == keycode) {
-			return true;
-		}
-	}
-	return false;
+	return lab::find(keybind->keycodes, keycode) != keybind->keycodes.end();
 }
 
 bool
 keybind_contains_keysym(struct keybind *keybind, xkb_keysym_t keysym)
 {
 	assert(keybind);
-	for (size_t i = 0; i < keybind->keysyms_len; i++) {
-		if (keybind->keysyms[i] == keysym) {
-			return true;
-		}
-	}
-	return false;
+	return lab::find(keybind->keysyms, keysym) != keybind->keysyms.end();
 }
 
 static bool
@@ -108,13 +89,7 @@ update_keycodes_iter(struct xkb_keymap *keymap, xkb_keycode_t key, void *data)
 				/* Prevent storing the same keycode twice */
 				continue;
 			}
-			if (keybind->keycodes_len == MAX_KEYCODES) {
-				wlr_log(WLR_ERROR,
-					"Already stored %lu keycodes for keybind",
-					keybind->keycodes_len);
-				continue;
-			}
-			keybind->keycodes[keybind->keycodes_len++] = key;
+			keybind->keycodes.push_back(key);
 			keybind->keycodes_layout = layout;
 		}
 	}
@@ -128,7 +103,7 @@ keybind_update_keycodes(void)
 
 	struct keybind *keybind;
 	wl_list_for_each(keybind, &rc.keybinds, link) {
-		keybind->keycodes_len = 0;
+		keybind->keycodes.clear();
 		keybind->keycodes_layout = -1;
 	}
 	xkb_layout_index_t layouts = xkb_keymap_num_layouts(keymap);
@@ -141,9 +116,7 @@ keybind_update_keycodes(void)
 struct keybind *
 keybind_create(const char *keybind)
 {
-	xkb_keysym_t sym;
-	struct keybind *k = znew(*k);
-	xkb_keysym_t keysyms[MAX_KEYSYMS];
+	auto k = new struct keybind();
 	gchar **symnames = g_strsplit(keybind, "-", -1);
 	for (size_t i = 0; symnames[i]; i++) {
 		const char *symname = symnames[i];
@@ -170,7 +143,8 @@ keybind_create(const char *keybind)
 		if (modifier != 0) {
 			k->modifiers |= modifier;
 		} else {
-			sym = xkb_keysym_from_name(symname, XKB_KEYSYM_CASE_INSENSITIVE);
+			auto sym = xkb_keysym_from_name(symname,
+				XKB_KEYSYM_CASE_INSENSITIVE);
 			if (sym == XKB_KEY_NoSymbol && g_utf8_strlen(symname, -1) == 1) {
 				/*
 				 * xkb_keysym_from_name() only handles a legacy set of single
@@ -187,18 +161,11 @@ keybind_create(const char *keybind)
 			sym = xkb_keysym_to_lower(sym);
 			if (sym == XKB_KEY_NoSymbol) {
 				wlr_log(WLR_ERROR, "unknown keybind (%s)", symname);
-				free(k);
+				delete k;
 				k = NULL;
 				break;
 			}
-			keysyms[k->keysyms_len] = sym;
-			k->keysyms_len++;
-			if (k->keysyms_len == MAX_KEYSYMS) {
-				wlr_log(WLR_ERROR, "There are a lot of fingers involved. "
-					"We stopped counting at %u.", MAX_KEYSYMS);
-				wlr_log(WLR_ERROR, "Offending keybind was %s", keybind);
-				break;
-			}
+			k->keysyms.push_back(sym);
 		}
 	}
 	g_strfreev(symnames);
@@ -206,17 +173,5 @@ keybind_create(const char *keybind)
 		return NULL;
 	}
 	wl_list_append(&rc.keybinds, &k->link);
-	k->keysyms = xmalloc(k->keysyms_len * sizeof(xkb_keysym_t));
-	memcpy(k->keysyms, keysyms, k->keysyms_len * sizeof(xkb_keysym_t));
-	wl_list_init(&k->actions);
 	return k;
-}
-
-void
-keybind_destroy(struct keybind *keybind)
-{
-	assert(wl_list_empty(&keybind->actions));
-
-	zfree(keybind->keysyms);
-	zfree(keybind);
 }

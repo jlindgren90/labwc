@@ -85,6 +85,7 @@ enum view_wants_focus {
 	VIEW_WANTS_FOCUS_UNLIKELY,
 };
 
+struct action;
 struct foreign_toplevel;
 struct lab_data_buffer;
 struct region;
@@ -287,22 +288,30 @@ struct view : public destroyable, public ref_guarded<view>, public view_data {
 };
 
 struct view_query {
-	struct wl_list link;
-	char *identifier;
-	char *title;
+	lab_str identifier;
+	lab_str title;
 	enum lab_window_type window_type;
-	char *sandbox_engine;
-	char *sandbox_app_id;
+	lab_str sandbox_engine;
+	lab_str sandbox_app_id;
 	enum lab_tristate shaded;
 	enum view_axis maximized;
 	enum lab_tristate iconified;
 	enum lab_tristate focused;
 	enum lab_tristate omnipresent;
 	enum lab_edge tiled;
-	char *tiled_region;
-	char *desktop;
+	lab_str tiled_region;
+	lab_str desktop;
 	enum lab_ssd_mode decoration;
-	char *monitor;
+	lab_str monitor;
+
+	/* Must be synced with view_matches_criteria() in window-rules.c */
+	static view_query create() {
+		return {
+			.window_type = LAB_WINDOW_TYPE_INVALID,
+			.maximized = VIEW_AXIS_INVALID,
+			.decoration = LAB_SSD_MODE_INVALID,
+		};
+	}
 };
 
 struct xdg_toplevel_view : public view {
@@ -354,19 +363,6 @@ extern reflist<view> g_views;
  * wlr_surface, or NULL if the surface has no associated view.
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
-
-/**
- * view_query_create() - Create a new heap allocated view query with
- * all members initialized to their default values (window_type = -1,
- * NULL for strings)
- */
-struct view_query *view_query_create(void);
-
-/**
- * view_query_free() - Free a given view query
- * @query: Query to be freed.
- */
-void view_query_free(struct view_query *view);
 
 /**
  * view_matches_query() - Check if view matches the given criteria
@@ -445,7 +441,7 @@ struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
 	enum lab_edge edge);
 
 void view_toggle_keybinds(struct view *view);
-bool view_inhibits_actions(struct view *view, struct wl_list *actions);
+bool view_inhibits_actions(struct view *view, std::vector<action> &actions);
 
 void view_set_activated(struct view *view, bool activated);
 void view_set_output(struct view *view, struct output *output);
