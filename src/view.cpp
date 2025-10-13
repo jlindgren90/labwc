@@ -361,7 +361,7 @@ view_get_edge_snap_box(struct view *view, struct output *output,
 	};
 
 	if (view) {
-		struct border margin = ssd_get_margin(view->ssd);
+		struct border margin = view->ssd.get_margin();
 		dst.x += margin.left;
 		dst.y += margin.top;
 		dst.width -= margin.left + margin.right;
@@ -414,7 +414,7 @@ void
 view_set_activated(struct view *view, bool activated)
 {
 	assert(view);
-	ssd_set_active(view->ssd, activated);
+	view->ssd.set_active(activated);
 	view->set_activated(activated);
 
 	wl_signal_emit_mutable(&view->events.activated, &activated);
@@ -511,7 +511,7 @@ view_moved(struct view *view)
 		view_discover_output(view, NULL);
 	}
 	view_update_outputs(view);
-	ssd_update_geometry(view->ssd);
+	view->ssd.update_geometry();
 	cursor_update_focus();
 	if (rc.resize_indicator && g_server.grabbed_view == view) {
 		resize_indicator_update(view);
@@ -734,7 +734,7 @@ view_compute_centered_position(struct view *view, const struct wlr_box *ref,
 		return false;
 	}
 
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = view->ssd.get_margin();
 	struct wlr_box usable = output_usable_area_in_layout_coords(view->output);
 	int width = w + margin.left + margin.right;
 	int height = h + margin.top + margin.bottom;
@@ -786,7 +786,7 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 	if (wlr_output_layout_intersects(g_server.output_layout,
 			view->output->wlr_output, geometry)) {
 		/* Always make sure the titlebar starts within the usable area */
-		struct border margin = ssd_get_margin(view->ssd);
+		struct border margin = view->ssd.get_margin();
 		struct wlr_box usable =
 			output_usable_area_in_layout_coords(view->output);
 
@@ -908,7 +908,7 @@ view_cascade(struct view *view)
 	struct wlr_box center = view->pending;
 	view_compute_centered_position(view, NULL,
 		center.width, center.height, &center.x, &center.y);
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = view->ssd.get_margin();
 	center.x -= margin.left;
 	center.y -= margin.top;
 	center.width += margin.left + margin.right;
@@ -1012,7 +1012,7 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 
 	struct wlr_box usable_area =
 			output_usable_area_in_layout_coords(view->output);
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = view->ssd.get_margin();
 
 	int available_width = usable_area.width - margin.left - margin.right;
 	int available_height = usable_area.height - margin.top - margin.bottom;
@@ -1102,7 +1102,7 @@ view_get_region_snap_box(struct view *view, struct region *region)
 
 	/* And adjust for current view */
 	if (view) {
-		struct border margin = ssd_get_margin(view->ssd);
+		struct border margin = view->ssd.get_margin();
 		geo.x += margin.left;
 		geo.y += margin.top;
 		geo.width -= margin.left + margin.right;
@@ -1258,7 +1258,7 @@ view_set_maximized(struct view *view, enum view_axis maximized)
 	 * use up-to-date SSD margin information. Otherwise we will end
 	 * up using an outdated ssd->margin to calculate offsets.
 	 */
-	ssd_update_margin(view->ssd);
+	view->ssd.update_margin();
 }
 
 bool
@@ -1501,7 +1501,7 @@ view_toggle_visible_on_all_workspaces(struct view *view)
 {
 	assert(view);
 	view->visible_on_all_workspaces = !view->visible_on_all_workspaces;
-	ssd_update_geometry(view->ssd);
+	view->ssd.update_geometry();
 }
 
 void
@@ -1520,15 +1520,14 @@ static void
 decorate(struct view *view)
 {
 	if (!view->ssd) {
-		view->ssd = ssd_create(view, view == g_server.active_view);
+		view->ssd.create(view, view == g_server.active_view);
 	}
 }
 
 static void
 undecorate(struct view *view)
 {
-	ssd_destroy(view->ssd);
-	view->ssd = NULL;
+	view->ssd.destroy();
 }
 
 bool
@@ -1559,7 +1558,7 @@ view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode)
 
 	if (mode) {
 		decorate(view);
-		ssd_set_titlebar(view->ssd, view_titlebar_visible(view));
+		view->ssd.set_titlebar(view_titlebar_visible(view));
 	} else {
 		undecorate(view);
 	}
@@ -1858,7 +1857,7 @@ view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windo
 
 	/* When jumping to next output, attach to edge nearest the motion */
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = view->ssd.get_margin();
 
 	/* Bounds of the possible placement zone in this output */
 	int left = usable.x + rc.gap + margin.left;
@@ -2224,7 +2223,7 @@ view_set_title(struct view *view, const char *title)
 	}
 	view->title = lab_str(title);
 
-	ssd_update_title(view->ssd);
+	view->ssd.update_title();
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
 }
 
@@ -2257,7 +2256,7 @@ view_toggle_keybinds(struct view *view)
 	view->inhibits_keybinds = !view->inhibits_keybinds;
 
 	if (view->ssd_mode) {
-		ssd_enable_keybind_inhibit_indicator(view->ssd,
+		view->ssd.enable_keybind_inhibit_indicator(
 			view->inhibits_keybinds);
 	}
 }
@@ -2306,7 +2305,7 @@ view_set_shade(struct view *view, bool shaded)
 	}
 
 	view->shaded = shaded;
-	ssd_enable_shade(view->ssd, view->shaded);
+	view->ssd.enable_shade(view->shaded);
 	wlr_scene_node_set_enabled(&view->content_tree->node, !view->shaded);
 }
 

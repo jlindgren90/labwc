@@ -85,7 +85,7 @@ get_view_part(struct view *view, struct wlr_scene_node *node)
 		/* Created on-demand */
 		return "view->resize_indicator";
 	}
-	return ssd_debug_get_node_name(view->ssd, node);
+	return view->ssd.debug_get_node_name(node);
 }
 
 static const char *
@@ -216,7 +216,7 @@ dump_tree(struct wlr_scene_node *node, int pos, int x, int y)
 		g_server.osd_state.preview_outline;
 	if ((IGNORE_MENU && node == &g_server.menu_tree->node)
 			|| (IGNORE_SSD && last_view
-				&& ssd_debug_is_root_node(last_view->ssd, node))
+				&& last_view->ssd.debug_is_root_node(node))
 			|| (IGNORE_OSD_PREVIEW_OUTLINE && osd_preview_outline
 				&& node == &osd_preview_outline->tree->node)
 			|| (IGNORE_SNAPPING_OVERLAY && g_seat.overlay.rect
