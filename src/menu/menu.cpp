@@ -13,7 +13,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include "action.h"
-#include "common/buf.h"
 #include "common/dir.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
@@ -42,7 +41,7 @@ static weakptr<menuitem> selected_item;
 struct menu_pipe_context {
 	menu &pipemenu;
 	struct wlr_box anchor_rect;
-	struct buf buf;
+	lab_str buf;
 	struct wl_event_source *event_read;
 	struct wl_event_source *event_timeout;
 	pid_t pid;
@@ -476,7 +475,7 @@ menuitem::~menuitem()
 	}
 }
 
-static bool parse_buf(struct menu *menu, struct buf *buf);
+static bool parse_buf(struct menu *menu, const lab_str &buf);
 static int handle_pipemenu_readable(int fd, uint32_t mask, void *_ctx);
 static int handle_pipemenu_timeout(void *_ctx);
 static void fill_menu_children(struct menu *parent, xmlNode *n);
@@ -634,10 +633,10 @@ fill_menu_children(struct menu *parent, xmlNode *n)
 }
 
 static bool
-parse_buf(struct menu *parent, struct buf *buf)
+parse_buf(struct menu *parent, const lab_str &buf)
 {
 	int options = 0;
-	xmlDoc *d = xmlReadMemory(buf->data, buf->len, NULL, NULL, options);
+	xmlDoc *d = xmlReadMemory(buf.c(), buf.size(), NULL, NULL, options);
 	if (!d) {
 		wlr_log(WLR_ERROR, "xmlParseMemory()");
 		return false;
@@ -661,18 +660,17 @@ parse_stream(FILE *stream)
 {
 	char *line = NULL;
 	size_t len = 0;
-	struct buf b = BUF_INIT;
+	lab_str buf;
 
 	while (getline(&line, &len, stream) != -1) {
 		char *p = strrchr(line, '\n');
 		if (p) {
 			*p = '\0';
 		}
-		buf_add(&b, line);
+		buf += line;
 	}
 	free(line);
-	parse_buf(NULL, &b);
-	buf_reset(&b);
+	parse_buf(NULL, buf);
 }
 
 static void
@@ -811,22 +809,16 @@ update_client_send_to_menu(void)
 	 * <action name="SendToDesktop"><follow> is true by default so
 	 * GoToDesktop will be called as part of the action.
 	 */
-	struct buf buf = BUF_INIT;
 	for (auto &workspace : g_server.workspaces.all) {
-		if (&workspace == g_server.workspaces.current) {
-			buf_add_fmt(&buf, ">%s<", workspace.name.c());
-		} else {
-			buf_add(&buf, workspace.name.c());
-		}
-		struct menuitem *item = item_create(menu, buf.data,
-			NULL, /*show arrow*/ false);
+		lab_str name = (&workspace == g_server.workspaces.current)
+			? strdup_printf(">%s<", workspace.name.c())
+			: workspace.name;
+		struct menuitem *item =
+			item_create(menu, name.c(), NULL, /*show arrow*/ false);
 
 		struct action *action = item_add_action(item, "SendToDesktop");
 		action->add_str("to", workspace.name.c());
-
-		buf_clear(&buf);
 	}
-	buf_reset(&buf);
 
 	separator_create(menu, "");
 	struct menuitem *item = item_create(menu,
@@ -853,14 +845,12 @@ update_client_list_combined_menu(void)
 	reset_menu(menu);
 
 	struct menuitem *item;
-	struct buf buffer = BUF_INIT;
 
 	for (auto &workspace : g_server.workspaces.all) {
-		buf_add_fmt(&buffer,
-			&workspace == g_server.workspaces.current ? ">%s<" : "%s",
-			workspace.name.c());
-		separator_create(menu, buffer.data);
-		buf_clear(&buffer);
+		lab_str name = (&workspace == g_server.workspaces.current)
+			? strdup_printf(">%s<", workspace.name.c())
+			: workspace.name;
+		separator_create(menu, name.c());
 
 		for (auto &view : g_views) {
 			if (view.workspace.get() == &workspace) {
@@ -868,20 +858,20 @@ update_client_list_combined_menu(void)
 					continue;
 				}
 
+				lab_str buf;
 				if (&view == g_server.active_view) {
-					buf_add(&buffer, "*");
+					buf += '*';
 				}
 				if (view.minimized) {
-					buf_add_fmt(&buffer, "(%s)", view.title.c());
+					buf += strdup_printf("(%s)", view.title.c());
 				} else {
-					buf_add(&buffer, view.title.c());
+					buf += view.title;
 				}
-				item = item_create(menu, buffer.data, NULL,
+				item = item_create(menu, buf.c(), NULL,
 					/*show arrow*/ false);
 				item->client_list_view = &view;
 				item_add_action(item, "Focus");
 				item_add_action(item, "Raise");
-				buf_clear(&buffer);
 				menu->has_icons = true;
 			}
 		}
@@ -890,7 +880,6 @@ update_client_list_combined_menu(void)
 		struct action *action = item_add_action(item, "GoToDesktop");
 		action->add_str("to", workspace.name.c());
 	}
-	buf_reset(&buffer);
 	menu_create_scene(menu);
 }
 
@@ -1131,7 +1120,7 @@ menu_open_root(struct menu *menu, int x, int y)
 static void
 create_pipe_menu(struct menu_pipe_context *ctx)
 {
-	if (!parse_buf(&ctx->pipemenu, &ctx->buf)) {
+	if (!parse_buf(&ctx->pipemenu, ctx->buf)) {
 		return;
 	}
 	/* TODO: apply validate() only for generated pipemenus */
@@ -1146,7 +1135,6 @@ menu_pipe_context::~menu_pipe_context()
 	wl_event_source_remove(event_read);
 	wl_event_source_remove(event_timeout);
 	spawn_piped_close(pid, pipe_fd);
-	buf_reset(&buf);
 	waiting_for_pipe_menu = false;
 }
 
@@ -1182,7 +1170,7 @@ handle_pipemenu_readable(int fd, uint32_t mask, void *_ctx)
 	}
 
 	/* Limit pipemenu buffer to 1 MiB for safety */
-	if (ctx->buf.len + size > PIPEMENU_MAX_BUF_SIZE) {
+	if (ctx->buf.size() + size > PIPEMENU_MAX_BUF_SIZE) {
 		wlr_log(WLR_ERROR,
 			"[pipemenu %ld] too big (> %d bytes); killing %s",
 			(long)ctx->pid, PIPEMENU_MAX_BUF_SIZE,
@@ -1194,12 +1182,12 @@ handle_pipemenu_readable(int fd, uint32_t mask, void *_ctx)
 	wlr_log(WLR_DEBUG, "[pipemenu %ld] read %ld bytes of data", (long)ctx->pid, size);
 	if (size) {
 		data[size] = '\0';
-		buf_add(&ctx->buf, data);
+		ctx->buf += data;
 		return 0;
 	}
 
 	/* Guard against badly formed data such as binary input */
-	if (!str_starts_with(ctx->buf.data, '<', " \t\r\n")) {
+	if (!str_starts_with(ctx->buf.c(), '<', " \t\r\n")) {
 		wlr_log(WLR_ERROR, "expect xml data to start with '<'; abort pipemenu");
 		goto clean_up;
 	}
@@ -1229,7 +1217,6 @@ open_pipemenu_async(struct menu *pipemenu, struct wlr_box anchor_rect)
 	auto ctx = new menu_pipe_context{.pipemenu = *pipemenu};
 	ctx->pid = pid;
 	ctx->pipe_fd = pipe_fd;
-	ctx->buf = BUF_INIT;
 	ctx->anchor_rect = anchor_rect;
 	pipemenu->pipe_ctx.reset(ctx);
 

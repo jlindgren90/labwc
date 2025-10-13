@@ -46,7 +46,6 @@ enum tiling_events_mode {
 };
 
 struct action;
-struct buf;
 struct keybind;
 struct libinput_category;
 struct mousebind;

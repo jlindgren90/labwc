@@ -17,7 +17,8 @@
 static_assert(LAB_FIELD_SINGLE_FMT_MAX_LEN <= 255, "fmt_position is a unsigned char");
 
 /* forward declares */
-typedef void field_conversion_type(struct buf *buf, struct view *view, const char *format);
+typedef void field_conversion_type(lab_str &buf, struct view *view,
+	const char *format);
 struct field_converter {
 	const char fmt_char;
 	field_conversion_type *fn;
@@ -78,115 +79,117 @@ get_title_if_different(struct view *view)
 
 /* Field handlers */
 static void
-field_set_type(struct buf *buf, struct view *view, const char *format)
+field_set_type(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: B (backend) */
-	buf_add(buf, get_type(view, /*short_form*/ false));
+	buf += get_type(view, /*short_form*/ false);
 }
 
 static void
-field_set_type_short(struct buf *buf, struct view *view, const char *format)
+field_set_type_short(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: b (backend) */
-	buf_add(buf, get_type(view, /*short_form*/ true));
+	buf += get_type(view, /*short_form*/ true);
 }
 
 static void
-field_set_workspace(struct buf *buf, struct view *view, const char *format)
+field_set_workspace(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: W */
-	buf_add(buf, view->workspace->name.c());
+	buf += view->workspace->name;
 }
 
 static void
-field_set_workspace_short(struct buf *buf, struct view *view, const char *format)
+field_set_workspace_short(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: w */
 	if (rc.workspace_config.names.size() > 1) {
-		buf_add(buf, view->workspace->name.c());
+		buf += view->workspace->name;
 	}
 }
 
 static void
-field_set_win_state(struct buf *buf, struct view *view, const char *format)
+field_set_win_state(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: s */
 	if (view->maximized) {
-		buf_add(buf, "M");
+		buf += 'M';
 	} else if (view->minimized) {
-		buf_add(buf, "m");
+		buf += 'm';
 	} else if (view->fullscreen) {
-		buf_add(buf, "F");
+		buf += 'F';
 	} else {
-		buf_add(buf, " ");
+		buf += ' ';
 	}
 }
 
 static void
-field_set_win_state_all(struct buf *buf, struct view *view, const char *format)
+field_set_win_state_all(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: S */
-	buf_add(buf, view->minimized ? "m" : " ");
-	buf_add(buf, view->maximized ? "M" : " ");
-	buf_add(buf, view->fullscreen ? "F" : " ");
+	buf += (view->minimized ? 'm' : ' ');
+	buf += (view->maximized ? 'M' : ' ');
+	buf += (view->fullscreen ? 'F' : ' ');
 	/* TODO: add always-on-top and omnipresent ? */
 }
 
 static void
-field_set_output(struct buf *buf, struct view *view, const char *format)
+field_set_output(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: O */
 	if (output_is_usable(view->output)) {
-		buf_add(buf, view->output->wlr_output->name);
+		buf += view->output->wlr_output->name;
 	}
 }
 
 static void
-field_set_output_short(struct buf *buf, struct view *view, const char *format)
+field_set_output_short(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: o */
 	if (wl_list_length(&g_server.outputs) > 1
 			&& output_is_usable(view->output)) {
-		buf_add(buf, view->output->wlr_output->name);
+		buf += view->output->wlr_output->name;
 	}
 }
 
 static void
-field_set_identifier(struct buf *buf, struct view *view, const char *format)
+field_set_identifier(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: I */
-	buf_add(buf, get_identifier(view, /*trim*/ false));
+	buf += get_identifier(view, /*trim*/ false);
 }
 
 static void
-field_set_identifier_trimmed(struct buf *buf, struct view *view, const char *format)
+field_set_identifier_trimmed(lab_str &buf, struct view *view,
+		const char *format)
 {
 	/* custom type conversion-specifier: i */
-	buf_add(buf, get_identifier(view, /*trim*/ true));
+	buf += get_identifier(view, /*trim*/ true);
 }
 
 static void
-field_set_desktop_entry_name(struct buf *buf, struct view *view, const char *format)
+field_set_desktop_entry_name(lab_str &buf, struct view *view,
+		const char *format)
 {
 	/* custom type conversion-specifier: n */
-	buf_add(buf, get_desktop_name(view));
+	buf += get_desktop_name(view);
 }
 
 static void
-field_set_title(struct buf *buf, struct view *view, const char *format)
+field_set_title(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: T */
-	buf_add(buf, view->title.c());
+	buf += view->title;
 }
 
 static void
-field_set_title_short(struct buf *buf, struct view *view, const char *format)
+field_set_title_short(lab_str &buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: t */
-	buf_add(buf, get_title_if_different(view));
+	buf += get_title_if_different(view);
 }
 
-static void field_set_custom(struct buf *buf, struct view *view,
+static void field_set_custom(lab_str &buf, struct view *view,
 	const char *format);
 
 static const struct field_converter field_converter[] = {
@@ -212,7 +215,7 @@ static const struct field_converter field_converter[] = {
 static_assert(ARRAY_SIZE(field_converter) == LAB_FIELD_COUNT);
 
 static void
-field_set_custom(struct buf *buf, struct view *view, const char *format)
+field_set_custom(lab_str &buf, struct view *view, const char *format)
 {
 	if (!format) {
 		wlr_log(WLR_ERROR, "Missing format for custom window switcher field");
@@ -222,7 +225,7 @@ field_set_custom(struct buf *buf, struct view *view, const char *format)
 	char fmt[LAB_FIELD_SINGLE_FMT_MAX_LEN];
 	unsigned char fmt_position = 0;
 
-	struct buf field_result = BUF_INIT;
+	lab_str field_result;
 	char converted_field[4096];
 
 	for (const char *p = format; *p; p++) {
@@ -234,7 +237,7 @@ field_set_custom(struct buf *buf, struct view *view, const char *format)
 				 * Just relay anything not part of a
 				 * format string to the output buffer.
 				 */
-				buf_add_char(buf, *p);
+				buf += *p;
 			}
 			continue;
 		}
@@ -264,16 +267,17 @@ field_set_custom(struct buf *buf, struct view *view, const char *format)
 			}
 
 			/* Generate the actual content*/
-			field_converter[i].fn(&field_result, view, /*format*/ NULL);
+			field_converter[i].fn(field_result, view,
+				/*format*/ NULL);
 
 			/* Throw it at snprintf to allow formatting / padding */
 			fmt[fmt_position++] = 's';
 			fmt[fmt_position++] = '\0';
-			snprintf(converted_field, sizeof(converted_field),
-				fmt, field_result.data);
+			snprintf(converted_field, sizeof(converted_field), fmt,
+				field_result.c());
 
 			/* And finally write it to the output buffer */
-			buf_add(buf, converted_field);
+			buf += converted_field;
 			goto reset_format;
 		}
 
@@ -283,10 +287,9 @@ field_set_custom(struct buf *buf, struct view *view, const char *format)
 
 reset_format:
 		/* Reset format string and tmp field result buffer */
-		buf_clear(&field_result);
+		field_result.clear();
 		fmt_position = 0;
 	}
-	buf_reset(&field_result);
 }
 
 void
@@ -352,15 +355,16 @@ osd_field_is_valid(struct window_switcher_field *field)
 	return true;
 }
 
-void
-osd_field_get_content(struct window_switcher_field *field,
-		struct buf *buf, struct view *view)
+lab_str
+osd_field_get_content(struct window_switcher_field *field, struct view *view)
 {
 	if (field->content == LAB_FIELD_NONE) {
 		wlr_log(WLR_ERROR, "Invalid window switcher field type");
-		return;
+		return lab_str();
 	}
 	assert(field->content < LAB_FIELD_COUNT && field_converter[field->content].fn);
 
+	lab_str buf;
 	field_converter[field->content].fn(buf, view, field->format.c());
+	return buf;
 }
