@@ -33,110 +33,6 @@
 #include "view.h"
 #include "workspaces.h"
 
-enum action_arg_type {
-	LAB_ACTION_ARG_STR = 0,
-	LAB_ACTION_ARG_BOOL,
-	LAB_ACTION_ARG_INT,
-	LAB_ACTION_ARG_QUERY_LIST,
-	LAB_ACTION_ARG_ACTION_LIST,
-};
-
-struct action_arg {
-	struct wl_list link;        /* struct action.args */
-
-	char *key;                  /* May be NULL if there is just one arg */
-	enum action_arg_type type;
-};
-
-struct action_arg_str {
-	struct action_arg base;
-	char *value;
-};
-
-struct action_arg_bool {
-	struct action_arg base;
-	bool value;
-};
-
-struct action_arg_int {
-	struct action_arg base;
-	int value;
-};
-
-struct action_arg_list {
-	struct action_arg base;
-	struct wl_list value;
-};
-
-enum action_type {
-	ACTION_TYPE_INVALID = 0,
-	ACTION_TYPE_NONE,
-	ACTION_TYPE_CLOSE,
-	ACTION_TYPE_KILL,
-	ACTION_TYPE_DEBUG,
-	ACTION_TYPE_EXECUTE,
-	ACTION_TYPE_EXIT,
-	ACTION_TYPE_MOVE_TO_EDGE,
-	ACTION_TYPE_TOGGLE_SNAP_TO_EDGE,
-	ACTION_TYPE_SNAP_TO_EDGE,
-	ACTION_TYPE_GROW_TO_EDGE,
-	ACTION_TYPE_SHRINK_TO_EDGE,
-	ACTION_TYPE_NEXT_WINDOW,
-	ACTION_TYPE_PREVIOUS_WINDOW,
-	ACTION_TYPE_RECONFIGURE,
-	ACTION_TYPE_SHOW_MENU,
-	ACTION_TYPE_TOGGLE_MAXIMIZE,
-	ACTION_TYPE_MAXIMIZE,
-	ACTION_TYPE_UNMAXIMIZE,
-	ACTION_TYPE_TOGGLE_FULLSCREEN,
-	ACTION_TYPE_SET_DECORATIONS,
-	ACTION_TYPE_TOGGLE_DECORATIONS,
-	ACTION_TYPE_TOGGLE_ALWAYS_ON_TOP,
-	ACTION_TYPE_TOGGLE_ALWAYS_ON_BOTTOM,
-	ACTION_TYPE_TOGGLE_OMNIPRESENT,
-	ACTION_TYPE_FOCUS,
-	ACTION_TYPE_UNFOCUS,
-	ACTION_TYPE_ICONIFY,
-	ACTION_TYPE_MOVE,
-	ACTION_TYPE_RAISE,
-	ACTION_TYPE_LOWER,
-	ACTION_TYPE_RESIZE,
-	ACTION_TYPE_RESIZE_RELATIVE,
-	ACTION_TYPE_MOVETO,
-	ACTION_TYPE_RESIZETO,
-	ACTION_TYPE_MOVETO_CURSOR,
-	ACTION_TYPE_MOVE_RELATIVE,
-	ACTION_TYPE_SEND_TO_DESKTOP,
-	ACTION_TYPE_GO_TO_DESKTOP,
-	ACTION_TYPE_TOGGLE_SNAP_TO_REGION,
-	ACTION_TYPE_SNAP_TO_REGION,
-	ACTION_TYPE_UNSNAP,
-	ACTION_TYPE_TOGGLE_KEYBINDS,
-	ACTION_TYPE_FOCUS_OUTPUT,
-	ACTION_TYPE_MOVE_TO_OUTPUT,
-	ACTION_TYPE_FIT_TO_OUTPUT,
-	ACTION_TYPE_IF,
-	ACTION_TYPE_FOR_EACH,
-	ACTION_TYPE_VIRTUAL_OUTPUT_ADD,
-	ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE,
-	ACTION_TYPE_AUTO_PLACE,
-	ACTION_TYPE_TOGGLE_TEARING,
-	ACTION_TYPE_SHADE,
-	ACTION_TYPE_UNSHADE,
-	ACTION_TYPE_TOGGLE_SHADE,
-	ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION,
-	ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION,
-	ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION,
-	ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION,
-	ACTION_TYPE_DISABLE_TABLET_MOUSE_EMULATION,
-	ACTION_TYPE_TOGGLE_TABLET_MOUSE_EMULATION,
-	ACTION_TYPE_TOGGLE_MAGNIFY,
-	ACTION_TYPE_ZOOM_IN,
-	ACTION_TYPE_ZOOM_OUT,
-	ACTION_TYPE_WARP_CURSOR,
-	ACTION_TYPE_HIDE_CURSOR,
-};
-
 const char *action_names[] = {
 	"INVALID",
 	"None",
@@ -207,125 +103,117 @@ const char *action_names[] = {
 	NULL
 };
 
+action::~action() {}
+
 void
-action_arg_add_str(struct action *action, const char *key, const char *value)
+action::add_str(const char *key, const char *value)
 {
-	assert(action);
 	assert(key);
-	assert(value && "Tried to add NULL action string argument");
-	struct action_arg_str *arg = znew(*arg);
-	arg->base.type = LAB_ACTION_ARG_STR;
-	arg->base.key = xstrdup(key);
-	arg->value = xstrdup(value);
-	wl_list_append(&action->args, &arg->base.link);
-}
-
-static void
-action_arg_add_bool(struct action *action, const char *key, bool value)
-{
-	assert(action);
-	assert(key);
-	struct action_arg_bool *arg = znew(*arg);
-	arg->base.type = LAB_ACTION_ARG_BOOL;
-	arg->base.key = xstrdup(key);
-	arg->value = value;
-	wl_list_append(&action->args, &arg->base.link);
-}
-
-static void
-action_arg_add_int(struct action *action, const char *key, int value)
-{
-	assert(action);
-	assert(key);
-	struct action_arg_int *arg = znew(*arg);
-	arg->base.type = LAB_ACTION_ARG_INT;
-	arg->base.key = xstrdup(key);
-	arg->value = value;
-	wl_list_append(&action->args, &arg->base.link);
-}
-
-static void
-action_arg_add_list(struct action *action, const char *key, enum action_arg_type type)
-{
-	assert(action);
-	assert(key);
-	struct action_arg_list *arg = znew(*arg);
-	arg->base.type = type;
-	arg->base.key = xstrdup(key);
-	wl_list_init(&arg->value);
-	wl_list_append(&action->args, &arg->base.link);
+	args.push_back({
+		.type = LAB_ACTION_ARG_STR,
+		.key = lab_str(key),
+		.sval = lab_str(value)
+	});
 }
 
 void
-action_arg_add_querylist(struct action *action, const char *key)
+action::add_bool(const char *key, bool value)
 {
-	action_arg_add_list(action, key, LAB_ACTION_ARG_QUERY_LIST);
+	assert(key);
+	args.push_back({
+		.type = LAB_ACTION_ARG_BOOL,
+		.key = lab_str(key),
+		.bval = value
+	});
 }
 
 void
-action_arg_add_actionlist(struct action *action, const char *key)
+action::add_int(const char *key, int value)
 {
-	action_arg_add_list(action, key, LAB_ACTION_ARG_ACTION_LIST);
+	assert(key);
+	args.push_back({
+		.type = LAB_ACTION_ARG_INT,
+		.key = lab_str(key),
+		.ival = value
+	});
 }
 
-static void *
-action_get_arg(struct action *action, const char *key, enum action_arg_type type)
+std::vector<view_query> &
+action::add_querylist(const char *key)
 {
-	assert(action);
 	assert(key);
-	struct action_arg *arg;
-	wl_list_for_each(arg, &action->args, link) {
-		if (!strcasecmp(key, arg->key) && arg->type == type) {
-			return arg;
+	args.push_back({
+		.type = LAB_ACTION_ARG_QUERY_LIST,
+		.key = lab_str(key)
+	});
+	return args.back().queries;
+}
+
+std::vector<action> &
+action::add_actionlist(const char *key)
+{
+	assert(key);
+	args.push_back({
+		.type = LAB_ACTION_ARG_ACTION_LIST,
+		.key = lab_str(key)
+	});
+	return args.back().actions;
+}
+
+action_arg *
+action::get_arg(const char *key, action_arg_type type)
+{
+	assert(key);
+	for (auto &arg : args) {
+		if (!strcasecmp(key, arg.key.c()) && arg.type == type) {
+			return &arg;
 		}
 	}
 	return NULL;
 }
 
-const char *
-action_get_str(struct action *action, const char *key, const char *default_value)
+lab_str
+action::get_str(const char *key, const char *default_value)
 {
-	struct action_arg_str *arg = action_get_arg(action, key, LAB_ACTION_ARG_STR);
-	return arg ? arg->value : default_value;
+	auto arg = get_arg(key, LAB_ACTION_ARG_STR);
+	return arg ? arg->sval : lab_str(default_value);
 }
 
-static bool
-action_get_bool(struct action *action, const char *key, bool default_value)
+bool
+action::get_bool(const char *key, bool default_value)
 {
-	struct action_arg_bool *arg = action_get_arg(action, key, LAB_ACTION_ARG_BOOL);
-	return arg ? arg->value : default_value;
+	auto arg = get_arg(key, LAB_ACTION_ARG_BOOL);
+	return arg ? arg->bval : default_value;
 }
 
-static int
-action_get_int(struct action *action, const char *key, int default_value)
+int
+action::get_int(const char *key, int default_value)
 {
-	struct action_arg_int *arg = action_get_arg(action, key, LAB_ACTION_ARG_INT);
-	return arg ? arg->value : default_value;
+	auto arg = get_arg(key, LAB_ACTION_ARG_INT);
+	return arg ? arg->ival : default_value;
 }
 
-struct wl_list *
-action_get_querylist(struct action *action, const char *key)
+std::vector<view_query> *
+action::get_querylist(const char *key)
 {
-	struct action_arg_list *arg = action_get_arg(action, key, LAB_ACTION_ARG_QUERY_LIST);
-	return arg ? &arg->value : NULL;
+	auto arg = get_arg(key, LAB_ACTION_ARG_QUERY_LIST);
+	return arg ? &arg->queries : NULL;
 }
 
-struct wl_list *
-action_get_actionlist(struct action *action, const char *key)
+std::vector<action> *
+action::get_actionlist(const char *key)
 {
-	struct action_arg_list *arg = action_get_arg(action, key, LAB_ACTION_ARG_ACTION_LIST);
-	return arg ? &arg->value : NULL;
+	auto arg = get_arg(key, LAB_ACTION_ARG_ACTION_LIST);
+	return arg ? &arg->actions : NULL;
 }
 
 void
-action_arg_from_xml_node(struct action *action, const char *nodename, const char *content)
+action::add_arg_from_xml_node(const char *nodename, const char *content)
 {
-	assert(action);
-
 	char *argument = xstrdup(nodename);
 	string_truncate_at_pattern(argument, ".action");
 
-	switch (action->type) {
+	switch (type) {
 	case ACTION_TYPE_EXECUTE:
 		/*
 		 * <action name="Execute"> with an <execute> child is
@@ -333,7 +221,7 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 		 * compatibility with old openbox-menu generators
 		 */
 		if (!strcmp(argument, "command") || !strcmp(argument, "execute")) {
-			action_arg_add_str(action, "command", content);
+			add_str("command", content);
 			goto cleanup;
 		}
 		break;
@@ -343,44 +231,45 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 	case ACTION_TYPE_GROW_TO_EDGE:
 	case ACTION_TYPE_SHRINK_TO_EDGE:
 		if (!strcmp(argument, "direction")) {
-			bool tiled = (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE
-					|| action->type == ACTION_TYPE_SNAP_TO_EDGE);
+			bool tiled = (type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE
+				|| type == ACTION_TYPE_SNAP_TO_EDGE);
 			enum lab_edge edge = lab_edge_parse(content, tiled, /*any*/ false);
 			if (edge == LAB_EDGE_NONE) {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-					action_names[action->type], argument, content);
+				wlr_log(WLR_ERROR,
+					"Invalid argument for action %s: '%s' (%s)",
+					action_names[type], argument, content);
 			} else {
-				action_arg_add_int(action, argument, edge);
+				add_int(argument, edge);
 			}
 			goto cleanup;
 		}
-		if (action->type == ACTION_TYPE_MOVE_TO_EDGE
+		if (type == ACTION_TYPE_MOVE_TO_EDGE
 				&& !strcasecmp(argument, "snapWindows")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
+			add_bool(argument, parse_bool(content, true));
 			goto cleanup;
 		}
-		if ((action->type == ACTION_TYPE_SNAP_TO_EDGE
-					|| action->type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE)
+		if ((type == ACTION_TYPE_SNAP_TO_EDGE
+					|| type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE)
 				&& !strcasecmp(argument, "combine")) {
-			action_arg_add_bool(action, argument, parse_bool(content, false));
+			add_bool(argument, parse_bool(content, false));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_SHOW_MENU:
 		if (!strcmp(argument, "menu")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		if (!strcasecmp(argument, "atCursor")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
+			add_bool(argument, parse_bool(content, true));
 			goto cleanup;
 		}
 		if (!strcasecmp(argument, "x.position")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		if (!strcasecmp(argument, "y.position")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		break;
@@ -390,10 +279,11 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 		if (!strcmp(argument, "direction")) {
 			enum view_axis axis = view_axis_parse(content);
 			if (axis == VIEW_AXIS_NONE || axis == VIEW_AXIS_INVALID) {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-					action_names[action->type], argument, content);
+				wlr_log(WLR_ERROR,
+					"Invalid argument for action %s: '%s' (%s)",
+					action_names[type], argument, content);
 			} else {
-				action_arg_add_int(action, argument, axis);
+				add_int(argument, axis);
 			}
 			goto cleanup;
 		}
@@ -402,92 +292,93 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 		if (!strcmp(argument, "decorations")) {
 			enum lab_ssd_mode mode = ssd_mode_parse(content);
 			if (mode != LAB_SSD_MODE_INVALID) {
-				action_arg_add_int(action, argument, mode);
+				add_int(argument, mode);
 			} else {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-					action_names[action->type], argument, content);
+				wlr_log(WLR_ERROR,
+					"Invalid argument for action %s: '%s' (%s)",
+					action_names[type], argument, content);
 			}
 			goto cleanup;
 		}
 		if (!strcasecmp(argument, "forceSSD")) {
-			action_arg_add_bool(action, argument, parse_bool(content, false));
+			add_bool(argument, parse_bool(content, false));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_RESIZE_RELATIVE:
 		if (!strcmp(argument, "left") || !strcmp(argument, "right") ||
 				!strcmp(argument, "top") || !strcmp(argument, "bottom")) {
-			action_arg_add_int(action, argument, atoi(content));
+			add_int(argument, atoi(content));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_MOVETO:
 	case ACTION_TYPE_MOVE_RELATIVE:
 		if (!strcmp(argument, "x") || !strcmp(argument, "y")) {
-			action_arg_add_int(action, argument, atoi(content));
+			add_int(argument, atoi(content));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_RESIZETO:
 		if (!strcmp(argument, "width") || !strcmp(argument, "height")) {
-			action_arg_add_int(action, argument, atoi(content));
+			add_int(argument, atoi(content));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_SEND_TO_DESKTOP:
 		if (!strcmp(argument, "follow")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
+			add_bool(argument, parse_bool(content, true));
 			goto cleanup;
 		}
-		/* Falls through to GoToDesktop */
+		[[fallthrough]];
 	case ACTION_TYPE_GO_TO_DESKTOP:
 		if (!strcmp(argument, "to")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		if (!strcmp(argument, "wrap")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
+			add_bool(argument, parse_bool(content, true));
 			goto cleanup;
 		}
 		if (!strcmp(argument, "toggle")) {
-			action_arg_add_bool(
-				action, argument, parse_bool(content, false));
+			add_bool(argument, parse_bool(content, false));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_SNAP_TO_REGION:
 	case ACTION_TYPE_SNAP_TO_REGION:
 		if (!strcmp(argument, "region")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_FOCUS_OUTPUT:
 	case ACTION_TYPE_MOVE_TO_OUTPUT:
 		if (!strcmp(argument, "output")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		if (!strcmp(argument, "direction")) {
 			enum lab_edge edge = lab_edge_parse(content,
 				/*tiled*/ false, /*any*/ false);
 			if (edge == LAB_EDGE_NONE) {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-					action_names[action->type], argument, content);
+				wlr_log(WLR_ERROR,
+					"Invalid argument for action %s: '%s' (%s)",
+					action_names[type], argument, content);
 			} else {
-				action_arg_add_int(action, argument, edge);
+				add_int(argument, edge);
 			}
 			goto cleanup;
 		}
 		if (!strcmp(argument, "wrap")) {
-			action_arg_add_bool(action, argument, parse_bool(content, false));
+			add_bool(argument, parse_bool(content, false));
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_VIRTUAL_OUTPUT_ADD:
 	case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE:
 		if (!strcmp(argument, "output_name")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		break;
@@ -496,29 +387,32 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 			enum lab_placement_policy policy =
 				view_placement_parse(content);
 			if (policy == LAB_PLACE_INVALID) {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-						action_names[action->type], argument, content);
+				wlr_log(WLR_ERROR,
+					"Invalid argument for action %s: '%s' (%s)",
+					action_names[type], argument, content);
 			} else {
-				action_arg_add_int(action, argument, policy);
+				add_int(argument, policy);
 			}
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_WARP_CURSOR:
 		if (!strcmp(argument, "to") || !strcmp(argument, "x") || !strcmp(argument, "y")) {
-			action_arg_add_str(action, argument, content);
+			add_str(argument, content);
 			goto cleanup;
 		}
 		break;
 	case ACTION_TYPE_IF:
 		if (!strcmp(argument, "message.prompt")) {
-			action_arg_add_str(action, "message.prompt", content);
+			add_str("message.prompt", content);
 		}
 		goto cleanup;
+	default:
+		break;
 	}
 
 	wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s'",
-		action_names[action->type], argument);
+		action_names[type], argument);
 
 cleanup:
 	free(argument);
@@ -529,38 +423,35 @@ action_type_from_str(const char *action_name)
 {
 	for (size_t i = 1; action_names[i]; i++) {
 		if (!strcasecmp(action_name, action_names[i])) {
-			return i;
+			return (action_type)i;
 		}
 	}
 	wlr_log(WLR_ERROR, "Invalid action: %s", action_name);
 	return ACTION_TYPE_INVALID;
 }
 
-struct action *
-action_create(const char *action_name)
+action *
+action::append_new(std::vector<action> &actions, const char *action_name)
 {
 	if (!action_name) {
 		wlr_log(WLR_ERROR, "action name not specified");
-		return NULL;
+		return nullptr;
 	}
 
 	enum action_type action_type = action_type_from_str(action_name);
 	if (action_type == ACTION_TYPE_NONE) {
-		return NULL;
+		return nullptr;
 	}
 
-	struct action *action = znew(*action);
-	action->type = action_type;
-	wl_list_init(&action->args);
-	return action;
+	actions.push_back({.type = action_type});
+	return &actions.back();
 }
 
 bool
-actions_contain_toggle_keybinds(struct wl_list *action_list)
+actions_contain_toggle_keybinds(std::vector<action> &actions)
 {
-	struct action *action;
-	wl_list_for_each(action, action_list, link) {
-		if (action->type == ACTION_TYPE_TOGGLE_KEYBINDS) {
+	for (auto &action : actions) {
+		if (action.type == ACTION_TYPE_TOGGLE_KEYBINDS) {
 			return true;
 		}
 	}
@@ -568,13 +459,10 @@ actions_contain_toggle_keybinds(struct wl_list *action_list)
 }
 
 static bool
-action_list_is_valid(struct wl_list *actions)
+action_list_is_valid(std::vector<action> &actions)
 {
-	assert(actions);
-
-	struct action *action;
-	wl_list_for_each(action, actions, link) {
-		if (!action_is_valid(action)) {
+	for (auto &action : actions) {
+		if (!action.is_valid()) {
 			return false;
 		}
 	}
@@ -582,15 +470,14 @@ action_list_is_valid(struct wl_list *actions)
 }
 
 static bool
-action_branches_are_valid(struct action *action)
+action_branches_are_valid(action &action)
 {
 	static const char * const branches[] = { "then", "else", "none" };
 	for (size_t i = 0; i < ARRAY_SIZE(branches); i++) {
-		struct wl_list *children =
-			action_get_actionlist(action, branches[i]);
-		if (children && !action_list_is_valid(children)) {
+		auto children = action.get_actionlist(branches[i]);
+		if (children && !action_list_is_valid(*children)) {
 			wlr_log(WLR_ERROR, "Invalid action in %s '%s' branch",
-				action_names[action->type], branches[i]);
+				action_names[action.type], branches[i]);
 			return false;
 		}
 	}
@@ -599,12 +486,12 @@ action_branches_are_valid(struct action *action)
 
 /* Checks for *required* arguments */
 bool
-action_is_valid(struct action *action)
+action::is_valid()
 {
 	const char *arg_name = NULL;
 	enum action_arg_type arg_type = LAB_ACTION_ARG_STR;
 
-	switch (action->type) {
+	switch (type) {
 	case ACTION_TYPE_EXECUTE:
 		arg_name = "command";
 		break;
@@ -629,61 +516,19 @@ action_is_valid(struct action *action)
 		break;
 	case ACTION_TYPE_IF:
 	case ACTION_TYPE_FOR_EACH:
-		return action_branches_are_valid(action);
+		return action_branches_are_valid(*this);
 	default:
 		/* No arguments required */
 		return true;
 	}
 
-	if (action_get_arg(action, arg_name, arg_type)) {
+	if (get_arg(arg_name, arg_type)) {
 		return true;
 	}
 
 	wlr_log(WLR_ERROR, "Missing required argument for %s: %s",
-		action_names[action->type], arg_name);
+		action_names[type], arg_name);
 	return false;
-}
-
-bool
-action_is_show_menu(struct action *action)
-{
-	return action->type == ACTION_TYPE_SHOW_MENU;
-}
-
-void
-action_free(struct action *action)
-{
-	/* Free args */
-	struct action_arg *arg, *arg_tmp;
-	wl_list_for_each_safe(arg, arg_tmp, &action->args, link) {
-		wl_list_remove(&arg->link);
-		zfree(arg->key);
-		if (arg->type == LAB_ACTION_ARG_STR) {
-			struct action_arg_str *str_arg = (struct action_arg_str *)arg;
-			zfree(str_arg->value);
-		} else if (arg->type == LAB_ACTION_ARG_ACTION_LIST) {
-			struct action_arg_list *list_arg = (struct action_arg_list *)arg;
-			action_list_free(&list_arg->value);
-		} else if (arg->type == LAB_ACTION_ARG_QUERY_LIST) {
-			struct action_arg_list *list_arg = (struct action_arg_list *)arg;
-			struct view_query *elm, *next;
-			wl_list_for_each_safe(elm, next, &list_arg->value, link) {
-				view_query_free(elm);
-			}
-		}
-		zfree(arg);
-	}
-	zfree(action);
-}
-
-void
-action_list_free(struct wl_list *action_list)
-{
-	struct action *action, *action_tmp;
-	wl_list_for_each_safe(action, action_tmp, action_list, link) {
-		wl_list_remove(&action->link);
-		action_free(action);
-	}
 }
 
 static void
@@ -729,7 +574,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 	 * determine placement by looking at x and y
 	 * x/y can be number, "center" or a %percent of screen dimensions
 	 */
-	if (pos_x && pos_y) {
+	if (pos_x && pos_y && pos_x[0] && pos_y[0]) {
 		struct output *output =
 			output_nearest_to(g_seat.cursor->x, g_seat.cursor->y);
 		struct wlr_box usable = output_usable_area_in_layout_coords(output);
@@ -775,7 +620,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 }
 
 static struct view *
-view_for_action(struct view *activator, struct action *action,
+view_for_action(struct view *activator, action &action,
 		struct cursor_context *ctx)
 {
 	/* View is explicitly specified for mousebinds */
@@ -784,7 +629,7 @@ view_for_action(struct view *activator, struct action *action,
 	}
 
 	/* Select view based on action type for keybinds */
-	switch (action->type) {
+	switch (action.type) {
 	case ACTION_TYPE_FOCUS:
 	case ACTION_TYPE_MOVE:
 	case ACTION_TYPE_RESIZE: {
@@ -830,8 +675,7 @@ handle_view_destroy(struct wl_listener *listener, void *data)
 }
 
 static void
-print_prompt_command(struct buf *buf, const char *format,
-		struct action *action)
+print_prompt_command(struct buf *buf, const char *format, action &action)
 {
 	assert(format);
 
@@ -850,8 +694,8 @@ print_prompt_command(struct buf *buf, const char *format,
 
 		switch (*p) {
 		case 'm':
-			buf_add(buf, action_get_str(action,
-					"message.prompt", "Choose wisely"));
+			buf_add(buf, action.get_str("message.prompt",
+				"Choose wisely").c());
 			break;
 		case 'n':
 			buf_add(buf, _("No"));
@@ -874,7 +718,7 @@ print_prompt_command(struct buf *buf, const char *format,
 }
 
 static void
-action_prompt_create(struct view *view, struct action *action)
+action_prompt_create(struct view *view, action &action)
 {
 	struct buf command = BUF_INIT;
 	print_prompt_command(&command, rc.prompt_command, action);
@@ -892,7 +736,7 @@ action_prompt_create(struct view *view, struct action *action)
 	close(pipe_fd);
 
 	struct action_prompt *prompt = znew(*prompt);
-	prompt->action = action;
+	prompt->action = &action;
 	prompt->view = view;
 	prompt->pid = prompt_pid;
 	if (view) {
@@ -928,19 +772,19 @@ action_check_prompt_result(pid_t pid, int exit_code)
 		}
 
 		wlr_log(WLR_INFO, "Found pending prompt for exit code %d", exit_code);
-		struct wl_list *actions = NULL;
+		std::vector<action> *actions = NULL;
 		if (exit_code == LAB_EXIT_SUCCESS) {
 			wlr_log(WLR_INFO, "Selected the 'then' branch");
-			actions = action_get_actionlist(prompt->action, "then");
+			actions = prompt->action->get_actionlist("then");
 		} else if (exit_code == LAB_EXIT_TIMEOUT) {
 			/* no-op */
 		} else {
 			wlr_log(WLR_INFO, "Selected the 'else' branch");
-			actions = action_get_actionlist(prompt->action, "else");
+			actions = prompt->action->get_actionlist("else");
 		}
 		if (actions) {
 			wlr_log(WLR_INFO, "Running actions");
-			actions_run(prompt->view, actions, /*cursor_ctx*/ NULL);
+			actions_run(prompt->view, *actions, /*cursor_ctx*/ NULL);
 		} else {
 			wlr_log(WLR_INFO, "No actions for selected branch");
 		}
@@ -951,19 +795,18 @@ action_check_prompt_result(pid_t pid, int exit_code)
 }
 
 static bool
-match_queries(struct view *view, struct action *action)
+match_queries(struct view *view, action &action)
 {
 	assert(view);
 
-	struct wl_list *queries = action_get_querylist(action, "query");
+	auto queries = action.get_querylist("query");
 	if (!queries) {
 		return true;
 	}
 
 	/* All queries are OR'ed */
-	struct view_query *query;
-	wl_list_for_each(query, queries, link) {
-		if (view_matches_query(view, query)) {
+	for (auto &query : *queries) {
+		if (view_matches_query(view, &query)) {
 			return true;
 		}
 	}
@@ -971,17 +814,16 @@ match_queries(struct view *view, struct action *action)
 }
 
 static struct output *
-get_target_output(struct output *output, struct action *action)
+get_target_output(struct output *output, action &action)
 {
-	const char *output_name = action_get_str(action, "output", NULL);
+	lab_str output_name = action.get_str("output", NULL);
 	struct output *target = NULL;
 
 	if (output_name) {
-		target = output_from_name(output_name);
+		target = output_from_name(output_name.c());
 	} else {
-		enum lab_edge edge =
-			action_get_int(action, "direction", LAB_EDGE_NONE);
-		bool wrap = action_get_bool(action, "wrap", false);
+		auto edge = (lab_edge)action.get_int("direction", LAB_EDGE_NONE);
+		bool wrap = action.get_bool("wrap", false);
 		target = output_get_adjacent(output, edge, wrap);
 	}
 
@@ -1031,9 +873,9 @@ warp_cursor(struct view *view, const char *to, const char *x, const char *y)
 }
 
 static void
-run_action(struct view *view, struct action *action, struct cursor_context *ctx)
+run_action(struct view *view, action &action, struct cursor_context *ctx)
 {
-	switch (action->type) {
+	switch (action.type) {
 	case ACTION_TYPE_CLOSE:
 		if (view) {
 			view_close(view);
@@ -1054,8 +896,8 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		debug_dump_scene();
 		break;
 	case ACTION_TYPE_EXECUTE: {
-		struct buf cmd = BUF_INIT;
-		buf_add(&cmd, action_get_str(action, "command", NULL));
+		auto cmd = BUF_INIT;
+		buf_add(&cmd, action.get_str("command", NULL).c());
 		buf_expand_tilde(&cmd);
 		spawn_async_no_shell(cmd.data);
 		buf_reset(&cmd);
@@ -1067,8 +909,8 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 	case ACTION_TYPE_MOVE_TO_EDGE:
 		if (view) {
 			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
-			bool snap_to_windows = action_get_bool(action, "snapWindows", true);
+			auto edge = (lab_edge)action.get_int("direction", 0);
+			bool snap_to_windows = action.get_bool("snapWindows", true);
 			view_move_to_edge(view, edge, snap_to_windows);
 		}
 		break;
@@ -1076,8 +918,8 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 	case ACTION_TYPE_SNAP_TO_EDGE:
 		if (view) {
 			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
-			if (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE
+			auto edge = (lab_edge)action.get_int("direction", 0);
+			if (action.type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE
 					&& view->maximized == VIEW_AXIS_NONE
 					&& !view->fullscreen
 					&& view_is_tiled(view)
@@ -1086,7 +928,7 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 				view_apply_natural_geometry(view);
 				break;
 			}
-			bool combine = action_get_bool(action, "combine", false);
+			bool combine = action.get_bool("combine", false);
 			view_snap_to_edge(view, edge, /*across_outputs*/ true,
 				combine, /*store_natural_geometry*/ true);
 		}
@@ -1094,14 +936,14 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 	case ACTION_TYPE_GROW_TO_EDGE:
 		if (view) {
 			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
+			auto edge = (lab_edge)action.get_int("direction", 0);
 			view_grow_to_edge(view, edge);
 		}
 		break;
 	case ACTION_TYPE_SHRINK_TO_EDGE:
 		if (view) {
 			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
+			auto edge = (lab_edge)action.get_int("direction", 0);
 			view_shrink_to_edge(view, edge);
 		}
 		break;
@@ -1124,31 +966,32 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_SHOW_MENU:
 		show_menu(view, ctx,
-			action_get_str(action, "menu", NULL),
-			action_get_bool(action, "atCursor", true),
-			action_get_str(action, "x.position", NULL),
-			action_get_str(action, "y.position", NULL));
+			action.get_str("menu", NULL).c(),
+			action.get_bool("atCursor", true),
+			action.get_str("x.position", NULL).c(),
+			action.get_str("y.position", NULL).c());
 		break;
 	case ACTION_TYPE_TOGGLE_MAXIMIZE:
 		if (view) {
-			enum view_axis axis = action_get_int(action,
-				"direction", VIEW_AXIS_BOTH);
+			auto axis = (view_axis)action.get_int("direction",
+				VIEW_AXIS_BOTH);
 			view_toggle_maximize(view, axis);
 		}
 		break;
 	case ACTION_TYPE_MAXIMIZE:
 		if (view) {
-			enum view_axis axis = action_get_int(action,
-				"direction", VIEW_AXIS_BOTH);
+			auto axis = (view_axis)action.get_int("direction",
+				VIEW_AXIS_BOTH);
 			view_maximize(view, axis,
 				/*store_natural_geometry*/ true);
 		}
 		break;
 	case ACTION_TYPE_UNMAXIMIZE:
 		if (view) {
-			enum view_axis axis = action_get_int(action,
-				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, view->maximized & ~axis,
+			auto axis = (view_axis)action.get_int("direction",
+				VIEW_AXIS_BOTH);
+			view_maximize(view,
+				(view_axis)(view->maximized & ~axis),
 				/*store_natural_geometry*/ true);
 		}
 		break;
@@ -1159,10 +1002,9 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_SET_DECORATIONS:
 		if (view) {
-			enum lab_ssd_mode mode = action_get_int(action,
-				"decorations", LAB_SSD_MODE_FULL);
-			bool force_ssd = action_get_bool(action,
-				"forceSSD", false);
+			auto mode = (lab_ssd_mode)action.get_int("decorations",
+				LAB_SSD_MODE_FULL);
+			bool force_ssd = action.get_bool("forceSSD", false);
 			view_set_decorations(view, mode, force_ssd);
 		}
 		break;
@@ -1225,25 +1067,25 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_RESIZE_RELATIVE:
 		if (view) {
-			int left = action_get_int(action, "left", 0);
-			int right = action_get_int(action, "right", 0);
-			int top = action_get_int(action, "top", 0);
-			int bottom = action_get_int(action, "bottom", 0);
+			int left = action.get_int("left", 0);
+			int right = action.get_int("right", 0);
+			int top = action.get_int("top", 0);
+			int bottom = action.get_int("bottom", 0);
 			view_resize_relative(view, left, right, top, bottom);
 		}
 		break;
 	case ACTION_TYPE_MOVETO:
 		if (view) {
-			int x = action_get_int(action, "x", 0);
-			int y = action_get_int(action, "y", 0);
+			int x = action.get_int("x", 0);
+			int y = action.get_int("y", 0);
 			struct border margin = ssd_thickness(view);
 			view_move(view, x + margin.left, y + margin.top);
 		}
 		break;
 	case ACTION_TYPE_RESIZETO:
 		if (view) {
-			int width = action_get_int(action, "width", 0);
-			int height = action_get_int(action, "height", 0);
+			int width = action.get_int("width", 0);
+			int height = action.get_int("height", 0);
 
 			/*
 			 * To support only setting one of width/height
@@ -1262,8 +1104,8 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_MOVE_RELATIVE:
 		if (view) {
-			int x = action_get_int(action, "x", 0);
-			int y = action_get_int(action, "y", 0);
+			int x = action.get_int("x", 0);
+			int y = action.get_int("y", 0);
 			view_move_relative(view, x, y);
 		}
 		break;
@@ -1279,20 +1121,20 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		if (!view) {
 			break;
 		}
-		/* Falls through to GoToDesktop */
+		[[fallthrough]];
 	case ACTION_TYPE_GO_TO_DESKTOP: {
 		bool follow = true;
-		bool wrap = action_get_bool(action, "wrap", true);
-		const char *to = action_get_str(action, "to", NULL);
+		bool wrap = action.get_bool("wrap", true);
+		lab_str to = action.get_str("to", NULL);
 		/*
 		 * `to` is always != NULL here because otherwise we would have
 		 * removed the action during the initial parsing step as it is
 		 * a required argument for both SendToDesktop and GoToDesktop.
 		 */
 		struct workspace *target_workspace =
-			workspaces_find(g_server.workspaces.current, to, wrap);
-		if (action->type == ACTION_TYPE_GO_TO_DESKTOP) {
-			bool toggle = action_get_bool(action, "toggle", false);
+			workspaces_find(g_server.workspaces.current, to.c(), wrap);
+		if (action.type == ACTION_TYPE_GO_TO_DESKTOP) {
+			bool toggle = action.get_bool("toggle", false);
 			if (target_workspace == g_server.workspaces.current
 				&& toggle) {
 				target_workspace = g_server.workspaces.last;
@@ -1301,9 +1143,9 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		if (!target_workspace) {
 			break;
 		}
-		if (action->type == ACTION_TYPE_SEND_TO_DESKTOP) {
+		if (action.type == ACTION_TYPE_SEND_TO_DESKTOP) {
 			view_move_to_workspace(view, target_workspace);
-			follow = action_get_bool(action, "follow", true);
+			follow = action.get_bool("follow", true);
 
 			/* Ensure that the focus is not on another desktop */
 			if (!follow && g_server.active_view == view) {
@@ -1342,10 +1184,10 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		if (!output) {
 			break;
 		}
-		const char *region_name = action_get_str(action, "region", NULL);
-		struct region *region = regions_from_name(region_name, output);
+		lab_str region_name = action.get_str("region", NULL);
+		struct region *region = regions_from_name(region_name.c(), output);
 		if (region) {
-			if (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_REGION
+			if (action.type == ACTION_TYPE_TOGGLE_SNAP_TO_REGION
 					&& view->maximized == VIEW_AXIS_NONE
 					&& !view->fullscreen
 					&& view_is_tiled(view)
@@ -1357,7 +1199,8 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 			view_snap_to_region(view, region,
 				/*store_natural_geometry*/ true);
 		} else {
-			wlr_log(WLR_ERROR, "Invalid SnapToRegion id: '%s'", region_name);
+			wlr_log(WLR_ERROR, "Invalid SnapToRegion id: '%s'",
+				region_name.c());
 		}
 		break;
 	}
@@ -1385,67 +1228,65 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 	}
 	case ACTION_TYPE_IF: {
 		/* At least one of the queries was matched or there was no query */
-		if (action_get_str(action, "message.prompt", NULL)) {
+		if (action.get_str("message.prompt", NULL)) {
 			/*
 			 * We delay the selection and execution of the
 			 * branch until we get a response from the user.
 			 */
 			action_prompt_create(view, action);
 		} else if (view) {
-			struct wl_list *actions;
+			std::vector<::action> *actions;
 			if (match_queries(view, action)) {
-				actions = action_get_actionlist(action, "then");
+				actions = action.get_actionlist("then");
 			} else {
-				actions = action_get_actionlist(action, "else");
+				actions = action.get_actionlist("else");
 			}
 			if (actions) {
-				actions_run(view, actions, ctx);
+				actions_run(view, *actions, ctx);
 			}
 		}
 		break;
 	}
 	case ACTION_TYPE_FOR_EACH: {
-		struct wl_list *actions = NULL;
+		std::vector<::action> *actions;
 		bool matches = false;
 
 		for (auto &item : view_list_matching(LAB_VIEW_CRITERIA_NONE)) {
 			if (match_queries(&item, action)) {
 				matches = true;
-				actions = action_get_actionlist(action, "then");
+				actions = action.get_actionlist("then");
 			} else {
-				actions = action_get_actionlist(action, "else");
+				actions = action.get_actionlist("else");
 			}
 			if (actions) {
-				actions_run(&item, actions, ctx);
+				actions_run(&item, *actions, ctx);
 			}
 		}
 		if (!matches) {
-			actions = action_get_actionlist(action, "none");
+			actions = action.get_actionlist("none");
 			if (actions) {
-				actions_run(view, actions, NULL);
+				actions_run(view, *actions, NULL);
 			}
 		}
 		break;
 	}
 	case ACTION_TYPE_VIRTUAL_OUTPUT_ADD: {
 		/* TODO: rename this argument to "outputName" */
-		const char *output_name =
-			action_get_str(action, "output_name", NULL);
-		output_virtual_add(output_name,
+		lab_str output_name = action.get_str("output_name", NULL);
+		output_virtual_add(output_name.c(),
 			/*store_wlr_output*/ NULL);
 		break;
 	}
 	case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE: {
 		/* TODO: rename this argument to "outputName" */
-		const char *output_name =
-			action_get_str(action, "output_name", NULL);
-		output_virtual_remove(output_name);
+		lab_str output_name = action.get_str("output_name", NULL);
+		output_virtual_remove(output_name.c());
 		break;
 	}
 	case ACTION_TYPE_AUTO_PLACE:
 		if (view) {
-			enum lab_placement_policy policy =
-				action_get_int(action, "policy", LAB_PLACE_AUTOMATIC);
+			auto policy = (lab_placement_policy)
+				action.get_int("policy", LAB_PLACE_AUTOMATIC);
 			view_place_by_policy(view,
 				/* allow_cursor */ true, policy);
 		}
@@ -1514,10 +1355,10 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		magnifier_set_scale(MAGNIFY_DECREASE);
 		break;
 	case ACTION_TYPE_WARP_CURSOR: {
-		const char *to = action_get_str(action, "to", "output");
-		const char *x = action_get_str(action, "x", "center");
-		const char *y = action_get_str(action, "y", "center");
-		warp_cursor(view, to, x, y);
+		lab_str to = action.get_str("to", "output");
+		lab_str x = action.get_str("x", "center");
+		lab_str y = action.get_str("y", "center");
+		warp_cursor(view, to.c(), x.c(), y.c());
 		break;
 	}
 	case ACTION_TYPE_HIDE_CURSOR:
@@ -1534,15 +1375,15 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		 */
 		wlr_log(WLR_ERROR,
 			"Not executing invalid action (%u)"
-			" This is a BUG. Please report.", action->type);
+			" This is a BUG. Please report.", action.type);
 	}
 }
 
 void
-actions_run(struct view *activator, struct wl_list *actions,
+actions_run(struct view *activator, std::vector<action> &actions,
 		struct cursor_context *cursor_ctx)
 {
-	if (!actions) {
+	if (actions.empty()) {
 		wlr_log(WLR_ERROR, "empty actions");
 		return;
 	}
@@ -1555,18 +1396,17 @@ actions_run(struct view *activator, struct wl_list *actions,
 		ctx = *cursor_ctx;
 	}
 
-	struct action *action;
-	wl_list_for_each(action, actions, link) {
+	for (auto &action : actions) {
 		if (g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER
-				&& action->type != ACTION_TYPE_NEXT_WINDOW
-				&& action->type != ACTION_TYPE_PREVIOUS_WINDOW) {
+				&& action.type != ACTION_TYPE_NEXT_WINDOW
+				&& action.type != ACTION_TYPE_PREVIOUS_WINDOW) {
 			wlr_log(WLR_INFO, "Only NextWindow or PreviousWindow "
 				"actions are accepted while window switching.");
 			continue;
 		}
 
-		wlr_log(WLR_DEBUG, "Handling action %u: %s", action->type,
-			action_names[action->type]);
+		wlr_log(WLR_DEBUG, "Handling action %u: %s", action.type,
+			action_names[action.type]);
 
 		/*
 		 * Refetch view because it may have been changed due to the

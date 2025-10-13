@@ -247,27 +247,26 @@ set_property(const char *str, enum property *variable)
 static void
 fill_window_rule(xmlNode *node)
 {
-	struct window_rule *window_rule = znew(*window_rule);
+	auto window_rule = new struct window_rule();
 	window_rule->window_type = LAB_WINDOW_TYPE_INVALID;
 	wl_list_append(&rc.window_rules, &window_rule->link);
-	wl_list_init(&window_rule->actions);
 
 	xmlNode *child;
 	char *key, *content;
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		/* Criteria */
 		if (!strcmp(key, "identifier")) {
-			xstrdup_replace(window_rule->identifier, content);
+			window_rule->identifier = lab_str(content);
 		} else if (!strcmp(key, "title")) {
-			xstrdup_replace(window_rule->title, content);
+			window_rule->title = lab_str(content);
 		} else if (!strcmp(key, "type")) {
 			window_rule->window_type = parse_window_type(content);
 		} else if (!strcasecmp(key, "matchOnce")) {
 			set_bool(content, &window_rule->match_once);
 		} else if (!strcasecmp(key, "sandboxEngine")) {
-			xstrdup_replace(window_rule->sandbox_engine, content);
+			window_rule->sandbox_engine = lab_str(content);
 		} else if (!strcasecmp(key, "sandboxAppId")) {
-			xstrdup_replace(window_rule->sandbox_app_id, content);
+			window_rule->sandbox_app_id = lab_str(content);
 
 		/* Event */
 		} else if (!strcmp(key, "event")) {
@@ -304,7 +303,7 @@ fill_window_rule(xmlNode *node)
 		}
 	}
 
-	append_parsed_actions(node, &window_rule->actions);
+	append_parsed_actions(node, window_rule->actions);
 }
 
 static void
@@ -407,94 +406,86 @@ fill_regions(xmlNode *node)
 	}
 }
 
-static void
-fill_action_query(struct action *action, xmlNode *node, struct view_query *query)
+static view_query
+parse_query(xmlNode *node)
 {
+	auto query = view_query::create();
 	xmlNode *child;
 	char *key, *content;
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		if (!strcasecmp(key, "identifier")) {
-			xstrdup_replace(query->identifier, content);
+			query.identifier = lab_str(content);
 		} else if (!strcasecmp(key, "title")) {
-			xstrdup_replace(query->title, content);
+			query.title = lab_str(content);
 		} else if (!strcmp(key, "type")) {
-			query->window_type = parse_window_type(content);
+			query.window_type = parse_window_type(content);
 		} else if (!strcasecmp(key, "sandboxEngine")) {
-			xstrdup_replace(query->sandbox_engine, content);
+			query.sandbox_engine = lab_str(content);
 		} else if (!strcasecmp(key, "sandboxAppId")) {
-			xstrdup_replace(query->sandbox_app_id, content);
+			query.sandbox_app_id = lab_str(content);
 		} else if (!strcasecmp(key, "shaded")) {
-			query->shaded = parse_tristate(content);
+			query.shaded = parse_tristate(content);
 		} else if (!strcasecmp(key, "maximized")) {
-			query->maximized = view_axis_parse(content);
+			query.maximized = view_axis_parse(content);
 		} else if (!strcasecmp(key, "iconified")) {
-			query->iconified = parse_tristate(content);
+			query.iconified = parse_tristate(content);
 		} else if (!strcasecmp(key, "focused")) {
-			query->focused = parse_tristate(content);
+			query.focused = parse_tristate(content);
 		} else if (!strcasecmp(key, "omnipresent")) {
-			query->omnipresent = parse_tristate(content);
+			query.omnipresent = parse_tristate(content);
 		} else if (!strcasecmp(key, "tiled")) {
-			query->tiled = lab_edge_parse(content,
+			query.tiled = lab_edge_parse(content,
 				/*tiled*/ true, /*any*/ true);
 		} else if (!strcasecmp(key, "tiled_region")) {
-			xstrdup_replace(query->tiled_region, content);
+			query.tiled_region = lab_str(content);
 		} else if (!strcasecmp(key, "desktop")) {
-			xstrdup_replace(query->desktop, content);
+			query.desktop = lab_str(content);
 		} else if (!strcasecmp(key, "decoration")) {
-			query->decoration = ssd_mode_parse(content);
+			query.decoration = ssd_mode_parse(content);
 		} else if (!strcasecmp(key, "monitor")) {
-			xstrdup_replace(query->monitor, content);
+			query.monitor = lab_str(content);
 		}
 	}
+	return query;
 }
 
 static void
-parse_action_args(xmlNode *node, struct action *action)
+parse_action_args(xmlNode *node, action &action)
 {
 	xmlNode *child;
 	char *key, *content;
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		if (!strcasecmp(key, "query")) {
-			struct wl_list *querylist =
-				action_get_querylist(action, "query");
+			auto querylist = action.get_querylist("query");
 			if (!querylist) {
-				action_arg_add_querylist(action, "query");
-				querylist = action_get_querylist(action, "query");
+				querylist = &action.add_querylist("query");
 			}
-			struct view_query *query = view_query_create();
-			fill_action_query(action, child, query);
-			wl_list_append(querylist, &query->link);
+			querylist->push_back(parse_query(child));
 		} else if (!strcasecmp(key, "then")) {
-			struct wl_list *actions =
-				action_get_actionlist(action, "then");
+			auto actions = action.get_actionlist("then");
 			if (!actions) {
-				action_arg_add_actionlist(action, "then");
-				actions = action_get_actionlist(action, "then");
+				actions = &action.add_actionlist("then");
 			}
-			append_parsed_actions(child, actions);
+			append_parsed_actions(child, *actions);
 		} else if (!strcasecmp(key, "else")) {
-			struct wl_list *actions =
-				action_get_actionlist(action, "else");
+			auto actions = action.get_actionlist("else");
 			if (!actions) {
-				action_arg_add_actionlist(action, "else");
-				actions = action_get_actionlist(action, "else");
+				actions = &action.add_actionlist("else");
 			}
-			append_parsed_actions(child, actions);
+			append_parsed_actions(child, *actions);
 		} else if (!strcasecmp(key, "none")) {
-			struct wl_list *actions =
-				action_get_actionlist(action, "none");
+			auto actions = action.get_actionlist("none");
 			if (!actions) {
-				action_arg_add_actionlist(action, "none");
-				actions = action_get_actionlist(action, "none");
+				actions = &action.add_actionlist("none");
 			}
-			append_parsed_actions(child, actions);
+			append_parsed_actions(child, *actions);
 		} else if (!strcasecmp(key, "name")) {
 			/* Ignore <action name=""> */
 		} else if (lab_xml_node_is_leaf(child)) {
 			/* Handle normal action args */
 			char buffer[256];
 			char *node_name = nodename(child, buffer, sizeof(buffer));
-			action_arg_from_xml_node(action, node_name, content);
+			action.add_arg_from_xml_node(node_name, content);
 		} else {
 			/* Handle nested args like <position><x> in ShowMenu */
 			parse_action_args(child, action);
@@ -502,25 +493,20 @@ parse_action_args(xmlNode *node, struct action *action)
 	}
 }
 
-static struct action *
-parse_action(xmlNode *node)
+static void
+append_parsed_action(xmlNode *node, std::vector<action> &actions)
 {
 	char name[256];
-	struct action *action = NULL;
-
 	if (lab_xml_get_string(node, "name", name, sizeof(name))) {
-		action = action_create(name);
+		auto action = action::append_new(actions, name);
+		if (action) {
+			parse_action_args(node, *action);
+		}
 	}
-	if (!action) {
-		return NULL;
-	}
-
-	parse_action_args(node, action);
-	return action;
 }
 
 void
-append_parsed_actions(xmlNode *node, struct wl_list *list)
+append_parsed_actions(xmlNode *node, std::vector<action> &actions)
 {
 	xmlNode *child;
 	char *key, *content;
@@ -538,10 +524,7 @@ append_parsed_actions(xmlNode *node, struct wl_list *list)
 			 */
 			continue;
 		}
-		struct action *action = parse_action(child);
-		if (action) {
-			wl_list_append(list, &action->link);
-		}
+		append_parsed_action(child, actions);
 	}
 }
 
@@ -565,7 +548,7 @@ fill_keybind(xmlNode *node)
 	lab_xml_get_bool(node, "layoutDependent", &keybind->use_syms_only);
 	lab_xml_get_bool(node, "allowWhenLocked", &keybind->allow_when_locked);
 
-	append_parsed_actions(node, &keybind->actions);
+	append_parsed_actions(node, keybind->actions);
 }
 
 static void
@@ -597,7 +580,7 @@ fill_mousebind(xmlNode *node, const char *context)
 		mousebind->mouse_event = mousebind_event_from_str(buf);
 	}
 
-	append_parsed_actions(node, &mousebind->actions);
+	append_parsed_actions(node, mousebind->actions);
 }
 
 static void
@@ -1216,8 +1199,9 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &rc.window_switcher.outlines);
 	} else if (!strcasecmp(nodename, "allWorkspaces.windowSwitcher")) {
 		if (parse_bool(content, -1) == true) {
-			rc.window_switcher.criteria &=
-				~LAB_VIEW_CRITERIA_CURRENT_WORKSPACE;
+			rc.window_switcher.criteria =
+				(lab_view_criteria)(rc.window_switcher.criteria
+					& ~LAB_VIEW_CRITERIA_CURRENT_WORKSPACE);
 		}
 
 	/* Remove this long term - just a friendly warning for now */
@@ -1431,9 +1415,10 @@ rcxml_init(void)
 	rc.window_switcher.style = WINDOW_SWITCHER_CLASSIC;
 	rc.window_switcher.preview = true;
 	rc.window_switcher.outlines = true;
-	rc.window_switcher.criteria = LAB_VIEW_CRITERIA_CURRENT_WORKSPACE
-		| LAB_VIEW_CRITERIA_ROOT_TOPLEVEL
-		| LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER;
+	rc.window_switcher.criteria =
+		(lab_view_criteria)(LAB_VIEW_CRITERIA_CURRENT_WORKSPACE
+			| LAB_VIEW_CRITERIA_ROOT_TOPLEVEL
+			| LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER);
 
 	rc.resize_indicator = LAB_RESIZE_INDICATOR_NEVER;
 	rc.resize_draw_contents = true;
@@ -1457,7 +1442,6 @@ static void
 load_default_key_bindings(void)
 {
 	struct keybind *k;
-	struct action *action;
 	for (int i = 0; key_combos[i].binding; i++) {
 		struct key_combos *current = &key_combos[i];
 		k = keybind_create(current->binding);
@@ -1465,15 +1449,15 @@ load_default_key_bindings(void)
 			continue;
 		}
 
-		action = action_create(current->action);
-		wl_list_append(&k->actions, &action->link);
+		auto action = action::append_new(k->actions, current->action);
+		assert(action);
 
 		for (size_t j = 0; j < ARRAY_SIZE(current->attributes); j++) {
 			if (!current->attributes[j].name
 					|| !current->attributes[j].value) {
 				break;
 			}
-			action_arg_from_xml_node(action,
+			action->add_arg_from_xml_node(
 				current->attributes[j].name,
 				current->attributes[j].value);
 		}
@@ -1485,7 +1469,6 @@ load_default_mouse_bindings(void)
 {
 	uint32_t count = 0;
 	struct mousebind *m;
-	struct action *action;
 	for (int i = 0; mouse_combos[i].context; i++) {
 		struct mouse_combos *current = &mouse_combos[i];
 		if (i == 0
@@ -1505,15 +1488,15 @@ load_default_mouse_bindings(void)
 			count++;
 		}
 
-		action = action_create(current->action);
-		wl_list_append(&m->actions, &action->link);
+		auto action = action::append_new(m->actions, current->action);
+		assert(action);
 
 		for (size_t j = 0; j < ARRAY_SIZE(current->attributes); j++) {
 			if (!current->attributes[j].name
 					|| !current->attributes[j].value) {
 				break;
 			}
-			action_arg_from_xml_node(action,
+			action->add_arg_from_xml_node(
 				current->attributes[j].name,
 				current->attributes[j].value);
 		}
@@ -1534,17 +1517,16 @@ deduplicate_mouse_bindings(void)
 			}
 			if (mousebind_the_same(existing, current)) {
 				wl_list_remove(&existing->link);
-				action_list_free(&existing->actions);
-				free(existing);
+				delete existing;
 				replaced++;
 				break;
 			}
 		}
 	}
 	wl_list_for_each_safe(current, tmp, &rc.mousebinds, link) {
-		if (wl_list_empty(&current->actions)) {
+		if (current->actions.empty()) {
 			wl_list_remove(&current->link);
-			free(current);
+			delete current;
 			cleared++;
 		}
 	}
@@ -1569,17 +1551,16 @@ deduplicate_key_bindings(void)
 			}
 			if (keybind_the_same(existing, current)) {
 				wl_list_remove(&existing->link);
-				action_list_free(&existing->actions);
-				keybind_destroy(existing);
+				delete existing;
 				replaced++;
 				break;
 			}
 		}
 	}
 	wl_list_for_each_safe(current, tmp, &rc.keybinds, link) {
-		if (wl_list_empty(&current->actions)) {
+		if (current->actions.empty()) {
 			wl_list_remove(&current->link);
-			keybind_destroy(current);
+			delete current;
 			cleared++;
 		}
 	}
@@ -1742,50 +1723,35 @@ static void
 rule_destroy(struct window_rule *rule)
 {
 	wl_list_remove(&rule->link);
-	zfree(rule->identifier);
-	zfree(rule->title);
-	zfree(rule->sandbox_engine);
-	zfree(rule->sandbox_app_id);
-	action_list_free(&rule->actions);
-	zfree(rule);
+	delete rule;
+}
+
+static bool
+is_invalid_action(action &action)
+{
+	if (!action.is_valid()) {
+		wlr_log(WLR_ERROR, "Removed invalid action");
+		return true; // invalid
+	}
+	return false; // valid
 }
 
 static void
 validate_actions(void)
 {
-	struct action *action, *action_tmp;
-
 	struct keybind *keybind;
 	wl_list_for_each(keybind, &rc.keybinds, link) {
-		wl_list_for_each_safe(action, action_tmp, &keybind->actions, link) {
-			if (!action_is_valid(action)) {
-				wl_list_remove(&action->link);
-				action_free(action);
-				wlr_log(WLR_ERROR, "Removed invalid keybind action");
-			}
-		}
+		lab::remove_if(keybind->actions, is_invalid_action);
 	}
 
 	struct mousebind *mousebind;
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
-		wl_list_for_each_safe(action, action_tmp, &mousebind->actions, link) {
-			if (!action_is_valid(action)) {
-				wl_list_remove(&action->link);
-				action_free(action);
-				wlr_log(WLR_ERROR, "Removed invalid mousebind action");
-			}
-		}
+		lab::remove_if(mousebind->actions, is_invalid_action);
 	}
 
 	struct window_rule *rule;
 	wl_list_for_each(rule, &rc.window_rules, link) {
-		wl_list_for_each_safe(action, action_tmp, &rule->actions, link) {
-			if (!action_is_valid(action)) {
-				wl_list_remove(&action->link);
-				action_free(action);
-				wlr_log(WLR_ERROR, "Removed invalid window rule action");
-			}
-		}
+		lab::remove_if(rule->actions, is_invalid_action);
 	}
 }
 
@@ -1814,8 +1780,10 @@ validate(void)
 	/* Window-rule criteria */
 	struct window_rule *rule, *rule_tmp;
 	wl_list_for_each_safe(rule, rule_tmp, &rc.window_rules, link) {
-		if (!rule->identifier && !rule->title && rule->window_type < 0
-				&& !rule->sandbox_engine && !rule->sandbox_app_id) {
+		if (rule->identifier.empty() && rule->title.empty()
+				&& rule->window_type < 0
+				&& rule->sandbox_engine.empty()
+				&& rule->sandbox_app_id.empty()) {
 			wlr_log(WLR_ERROR, "Deleting rule %p as it has no criteria", rule);
 			rule_destroy(rule);
 		}
@@ -1927,15 +1895,13 @@ rcxml_finish(void)
 	struct keybind *k, *k_tmp;
 	wl_list_for_each_safe(k, k_tmp, &rc.keybinds, link) {
 		wl_list_remove(&k->link);
-		action_list_free(&k->actions);
-		keybind_destroy(k);
+		delete k;
 	}
 
 	struct mousebind *m, *m_tmp;
 	wl_list_for_each_safe(m, m_tmp, &rc.mousebinds, link) {
 		wl_list_remove(&m->link);
-		action_list_free(&m->actions);
-		zfree(m);
+		delete m;
 	}
 
 	struct touch_config_entry *touch_config, *touch_config_tmp;
