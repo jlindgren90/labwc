@@ -262,12 +262,11 @@ img_xbm_load(const char *filename, float *rgba)
 	uint32_t color = argb32(rgba);
 
 	/* Read file into memory as it's easier to tokenize that way */
-	struct buf token_buf = grab_file(filename);
-	if (token_buf.len) {
-		auto tokens = tokenize_xbm(token_buf.data);
+	lab_str token_buf = grab_file(filename);
+	if (token_buf) {
+		auto tokens = tokenize_xbm(token_buf.data());
 		pixmap = parse_xbm_tokens(&tokens[0], color);
 	}
-	buf_reset(&token_buf);
 	if (pixmap.data.empty()) {
 		return {};
 	}
