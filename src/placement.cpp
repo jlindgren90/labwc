@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <limits.h>
 #include "config/rcxml.h"
-#include "labwc.h"
 #include "output.h"
 #include "ssd.h"
 #include "view.h"
@@ -125,7 +124,7 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 			continue;
 		}
 
-		struct border margin = ssd_get_margin(v->ssd);
+		struct border margin = v->ssd.get_margin();
 		int x = v->pending.x - margin.left;
 		int y = v->pending.y - margin.top;
 
@@ -222,7 +221,7 @@ build_overlap(struct overlap_bitmap *bmp, struct view *view)
 		}
 
 		/* Find boundaries of the window */
-		struct border margin = ssd_get_margin(v->ssd);
+		struct border margin = v->ssd.get_margin();
 		int lx = v->pending.x - margin.left;
 		int ly = v->pending.y - margin.top;
 		int hx = v->pending.x + margin.right + v->pending.width;
@@ -374,7 +373,7 @@ placement_find_best(struct view *view, struct wlr_box *geometry)
 {
 	assert(view);
 
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = view->ssd.get_margin();
 
 	struct output *output = view->output;
 	if (!output_is_usable(output)) {

@@ -178,7 +178,7 @@ resize_indicator_update(struct view *view)
 			MAX(0, view_box.height - hints.base_height)
 				/ MAX(1, hints.height_inc));
 	} else if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
-		struct border margin = ssd_get_margin(view->ssd);
+		struct border margin = view->ssd.get_margin();
 		snprintf(text, sizeof(text), "%d , %d",
 			view_box.x - margin.left,
 			view_box.y - margin.top);
