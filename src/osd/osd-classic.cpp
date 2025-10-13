@@ -85,7 +85,6 @@ osd_classic_create(struct output *output, reflist<view> &views)
 	}
 
 { /* !goto */
-	struct buf buf = BUF_INIT;
 	int nr_fields = rc.window_switcher.fields.size();
 
 	/* This is the width of the area available for text fields */
@@ -142,14 +141,12 @@ osd_classic_create(struct output *output, reflist<view> &views)
 				node = &icon_buffer->scene_buffer->node;
 				height = icon_size;
 			} else {
-				buf_clear(&buf);
-				osd_field_get_content(&field, &buf, &view);
-
-				if (!string_null_or_empty(buf.data)) {
+				lab_str buf = osd_field_get_content(&field, &view);
+				if (buf) {
 					struct scaled_font_buffer *font_buffer =
 						new scaled_font_buffer(item_root);
 					scaled_font_buffer_update(font_buffer,
-						buf.data, field_width,
+						buf.c(), field_width,
 						&rc.font_osd, text_color, bg_color);
 					node = &font_buffer->scene_buffer->node;
 					height = font_height(&rc.font_osd);
@@ -184,7 +181,6 @@ osd_classic_create(struct output *output, reflist<view> &views)
 
 		y += switcher_theme->item_height;
 	}
-	buf_reset(&buf);
 
 } } error:;
 	/* Center OSD */
