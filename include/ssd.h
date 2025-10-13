@@ -56,8 +56,6 @@ void ssd_enable_shade(struct ssd *ssd, bool enable);
 
 void ssd_update_hovered_button(struct wlr_scene_node *node);
 
-void ssd_button_free(struct ssd_button *button);
-
 /* Public SSD helpers */
 
 /*

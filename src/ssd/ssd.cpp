@@ -11,7 +11,6 @@
 #include <strings.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "node.h"
@@ -140,7 +139,7 @@ struct ssd *
 ssd_create(struct view *view, bool active)
 {
 	assert(view);
-	struct ssd *ssd = znew(*ssd);
+	auto ssd = new struct ssd();
 
 	ssd->view = view;
 	ssd->tree = wlr_scene_tree_create(view->scene_tree);
@@ -282,7 +281,7 @@ ssd_destroy(struct ssd *ssd)
 	ssd_shadow_destroy(ssd);
 	wlr_scene_node_destroy(&ssd->tree->node);
 
-	free(ssd);
+	delete ssd;
 }
 
 enum lab_ssd_mode
