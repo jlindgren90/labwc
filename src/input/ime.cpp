@@ -293,12 +293,12 @@ handle_input_method_commit(struct wl_listener *listener, void *data)
 			text_input->input,
 			input_method->current.commit_text);
 	}
-	if (input_method->current.delete.before_length
-			|| input_method->current.delete.after_length) {
+	if (input_method->current.delete_.before_length
+			|| input_method->current.delete_.after_length) {
 		wlr_text_input_v3_send_delete_surrounding_text(
 			text_input->input,
-			input_method->current.delete.before_length,
-			input_method->current.delete.after_length);
+			input_method->current.delete_.before_length,
+			input_method->current.delete_.after_length);
 	}
 	wlr_text_input_v3_send_done(text_input->input);
 }
