@@ -5,8 +5,6 @@
 #include <string.h>
 #include <wlr/render/pixman.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/mem.h"
-#include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "node.h"
@@ -82,14 +80,11 @@ ssd_titlebar_create(struct ssd *ssd)
 		/* Center vertically within titlebar */
 		int y = (g_theme.titlebar_height - g_theme.window_button_height) / 2;
 
-		wl_list_init(&subtree->buttons_left);
-		wl_list_init(&subtree->buttons_right);
-
 		for (int b = 0; b < rc.nr_title_buttons_left; b++) {
 			enum lab_node_type type = rc.title_buttons_left[b];
 			auto imgs = g_theme.window[active].button_imgs[type];
-			attach_ssd_button(&subtree->buttons_left, type, parent,
-				imgs, x, y, view);
+			subtree->buttons_left.append(ssd_button_create(type,
+				parent, imgs, x, y, view));
 			x += g_theme.window_button_width
 				+ g_theme.window_button_spacing;
 		}
@@ -101,8 +96,8 @@ ssd_titlebar_create(struct ssd *ssd)
 				+ g_theme.window_button_spacing;
 			enum lab_node_type type = rc.title_buttons_right[b];
 			auto imgs = g_theme.window[active].button_imgs[type];
-			attach_ssd_button(&subtree->buttons_right, type, parent,
-				imgs, x, y, view);
+			subtree->buttons_right.append(ssd_button_create(type,
+				parent, imgs, x, y, view));
 		}
 	}
 
@@ -173,13 +168,12 @@ set_squared_corners(struct ssd *ssd, bool enable)
 		wlr_scene_node_set_enabled(&subtree->corner_right->node, !enable);
 
 		/* (Un)round the corner buttons */
-		struct ssd_button *button;
-		wl_list_for_each(button, &subtree->buttons_left, link) {
-			update_button_state(button, LAB_BS_ROUNDED, !enable);
+		for (auto &button : subtree->buttons_left) {
+			update_button_state(&button, LAB_BS_ROUNDED, !enable);
 			break;
 		}
-		wl_list_for_each(button, &subtree->buttons_right, link) {
-			update_button_state(button, LAB_BS_ROUNDED, !enable);
+		for (auto &button : subtree->buttons_right) {
+			update_button_state(&button, LAB_BS_ROUNDED, !enable);
 			break;
 		}
 	}
@@ -192,16 +186,15 @@ set_alt_button_icon(struct ssd *ssd, enum lab_node_type type, bool enable)
 	FOR_EACH_ACTIVE_STATE(active) {
 		struct ssd_titlebar_subtree *subtree = &ssd->titlebar.subtrees[active];
 
-		struct ssd_button *button;
-		wl_list_for_each(button, &subtree->buttons_left, link) {
-			if (button->type == type) {
-				update_button_state(button,
+		for (auto &button : subtree->buttons_left) {
+			if (button.type == type) {
+				update_button_state(&button,
 					LAB_BS_TOGGLED, enable);
 			}
 		}
-		wl_list_for_each(button, &subtree->buttons_right, link) {
-			if (button->type == type) {
-				update_button_state(button,
+		for (auto &button : subtree->buttons_right) {
+			if (button.type == type) {
+				update_button_state(&button,
 					LAB_BS_TOGGLED, enable);
 			}
 		}
@@ -247,16 +240,15 @@ update_visible_buttons(struct ssd *ssd)
 		struct ssd_titlebar_subtree *subtree = &ssd->titlebar.subtrees[active];
 		int button_count = 0;
 
-		struct ssd_button *button;
-		wl_list_for_each(button, &subtree->buttons_left, link) {
-			wlr_scene_node_set_enabled(button->node,
+		for (auto &button : subtree->buttons_left) {
+			wlr_scene_node_set_enabled(button.node,
 				button_count < button_count_left);
 			button_count++;
 		}
 
 		button_count = 0;
-		wl_list_for_each(button, &subtree->buttons_right, link) {
-			wlr_scene_node_set_enabled(button->node,
+		for (auto &button : subtree->buttons_right) {
+			wlr_scene_node_set_enabled(button.node,
 				button_count < button_count_right);
 			button_count++;
 		}
@@ -312,9 +304,8 @@ ssd_titlebar_update(struct ssd *ssd)
 			MAX(width - bg_offset * 2, 0), g_theme.titlebar_height);
 
 		x = g_theme.window_titlebar_padding_width;
-		struct ssd_button *button;
-		wl_list_for_each(button, &subtree->buttons_left, link) {
-			wlr_scene_node_set_position(button->node, x, y);
+		for (auto &button : subtree->buttons_left) {
+			wlr_scene_node_set_position(button.node, x, y);
 			x += g_theme.window_button_width
 				+ g_theme.window_button_spacing;
 		}
@@ -325,10 +316,10 @@ ssd_titlebar_update(struct ssd *ssd)
 
 		x = width - g_theme.window_titlebar_padding_width
 			+ g_theme.window_button_spacing;
-		wl_list_for_each(button, &subtree->buttons_right, link) {
+		for (auto &button : subtree->buttons_right) {
 			x -= g_theme.window_button_width
 				+ g_theme.window_button_spacing;
-			wlr_scene_node_set_position(button->node, x, y);
+			wlr_scene_node_set_position(button.node, x, y);
 		}
 	}
 
@@ -342,7 +333,7 @@ ssd_titlebar_destroy(struct ssd *ssd)
 		return;
 	}
 
-	zfree(ssd->state.title.text);
+	ssd->state.title.text.clear();
 	wlr_scene_node_destroy(&ssd->titlebar.tree->node);
 	ssd->titlebar = (struct ssd_titlebar_scene){0};
 }
@@ -416,14 +407,13 @@ get_title_offsets(struct ssd *ssd, int *offset_left, int *offset_right)
 	*offset_left = padding_width;
 	*offset_right = padding_width;
 
-	struct ssd_button *button;
-	wl_list_for_each(button, &subtree->buttons_left, link) {
-		if (button->node->enabled) {
+	for (auto &button : subtree->buttons_left) {
+		if (button.node->enabled) {
 			*offset_left += button_width + button_spacing;
 		}
 	}
-	wl_list_for_each(button, &subtree->buttons_right, link) {
-		if (button->node->enabled) {
+	for (auto &button : subtree->buttons_right) {
+		if (button.node->enabled) {
 			*offset_right += button_width + button_spacing;
 		}
 	}
@@ -478,7 +468,7 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	if (!title_unchanged) {
-		xstrdup_replace(state->text, view->title.c());
+		state->text = view->title;
 	}
 	ssd_update_title_positions(ssd, offset_left, offset_right);
 }

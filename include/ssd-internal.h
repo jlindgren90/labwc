@@ -4,8 +4,11 @@
 
 #include <wlr/util/box.h>
 #include "common/border.h"
+#include "common/str.h"
 #include "theme.h"
 #include "view.h"
+
+struct ssd_button;
 
 struct ssd_state_title_width {
 	int width;
@@ -13,7 +16,7 @@ struct ssd_state_title_width {
 };
 
 struct ssd_state_title {
-	char *text;
+	lab_str text;
 	/* indexed by enum ssd_active_state */
 	struct ssd_state_title_width dstates[2];
 };
@@ -50,8 +53,8 @@ struct ssd_titlebar_subtree {
 	struct wlr_scene_buffer *corner_right;
 	struct wlr_scene_buffer *bar;
 	struct scaled_font_buffer *title;
-	struct wl_list buttons_left; /* ssd_button.link */
-	struct wl_list buttons_right; /* ssd_button.link */
+	ownlist<ssd_button> buttons_left;
+	ownlist<ssd_button> buttons_right;
 };
 
 struct ssd_titlebar_scene {
@@ -151,7 +154,7 @@ struct ssd {
 	struct border margin;
 };
 
-struct ssd_button {
+struct ssd_button : public ref_guarded<ssd_button> {
 	struct wlr_scene_node *node;
 	enum lab_node_type type;
 
@@ -171,15 +174,13 @@ struct ssd_button {
 	struct scaled_img_buffer *img_buffers[LAB_BS_ALL + 1];
 
 	struct scaled_icon_buffer *window_icon;
-
-	struct wl_list link; /* ssd_titlebar_subtree.buttons_{left,right} */
 };
 
 struct wlr_buffer;
 struct wlr_scene_tree;
 
 /* SSD internal helpers to create various SSD elements */
-struct ssd_button *attach_ssd_button(struct wl_list *button_parts,
+struct ssd_button *ssd_button_create(
 	enum lab_node_type type, struct wlr_scene_tree *parent,
 	lab_img imgs[LAB_BS_ALL + 1], int x, int y, struct view *view);
 
