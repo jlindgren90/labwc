@@ -2,8 +2,6 @@
 
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/list.h"
-#include "common/mem.h"
 #include "node.h"
 #include "scaled-buffer/scaled-icon-buffer.h"
 #include "scaled-buffer/scaled-img-buffer.h"
@@ -13,7 +11,7 @@
 /* Internal API */
 
 struct ssd_button *
-attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
+ssd_button_create(enum lab_node_type type,
 		struct wlr_scene_tree *parent, lab_img imgs[LAB_BS_ALL + 1],
 		int x, int y, struct view *view)
 {
@@ -21,11 +19,10 @@ attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
 	wlr_scene_node_set_position(&root->node, x, y);
 
 	assert(node_type_contains(LAB_NODE_BUTTON, type));
-	struct ssd_button *button = znew(*button);
+	auto button = new ssd_button();
 	button->node = &root->node;
 	button->type = type;
 	node_descriptor_create(&root->node, type, view, button);
-	wl_list_append(button_parts, &button->link);
 
 	/* Hitbox */
 	float invisible[4] = { 0, 0, 0, 0 };
@@ -75,11 +72,4 @@ attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
 	}
 
 	return button;
-}
-
-/* called from node descriptor destroy */
-void ssd_button_free(struct ssd_button *button)
-{
-	wl_list_remove(&button->link);
-	free(button);
 }
