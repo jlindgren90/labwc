@@ -100,8 +100,7 @@ create_title(struct wlr_scene_tree *parent,
 		const char *title, const float *title_color,
 		const float *bg_color, int y)
 {
-	struct scaled_font_buffer *buffer =
-		scaled_font_buffer_create(parent);
+	struct scaled_font_buffer *buffer = new scaled_font_buffer(parent);
 	scaled_font_buffer_update(buffer, title,
 		switcher_theme->item_width - 2 * switcher_theme->item_padding,
 		&rc.font_osd, title_color, bg_color);
@@ -172,7 +171,7 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 	/* icon */
 	int icon_size = switcher_theme->item_icon_size;
 	struct scaled_icon_buffer *icon_buffer =
-		scaled_icon_buffer_create(item->tree, icon_size, icon_size);
+		new scaled_icon_buffer(item->tree, icon_size, icon_size);
 	scaled_icon_buffer_set_view(icon_buffer, view);
 	int x = (switcher_theme->item_width - icon_size) / 2;
 	int y = title_y - padding - icon_size + 10; /* slide by 10px */

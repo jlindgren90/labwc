@@ -2,17 +2,27 @@
 #ifndef LABWC_SCALED_IMG_BUFFER_H
 #define LABWC_SCALED_IMG_BUFFER_H
 
-struct wlr_scene_tree;
+#include "scaled-buffer.h"
+
 struct wlr_scene_node;
-struct wlr_scene_buffer;
 struct lab_img;
 
-struct scaled_img_buffer {
-	struct scaled_buffer *scaled_buffer;
-	struct wlr_scene_buffer *scene_buffer;
-	struct lab_img *img;
-	int width;
-	int height;
+/*
+ * Auto scaling image buffer, providing a wlr_scene_buffer node for display.
+ * The constructor clones the lab_img passed as the image source, so callers are
+ * free to destroy it.
+ */
+struct scaled_img_buffer : public scaled_buffer {
+	lab_img *img = nullptr;
+	int width = 0;
+	int height = 0;
+
+	scaled_img_buffer(wlr_scene_tree *parent, lab_img *img, int width,
+		int height);
+	~scaled_img_buffer();
+
+	refptr<lab_data_buffer> create_buffer(double scale) override;
+	bool equal(scaled_buffer &other) override;
 };
 
 /*
@@ -51,17 +61,5 @@ struct scaled_img_buffer {
  *           ´----------------------------------`       of two given lab_img instances
  *
  */
-
-/*
- * Create an auto scaling image buffer, providing a wlr_scene_buffer node for
- * display. It gets destroyed automatically when the backing scaled_buffer
- * is being destroyed which in turn happens automatically when the backing
- * wlr_scene_buffer (or one of its parents) is being destroyed.
- *
- * This function clones the lab_img passed as the image source, so callers are
- * free to destroy it.
- */
-struct scaled_img_buffer *scaled_img_buffer_create(struct wlr_scene_tree *parent,
-	struct lab_img *img, int width, int height);
 
 #endif /* LABWC_SCALED_IMG_BUFFER_H */

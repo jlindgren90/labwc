@@ -76,7 +76,7 @@ osd_classic_create(struct output *output, reflist<view> &views)
 		}
 
 		struct scaled_font_buffer *font_buffer =
-			scaled_font_buffer_create(output->osd_scene.tree);
+			new scaled_font_buffer(output->osd_scene.tree);
 		wlr_scene_node_set_position(&font_buffer->scene_buffer->node,
 			x, y + (switcher_theme->item_height - font_height(&font)) / 2);
 		scaled_font_buffer_update(font_buffer, workspace_name, 0,
@@ -137,7 +137,7 @@ osd_classic_create(struct output *output, reflist<view> &views)
 				int icon_size = MIN(field_width,
 					switcher_theme->item_icon_size);
 				struct scaled_icon_buffer *icon_buffer =
-					scaled_icon_buffer_create(item_root,
+					new scaled_icon_buffer(item_root,
 						icon_size, icon_size);
 				scaled_icon_buffer_set_view(icon_buffer, &view);
 				node = &icon_buffer->scene_buffer->node;
@@ -148,7 +148,7 @@ osd_classic_create(struct output *output, reflist<view> &views)
 
 				if (!string_null_or_empty(buf.data)) {
 					struct scaled_font_buffer *font_buffer =
-						scaled_font_buffer_create(item_root);
+						new scaled_font_buffer(item_root);
 					scaled_font_buffer_update(font_buffer,
 						buf.data, field_width,
 						&rc.font_osd, text_color, bg_color);
