@@ -88,8 +88,8 @@ enum lab_node_type
 ssd_handle::get_resizing_type(struct wlr_cursor *cursor)
 {
 	CHECK_PTR_OR_RET_VAL(impl, ssd, LAB_NODE_NONE);
-	struct view *view = ssd->view;
-	if (!view || !cursor || !view->ssd_mode || view->fullscreen) {
+	auto view = &ssd->view;
+	if (!cursor || !view->ssd_mode || view->fullscreen) {
 		return LAB_NODE_NONE;
 	}
 
@@ -137,20 +137,17 @@ ssd_handle::get_resizing_type(struct wlr_cursor *cursor)
 }
 
 void
-ssd_handle::create(struct view *view, bool active)
+ssd_handle::create(view &view, bool active)
 {
-	assert(view);
-	auto ssd = impl.set_new();
-
-	ssd->view = view;
-	ssd->tree = wlr_scene_tree_create(view->scene_tree);
+	auto ssd = impl.set_new(view);
+	ssd->tree = wlr_scene_tree_create(view.scene_tree);
 
 	/*
 	 * Attach node_descriptor to the root node so that get_cursor_context()
 	 * detect cursor hovering on borders and extents.
 	 */
 	node_descriptor_create(&ssd->tree->node,
-		LAB_NODE_SSD_ROOT, view, /*data*/ NULL);
+		LAB_NODE_SSD_ROOT, &view, /*data*/ NULL);
 
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
 	ssd->titlebar.height = g_theme.titlebar_height;
@@ -164,14 +161,14 @@ ssd_handle::create(struct view *view, bool active)
 	 */
 	ssd_titlebar_create(ssd);
 	ssd_border_create(ssd);
-	if (!view_titlebar_visible(view)) {
+	if (!view_titlebar_visible(&view)) {
 		/* Ensure we keep the old state on Reconfigure or when exiting fullscreen */
 		set_titlebar(false);
 	}
-	ssd->margin = ssd_thickness(view);
+	ssd->margin = ssd_thickness(&view);
 	set_active(active);
-	enable_keybind_inhibit_indicator(view->inhibits_keybinds);
-	ssd->state.geometry = view->current;
+	enable_keybind_inhibit_indicator(view.inhibits_keybinds);
+	ssd->state.geometry = view.current;
 }
 
 struct border
@@ -192,7 +189,7 @@ void
 ssd_handle::update_margin()
 {
 	CHECK_PTR_OR_RET(impl, ssd);
-	ssd->margin = ssd_thickness(ssd->view);
+	ssd->margin = ssd_thickness(&ssd->view);
 }
 
 void
@@ -206,8 +203,7 @@ void
 ssd_handle::update_geometry()
 {
 	CHECK_PTR_OR_RET(impl, ssd);
-	struct view *view = ssd->view;
-	assert(view);
+	auto view = &ssd->view;
 
 	struct wlr_box cached = ssd->state.geometry;
 	struct wlr_box current = view->current;
@@ -260,14 +256,14 @@ ssd_handle::set_titlebar(bool enabled)
 	ssd_border_update(ssd);
 	ssd_extents_update(ssd);
 	ssd_shadow_update(ssd);
-	ssd->margin = ssd_thickness(ssd->view);
+	ssd->margin = ssd_thickness(&ssd->view);
 }
 
 void
 ssd_handle::destroy_impl(struct ssd *ssd)
 {
 	/* Maybe reset hover view */
-	struct view *view = ssd->view;
+	auto view = &ssd->view;
 	if (g_server.hovered_button && node_view_from_node(
 			g_server.hovered_button->node) == view) {
 		g_server.hovered_button = NULL;
