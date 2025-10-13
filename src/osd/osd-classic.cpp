@@ -3,7 +3,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
-#include "common/array.h"
 #include "common/buf.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
@@ -15,6 +14,7 @@
 #include "scaled-buffer/scaled-font-buffer.h"
 #include "scaled-buffer/scaled-icon-buffer.h"
 #include "theme.h"
+#include "view.h"
 #include "workspaces.h"
 
 struct osd_classic_scene_item {
@@ -23,7 +23,7 @@ struct osd_classic_scene_item {
 };
 
 static void
-osd_classic_create(struct output *output, struct wl_array *views)
+osd_classic_create(struct output *output, reflist<view> &views)
 {
 	assert(!output->osd_scene.tree);
 
@@ -36,7 +36,7 @@ osd_classic_create(struct output *output, struct wl_array *views)
 	if (switcher_theme->width_is_percent) {
 		w = output->wlr_output->width * switcher_theme->width / 100;
 	}
-	int h = wl_array_len(views) * switcher_theme->item_height
+	int h = views.size() * switcher_theme->item_height
 		+ 2 * g_theme.osd_border_width + 2 * switcher_theme->padding;
 	if (show_workspace) {
 		/* workspace indicator */
@@ -100,11 +100,10 @@ osd_classic_create(struct output *output, struct wl_array *views)
 
 { /* !goto */
 	/* Draw text for each node */
-	struct view **view;
-	wl_array_for_each(view, views) {
+	for (auto &view : views) {
 		struct osd_classic_scene_item *item =
 			wl_array_add(&output->osd_scene.items, sizeof(*item));
-		item->view = *view;
+		item->view = &view;
 		/*
 		 *    OSD border
 		 * +---------------------------------+
@@ -140,12 +139,12 @@ osd_classic_create(struct output *output, struct wl_array *views)
 				struct scaled_icon_buffer *icon_buffer =
 					scaled_icon_buffer_create(item_root,
 						icon_size, icon_size);
-				scaled_icon_buffer_set_view(icon_buffer, *view);
+				scaled_icon_buffer_set_view(icon_buffer, &view);
 				node = &icon_buffer->scene_buffer->node;
 				height = icon_size;
 			} else {
 				buf_clear(&buf);
-				osd_field_get_content(field, &buf, *view);
+				osd_field_get_content(field, &buf, &view);
 
 				if (!string_null_or_empty(buf.data)) {
 					struct scaled_font_buffer *font_buffer =
