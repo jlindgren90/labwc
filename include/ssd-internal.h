@@ -103,7 +103,7 @@ struct ssd_titlebar_scene {
  *    +--...
  */
 struct ssd {
-	struct view *view;
+	struct view &view; /* owning view */
 	struct wlr_scene_tree *tree;
 
 	/*
