@@ -443,12 +443,12 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	struct view *view = ssd->view;
-	if (string_null_or_empty(view->title)) {
+	if (!view->title) {
 		return;
 	}
 
 	struct ssd_state_title *state = &ssd->state.title;
-	bool title_unchanged = state->text && !strcmp(view->title, state->text);
+	bool title_unchanged = (view->title == state->text);
 
 	int offset_left, offset_right;
 	get_title_offsets(ssd, &offset_left, &offset_right);
@@ -475,9 +475,8 @@ ssd_update_title(struct ssd *ssd)
 		}
 
 		const float bg_color[4] = {0, 0, 0, 0}; /* ignored */
-		scaled_font_buffer_update(subtree->title, view->title,
-			title_bg_width, font,
-			text_color, bg_color);
+		scaled_font_buffer_update(subtree->title, view->title.c(),
+			title_bg_width, font, text_color, bg_color);
 
 		/* And finally update the cache */
 		dstate->width = subtree->title->width;
@@ -485,7 +484,7 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	if (!title_unchanged) {
-		xstrdup_replace(state->text, view->title);
+		xstrdup_replace(state->text, view->title.c());
 	}
 	ssd_update_title_positions(ssd, offset_left, offset_right);
 }
