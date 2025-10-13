@@ -1,4 +1,4 @@
 labwc_sources += files(
-  'kde-deco.c',
-  'xdg-deco.c',
+  'kde-deco.cpp',
+  'xdg-deco.cpp',
 )
