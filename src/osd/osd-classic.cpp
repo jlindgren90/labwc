@@ -95,7 +95,7 @@ osd_classic_create(struct output *output, reflist<view> &views)
 	for (auto &view : views) {
 		output->osd_scene.classic_items.push_back({});
 		auto item = &output->osd_scene.classic_items.back();
-		item->view = &view;
+		item->view.reset(&view);
 		/*
 		 *    OSD border
 		 * +---------------------------------+

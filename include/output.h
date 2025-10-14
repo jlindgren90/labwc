@@ -12,12 +12,12 @@
 struct region;
 
 struct osd_classic_scene_item {
-	struct view *view;
+	weakptr<struct view> view;
 	struct wlr_scene_node *highlight_outline;
 };
 
 struct osd_thumbnail_scene_item {
-	struct view *view;
+	weakptr<struct view> view;
 	struct wlr_scene_tree *tree;
 	struct scaled_font_buffer *normal_title;
 	struct scaled_font_buffer *active_title;
