@@ -472,7 +472,7 @@ lab_layer_surface::handle_new_popup(void *data)
 {
 	auto wlr_popup = (wlr_xdg_popup *)data;
 	auto surface = this->scene_layer_surface;
-	auto output = (::output *)surface->layer_surface->output->data;
+	auto output = (struct output *)surface->layer_surface->output->data;
 
 	int lx, ly;
 	wlr_scene_node_coords(&surface->tree->node, &lx, &ly);
@@ -523,7 +523,7 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 	auto surface = new lab_layer_surface();
 	surface->layer_surface = layer_surface;
 
-	auto output = (::output *)layer_surface->output->data;
+	auto output = (struct output *)layer_surface->output->data;
 
 	wlr_fractional_scale_v1_notify_scale(layer_surface->surface,
 		output->wlr_output->scale);

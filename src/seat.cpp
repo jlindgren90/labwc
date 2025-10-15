@@ -112,7 +112,7 @@ configure_libinput(struct wlr_input_device *wlr_input_device)
 		wlr_log(WLR_ERROR, "no wlr_input_device");
 		return;
 	}
-	auto input = (::input *)wlr_input_device->data;
+	auto input = (struct input *)wlr_input_device->data;
 
 	/* Set scroll factor to 1.0 for Wayland/X11 backends or virtual pointers */
 	if (!wlr_input_device_is_libinput(wlr_input_device)) {

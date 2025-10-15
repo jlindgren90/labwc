@@ -145,7 +145,7 @@ void
 session_lock::handle_new_surface(void *data)
 {
 	auto lock_surface = (wlr_session_lock_surface_v1 *)data;
-	auto output = (::output *)lock_surface->output->data;
+	auto output = (struct output *)lock_surface->output->data;
 	struct session_lock_output *lock_output =
 		lock_output_for_output(manager, output);
 	if (!lock_output) {

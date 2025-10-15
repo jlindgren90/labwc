@@ -409,7 +409,7 @@ handle_new_output(struct wl_listener *listener, void *data)
 	 * This event is raised by the backend when a new output (aka display
 	 * or monitor) becomes available.
 	 */
-	auto wlr_output = (::wlr_output *)data;
+	auto wlr_output = (struct wlr_output *)data;
 
 	for (auto &output : g_server.outputs) {
 		if (output.wlr_output == wlr_output) {
@@ -856,7 +856,7 @@ static void
 handle_gamma_control_set_gamma(struct wl_listener *listener, void *data)
 {
 	auto event = (const wlr_gamma_control_manager_v1_set_gamma_event *)data;
-	auto output = (::output *)event->output->data;
+	auto output = (struct output *)event->output->data;
 	if (!output_is_usable(output)) {
 		return;
 	}
@@ -1070,7 +1070,7 @@ void
 handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
 {
 	auto event = (wlr_output_power_v1_set_mode_event *)data;
-	auto output = (::output *)event->output->data;
+	auto output = (struct output *)event->output->data;
 	assert(output);
 
 	switch (event->mode) {

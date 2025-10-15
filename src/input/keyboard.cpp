@@ -571,7 +571,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 static int
 handle_keybind_repeat(void *data)
 {
-	auto keyboard = (::keyboard *)data;
+	auto keyboard = (struct keyboard *)data;
 	assert(keyboard->keybind_repeat);
 	assert(keyboard->keybind_repeat_rate > 0);
 

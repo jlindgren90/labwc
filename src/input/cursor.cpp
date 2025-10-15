@@ -1359,7 +1359,7 @@ handle_axis(struct wl_listener *listener, void *data)
 	/* input->scroll_factor is set for pointer/touch devices */
 	assert(event->pointer->base.type == WLR_INPUT_DEVICE_POINTER
 		|| event->pointer->base.type == WLR_INPUT_DEVICE_TOUCH);
-	auto input = (::input *)event->pointer->base.data;
+	auto input = (struct input *)event->pointer->base.data;
 	double scroll_factor = input->scroll_factor;
 
 	bool notify = process_cursor_axis(event->orientation, event->delta,
@@ -1394,7 +1394,7 @@ cursor_emulate_axis(struct wlr_input_device *device,
 		double delta_discrete, enum wl_pointer_axis_source source,
 		uint32_t time_msec)
 {
-	auto input = (::input *)device->data;
+	auto input = (struct input *)device->data;
 
 	double scroll_factor = 1.0;
 	/* input->scroll_factor is set for pointer/touch devices */
