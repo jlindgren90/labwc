@@ -157,7 +157,7 @@ session_lock::handle_new_surface(void *data)
 	struct wlr_scene_tree *surface_tree =
 		wlr_scene_subsurface_tree_create(lock_output->tree, lock_surface->surface);
 	node_descriptor_create(&surface_tree->node,
-		LAB_NODE_SESSION_LOCK_SURFACE, /*view*/ NULL, /*data*/ NULL);
+		LAB_NODE_SESSION_LOCK_SURFACE, /*view*/ NULL);
 
 	lock_output->surface.reset(new session_lock_surface(lock_output,
 		lock_surface));
