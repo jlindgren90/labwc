@@ -768,8 +768,6 @@ xdg_toplevel_view_map(struct view *view)
 		return;
 	}
 
-	view->mapped = true;
-
 	/*
 	 * An output should have been chosen when the surface was first
 	 * created, but take one more opportunity to assign an output if not.
@@ -777,8 +775,16 @@ xdg_toplevel_view_map(struct view *view)
 	if (!view->output) {
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
-	struct wlr_xdg_surface *xdg_surface = xdg_surface_from_view(view);
-	wlr_scene_node_set_enabled(&view->scene_tree->node, true);
+
+	/*
+	 * For initially minimized views, we do not set view->mapped
+	 * nor enable the scene node. All other map logic (positioning,
+	 * creating foreign toplevel, etc.) happens as normal.
+	 */
+	if (!view->minimized) {
+		view->mapped = true;
+		wlr_scene_node_set_enabled(&view->scene_tree->node, true);
+	}
 
 	if (!view->foreign_toplevel) {
 		init_foreign_toplevel(view);
@@ -800,6 +806,8 @@ xdg_toplevel_view_map(struct view *view)
 		 * dimensions remain zero until handle_commit().
 		 */
 		if (wlr_box_empty(&view->pending)) {
+			struct wlr_xdg_surface *xdg_surface =
+				xdg_surface_from_view(view);
 			view->pending.width = xdg_surface->geometry.width;
 			view->pending.height = xdg_surface->geometry.height;
 		}
