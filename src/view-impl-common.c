@@ -55,8 +55,8 @@ view_impl_map(struct view *view)
 	 */
 	desktop_update_top_layer_visibility(view->server);
 
-	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s",
-		view->app_id, view->title);
+	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s", view->st->app_id,
+		view->st->title);
 }
 
 void
