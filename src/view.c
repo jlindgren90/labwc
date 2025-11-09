@@ -171,7 +171,7 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (!query_tristate_match(query->iconified, view->minimized)) {
+	if (!query_tristate_match(query->iconified, view->st->minimized)) {
 		return false;
 	}
 
@@ -424,7 +424,7 @@ view_is_focusable(struct view *view)
 	switch (view_wants_focus(view)) {
 	case VIEW_WANTS_FOCUS_ALWAYS:
 	case VIEW_WANTS_FOCUS_LIKELY:
-		return (view->mapped || view->minimized);
+		return (view->mapped || view->st->minimized);
 	default:
 		return false;
 	}
@@ -776,22 +776,12 @@ static void
 _minimize(struct view *view, bool minimized)
 {
 	assert(view);
-	if (view->minimized == minimized) {
+	if (view->st->minimized == minimized) {
 		return;
 	}
 
-	if (view->impl->minimize) {
-		view->impl->minimize(view, minimized);
-	}
-
-	view->minimized = minimized;
+	view_minimize_internal(view->id, minimized);
 	wl_signal_emit_mutable(&view->events.minimized, NULL);
-
-	if (minimized) {
-		view->impl->unmap(view, /* client_request */ false);
-	} else {
-		view->impl->map(view);
-	}
 }
 
 static void
@@ -1074,8 +1064,7 @@ view_cascade(struct view *view)
 		for_each_view(other_view, &view->server->views,
 				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 			struct wlr_box other = ssd_max_extents(other_view);
-			if (other_view == view
-					|| view->minimized
+			if (other_view == view || view->st->minimized
 					|| !box_intersects(&candidate, &other)) {
 				continue;
 			}
@@ -2411,14 +2400,14 @@ static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.map);
-	view->impl->map(view);
+	view_map(view->id);
 }
 
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.unmap);
-	view->impl->unmap(view, /* client_request */ true);
+	view_unmap(view->id, /* client_request */ true);
 }
 
 void

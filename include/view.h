@@ -95,17 +95,8 @@ struct view_size_hints {
 struct view_impl {
 	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
-	void (*map)(struct view *view);
 	void (*set_activated)(struct view *view, bool activated);
 	void (*notify_tiled)(struct view *view);
-	/*
-	 * client_request is true if the client unmapped its own
-	 * surface; false if we are just minimizing the view. The two
-	 * cases are similar but have subtle differences (e.g., when
-	 * minimizing we don't destroy the foreign toplevel handle).
-	 */
-	void (*unmap)(struct view *view, bool client_request);
-	void (*minimize)(struct view *view, bool minimize);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
@@ -169,7 +160,6 @@ struct view {
 	enum lab_ssd_mode ssd_mode;
 	enum ssd_preference ssd_preference;
 	bool shaded;
-	bool minimized;
 	bool tearing_hint;
 	enum lab_tristate force_tearing;
 	bool visible_on_all_workspaces;

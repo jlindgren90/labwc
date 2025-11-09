@@ -570,12 +570,6 @@ xdg_toplevel_view_maximize(struct view *view, int maximized)
 	}
 }
 
-static void
-xdg_toplevel_view_minimize(struct view *view, bool minimized)
-{
-	/* noop */
-}
-
 static struct view *
 xdg_toplevel_view_get_parent(struct view *view)
 {
@@ -615,7 +609,7 @@ xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
 		if (view->type != LAB_XDG_SHELL_VIEW) {
 			continue;
 		}
-		if (!view->mapped && !view->minimized) {
+		if (!view->mapped && !view->st->minimized) {
 			continue;
 		}
 		if (top_parent_of(view) != toplevel) {
@@ -731,7 +725,7 @@ set_initial_position(struct view *view)
 	view_place_by_policy(view, /* allow_cursor */ true, rc.placement_policy);
 }
 
-static void
+void
 xdg_toplevel_view_map(struct view *view)
 {
 	if (view->mapped) {
@@ -751,7 +745,7 @@ xdg_toplevel_view_map(struct view *view)
 	 * nor enable the scene node. All other map logic (positioning,
 	 * creating foreign toplevel, etc.) happens as normal.
 	 */
-	if (!view->minimized) {
+	if (!view->st->minimized) {
 		view->mapped = true;
 		wlr_scene_node_set_enabled(&view->scene_tree->node, true);
 	}
@@ -803,8 +797,8 @@ xdg_toplevel_view_map(struct view *view)
 	view->been_mapped = true;
 }
 
-static void
-xdg_toplevel_view_unmap(struct view *view, bool client_request)
+void
+xdg_toplevel_view_unmap(struct view *view, int client_request)
 {
 	if (view->mapped) {
 		view->mapped = false;
@@ -840,11 +834,8 @@ xdg_view_get_pid(struct view *view)
 static const struct view_impl xdg_toplevel_view_impl = {
 	.configure = xdg_toplevel_view_configure,
 	.close = xdg_toplevel_view_close,
-	.map = xdg_toplevel_view_map,
 	.set_activated = xdg_toplevel_view_set_activated,
 	.notify_tiled = xdg_toplevel_view_notify_tiled,
-	.unmap = xdg_toplevel_view_unmap,
-	.minimize = xdg_toplevel_view_minimize,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,
 	.append_children = xdg_toplevel_view_append_children,

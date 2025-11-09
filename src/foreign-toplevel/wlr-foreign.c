@@ -154,7 +154,7 @@ handle_minimized(struct wl_listener *listener, void *data)
 	assert(wlr_toplevel->handle);
 
 	wlr_foreign_toplevel_handle_v1_set_minimized(wlr_toplevel->handle,
-		wlr_toplevel->view->minimized);
+		wlr_toplevel->view->st->minimized);
 }
 
 static void

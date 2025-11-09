@@ -30,6 +30,7 @@ pub struct ViewState {
     title: *const c_char,
     fullscreen: bool,
     maximized: ViewAxis,
+    minimized: bool,
 }
 
 #[derive(Default)]
@@ -39,6 +40,33 @@ pub struct View {
     app_id: CString,
     title: CString,
     state: ViewState,
+}
+
+impl View {
+    fn map(&self) {
+        unsafe {
+            if self.is_xwayland {
+                xwayland_view_map(self.c_ptr);
+            } else {
+                xdg_toplevel_view_map(self.c_ptr);
+            }
+        }
+    }
+
+    // client_request is true if the client unmapped its own surface;
+    // false if we are just minimizing the view. The two cases are
+    // similar but have subtle differences (e.g., when minimizing we
+    // don't destroy the foreign toplevel handle).
+    //
+    fn unmap(&self, client_request: bool) {
+        unsafe {
+            if self.is_xwayland {
+                xwayland_view_unmap(self.c_ptr, client_request as i32);
+            } else {
+                xdg_toplevel_view_unmap(self.c_ptr, client_request as i32);
+            }
+        }
+    }
 }
 
 #[derive(Default)]
@@ -103,6 +131,20 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_map(id: ViewId) {
+    if let Some(view) = views().by_id.get(&id) {
+        view.map()
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_unmap(id: ViewId, client_request: bool) {
+    if let Some(view) = views().by_id.get(&id) {
+        view.unmap(client_request)
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         unsafe {
@@ -135,6 +177,25 @@ pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
         view.state.maximized = maximized;
         unsafe {
             view_notify_maximized(view.c_ptr);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_minimize_internal(id: ViewId, minimized: bool) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        unsafe {
+            if view.is_xwayland {
+                xwayland_view_minimize(view.c_ptr, minimized as i32);
+            } else {
+                // no-op for xdg-shell view
+            }
+        }
+        view.state.minimized = minimized;
+        if minimized {
+            view.unmap(/*client_request*/ false);
+        } else {
+            view.map();
         }
     }
 }

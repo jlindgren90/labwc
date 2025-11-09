@@ -79,7 +79,7 @@ desktop_focus_view(struct view *view, bool raise)
 		return;
 	}
 
-	if (view->minimized) {
+	if (view->st->minimized) {
 		/*
 		 * Unminimizing will map the view which triggers a call to this
 		 * function again (with raise=true).
@@ -228,7 +228,7 @@ desktop_update_top_layer_visibility(struct server *server)
 	 */
 	uint64_t outputs_covered = 0;
 	for_each_view(view, &server->views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
-		if (view->minimized) {
+		if (view->st->minimized) {
 			continue;
 		}
 		if (!output_is_usable(view->output)) {

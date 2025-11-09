@@ -39,7 +39,6 @@ static_assert(ARRAY_SIZE(atom_names) == ATOM_COUNT, "atom names out of sync");
 static xcb_atom_t atoms[ATOM_COUNT] = {0};
 
 static void set_surface(struct view *view, struct wlr_surface *surface);
-static void xwayland_view_unmap(struct view *view, bool client_request);
 
 static struct xwayland_view *
 xwayland_view_from_view(struct view *view)
@@ -792,7 +791,7 @@ set_surface(struct view *view, struct wlr_surface *surface)
 	}
 }
 
-static void
+void
 xwayland_view_map(struct view *view)
 {
 	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
@@ -818,7 +817,7 @@ xwayland_view_map(struct view *view)
 	 * nor enable the scene node. All other map logic (positioning,
 	 * creating foreign toplevel, etc.) happens as normal.
 	 */
-	if (!view->minimized) {
+	if (!view->st->minimized) {
 		view->mapped = true;
 		wlr_scene_node_set_enabled(&view->scene_tree->node, true);
 	}
@@ -884,8 +883,8 @@ xwayland_view_map(struct view *view)
 	}
 }
 
-static void
-xwayland_view_unmap(struct view *view, bool client_request)
+void
+xwayland_view_unmap(struct view *view, int client_request)
 {
 	if (!view->mapped) {
 		goto out;
@@ -918,8 +917,8 @@ xwayland_view_maximize(struct view *view, int maximized)
 		maximized & VIEW_AXIS_HORIZONTAL, maximized & VIEW_AXIS_VERTICAL);
 }
 
-static void
-xwayland_view_minimize(struct view *view, bool minimized)
+void
+xwayland_view_minimize(struct view *view, int minimized)
 {
 	wlr_xwayland_surface_set_minimized(xwayland_surface_from_view(view),
 		minimized);
@@ -959,7 +958,7 @@ xwayland_view_append_children(struct view *self, struct wl_array *children)
 		if (!view->surface) {
 			continue;
 		}
-		if (!view->mapped && !view->minimized) {
+		if (!view->mapped && !view->st->minimized) {
 			continue;
 		}
 		if (top_parent_of(view) != surface) {
@@ -1012,10 +1011,7 @@ xwayland_view_get_pid(struct view *view)
 static const struct view_impl xwayland_view_impl = {
 	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
-	.map = xwayland_view_map,
 	.set_activated = xwayland_view_set_activated,
-	.unmap = xwayland_view_unmap,
-	.minimize = xwayland_view_minimize,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,
 	.append_children = xwayland_view_append_children,

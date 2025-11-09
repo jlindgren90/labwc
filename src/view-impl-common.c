@@ -29,7 +29,7 @@ void
 view_impl_map(struct view *view)
 {
 	/* Leave minimized, if minimized before map */
-	if (!view->minimized) {
+	if (!view->st->minimized) {
 		desktop_focus_view(view, /*raise*/ true);
 	}
 	if (!view->been_mapped) {
