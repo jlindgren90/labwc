@@ -34,13 +34,13 @@ ssd_thickness(struct view *view)
 	 * in border-only deco mode as view->ssd would only be set
 	 * after ssd_create() returns.
 	 */
-	if (!view->ssd_mode || view->fullscreen) {
+	if (!view->ssd_mode || view->st->fullscreen) {
 		return (struct border){ 0 };
 	}
 
 	struct theme *theme = view->server->theme;
 
-	if (view->maximized == VIEW_AXIS_BOTH) {
+	if (view->st->maximized == VIEW_AXIS_BOTH) {
 		struct border thickness = { 0 };
 		if (view_titlebar_visible(view)) {
 			thickness.top += theme->titlebar_height;
@@ -91,7 +91,7 @@ enum lab_node_type
 ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 {
 	struct view *view = ssd ? ssd->view : NULL;
-	if (!view || !cursor || !view->ssd_mode || view->fullscreen) {
+	if (!view || !cursor || !view->ssd_mode || view->st->fullscreen) {
 		return LAB_NODE_NONE;
 	}
 
@@ -220,7 +220,7 @@ ssd_update_geometry(struct ssd *ssd)
 	bool update_extents = update_area
 		|| current.x != cached.x || current.y != cached.y;
 
-	bool maximized = view->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
 
 	bool state_changed = ssd->state.was_maximized != maximized

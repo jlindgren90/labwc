@@ -1084,8 +1084,8 @@ run_action(struct view *view, struct server *server, struct action *action,
 			/* Config parsing makes sure that direction is a valid direction */
 			enum lab_edge edge = action_get_int(action, "direction", 0);
 			if (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE
-					&& view->maximized == VIEW_AXIS_NONE
-					&& !view->fullscreen
+					&& view->st->maximized == VIEW_AXIS_NONE
+					&& !view->st->fullscreen
 					&& view_is_tiled(view)
 					&& view->tiled == edge) {
 				view_set_untiled(view);
@@ -1154,7 +1154,7 @@ run_action(struct view *view, struct server *server, struct action *action,
 		if (view) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, view->maximized & ~axis,
+			view_maximize(view, view->st->maximized & ~axis,
 				/*store_natural_geometry*/ true);
 		}
 		break;
@@ -1352,8 +1352,8 @@ run_action(struct view *view, struct server *server, struct action *action,
 		struct region *region = regions_from_name(region_name, output);
 		if (region) {
 			if (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_REGION
-					&& view->maximized == VIEW_AXIS_NONE
-					&& !view->fullscreen
+					&& view->st->maximized == VIEW_AXIS_NONE
+					&& !view->st->fullscreen
 					&& view_is_tiled(view)
 					&& view->tiled_region == region) {
 				view_set_untiled(view);
@@ -1368,7 +1368,7 @@ run_action(struct view *view, struct server *server, struct action *action,
 		break;
 	}
 	case ACTION_TYPE_UNSNAP:
-		if (view && !view->fullscreen && !view_is_floating(view)) {
+		if (view && !view->st->fullscreen && !view_is_floating(view)) {
 			view_maximize(view, VIEW_AXIS_NONE,
 				/* store_natural_geometry */ false);
 			view_set_untiled(view);
