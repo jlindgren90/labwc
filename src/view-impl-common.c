@@ -84,7 +84,7 @@ view_impl_unmap(struct view *view)
 	 * views. It should probably be combined with the existing
 	 * logic in desktop_update_top_layer_visibility().
 	 */
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		output_set_has_fullscreen_view(view->output, false);
 	}
 }

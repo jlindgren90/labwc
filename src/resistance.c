@@ -99,12 +99,12 @@ resistance_unsnap_apply(struct view *view, int *x, int *y)
 
 	int dx = *x - view->current.x;
 	int dy = *y - view->current.y;
-	if (view->maximized == VIEW_AXIS_HORIZONTAL) {
+	if (view->st->maximized == VIEW_AXIS_HORIZONTAL) {
 		if (abs(dx) < rc.unmaximize_threshold) {
 			*x = view->current.x;
 			return false;
 		}
-	} else if (view->maximized == VIEW_AXIS_VERTICAL) {
+	} else if (view->st->maximized == VIEW_AXIS_VERTICAL) {
 		if (abs(dy) < rc.unmaximize_threshold) {
 			*y = view->current.y;
 			return false;

@@ -911,8 +911,8 @@ out:
 	}
 }
 
-static void
-xwayland_view_maximize(struct view *view, enum view_axis maximized)
+void
+xwayland_view_maximize(struct view *view, int maximized)
 {
 	wlr_xwayland_surface_set_maximized(xwayland_surface_from_view(view),
 		maximized & VIEW_AXIS_HORIZONTAL, maximized & VIEW_AXIS_VERTICAL);
@@ -989,8 +989,8 @@ xwayland_view_set_activated(struct view *view, bool activated)
 	wlr_xwayland_surface_activate(xwayland_surface, activated);
 }
 
-static void
-xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
+void
+xwayland_view_set_fullscreen(struct view *view, int fullscreen)
 {
 	wlr_xwayland_surface_set_fullscreen(xwayland_surface_from_view(view),
 		fullscreen);
@@ -1014,9 +1014,7 @@ static const struct view_impl xwayland_view_impl = {
 	.close = xwayland_view_close,
 	.map = xwayland_view_map,
 	.set_activated = xwayland_view_set_activated,
-	.set_fullscreen = xwayland_view_set_fullscreen,
 	.unmap = xwayland_view_unmap,
-	.maximize = xwayland_view_maximize,
 	.minimize = xwayland_view_minimize,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,

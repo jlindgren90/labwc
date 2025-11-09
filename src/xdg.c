@@ -104,7 +104,7 @@ static void
 set_fullscreen_from_request(struct view *view,
 		struct wlr_xdg_toplevel_requested *requested)
 {
-	if (!view->fullscreen && requested->fullscreen
+	if (!view->st->fullscreen && requested->fullscreen
 			&& requested->fullscreen_output) {
 		view_set_output(view, output_from_wlr_output(view->server,
 			requested->fullscreen_output));
@@ -556,8 +556,8 @@ xdg_toplevel_view_close(struct view *view)
 	wlr_xdg_toplevel_send_close(xdg_toplevel_from_view(view));
 }
 
-static void
-xdg_toplevel_view_maximize(struct view *view, enum view_axis maximized)
+void
+xdg_toplevel_view_maximize(struct view *view, int maximized)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented maximize notification for a non-intialized view");
@@ -640,8 +640,8 @@ xdg_toplevel_view_set_activated(struct view *view, bool activated)
 	}
 }
 
-static void
-xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
+void
+xdg_toplevel_view_set_fullscreen(struct view *view, int fullscreen)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented fullscreening a non-intialized view");
@@ -842,10 +842,8 @@ static const struct view_impl xdg_toplevel_view_impl = {
 	.close = xdg_toplevel_view_close,
 	.map = xdg_toplevel_view_map,
 	.set_activated = xdg_toplevel_view_set_activated,
-	.set_fullscreen = xdg_toplevel_view_set_fullscreen,
 	.notify_tiled = xdg_toplevel_view_notify_tiled,
 	.unmap = xdg_toplevel_view_unmap,
-	.maximize = xdg_toplevel_view_maximize,
 	.minimize = xdg_toplevel_view_minimize,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,
