@@ -45,10 +45,10 @@ output_get_tearing_allowance(struct output *output)
 		return false;
 	}
 
-	struct view *view = g_server.active_view;
+	CHECK_PTR_OR_RET_VAL(g_server.active_view, view, false);
 
 	/* tearing is only allowed for the output with the active view */
-	if (!view || view->output != output) {
+	if (view->output != output) {
 		return false;
 	}
 

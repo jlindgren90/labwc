@@ -258,7 +258,7 @@ handle_request_set_primary_selection(struct wl_listener *listener, void *data)
 static void
 process_cursor_move(uint32_t time)
 {
-	struct view *view = g_server.grabbed_view;
+	ASSERT_PTR(g_server.grabbed_view, view);
 
 	int x = g_server.grab_box.x + (g_seat.cursor->x - g_server.grab_x);
 	int y = g_server.grab_box.y + (g_seat.cursor->y - g_server.grab_y);
@@ -291,7 +291,7 @@ process_cursor_move(uint32_t time)
 	resistance_move_apply(view, &x, &y);
 
 	view_move(view, x, y);
-	overlay_update();
+	overlay_update(view);
 }
 
 static void
@@ -301,8 +301,9 @@ process_cursor_resize(uint32_t time)
 	static uint32_t last_resize_time = 0;
 	static struct view *last_resize_view = NULL;
 
-	assert(g_server.grabbed_view);
-	if (g_server.grabbed_view == last_resize_view) {
+	ASSERT_PTR(g_server.grabbed_view, view);
+
+	if (view == last_resize_view) {
 		int32_t refresh = 0;
 		if (output_is_usable(last_resize_view->output)) {
 			refresh = last_resize_view->output->wlr_output->refresh;
@@ -318,12 +319,11 @@ process_cursor_resize(uint32_t time)
 	}
 
 	last_resize_time = time;
-	last_resize_view = g_server.grabbed_view;
+	last_resize_view = view;
 
 	double dx = g_seat.cursor->x - g_server.grab_x;
 	double dy = g_seat.cursor->y - g_server.grab_y;
 
-	struct view *view = g_server.grabbed_view;
 	struct wlr_box new_view_geo = view->current;
 
 	if (g_server.resize_edges & LAB_EDGE_TOP) {
@@ -725,17 +725,14 @@ cursor_update_focus(void)
 static void
 warp_cursor_to_constraint_hint(struct wlr_pointer_constraint_v1 *constraint)
 {
-	if (!g_server.active_view) {
-		return;
-	}
+	CHECK_PTR_OR_RET(g_server.active_view, view);
 
 	if (constraint->current.committed
 			& WLR_POINTER_CONSTRAINT_V1_STATE_CURSOR_HINT) {
 		double sx = constraint->current.cursor_hint.x;
 		double sy = constraint->current.cursor_hint.y;
-		wlr_cursor_warp(g_seat.cursor, NULL,
-			g_server.active_view->current.x + sx,
-			g_server.active_view->current.y + sy);
+		wlr_cursor_warp(g_seat.cursor, NULL, view->current.x + sx,
+			view->current.y + sy);
 
 		/* Make sure we are not sending unnecessary surface movements */
 		wlr_seat_pointer_warp(g_seat.seat, sx, sy);
@@ -774,8 +771,8 @@ create_constraint(struct wl_listener *listener, void *data)
 	constraint->wlr_constraint = wlr_constraint;
 	CONNECT_LISTENER(wlr_constraint, constraint, destroy);
 
-	struct view *view = g_server.active_view;
-	if (view && view->surface == wlr_constraint->surface) {
+	if (CHECK_PTR(g_server.active_view, view)
+			&& view->surface == wlr_constraint->surface) {
 		constrain_cursor(wlr_constraint);
 	}
 }
@@ -813,9 +810,8 @@ constrain_cursor(struct wlr_pointer_constraint_v1 *constraint)
 static void
 apply_constraint(struct wlr_pointer *pointer, double *x, double *y)
 {
-	if (!g_server.active_view) {
-		return;
-	}
+	CHECK_PTR_OR_RET(g_server.active_view, view);
+
 	if (!g_seat.current_constraint
 			|| pointer->base.type != WLR_INPUT_DEVICE_POINTER
 			|| g_seat.current_constraint->type
@@ -826,8 +822,8 @@ apply_constraint(struct wlr_pointer *pointer, double *x, double *y)
 	double sx = g_seat.cursor->x;
 	double sy = g_seat.cursor->y;
 
-	sx -= g_server.active_view->current.x;
-	sy -= g_server.active_view->current.y;
+	sx -= view->current.x;
+	sy -= view->current.y;
 
 	double sx_confined, sy_confined;
 	if (!wlr_region_confine(&g_seat.current_constraint->region, sx, sy,
@@ -1236,11 +1232,12 @@ cursor_finish_button_release(uint32_t button)
 
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE
 			|| g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
-		if (resize_outlines_enabled(g_server.grabbed_view)) {
-			resize_outlines_finish(g_server.grabbed_view);
+		ASSERT_PTR(g_server.grabbed_view, view);
+		if (resize_outlines_enabled(view)) {
+			resize_outlines_finish(view);
 		}
 		/* Exit interactive move/resize mode */
-		interactive_finish(g_server.grabbed_view);
+		interactive_finish(view);
 		return true;
 	}
 

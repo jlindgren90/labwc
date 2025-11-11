@@ -13,12 +13,12 @@
 #include "view.h"
 
 bool
-regions_should_snap(void)
+regions_should_snap(view *view)
 {
 	if (g_server.input_mode != LAB_INPUT_STATE_MOVE
 			|| rc.regions.empty()
 			|| g_seat.region_prevent_snap
-			|| !view_is_floating(g_server.grabbed_view)) {
+			|| !view_is_floating(view)) {
 		return false;
 	}
 
