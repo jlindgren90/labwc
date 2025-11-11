@@ -4,8 +4,7 @@
 
 #include <cairo.h>
 #include <pango/pango-font.h>
-
-struct lab_data_buffer;
+#include "buffer.h"
 
 struct font {
 	char *name;
@@ -36,7 +35,6 @@ void font_get_buffer_size(int max_width, const char *text, struct font *font,
 
 /**
  * font_buffer_create - Create ARGB8888 lab_data_buffer using pango
- * @buffer: buffer pointer
  * @max_width: max allowable width; will be ellipsized if longer
  * @height: buffer height or -1 to compute from font
  * @text: text to be generated as texture
@@ -44,8 +42,8 @@ void font_get_buffer_size(int max_width, const char *text, struct font *font,
  * @color: foreground color in rgba format
  * @bg_pattern: background pattern
  */
-void font_buffer_create(struct lab_data_buffer **buffer, int max_width,
-	int height, const char *text, struct font *font, const float *color,
+refptr<lab_data_buffer> font_buffer_create(int max_width, int height,
+	const char *text, struct font *font, const float *color,
 	cairo_pattern_t *bg_pattern, double scale);
 
 /**

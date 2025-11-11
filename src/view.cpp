@@ -2341,24 +2341,11 @@ view_set_shade(struct view *view, bool shaded)
 }
 
 void
-view_set_icon(struct view *view, const char *icon_name, struct wl_array *buffers)
+view_set_icon(struct view *view, const char *icon_name,
+		reflist<lab_data_buffer> &&buffers)
 {
-	/* Update icon name */
-	zfree(view->icon.name);
-	if (icon_name) {
-		view->icon.name = xstrdup(icon_name);
-	}
-
-	/* Update icon images */
-	struct lab_data_buffer **buffer;
-	wl_array_for_each(buffer, &view->icon.buffers) {
-		wlr_buffer_drop(&(*buffer)->base);
-	}
-	wl_array_release(&view->icon.buffers);
-	wl_array_init(&view->icon.buffers);
-	if (buffers) {
-		wl_array_copy(&view->icon.buffers, buffers);
-	}
+	view->icon.name = lab_str(icon_name);
+	view->icon.buffers = std::move(buffers);
 
 	wl_signal_emit_mutable(&view->events.set_icon, NULL);
 }
@@ -2414,7 +2401,6 @@ view::~view()
 	osd_on_view_destroy(view);
 	undecorate(view);
 
-	view_set_icon(view, NULL, NULL);
 	menu_on_view_destroy(view);
 
 	/*

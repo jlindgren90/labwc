@@ -376,18 +376,18 @@ xpm_load_to_surface(struct file_handle *handle)
 	return surface;
 }
 
-struct lab_data_buffer *
+refptr<lab_data_buffer>
 img_xpm_load(const char *filename)
 {
 	struct file_handle h = {0};
 	h.infile = fopen(filename, "rb");
 	if (!h.infile) {
 		wlr_log(WLR_ERROR, "error opening '%s'", filename);
-		return NULL;
+		return {};
 	}
 
 	cairo_surface_t *surface = xpm_load_to_surface(&h);
-	struct lab_data_buffer *buffer = NULL;
+	refptr<lab_data_buffer> buffer;
 	if (surface) {
 		buffer = buffer_adopt_cairo_surface(surface);
 	} else {

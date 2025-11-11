@@ -77,7 +77,6 @@ _osd_update(void)
 	uint16_t width = margin * 2 + (marker_width < 200 ? 200 : marker_width);
 	uint16_t height = margin * (hide_boxes ? 2 : 3) + rect_height + font_height(&rc.font_osd);
 
-	cairo_t *cairo;
 	cairo_surface_t *surface;
 	struct workspace *workspace;
 
@@ -86,14 +85,9 @@ _osd_update(void)
 		if (!output_is_usable(output)) {
 			continue;
 		}
-		struct lab_data_buffer *buffer = buffer_create_cairo(width, height,
+		auto buffer = buffer_create_cairo(width, height,
 			output->wlr_output->scale);
-		if (!buffer) {
-			wlr_log(WLR_ERROR, "Failed to allocate buffer for workspace OSD");
-			continue;
-		}
-
-		cairo = cairo_create(buffer->surface);
+		cairo_t *cairo = cairo_create(buffer->surface);
 
 		/* Background */
 		set_cairo_color(cairo, g_theme.osd_bg_color);
@@ -180,12 +174,10 @@ _osd_update(void)
 			+ (output->usable_area.height - height) / 2
 			+ output_box.y;
 		wlr_scene_node_set_position(&output->workspace_osd->node, lx, ly);
-		wlr_scene_buffer_set_buffer(output->workspace_osd, &buffer->base);
+		wlr_scene_buffer_set_buffer(output->workspace_osd,
+			buffer.get()); /* takes reference to wlr_buffer */
 		wlr_scene_buffer_set_dest_size(output->workspace_osd,
 			buffer->logical_width, buffer->logical_height);
-
-		/* And finally drop the buffer so it will get destroyed on OSD hide */
-		wlr_buffer_drop(&buffer->base);
 	}
 }
 
