@@ -13,9 +13,9 @@
 #include "view.h"
 
 static void
-show_overlay(struct theme_snapping_overlay *overlay_theme, struct wlr_box *box)
+show_overlay(struct view *view, struct theme_snapping_overlay *overlay_theme,
+		struct wlr_box *box)
 {
-	struct view *view = g_server.grabbed_view;
 	assert(view);
 	assert(!g_seat.overlay.rect);
 	struct lab_scene_rect_options opts = {
@@ -47,7 +47,7 @@ show_overlay(struct theme_snapping_overlay *overlay_theme, struct wlr_box *box)
 }
 
 static void
-show_region_overlay(struct region *region)
+show_region_overlay(struct view *view, struct region *region)
 {
 	if (g_seat.overlay.active.region == region) {
 		return;
@@ -56,7 +56,7 @@ show_region_overlay(struct region *region)
 	g_seat.overlay.active.region = weakptr(region);
 
 	struct wlr_box geo = view_get_region_snap_box(NULL, region);
-	show_overlay(&g_theme.snapping_overlay_region, &geo);
+	show_overlay(view, &g_theme.snapping_overlay_region, &geo);
 }
 
 static struct wlr_box
@@ -72,11 +72,12 @@ get_edge_snap_box(enum lab_edge edge, struct output *output)
 static int
 handle_edge_overlay_timeout(void *data)
 {
+	ASSERT_PTR(g_server.grabbed_view, view);
 	assert(g_seat.overlay.active.edge != LAB_EDGE_NONE
 		&& g_seat.overlay.active.output);
 	struct wlr_box box = get_edge_snap_box(g_seat.overlay.active.edge,
 		g_seat.overlay.active.output);
-	show_overlay(&g_theme.snapping_overlay_edge, &box);
+	show_overlay(view, &g_theme.snapping_overlay_edge, &box);
 	return 0;
 }
 
@@ -131,13 +132,13 @@ show_edge_overlay(enum lab_edge edge1, enum lab_edge edge2,
 }
 
 void
-overlay_update(void)
+overlay_update(view *view)
 {
 	/* Region-snapping overlay */
-	if (regions_should_snap()) {
+	if (regions_should_snap(view)) {
 		auto region = regions_from_cursor();
 		if (region) {
-			show_region_overlay(region.get());
+			show_region_overlay(view, region.get());
 			return;
 		}
 	}
@@ -145,7 +146,7 @@ overlay_update(void)
 	/* Edge-snapping overlay */
 	struct output *output;
 	enum lab_edge edge1, edge2;
-	if (edge_from_cursor(&output, &edge1, &edge2)) {
+	if (edge_from_cursor(view, &output, &edge1, &edge2)) {
 		show_edge_overlay(edge1, edge2, output);
 		return;
 	}

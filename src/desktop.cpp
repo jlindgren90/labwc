@@ -314,7 +314,7 @@ get_cursor_context(void)
 			switch (desc->type) {
 			case LAB_NODE_VIEW:
 			case LAB_NODE_XDG_POPUP:
-				ret.view = desc->view;
+				ret.view = desc->view.get();
 				if (ret.surface) {
 					ret.type = LAB_NODE_CLIENT;
 				} else {
@@ -346,7 +346,7 @@ get_cursor_context(void)
 			case LAB_NODE_TITLEBAR:
 				/* Always return the top scene node for ssd parts */
 				ret.node = node;
-				ret.view = desc->view;
+				ret.view = desc->view.get();
 				/*
 				 * A node_descriptor attached to a ssd part
 				 * must have an associated view.
