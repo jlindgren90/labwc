@@ -12,6 +12,7 @@
 struct region;
 
 struct cycle_osd_item {
+	/* TODO: smart ptr */
 	struct view *view;
 	struct wlr_scene_tree *tree;
 };

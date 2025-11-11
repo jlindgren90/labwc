@@ -196,7 +196,7 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 		} else if (show_app_icon) {
 			/* app icon in client-list-combined-menu */
 			scaled_icon_buffer_set_view(icon_buffer,
-				item->client_list_view);
+				item->client_list_view.get());
 		}
 		wlr_scene_node_set_position(&icon_buffer->scene_buffer->node,
 			g_theme.menu_items_padding_x,
@@ -848,7 +848,7 @@ update_client_list_combined_menu(void)
 				}
 				item = item_create(menu, buf.c(), NULL,
 					/*show arrow*/ false);
-				item->client_list_view = &view;
+				item->client_list_view.reset(&view);
 				item_add_action(item, "Focus");
 				item_add_action(item, "Raise");
 				menu->has_icons = true;
@@ -977,7 +977,7 @@ menu_on_view_destroy(struct view *view)
 	if (menu) {
 		for (auto &item : menu->menuitems) {
 			if (item.client_list_view == view) {
-				item.client_list_view = NULL;
+				item.client_list_view.reset();
 				item.actions.clear();
 			}
 		}
@@ -1317,9 +1317,9 @@ menu_execute_item(struct menuitem *item)
 	 */
 	auto &menu = item->parent;
 	if (menu.id == "client-list-combined-menu" && item->client_list_view) {
-		actions_run(item->client_list_view, item->actions, NULL);
+		actions_run(item->client_list_view.get(), item->actions, NULL);
 	} else {
-		actions_run(menu.triggered_by_view, item->actions, NULL);
+		actions_run(menu.triggered_by_view.get(), item->actions, NULL);
 	}
 
 	reset_pipemenus();

@@ -164,7 +164,7 @@ cycle_begin(enum lab_cycle_dir direction)
 		return;
 	}
 
-	struct view *active_view = g_server.active_view;
+	struct view *active_view = g_server.active_view.get();
 	if (active_view && active_view->cycle_link.next) {
 		/* Select the active view it's in the cycle list */
 		g_server.cycle.selected_view = active_view;
@@ -322,8 +322,8 @@ init_cycle(void)
 			break;
 		case CYCLE_OSD_OUTPUT_FOCUSED: {
 			struct output *output;
-			if (g_server.active_view) {
-				output = g_server.active_view->output;
+			if (CHECK_PTR(g_server.active_view, active_view)) {
+				output = active_view->output;
 			} else {
 				/* Fallback to pointer, if there is no active_view */
 				output = output_nearest_to_cursor();

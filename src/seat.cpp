@@ -595,14 +595,14 @@ handle_focus_change(struct wl_listener *listener, void *data)
 	}
 
 	if (view != g_server.active_view) {
-		if (g_server.active_view) {
-			view_set_activated(g_server.active_view, false);
+		if (CHECK_PTR(g_server.active_view, active_view)) {
+			view_set_activated(active_view, false);
 		}
 		if (view) {
 			view_set_activated(view, true);
 			tablet_pad_enter_surface(surface);
 		}
-		g_server.active_view = view;
+		g_server.active_view.reset(view);
 	}
 }
 

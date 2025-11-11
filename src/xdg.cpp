@@ -502,7 +502,7 @@ xdg_toplevel_view::handle_request_show_window_menu(void *)
 {
 	struct menu *menu = menu_get_by_id("client-menu");
 	assert(menu);
-	menu->triggered_by_view = this;
+	menu->triggered_by_view.reset(this);
 
 	struct wlr_cursor *cursor = g_seat.cursor;
 	menu_open_root(menu, cursor->x, cursor->y);

@@ -364,8 +364,8 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 	/* Make sure new views will spawn on the new workspace */
 	g_server.workspaces.current.reset(target);
 
-	struct view *grabbed_view = g_server.grabbed_view;
-	if (grabbed_view && !view_is_always_on_top(grabbed_view)) {
+	if (CHECK_PTR(g_server.grabbed_view, grabbed_view)
+			&& !view_is_always_on_top(grabbed_view)) {
 		view_move_to_workspace(grabbed_view, target);
 	}
 
@@ -380,7 +380,7 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 	 *       below that should take care of the issue.
 	 */
 	if (update_focus) {
-		struct view *active_view = g_server.active_view;
+		struct view *active_view = g_server.active_view.get();
 		if (!active_view || (!active_view->visible_on_all_workspaces
 				&& !view_is_always_on_top(active_view))) {
 			desktop_focus_topmost_view();

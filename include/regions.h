@@ -31,7 +31,7 @@ struct region : public ref_guarded<region>, public weak_target<region> {
 };
 
 /* Returns true if we should show the region overlay or snap to region */
-bool regions_should_snap(void);
+bool regions_should_snap(view *view);
 
 /**
  * regions_reconfigure*() - re-initializes all regions from struct rc.

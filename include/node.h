@@ -5,12 +5,13 @@
 #include <wayland-server-core.h>
 #include "common/listener.h"
 #include "common/node-type.h"
+#include "common/refptr.h"
 
 struct wlr_scene_node;
 
 struct node_descriptor : public destroyable {
 	enum lab_node_type type;
-	struct view *view;
+	weakptr<struct view> view;
 	void *data;
 };
 

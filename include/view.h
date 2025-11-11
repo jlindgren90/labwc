@@ -247,7 +247,8 @@ struct view_data {
 };
 
 /* C++ class representing a view (constructor-initialized) */
-struct view : public destroyable, public ref_guarded<view>, public view_data {
+struct view : public destroyable, public ref_guarded<view>,
+		public weak_target<view>, public view_data {
 	const view_type type;
 	ref<::workspace> workspace;
 

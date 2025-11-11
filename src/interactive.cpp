@@ -127,7 +127,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		return;
 	}
 
-	g_server.grabbed_view = view;
+	g_server.grabbed_view.reset(view);
 	/* Remember view and cursor positions at start of move/resize */
 	g_server.grab_x = g_seat.cursor->x;
 	g_server.grab_y = g_seat.cursor->y;
@@ -163,14 +163,14 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 }
 
 bool
-edge_from_cursor(struct output **dest_output,
+edge_from_cursor(view *view, struct output **dest_output,
 		enum lab_edge *edge1, enum lab_edge *edge2)
 {
 	*dest_output = NULL;
 	*edge1 = LAB_EDGE_NONE;
 	*edge2 = LAB_EDGE_NONE;
 
-	if (!view_is_floating(g_server.grabbed_view)) {
+	if (!view_is_floating(view)) {
 		return false;
 	}
 
@@ -259,7 +259,7 @@ snap_to_edge(struct view *view)
 {
 	struct output *output;
 	enum lab_edge edge1, edge2;
-	if (!edge_from_cursor(&output, &edge1, &edge2)) {
+	if (!edge_from_cursor(view, &output, &edge1, &edge2)) {
 		return false;
 	}
 	auto edge = (lab_edge)(edge1 | edge2);
@@ -279,7 +279,7 @@ snap_to_edge(struct view *view)
 static bool
 snap_to_region(struct view *view)
 {
-	if (!regions_should_snap()) {
+	if (!regions_should_snap(view)) {
 		return false;
 	}
 
@@ -323,7 +323,7 @@ interactive_cancel(struct view *view)
 
 	resize_indicator_hide(view);
 
-	g_server.grabbed_view = NULL;
+	g_server.grabbed_view.reset();
 
 	/* Restore keyboard/pointer focus */
 	seat_focus_override_end();

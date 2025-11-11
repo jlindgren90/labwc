@@ -625,7 +625,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 	}
 
 	/* Replaced by next show_menu() or cleaned on view_destroy() */
-	menu->triggered_by_view = view;
+	menu->triggered_by_view.reset(view);
 	menu_open_root(menu, x, y);
 }
 
@@ -647,7 +647,7 @@ view_for_action(struct view *activator, action &action,
 		return ctx->view;
 	}
 	default:
-		return g_server.active_view;
+		return g_server.active_view.get();
 	}
 }
 
