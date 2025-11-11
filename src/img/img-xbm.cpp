@@ -12,8 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <vector>
 #include "common/grab-file.h"
-#include "common/mem.h"
 #include "common/string-helpers.h"
 #include "buffer.h"
 
@@ -34,35 +34,26 @@ struct token {
 };
 
 struct pixmap {
-	uint32_t *data;
+	std::vector<uint8_t> data;
 	int width;
 	int height;
 };
 
 struct tokenizer_context {
 	char *buffer_position;
-	struct token *tokens;
-	int nr_tokens, alloc_tokens;
+	std::vector<token> tokens;
 };
 
 static void
 add_token(struct tokenizer_context *ctx, enum token_type token_type)
 {
-	if (ctx->nr_tokens == ctx->alloc_tokens) {
-		ctx->alloc_tokens = (ctx->alloc_tokens + 16) * 2;
-		ctx->tokens = xrealloc(ctx->tokens,
-			ctx->alloc_tokens * sizeof(struct token));
-	}
-	struct token *token = ctx->tokens + ctx->nr_tokens;
-	memset(token, 0, sizeof(*token));
-	ctx->nr_tokens++;
-	token->type = token_type;
+	ctx->tokens.push_back(token{.type = token_type});
 }
 
 static void
 get_identifier_token(struct tokenizer_context *ctx)
 {
-	struct token *token = ctx->tokens + ctx->nr_tokens - 1;
+	auto token = &ctx->tokens.back();
 	token->name[token->pos] = ctx->buffer_position[0];
 	token->pos++;
 	if (token->pos == MAX_TOKEN_SIZE - 1) {
@@ -87,7 +78,7 @@ get_identifier_token(struct tokenizer_context *ctx)
 static void
 get_number_token(struct tokenizer_context *ctx)
 {
-	struct token *token = ctx->tokens + ctx->nr_tokens - 1;
+	auto token = &ctx->tokens.back();
 	token->name[token->pos] = ctx->buffer_position[0];
 	token->pos++;
 	if (token->pos == MAX_TOKEN_SIZE - 1) {
@@ -111,7 +102,7 @@ get_number_token(struct tokenizer_context *ctx)
 static void
 get_special_char_token(struct tokenizer_context *ctx)
 {
-	struct token *token = ctx->tokens + ctx->nr_tokens - 1;
+	auto token = &ctx->tokens.back();
 	token->name[0] = ctx->buffer_position[0];
 	ctx->buffer_position++;
 }
@@ -121,7 +112,7 @@ get_special_char_token(struct tokenizer_context *ctx)
  * @buffer: buffer containing xbm file
  * return token vector
  */
-static struct token *
+static std::vector<token>
 tokenize_xbm(char *buffer)
 {
 	struct tokenizer_context ctx = {0};
@@ -141,7 +132,7 @@ tokenize_xbm(char *buffer)
 		case '0' ... '9': {
 			add_token(&ctx, TOKEN_INT);
 			get_number_token(&ctx);
-			struct token *token = ctx.tokens + ctx.nr_tokens - 1;
+			auto token = &ctx.tokens.back();
 			token->value = (int)strtol(token->name, NULL, 0);
 			continue;
 		}
@@ -156,7 +147,7 @@ tokenize_xbm(char *buffer)
 	}
 out:
 	add_token(&ctx, TOKEN_NONE); /* vector end marker */
-	return ctx.tokens;
+	return std::move(ctx.tokens);
 }
 
 static uint32_t
@@ -173,7 +164,8 @@ argb32(float *rgba)
 static void
 process_bytes(struct pixmap *pixmap, struct token *tokens, uint32_t color)
 {
-	pixmap->data = znew_n(uint32_t, pixmap->width * pixmap->height);
+	pixmap->data.resize(4 * pixmap->width * pixmap->height);
+	auto u32_data = (uint32_t *)&pixmap->data[0];
 	struct token *t = tokens;
 	for (int row = 0; row < pixmap->height; row++) {
 		int byte = 1;
@@ -182,15 +174,12 @@ process_bytes(struct pixmap *pixmap, struct token *tokens, uint32_t color)
 				++byte;
 				++t;
 			}
-			if (!t->type) {
-				return;
-			}
 			if (t->type != TOKEN_INT) {
 				return;
 			}
 			int bit = 1 << (col % 8);
 			if (t->value & bit) {
-				pixmap->data[row * pixmap->width + col] = color;
+				u32_data[row * pixmap->width + col] = color;
 			}
 		}
 		++t;
@@ -204,7 +193,7 @@ process_bytes(struct pixmap *pixmap, struct token *tokens, uint32_t color)
 static struct pixmap
 parse_xbm_tokens(struct token *tokens, uint32_t color)
 {
-	struct pixmap pixmap = { 0 };
+	struct pixmap pixmap = {};
 
 	for (struct token *t = tokens; t->type; t++) {
 		if (pixmap.width && pixmap.height) {
@@ -237,7 +226,7 @@ out:
 static struct pixmap
 parse_xbm_builtin(const char *button, int size, uint32_t color)
 {
-	struct pixmap pixmap = { 0 };
+	struct pixmap pixmap = {};
 
 	assert(size <= LABWC_BUILTIN_ICON_MAX_SIZE);
 	pixmap.width = size;
@@ -253,39 +242,36 @@ parse_xbm_builtin(const char *button, int size, uint32_t color)
 	return pixmap;
 }
 
-struct lab_data_buffer *
+refptr<lab_data_buffer>
 img_xbm_load_from_bitmap(const char *bitmap, float *rgba)
 {
 	uint32_t color = argb32(rgba);
 	struct pixmap pixmap = parse_xbm_builtin(bitmap, 6, color);
 
-	return buffer_create_from_data(pixmap.data, pixmap.width, pixmap.height,
-		pixmap.width * 4);
+	return buffer_create_from_data(std::move(pixmap.data), pixmap.width,
+		pixmap.height, pixmap.width * 4);
 }
 
-struct lab_data_buffer *
+refptr<lab_data_buffer>
 img_xbm_load(const char *filename, float *rgba)
 {
-	struct pixmap pixmap = {0};
+	struct pixmap pixmap = {};
 	if (string_null_or_empty(filename)) {
-		return NULL;
+		return {};
 	}
 	uint32_t color = argb32(rgba);
 
 	/* Read file into memory as it's easier to tokenize that way */
 	struct buf token_buf = grab_file(filename);
 	if (token_buf.len) {
-		struct token *tokens = tokenize_xbm(token_buf.data);
-		pixmap = parse_xbm_tokens(tokens, color);
-		if (tokens) {
-			free(tokens);
-		}
+		auto tokens = tokenize_xbm(token_buf.data);
+		pixmap = parse_xbm_tokens(&tokens[0], color);
 	}
 	buf_reset(&token_buf);
-	if (!pixmap.data) {
-		return NULL;
+	if (pixmap.data.empty()) {
+		return {};
 	}
 
-	return buffer_create_from_data(pixmap.data, pixmap.width,
+	return buffer_create_from_data(std::move(pixmap.data), pixmap.width,
 		pixmap.height, pixmap.width * 4);
 }
