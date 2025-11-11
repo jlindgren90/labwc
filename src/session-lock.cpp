@@ -9,6 +9,7 @@
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
+#include "view.h"
 
 struct session_lock : public destroyable, public weak_target<session_lock> {
 	session_lock_manager *const manager;
@@ -266,12 +267,12 @@ session_lock::handle_unlock(void *)
 	session_lock_destroy(manager); // deletes "this"
 	manager->locked = false;
 
-	if (manager->last_active_view) {
-		desktop_focus_view(manager->last_active_view, /* raise */ false);
+	if (CHECK_PTR(manager->last_active_view, view)) {
+		desktop_focus_view(view, /* raise */ false);
 	} else {
 		desktop_focus_topmost_view();
 	}
-	manager->last_active_view = NULL;
+	manager->last_active_view.reset();
 
 	cursor_update_focus();
 }
