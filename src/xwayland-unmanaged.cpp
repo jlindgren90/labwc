@@ -100,8 +100,8 @@ focus_next_surface(struct wlr_xwayland_surface *xsurface)
 	 * If modifying this logic, please test for regressions with
 	 * menus/tooltips in JetBrains CLion or similar.
 	 */
-	if (g_server.active_view) {
-		seat_focus_surface(g_server.active_view->surface);
+	if (CHECK_PTR(g_server.active_view, view)) {
+		seat_focus_surface(view->surface);
 	}
 }
 
@@ -173,8 +173,8 @@ xwayland_unmanaged::handle_request_activate(void *)
 	 * FIXME: this logic is a bit incomplete/inconsistent. Refer to
 	 * https://github.com/labwc/labwc/discussions/2821 for more info.
 	 */
-	struct view *view = g_server.active_view;
-	if (view && view->type == LAB_XWAYLAND_VIEW) {
+	if (CHECK_PTR(g_server.active_view, view)
+			&& view->type == LAB_XWAYLAND_VIEW) {
 		struct wlr_xwayland_surface *surf =
 			wlr_xwayland_surface_try_from_wlr_surface(view->surface);
 		if (surf && surf->pid != xwayland_surface->pid) {

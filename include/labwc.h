@@ -155,7 +155,7 @@ struct seat {
 struct menu;
 
 struct osd_state {
-	struct view *cycle_view;
+	weakptr<view> cycle_view;
 	bool preview_was_enabled;
 	struct wlr_scene_node *preview_node;
 	struct wlr_scene_tree *preview_parent;
@@ -209,7 +209,7 @@ struct server {
 
 	/* cursor interactive */
 	enum input_mode input_mode;
-	struct view *grabbed_view;
+	weakptr<view> grabbed_view;
 	/* Cursor position when interactive move/resize is requested */
 	double grab_x, grab_y;
 	/* View geometry when interactive move/resize is requested */
@@ -228,7 +228,7 @@ struct server {
 	 *
 	 * Note that active_view is synced with foreign-toplevel clients.
 	 */
-	struct view *active_view;
+	weakptr<view> active_view;
 
 	struct ssd_button *hovered_button;
 
@@ -444,7 +444,7 @@ void interactive_cancel(struct view *view);
  * then edge1=LAB_EDGE_TOP and edge2=LAB_EDGE_LEFT.
  * The value of (edge1|edge2) can be passed to view_snap_to_edge().
  */
-bool edge_from_cursor(struct output **dest_output,
+bool edge_from_cursor(view *view, struct output **dest_output,
 	enum lab_edge *edge1, enum lab_edge *edge2);
 
 void handle_tearing_new_object(struct wl_listener *listener, void *data);

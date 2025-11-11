@@ -2361,14 +2361,6 @@ view::~view()
 		interactive_cancel(view);
 	}
 
-	if (g_server.active_view == view) {
-		g_server.active_view = NULL;
-	}
-
-	if (g_server.session_lock_manager->last_active_view == view) {
-		g_server.session_lock_manager->last_active_view = NULL;
-	}
-
 	if (g_seat.pressed.view == view) {
 		seat_reset_pressed();
 	}

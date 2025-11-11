@@ -123,7 +123,7 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 	output->osd_scene.thumbnail_items.push_back({});
 	auto item = &output->osd_scene.thumbnail_items.back();
 	item->tree = wlr_scene_tree_create(parent);
-	item->view = view;
+	item->view.reset(view);
 
 	/* background for selected item */
 	float *border_color = switcher_theme->item_active_border_color;

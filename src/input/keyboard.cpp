@@ -96,7 +96,7 @@ end_cycling(void)
 		return;
 	}
 
-	struct view *cycle_view = g_server.osd_state.cycle_view;
+	ASSERT_PTR(g_server.osd_state.cycle_view, cycle_view);
 	/* FIXME: osd_finish() transiently sets focus to the old surface */
 	osd_finish();
 	/* Note that g_server.osd_state.cycle_view is cleared at this point */
@@ -153,10 +153,11 @@ keyboard::handle_modifiers(void *)
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
+		ASSERT_PTR(g_server.grabbed_view, view);
 		/* Any change to the modifier state re-enable region snap */
 		g_seat.region_prevent_snap = false;
 		/* Pressing/releasing modifier key may show/hide region overlay */
-		overlay_update();
+		overlay_update(view);
 	}
 
 	bool window_switcher_active =
@@ -214,8 +215,8 @@ match_keybinding_for_sym(uint32_t modifiers, xkb_keysym_t sym,
 		if (modifiers ^ keybind.modifiers) {
 			continue;
 		}
-		if (view_inhibits_actions(g_server.active_view,
-				keybind.actions)) {
+		if (CHECK_PTR(g_server.active_view, view)
+				&& view_inhibits_actions(view, keybind.actions)) {
 			continue;
 		}
 		if (sym == XKB_KEY_NoSymbol) {
@@ -741,10 +742,7 @@ reset_window_keyboard_layout_groups(void)
 		view->keyboard_layout = 0;
 	}
 
-	struct view *active_view = g_server.active_view;
-	if (!active_view) {
-		return;
-	}
+	CHECK_PTR_OR_RET(g_server.active_view, active_view);
 	keyboard_update_layout(active_view->keyboard_layout);
 }
 

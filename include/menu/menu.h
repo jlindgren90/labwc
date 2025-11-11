@@ -34,7 +34,7 @@ struct menuitem : public ref_guarded<menuitem>, public weak_target<menuitem> {
 	struct wlr_scene_tree *tree;
 	struct wlr_scene_tree *normal_tree;
 	struct wlr_scene_tree *selected_tree;
-	struct view *client_list_view;  /* used by internal client-list */
+	weakptr<view> client_list_view; /* used by internal client-list */
 
 	~menuitem();
 };
@@ -63,7 +63,7 @@ struct menu : public ref_guarded<menu>, public weak_target<menu> {
 	bool has_icons;
 
 	/* Used to match a window-menu to the view that triggered it. */
-	struct view *triggered_by_view;  /* may be NULL */
+	weakptr<view> triggered_by_view; /* may be NULL */
 
 	~menu();
 };
