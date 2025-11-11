@@ -108,9 +108,8 @@ osd_on_view_destroy(struct view *view)
 		 */
 
 		/* Also resets preview node */
-		osd_state->cycle_view =
-			get_next_cycle_view(osd_state->cycle_view,
-				LAB_CYCLE_DIR_BACKWARD);
+		osd_state->cycle_view.reset(get_next_cycle_view(
+			osd_state->cycle_view.get(), LAB_CYCLE_DIR_BACKWARD));
 
 		/*
 		 * If we cycled back to ourselves, then we have no more windows.
@@ -173,8 +172,8 @@ osd_begin(enum lab_cycle_dir direction)
 		return;
 	}
 
-	g_server.osd_state.cycle_view =
-		get_next_cycle_view(g_server.osd_state.cycle_view, direction);
+	g_server.osd_state.cycle_view.reset(get_next_cycle_view(
+		g_server.osd_state.cycle_view.get(), direction));
 
 	seat_focus_override_begin(LAB_INPUT_STATE_WINDOW_SWITCHER,
 		LAB_CURSOR_DEFAULT);
@@ -189,8 +188,8 @@ osd_cycle(enum lab_cycle_dir direction)
 {
 	assert(g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER);
 
-	g_server.osd_state.cycle_view =
-		get_next_cycle_view(g_server.osd_state.cycle_view, direction);
+	g_server.osd_state.cycle_view.reset(get_next_cycle_view(
+		g_server.osd_state.cycle_view.get(), direction));
 	update_osd();
 }
 
@@ -202,7 +201,7 @@ osd_finish(void)
 
 	g_server.osd_state.preview_node = NULL;
 	g_server.osd_state.preview_anchor = NULL;
-	g_server.osd_state.cycle_view = NULL;
+	g_server.osd_state.cycle_view.reset();
 
 	destroy_osd_scenes();
 
@@ -273,7 +272,8 @@ update_osd(void)
 		break;
 	}
 
-	if (views.empty() || !g_server.osd_state.cycle_view) {
+	auto cycle_view = g_server.osd_state.cycle_view.get();
+	if (views.empty() || !cycle_view) {
 		osd_finish();
 		return;
 	}
@@ -294,13 +294,12 @@ update_osd(void)
 
 	/* Outline current window */
 	if (rc.window_switcher.outlines) {
-		if (view_is_focusable(g_server.osd_state.cycle_view)) {
-			osd_update_preview_outlines(
-				g_server.osd_state.cycle_view);
+		if (view_is_focusable(cycle_view)) {
+			osd_update_preview_outlines(cycle_view);
 		}
 	}
 
 	if (rc.window_switcher.preview) {
-		preview_cycled_view(g_server.osd_state.cycle_view);
+		preview_cycled_view(cycle_view);
 	}
 }
