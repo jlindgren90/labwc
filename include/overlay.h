@@ -7,6 +7,7 @@
 
 struct region;
 struct seat;
+struct view;
 
 struct overlay {
 	struct lab_scene_rect *rect;
@@ -29,7 +30,7 @@ struct overlay {
  * Shows or updates an overlay when the grabbed window can be snapped to
  * a region or an output edge. Calls overlay_finish() otherwise.
  */
-void overlay_update(void);
+void overlay_update(view *view);
 
 /* Destroys the overlay if it exists */
 void overlay_finish(void);
