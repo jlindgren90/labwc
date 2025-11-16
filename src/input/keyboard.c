@@ -52,9 +52,9 @@ keyboard_reset_current_keybind(void)
 }
 
 static void
-change_vt(struct server *server, unsigned int vt)
+change_vt(unsigned int vt)
 {
-	wlr_session_change_vt(server->session, vt);
+	wlr_session_change_vt(g_server.session, vt);
 }
 
 uint32_t
@@ -84,18 +84,18 @@ keyboard_get_all_modifiers(struct seat *seat)
 }
 
 static void
-end_cycling(struct server *server)
+end_cycling(void)
 {
 	should_cancel_cycling_on_next_key_release = false;
 
-	if (server->input_mode != LAB_INPUT_STATE_WINDOW_SWITCHER) {
+	if (g_server.input_mode != LAB_INPUT_STATE_WINDOW_SWITCHER) {
 		return;
 	}
 
-	struct view *cycle_view = server->osd_state.cycle_view;
+	struct view *cycle_view = g_server.osd_state.cycle_view;
 	/* FIXME: osd_finish() transiently sets focus to the old surface */
-	osd_finish(server);
-	/* Note that server->osd_state.cycle_view is cleared at this point */
+	osd_finish();
+	/* Note that g_server.osd_state.cycle_view is cleared at this point */
 	desktop_focus_view(cycle_view, /*raise*/ true);
 }
 
@@ -147,18 +147,17 @@ handle_modifiers(struct wl_listener *listener, void *data)
 {
 	struct keyboard *keyboard = wl_container_of(listener, keyboard, modifiers);
 	struct seat *seat = keyboard->base.seat;
-	struct server *server = seat->server;
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 
-	if (server->input_mode == LAB_INPUT_STATE_MOVE) {
+	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
 		/* Any change to the modifier state re-enable region snap */
 		seat->region_prevent_snap = false;
 		/* Pressing/releasing modifier key may show/hide region overlay */
 		overlay_update(seat);
 	}
 
-	bool window_switcher_active = server->input_mode
-					== LAB_INPUT_STATE_WINDOW_SWITCHER;
+	bool window_switcher_active =
+		g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER;
 
 	if (window_switcher_active || seat->workspace_osd_shown_by_modifier) {
 		if (!keyboard_get_all_modifiers(seat)) {
@@ -166,7 +165,7 @@ handle_modifiers(struct wl_listener *listener, void *data)
 				if (key_state_nr_bound_keys()) {
 					should_cancel_cycling_on_next_key_release = true;
 				} else {
-					end_cycling(server);
+					end_cycling();
 				}
 			}
 			if (seat->workspace_osd_shown_by_modifier) {
@@ -205,15 +204,16 @@ handle_modifiers(struct wl_listener *listener, void *data)
 }
 
 static struct keybind *
-match_keybinding_for_sym(struct server *server, uint32_t modifiers,
-		xkb_keysym_t sym, xkb_keycode_t xkb_keycode)
+match_keybinding_for_sym(uint32_t modifiers, xkb_keysym_t sym,
+		xkb_keycode_t xkb_keycode)
 {
 	struct keybind *keybind;
 	wl_list_for_each(keybind, &rc.keybinds, link) {
 		if (modifiers ^ keybind->modifiers) {
 			continue;
 		}
-		if (view_inhibits_actions(server->active_view, &keybind->actions)) {
+		if (view_inhibits_actions(g_server.active_view,
+				&keybind->actions)) {
 			continue;
 		}
 		if (sym == XKB_KEY_NoSymbol) {
@@ -258,13 +258,13 @@ match_keybinding_for_sym(struct server *server, uint32_t modifiers,
  * the raw keysym fallback.
  */
 static struct keybind *
-match_keybinding(struct server *server, struct keyinfo *keyinfo,
-		bool is_virtual)
+match_keybinding(struct keyinfo *keyinfo, bool is_virtual)
 {
 	if (!is_virtual) {
 		/* First try keycodes */
-		struct keybind *keybind = match_keybinding_for_sym(server,
-			keyinfo->modifiers, XKB_KEY_NoSymbol, keyinfo->xkb_keycode);
+		struct keybind *keybind =
+			match_keybinding_for_sym(keyinfo->modifiers,
+				XKB_KEY_NoSymbol, keyinfo->xkb_keycode);
 		if (keybind) {
 			wlr_log(WLR_DEBUG, "keycode matched");
 			return keybind;
@@ -274,8 +274,9 @@ match_keybinding(struct server *server, struct keyinfo *keyinfo,
 	/* Then fall back to keysyms */
 	for (int i = 0; i < keyinfo->translated.nr_syms; i++) {
 		struct keybind *keybind =
-			match_keybinding_for_sym(server, keyinfo->modifiers,
-				keyinfo->translated.syms[i], keyinfo->xkb_keycode);
+			match_keybinding_for_sym(keyinfo->modifiers,
+				keyinfo->translated.syms[i],
+				keyinfo->xkb_keycode);
 		if (keybind) {
 			wlr_log(WLR_DEBUG, "translated keysym matched");
 			return keybind;
@@ -285,7 +286,7 @@ match_keybinding(struct server *server, struct keyinfo *keyinfo,
 	/* And finally test for keysyms without modifier */
 	for (int i = 0; i < keyinfo->raw.nr_syms; i++) {
 		struct keybind *keybind =
-			match_keybinding_for_sym(server, keyinfo->modifiers,
+			match_keybinding_for_sym(keyinfo->modifiers,
 				keyinfo->raw.syms[i], keyinfo->xkb_keycode);
 		if (keybind) {
 			wlr_log(WLR_DEBUG, "raw keysym matched");
@@ -383,7 +384,7 @@ get_keyinfo(struct wlr_keyboard *wlr_keyboard, uint32_t evdev_keycode)
 }
 
 static enum lab_key_handled
-handle_key_release(struct server *server, uint32_t evdev_keycode)
+handle_key_release(uint32_t evdev_keycode)
 {
 	/*
 	 * Release events for keys that were not bound should always be
@@ -403,7 +404,7 @@ handle_key_release(struct server *server, uint32_t evdev_keycode)
 	 * event it gets stuck on repeat.
 	 */
 	if (should_cancel_cycling_on_next_key_release) {
-		end_cycling(server);
+		end_cycling();
 	}
 
 	/*
@@ -415,15 +416,14 @@ handle_key_release(struct server *server, uint32_t evdev_keycode)
 }
 
 static bool
-handle_change_vt_key(struct server *server, struct keyboard *keyboard,
-		struct keysyms *translated)
+handle_change_vt_key(struct keyboard *keyboard, struct keysyms *translated)
 {
 	for (int i = 0; i < translated->nr_syms; i++) {
 		unsigned int vt =
 			translated->syms[i] - XKB_KEY_XF86Switch_VT_1 + 1;
 		if (vt >= 1 && vt <= 12) {
 			keyboard_cancel_keybind_repeat(keyboard);
-			change_vt(server, vt);
+			change_vt(vt);
 			return true;
 		}
 	}
@@ -431,31 +431,31 @@ handle_change_vt_key(struct server *server, struct keyboard *keyboard,
 }
 
 static void
-handle_menu_keys(struct server *server, struct keysyms *syms)
+handle_menu_keys(struct keysyms *syms)
 {
-	assert(server->input_mode == LAB_INPUT_STATE_MENU);
+	assert(g_server.input_mode == LAB_INPUT_STATE_MENU);
 
 	for (int i = 0; i < syms->nr_syms; i++) {
 		switch (syms->syms[i]) {
 		case XKB_KEY_Down:
-			menu_item_select_next(server);
+			menu_item_select_next();
 			break;
 		case XKB_KEY_Up:
-			menu_item_select_previous(server);
+			menu_item_select_previous();
 			break;
 		case XKB_KEY_Right:
-			menu_submenu_enter(server);
+			menu_submenu_enter();
 			break;
 		case XKB_KEY_Left:
-			menu_submenu_leave(server);
+			menu_submenu_leave();
 			break;
 		case XKB_KEY_Return:
 		case XKB_KEY_KP_Enter:
-			menu_call_selected_actions(server);
+			menu_call_selected_actions();
 			break;
 		case XKB_KEY_Escape:
-			menu_close_root(server);
-			cursor_update_focus(server);
+			menu_close_root();
+			cursor_update_focus();
 			break;
 		default:
 			continue;
@@ -466,7 +466,7 @@ handle_menu_keys(struct server *server, struct keysyms *syms)
 
 /* Returns true if the keystroke is consumed */
 static bool
-handle_cycle_view_key(struct server *server, struct keyinfo *keyinfo)
+handle_cycle_view_key(struct keyinfo *keyinfo)
 {
 	if (keyinfo->is_modifier) {
 		return false;
@@ -476,19 +476,19 @@ handle_cycle_view_key(struct server *server, struct keyinfo *keyinfo)
 	for (int i = 0; i < keyinfo->translated.nr_syms; i++) {
 		if (keyinfo->translated.syms[i] == XKB_KEY_Escape) {
 			/* Esc deactivates window switcher */
-			osd_finish(server);
+			osd_finish();
 			return true;
 		}
 		if (keyinfo->translated.syms[i] == XKB_KEY_Up
 				|| keyinfo->translated.syms[i] == XKB_KEY_Left) {
 			/* Up/Left cycles the window backward */
-			osd_cycle(server, LAB_CYCLE_DIR_BACKWARD);
+			osd_cycle(LAB_CYCLE_DIR_BACKWARD);
 			return true;
 		}
 		if (keyinfo->translated.syms[i] == XKB_KEY_Down
 				|| keyinfo->translated.syms[i] == XKB_KEY_Right) {
 			/* Down/Right cycles the window forward */
-			osd_cycle(server, LAB_CYCLE_DIR_FORWARD);
+			osd_cycle(LAB_CYCLE_DIR_FORWARD);
 			return true;
 		}
 	}
@@ -499,11 +499,9 @@ static enum lab_key_handled
 handle_compositor_keybindings(struct keyboard *keyboard,
 		struct wlr_keyboard_key_event *event)
 {
-	struct seat *seat = keyboard->base.seat;
-	struct server *server = seat->server;
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 	struct keyinfo keyinfo = get_keyinfo(wlr_keyboard, event->keycode);
-	bool locked = seat->server->session_lock_manager->locked;
+	bool locked = g_server.session_lock_manager->locked;
 
 	key_state_set_pressed(event->keycode,
 		event->state == WL_KEYBOARD_KEY_STATE_PRESSED);
@@ -515,15 +513,15 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 				cur_keybind = NULL;
 				return LAB_KEY_HANDLED_TRUE;
 			}
-			actions_run(NULL, server, &cur_keybind->actions, NULL);
+			actions_run(NULL, &cur_keybind->actions, NULL);
 			return LAB_KEY_HANDLED_TRUE;
 		} else {
-			return handle_key_release(server, event->keycode);
+			return handle_key_release(event->keycode);
 		}
 	}
 
 	/* Catch C-A-F1 to C-A-F12 to change tty */
-	if (handle_change_vt_key(server, keyboard, &keyinfo.translated)) {
+	if (handle_change_vt_key(keyboard, &keyinfo.translated)) {
 		key_state_store_pressed_key_as_bound(event->keycode);
 		return LAB_KEY_HANDLED_TRUE_AND_VT_CHANGED;
 	}
@@ -534,12 +532,13 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 	 * _all_ key press/releases are registered
 	 */
 	if (!locked) {
-		if (server->input_mode == LAB_INPUT_STATE_MENU) {
+		if (g_server.input_mode == LAB_INPUT_STATE_MENU) {
 			key_state_store_pressed_key_as_bound(event->keycode);
-			handle_menu_keys(server, &keyinfo.translated);
+			handle_menu_keys(&keyinfo.translated);
 			return LAB_KEY_HANDLED_TRUE;
-		} else if (server->input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER) {
-			if (handle_cycle_view_key(server, &keyinfo)) {
+		} else if (g_server.input_mode
+				== LAB_INPUT_STATE_WINDOW_SWITCHER) {
+			if (handle_cycle_view_key(&keyinfo)) {
 				key_state_store_pressed_key_as_bound(event->keycode);
 				return LAB_KEY_HANDLED_TRUE;
 			}
@@ -549,7 +548,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 	/*
 	 * Handle compositor keybinds
 	 */
-	cur_keybind = match_keybinding(server, &keyinfo, keyboard->is_virtual);
+	cur_keybind = match_keybinding(&keyinfo, keyboard->is_virtual);
 	if (cur_keybind && (!locked || cur_keybind->allow_when_locked)) {
 		/*
 		 * Update key-state before action_run() because the action
@@ -558,7 +557,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 		 */
 		key_state_store_pressed_key_as_bound(event->keycode);
 		if (!cur_keybind->on_release) {
-			actions_run(NULL, server, &cur_keybind->actions, NULL);
+			actions_run(NULL, &cur_keybind->actions, NULL);
 		}
 		return LAB_KEY_HANDLED_TRUE;
 	}
@@ -588,7 +587,7 @@ handle_keybind_repeat(void *data)
 }
 
 static void
-start_keybind_repeat(struct server *server, struct keyboard *keyboard,
+start_keybind_repeat(struct keyboard *keyboard,
 		struct wlr_keyboard_key_event *event)
 {
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
@@ -598,8 +597,9 @@ start_keybind_repeat(struct server *server, struct keyboard *keyboard,
 			&& wlr_keyboard->repeat_info.delay > 0) {
 		keyboard->keybind_repeat_keycode = event->keycode;
 		keyboard->keybind_repeat_rate = wlr_keyboard->repeat_info.rate;
-		keyboard->keybind_repeat = wl_event_loop_add_timer(
-			server->wl_event_loop, handle_keybind_repeat, keyboard);
+		keyboard->keybind_repeat =
+			wl_event_loop_add_timer(g_server.wl_event_loop,
+				handle_keybind_repeat, keyboard);
 		wl_event_source_timer_update(keyboard->keybind_repeat,
 			wlr_keyboard->repeat_info.delay);
 	}
@@ -655,7 +655,7 @@ handle_key(struct wl_listener *listener, void *data)
 		 */
 		if (!is_modifier(keyboard->wlr_keyboard, event->keycode)
 				&& event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
-			start_keybind_repeat(seat->server, keyboard, event);
+			start_keybind_repeat(keyboard, event);
 		}
 	} else if (!input_method_keyboard_grab_forward_key(keyboard, event)) {
 		wlr_seat_set_keyboard(wlr_seat, keyboard->wlr_keyboard);
@@ -731,7 +731,7 @@ keyboard_update_layout(struct seat *seat, xkb_layout_index_t layout)
 }
 
 static void
-reset_window_keyboard_layout_groups(struct server *server)
+reset_window_keyboard_layout_groups(void)
 {
 	if (!rc.kb_layout_per_window) {
 		return;
@@ -743,15 +743,15 @@ reset_window_keyboard_layout_groups(struct server *server)
 	 * but let's keep it simple for now and just reset them all.
 	 */
 	struct view *view;
-	for_each_view(view, &server->views, LAB_VIEW_CRITERIA_NONE) {
+	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
 		view->keyboard_layout = 0;
 	}
 
-	struct view *active_view = server->active_view;
+	struct view *active_view = g_server.active_view;
 	if (!active_view) {
 		return;
 	}
-	keyboard_update_layout(&server->seat, active_view->keyboard_layout);
+	keyboard_update_layout(&g_server.seat, active_view->keyboard_layout);
 }
 
 /*
@@ -759,7 +759,7 @@ reset_window_keyboard_layout_groups(struct server *server)
  * XKB_DEFAULT_OPTIONS, and friends.
  */
 static void
-set_layout(struct server *server, struct wlr_keyboard *kb)
+set_layout(struct wlr_keyboard *kb)
 {
 	static bool fallback_mode;
 
@@ -778,7 +778,7 @@ set_layout(struct server *server, struct wlr_keyboard *kb)
 	if (keymap && !layout_empty) {
 		if (!wlr_keyboard_keymaps_match(kb->keymap, keymap)) {
 			wlr_keyboard_set_keymap(kb, keymap);
-			reset_window_keyboard_layout_groups(server);
+			reset_window_keyboard_layout_groups();
 		}
 		xkb_keymap_unref(keymap);
 	} else {
@@ -788,7 +788,7 @@ set_layout(struct server *server, struct wlr_keyboard *kb)
 			wlr_log(WLR_ERROR, "entering fallback mode with layout 'us'");
 			fallback_mode = true;
 			setenv("XKB_DEFAULT_LAYOUT", "us", 1);
-			set_layout(server, kb);
+			set_layout(kb);
 		}
 	}
 	xkb_context_unref(context);
@@ -798,10 +798,10 @@ void
 keyboard_configure(struct seat *seat, struct wlr_keyboard *kb, bool is_virtual)
 {
 	if (!is_virtual) {
-		set_layout(seat->server, kb);
+		set_layout(kb);
 	}
 	wlr_keyboard_set_repeat_info(kb, rc.repeat_rate, rc.repeat_delay);
-	keybind_update_keycodes(seat->server);
+	keybind_update_keycodes();
 }
 
 void
