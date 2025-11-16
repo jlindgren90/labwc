@@ -16,12 +16,10 @@ view_impl_init_foreign_toplevel(struct view *view)
 
 	view->foreign_toplevel = foreign_toplevel_create(view);
 
-	if (view->impl->get_parent) {
-		struct view *parent = view->impl->get_parent(view);
-		if (parent && parent->foreign_toplevel) {
-			foreign_toplevel_set_parent(view->foreign_toplevel,
-				parent->foreign_toplevel);
-		}
+	struct view *parent = view->get_parent();
+	if (parent && parent->foreign_toplevel) {
+		foreign_toplevel_set_parent(view->foreign_toplevel,
+			parent->foreign_toplevel);
 	}
 }
 
