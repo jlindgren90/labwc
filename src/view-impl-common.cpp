@@ -14,12 +14,13 @@ view_impl_init_foreign_toplevel(struct view *view)
 		return;
 	}
 
-	view->foreign_toplevel = foreign_toplevel_create(view);
+	auto ft = view->foreign_toplevel.set_new(view);
 
 	struct view *parent = view->get_parent();
-	if (parent && parent->foreign_toplevel) {
-		foreign_toplevel_set_parent(view->foreign_toplevel,
-			parent->foreign_toplevel);
+	if (parent) {
+		if (CHECK_PTR(parent->foreign_toplevel, pft)) {
+			ft->set_parent(*pft);
+		}
 	}
 }
 
@@ -41,10 +42,7 @@ view_impl_map(struct view *view)
 	 */
 	enum property ret = window_rules_get_property(view, "skipTaskbar");
 	if (ret == LAB_PROP_TRUE) {
-		if (view->foreign_toplevel) {
-			foreign_toplevel_destroy(view->foreign_toplevel);
-			view->foreign_toplevel = NULL;
-		}
+		view->foreign_toplevel.reset();
 	}
 
 	/*

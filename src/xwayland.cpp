@@ -812,9 +812,8 @@ xwayland_view::unmap(bool client_request)
 	 * the unmapped view doesn't show up in panels and the like.
 	 */
 out:
-	if (client_request && view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
+	if (client_request) {
+		view->foreign_toplevel.reset();
 	}
 }
 

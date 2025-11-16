@@ -778,9 +778,8 @@ xdg_toplevel_view::unmap(bool client_request)
 	 * than just minimized), destroy the foreign toplevel handle so
 	 * the unmapped view doesn't show up in panels and the like.
 	 */
-	if (client_request && view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
+	if (client_request) {
+		view->foreign_toplevel.reset();
 	}
 }
 
