@@ -29,8 +29,7 @@ osd_classic_create(struct output *output, reflist<view> &views)
 
 	struct window_switcher_classic_theme *switcher_theme =
 		&g_theme.osd_window_switcher_classic;
-	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
-	const char *workspace_name = g_server.workspaces.current->name;
+	bool show_workspace = rc.workspace_config.names.size() > 1;
 
 	int w = switcher_theme->width;
 	if (switcher_theme->width_is_percent) {
@@ -68,7 +67,8 @@ osd_classic_create(struct output *output, reflist<view> &views)
 		font.weight = PANGO_WEIGHT_BOLD;
 
 		/* Center workspace indicator on the x axis */
-		int x = (w - font_width(&font, workspace_name)) / 2;
+		ASSERT_PTR(g_server.workspaces.current, current);
+		int x = (w - font_width(&font, current->name.c())) / 2;
 		if (x < 0) {
 			wlr_log(WLR_ERROR,
 				"not enough space for workspace name in osd");
@@ -79,7 +79,7 @@ osd_classic_create(struct output *output, reflist<view> &views)
 			new scaled_font_buffer(output->osd_scene.tree);
 		wlr_scene_node_set_position(&font_buffer->scene_buffer->node,
 			x, y + (switcher_theme->item_height - font_height(&font)) / 2);
-		scaled_font_buffer_update(font_buffer, workspace_name, 0,
+		scaled_font_buffer_update(font_buffer, current->name.c(), 0,
 			&font, text_color, bg_color);
 		y += switcher_theme->item_height;
 	}
