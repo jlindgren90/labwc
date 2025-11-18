@@ -1019,12 +1019,8 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 
 	struct wlr_scene_tree *tree = wlr_scene_xdg_surface_create(
 		view->scene_tree, xdg_surface);
-	if (!tree) {
-		/* TODO: might need further clean up */
-		wl_resource_post_no_memory(xdg_surface->resource);
-		free(xdg_toplevel_view);
-		return;
-	}
+	die_if_null(tree);
+
 	view->content_tree = tree;
 	node_descriptor_create(&view->scene_tree->node,
 		LAB_NODE_VIEW, view, /*data*/ NULL);
