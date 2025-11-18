@@ -163,10 +163,10 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 
 	/* title */
 	item->normal_title = create_title(item->tree, switcher_theme,
-		view->title, g_theme.osd_label_text_color,
+		view->title.c(), g_theme.osd_label_text_color,
 		g_theme.osd_bg_color, title_y);
 	item->active_title = create_title(item->tree, switcher_theme,
-		view->title, g_theme.osd_label_text_color,
+		view->title.c(), g_theme.osd_label_text_color,
 		switcher_theme->item_active_bg_color, title_y);
 
 	/* icon */

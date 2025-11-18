@@ -122,11 +122,11 @@ query_str_match(const char *condition, const char *value)
 bool
 view_matches_query(struct view *view, struct view_query *query)
 {
-	if (!query_str_match(query->identifier, view->app_id)) {
+	if (!query_str_match(query->identifier, view->app_id.c())) {
 		return false;
 	}
 
-	if (!query_str_match(query->title, view->title)) {
+	if (!query_str_match(query->title, view->title.c())) {
 		return false;
 	}
 
@@ -2208,14 +2208,10 @@ void
 view_set_title(struct view *view, const char *title)
 {
 	assert(view);
-	if (!title) {
-		title = "";
-	}
-
-	if (!strcmp(view->title, title)) {
+	if (view->title == title) {
 		return;
 	}
-	xstrdup_replace(view->title, title);
+	view->title = lab_str(title);
 
 	ssd_update_title(view->ssd);
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
@@ -2225,14 +2221,10 @@ void
 view_set_app_id(struct view *view, const char *app_id)
 {
 	assert(view);
-	if (!app_id) {
-		app_id = "";
-	}
-
-	if (!strcmp(view->app_id, app_id)) {
+	if (view->app_id == app_id) {
 		return;
 	}
-	xstrdup_replace(view->app_id, app_id);
+	view->app_id = lab_str(app_id);
 
 	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
 }
@@ -2384,9 +2376,6 @@ view::view(view_type type) : view_data(), type(type)
 	wl_signal_init(&view->events.activated);
 	wl_signal_init(&view->events.set_icon);
 	wl_signal_init(&view->events.destroy);
-
-	view->title = xstrdup("");
-	view->app_id = xstrdup("");
 }
 
 view::~view()
@@ -2395,9 +2384,6 @@ view::~view()
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
 	snap_constraints_invalidate(view);
-
-	zfree(view->title);
-	zfree(view->app_id);
 
 	if (view->foreign_toplevel) {
 		foreign_toplevel_destroy(view->foreign_toplevel);
