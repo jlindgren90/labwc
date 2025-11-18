@@ -778,11 +778,7 @@ xwayland_view_map(struct view *view)
 	if (!view->content_tree) {
 		view->content_tree = wlr_scene_subsurface_tree_create(
 			view->scene_tree, view->surface);
-		if (!view->content_tree) {
-			/* TODO: might need further clean up */
-			wl_resource_post_no_memory(view->surface->resource);
-			return;
-		}
+		die_if_null(view->content_tree);
 	}
 
 	if (!view->been_mapped) {
