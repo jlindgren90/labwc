@@ -441,13 +441,6 @@ void view_offer_focus(struct view *view);
 struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
 	enum lab_edge edge);
 
-/*
- * Map/unmap event handlers are exposed so that the events can be
- * synthesized when xwayland surfaces transition to/from unmanaged.
- */
-void view_handle_map(struct wl_listener *listener, void *data);
-void view_handle_unmap(struct wl_listener *listener, void *data);
-
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, std::vector<action> &actions);
 
