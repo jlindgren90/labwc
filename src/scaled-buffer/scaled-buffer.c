@@ -192,11 +192,7 @@ scaled_buffer_create(struct wlr_scene_tree *parent,
 
 	struct scaled_buffer *self = znew(*self);
 	self->scene_buffer = wlr_scene_buffer_create(parent, NULL);
-	if (!self->scene_buffer) {
-		wlr_log(WLR_ERROR, "Failed to create scene buffer");
-		free(self);
-		return NULL;
-	}
+	die_if_null(self->scene_buffer);
 
 	self->impl = impl;
 	/*
