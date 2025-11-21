@@ -7,10 +7,9 @@
 static bool
 resizing_edge(struct view *view, enum lab_edge edge)
 {
-	struct server *server = view->server;
-	return server->input_mode == LAB_INPUT_STATE_RESIZE
-		&& server->grabbed_view == view
-		&& (server->resize_edges & edge);
+	return g_server.input_mode == LAB_INPUT_STATE_RESIZE
+		&& g_server.grabbed_view == view
+		&& (g_server.resize_edges & edge);
 }
 
 void
