@@ -95,7 +95,7 @@ handle_new_app_id(struct wl_listener *listener, void *data)
 	assert(wlr_toplevel->handle);
 
 	wlr_foreign_toplevel_handle_v1_set_app_id(wlr_toplevel->handle,
-		wlr_toplevel->view->app_id);
+		wlr_toplevel->view->st->app_id);
 }
 
 static void
@@ -106,7 +106,7 @@ handle_new_title(struct wl_listener *listener, void *data)
 	assert(wlr_toplevel->handle);
 
 	wlr_foreign_toplevel_handle_v1_set_title(wlr_toplevel->handle,
-		wlr_toplevel->view->title);
+		wlr_toplevel->view->st->title);
 }
 
 static void
@@ -191,8 +191,9 @@ wlr_foreign_toplevel_init(struct wlr_foreign_toplevel *wlr_toplevel,
 	wlr_toplevel->handle = wlr_foreign_toplevel_handle_v1_create(
 		view->server->foreign_toplevel_manager);
 	if (!wlr_toplevel->handle) {
-		wlr_log(WLR_ERROR, "cannot create wlr foreign toplevel handle for (%s)",
-			view->title);
+		wlr_log(WLR_ERROR,
+			"cannot create wlr foreign toplevel handle for (%s)",
+			view->st->title);
 		return;
 	}
 
