@@ -172,7 +172,7 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (!query_tristate_match(query->iconified, view->minimized)) {
+	if (!query_tristate_match(query->iconified, view->st->minimized)) {
 		return false;
 	}
 
@@ -425,7 +425,7 @@ view_is_focusable(struct view *view)
 	switch (view_wants_focus(view)) {
 	case VIEW_WANTS_FOCUS_ALWAYS:
 	case VIEW_WANTS_FOCUS_LIKELY:
-		return view->mapped;
+		return view->st->mapped;
 	default:
 		return false;
 	}
@@ -777,15 +777,11 @@ static void
 _minimize(struct view *view, bool minimized)
 {
 	assert(view);
-	if (view->minimized == minimized) {
+	if (view->st->minimized == minimized) {
 		return;
 	}
 
-	if (view->impl->minimize) {
-		view->impl->minimize(view, minimized);
-	}
-
-	view->minimized = minimized;
+	view_minimize_internal(view->id, minimized);
 	wl_signal_emit_mutable(&view->events.minimized, NULL);
 
 	view_update_visibility(view);
@@ -1066,8 +1062,7 @@ view_cascade(struct view *view)
 		for_each_view(other_view, &view->server->views,
 				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 			struct wlr_box other = ssd_max_extents(other_view);
-			if (other_view == view
-					|| view->minimized
+			if (other_view == view || view->st->minimized
 					|| !box_intersects(&candidate, &other)) {
 				continue;
 			}
@@ -2403,16 +2398,14 @@ void
 view_handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.map);
-	if (view->mapped) {
+	if (view->st->mapped) {
 		return;
 	}
 
 	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s",
 		view->st->app_id, view->st->title);
 
-	view->impl->map(view);
-	view->mapped = true;
-
+	view_map(view->id);
 	view_update_visibility(view);
 
 	if (!view->been_mapped) {
@@ -2442,13 +2435,11 @@ void
 view_handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.unmap);
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return;
 	}
 
-	view->impl->unmap(view);
-	view->mapped = false;
-
+	view_unmap(view->id);
 	view_update_visibility(view);
 
 	/*
@@ -2473,7 +2464,7 @@ void
 view_set_surface(struct view *view, struct wlr_surface *surface)
 {
 	assert(view);
-	assert(!view->mapped);
+	assert(!view->st->mapped);
 
 	if (view->surface) {
 		mappable_disconnect(&view->mappable);
@@ -2493,7 +2484,7 @@ view_set_surface(struct view *view, struct wlr_surface *surface)
 void
 view_update_visibility(struct view *view)
 {
-	bool visible = view->mapped && !view->minimized;
+	bool visible = view->st->mapped && !view->st->minimized;
 	if (visible == view->scene_tree->node.enabled) {
 		return;
 	}

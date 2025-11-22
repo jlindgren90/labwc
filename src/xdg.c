@@ -294,7 +294,7 @@ handle_configure_timeout(void *data)
 	 * No need to do anything else if the view is just being slow to
 	 * map - the map handler will take care of the positioning.
 	 */
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return 0; /* ignored per wl_event_loop docs */
 	}
 
@@ -442,7 +442,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (!view->mapped && !view->output) {
+	if (!view->st->mapped && !view->output) {
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
 	bool maximized = toplevel->requested.maximized;
@@ -464,7 +464,7 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (!view->mapped && !view->output) {
+	if (!view->st->mapped && !view->output) {
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
 	set_fullscreen_from_request(view,
@@ -567,12 +567,6 @@ xdg_toplevel_view_maximize(struct view *view, int maximized)
 	}
 }
 
-static void
-xdg_toplevel_view_minimize(struct view *view, bool minimized)
-{
-	/* noop */
-}
-
 static struct view *
 xdg_toplevel_view_get_parent(struct view *view)
 {
@@ -612,7 +606,7 @@ xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
 		if (view->type != LAB_XDG_SHELL_VIEW) {
 			continue;
 		}
-		if (!view->mapped) {
+		if (!view->st->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != toplevel) {
@@ -728,7 +722,7 @@ set_initial_position(struct view *view)
 	view_place_by_policy(view, /* allow_cursor */ true, rc.placement_policy);
 }
 
-static void
+void
 xdg_toplevel_view_map(struct view *view)
 {
 	/*
@@ -775,12 +769,6 @@ xdg_toplevel_view_map(struct view *view)
 	}
 }
 
-static void
-xdg_toplevel_view_unmap(struct view *view)
-{
-	/* no-op */
-}
-
 static pid_t
 xdg_view_get_pid(struct view *view)
 {
@@ -798,12 +786,9 @@ xdg_view_get_pid(struct view *view)
 static const struct view_impl xdg_toplevel_view_impl = {
 	.configure = xdg_toplevel_view_configure,
 	.close = xdg_toplevel_view_close,
-	.map = xdg_toplevel_view_map,
 	.set_activated = xdg_toplevel_view_set_activated,
 	.notify_tiled = xdg_toplevel_view_notify_tiled,
-	.unmap = xdg_toplevel_view_unmap,
 	.commit = xdg_toplevel_view_commit,
-	.minimize = xdg_toplevel_view_minimize,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,
 	.append_children = xdg_toplevel_view_append_children,

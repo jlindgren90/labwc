@@ -440,7 +440,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_maximize);
 	struct wlr_xwayland_surface *surf = xwayland_surface_from_view(view);
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 		/*
 		 * Set decorations early to avoid changing geometry
@@ -468,7 +468,7 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_fullscreen);
 	bool fullscreen = xwayland_surface_from_view(view)->fullscreen;
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 	}
 	view_set_fullscreen(view, fullscreen);
@@ -555,7 +555,7 @@ handle_set_strut_partial(struct wl_listener *listener, void *data)
 		wl_container_of(listener, xwayland_view, set_strut_partial);
 	struct view *view = &xwayland_view->base;
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		output_update_all_usable_areas(view->server, false);
 	}
 }
@@ -662,7 +662,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	struct view *view = &xwayland_view->base;
 	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		/* Probably shouldn't happen, but be sure */
 		return;
 	}
@@ -758,7 +758,7 @@ set_initial_position(struct view *view,
 	view_adjust_for_layout_change(view);
 }
 
-static void
+void
 xwayland_view_map(struct view *view)
 {
 	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
@@ -812,7 +812,7 @@ xwayland_view_map(struct view *view)
 	}
 }
 
-static void
+void
 xwayland_view_unmap(struct view *view)
 {
 	/*
@@ -833,8 +833,8 @@ xwayland_view_maximize(struct view *view, int maximized)
 		maximized & VIEW_AXIS_HORIZONTAL, maximized & VIEW_AXIS_VERTICAL);
 }
 
-static void
-xwayland_view_minimize(struct view *view, bool minimized)
+void
+xwayland_view_minimize(struct view *view, int minimized)
 {
 	wlr_xwayland_surface_set_minimized(xwayland_surface_from_view(view),
 		minimized);
@@ -874,7 +874,7 @@ xwayland_view_append_children(struct view *self, struct wl_array *children)
 		if (!view->surface) {
 			continue;
 		}
-		if (!view->mapped) {
+		if (!view->st->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != surface) {
@@ -927,11 +927,8 @@ xwayland_view_get_pid(struct view *view)
 static const struct view_impl xwayland_view_impl = {
 	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
-	.map = xwayland_view_map,
 	.set_activated = xwayland_view_set_activated,
-	.unmap = xwayland_view_unmap,
 	.commit = xwayland_view_commit,
-	.minimize = xwayland_view_minimize,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,
 	.append_children = xwayland_view_append_children,

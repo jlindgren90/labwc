@@ -95,12 +95,9 @@ struct view_size_hints {
 struct view_impl {
 	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
-	void (*map)(struct view *view);
 	void (*set_activated)(struct view *view, bool activated);
 	void (*notify_tiled)(struct view *view);
-	void (*unmap)(struct view *view);
 	void (*commit)(struct view *view);
-	void (*minimize)(struct view *view, bool minimize);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
@@ -159,12 +156,10 @@ struct view {
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree;
 
-	bool mapped;
 	bool been_mapped;
 	enum lab_ssd_mode ssd_mode;
 	enum ssd_preference ssd_preference;
 	bool shaded;
-	bool minimized;
 	bool tearing_hint;
 	enum lab_tristate force_tearing;
 	bool visible_on_all_workspaces;

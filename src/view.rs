@@ -28,8 +28,10 @@ pub type ViewId = u64;
 pub struct ViewState {
     app_id: *const c_char,
     title: *const c_char,
+    mapped: bool,
     fullscreen: bool,
     maximized: ViewAxis,
+    minimized: bool,
 }
 
 #[derive(Default)]
@@ -103,6 +105,34 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_map(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        unsafe {
+            if view.is_xwayland {
+                xwayland_view_map(view.c_ptr);
+            } else {
+                xdg_toplevel_view_map(view.c_ptr);
+            }
+        }
+        view.state.mapped = true;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_unmap(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        unsafe {
+            if view.is_xwayland {
+                xwayland_view_unmap(view.c_ptr);
+            } else {
+                // no-op for xdg-shell view
+            }
+        }
+        view.state.mapped = false;
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         unsafe {
@@ -136,6 +166,20 @@ pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
         unsafe {
             view_notify_maximized(view.c_ptr);
         }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_minimize_internal(id: ViewId, minimized: bool) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        unsafe {
+            if view.is_xwayland {
+                xwayland_view_minimize(view.c_ptr, minimized as i32);
+            } else {
+                // no-op for xdg-shell view
+            }
+        }
+        view.state.minimized = minimized;
     }
 }
 
