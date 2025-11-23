@@ -481,7 +481,9 @@ view_set_activated(struct view *view, bool activated)
 		view->impl->set_activated(view, activated);
 	}
 
-	wl_signal_emit_mutable(&view->events.activated, &activated);
+	if (view->foreign_toplevel) {
+		foreign_toplevel_update_activated(view->foreign_toplevel);
+	}
 
 	if (rc.kb_layout_per_window) {
 		if (!activated) {
@@ -536,7 +538,9 @@ view_update_outputs(struct view *view)
 
 	if (new_outputs != view->outputs) {
 		view->outputs = new_outputs;
-		wl_signal_emit_mutable(&view->events.new_outputs, NULL);
+		if (view->foreign_toplevel) {
+			foreign_toplevel_update_outputs(view->foreign_toplevel);
+		}
 		desktop_update_top_layer_visibility(view->server);
 	}
 }
@@ -739,7 +743,9 @@ _minimize(struct view *view, bool minimized)
 	}
 
 	view_minimize_internal(view->id, minimized);
-	wl_signal_emit_mutable(&view->events.minimized, NULL);
+	if (view->foreign_toplevel) {
+		foreign_toplevel_update_minimized(view->foreign_toplevel);
+	}
 
 	view_update_visibility(view);
 }
@@ -1294,7 +1300,9 @@ view_apply_special_geometry(struct view *view)
 void
 view_notify_maximized(struct view *view)
 {
-	wl_signal_emit_mutable(&view->events.maximized, NULL);
+	if (view->foreign_toplevel) {
+		foreign_toplevel_update_maximized(view->foreign_toplevel);
+	}
 
 	/*
 	 * Ensure that follow-up actions like SnapToEdge / SnapToRegion
@@ -1647,7 +1655,9 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	}
 
 	view_set_fullscreen_internal(view->id, fullscreen);
-	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
+	if (view->foreign_toplevel) {
+		foreign_toplevel_update_fullscreen(view->foreign_toplevel);
+	}
 
 	if (view->ssd_mode) {
 		if (fullscreen) {
@@ -2288,12 +2298,18 @@ view_notify_title_change(struct view *view)
 {
 	ssd_update_title(view->ssd);
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
+	if (view->foreign_toplevel) {
+		foreign_toplevel_update_title(view->foreign_toplevel);
+	}
 }
 
 void
 view_notify_app_id_change(struct view *view)
 {
 	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
+	if (view->foreign_toplevel) {
+		foreign_toplevel_update_app_id(view->foreign_toplevel);
+	}
 }
 
 void
@@ -2465,11 +2481,6 @@ view_init(struct view *view)
 
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
-	wl_signal_init(&view->events.new_outputs);
-	wl_signal_init(&view->events.maximized);
-	wl_signal_init(&view->events.minimized);
-	wl_signal_init(&view->events.fullscreened);
-	wl_signal_init(&view->events.activated);
 	wl_signal_init(&view->events.set_icon);
 	wl_signal_init(&view->events.destroy);
 }
@@ -2537,11 +2548,6 @@ view_destroy(struct view *view)
 
 	assert(wl_list_empty(&view->events.new_app_id.listener_list));
 	assert(wl_list_empty(&view->events.new_title.listener_list));
-	assert(wl_list_empty(&view->events.new_outputs.listener_list));
-	assert(wl_list_empty(&view->events.maximized.listener_list));
-	assert(wl_list_empty(&view->events.minimized.listener_list));
-	assert(wl_list_empty(&view->events.fullscreened.listener_list));
-	assert(wl_list_empty(&view->events.activated.listener_list));
 	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
 
