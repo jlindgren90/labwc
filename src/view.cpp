@@ -2355,10 +2355,7 @@ view::~view()
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
 	snap_constraints_invalidate(view);
 
-	if (view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
-	}
+	view->foreign_toplevel.reset();
 
 	if (g_server.grabbed_view == view) {
 		/* Application got killed while moving around */
