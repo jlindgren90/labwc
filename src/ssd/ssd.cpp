@@ -85,9 +85,10 @@ ssd_max_extents(struct view *view)
  * bounds, so check the cursor against the view here.
  */
 enum lab_node_type
-ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
+ssd_handle::get_resizing_type(struct wlr_cursor *cursor)
 {
-	struct view *view = ssd ? ssd->view : NULL;
+	CHECK_PTR_OR_RET_VAL(impl, ssd, LAB_NODE_NONE);
+	struct view *view = ssd->view;
 	if (!view || !cursor || !view->ssd_mode || view->fullscreen) {
 		return LAB_NODE_NONE;
 	}
@@ -135,11 +136,11 @@ ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 	return LAB_NODE_NONE;
 }
 
-struct ssd *
-ssd_create(struct view *view, bool active)
+void
+ssd_handle::create(struct view *view, bool active)
 {
 	assert(view);
-	auto ssd = new struct ssd();
+	auto ssd = impl.set_new();
 
 	ssd->view = view;
 	ssd->tree = wlr_scene_tree_create(view->scene_tree);
@@ -165,20 +166,19 @@ ssd_create(struct view *view, bool active)
 	ssd_border_create(ssd);
 	if (!view_titlebar_visible(view)) {
 		/* Ensure we keep the old state on Reconfigure or when exiting fullscreen */
-		ssd_set_titlebar(ssd, false);
+		set_titlebar(false);
 	}
 	ssd->margin = ssd_thickness(view);
-	ssd_set_active(ssd, active);
-	ssd_enable_keybind_inhibit_indicator(ssd, view->inhibits_keybinds);
+	set_active(active);
+	enable_keybind_inhibit_indicator(view->inhibits_keybinds);
 	ssd->state.geometry = view->current;
-
-	return ssd;
 }
 
 struct border
-ssd_get_margin(const struct ssd *ssd)
+ssd_handle::get_margin()
 {
-	return ssd ? ssd->margin : (struct border){ 0 };
+	CHECK_PTR_OR_RET_VAL(impl, ssd, border());
+	return ssd->margin;
 }
 
 int
@@ -189,21 +189,23 @@ ssd_get_corner_width(void)
 }
 
 void
-ssd_update_margin(struct ssd *ssd)
+ssd_handle::update_margin()
 {
-	if (!ssd) {
-		return;
-	}
+	CHECK_PTR_OR_RET(impl, ssd);
 	ssd->margin = ssd_thickness(ssd->view);
 }
 
 void
-ssd_update_geometry(struct ssd *ssd)
+ssd_handle::update_title()
 {
-	if (!ssd) {
-		return;
-	}
+	CHECK_PTR_OR_RET(impl, ssd);
+	ssd_titlebar_update_title(ssd);
+}
 
+void
+ssd_handle::update_geometry()
+{
+	CHECK_PTR_OR_RET(impl, ssd);
 	struct view *view = ssd->view;
 	assert(view);
 
@@ -229,7 +231,7 @@ ssd_update_geometry(struct ssd *ssd)
 	 * (Un)maximization updates titlebar visibility with
 	 * maximizedDecoration=none
 	 */
-	ssd_set_titlebar(ssd, view_titlebar_visible(view));
+	set_titlebar(view_titlebar_visible(view));
 
 	if (update_extents) {
 		ssd_extents_update(ssd);
@@ -247,9 +249,10 @@ ssd_update_geometry(struct ssd *ssd)
 }
 
 void
-ssd_set_titlebar(struct ssd *ssd, bool enabled)
+ssd_handle::set_titlebar(bool enabled)
 {
-	if (!ssd || ssd->titlebar.tree->node.enabled == enabled) {
+	CHECK_PTR_OR_RET(impl, ssd);
+	if (ssd->titlebar.tree->node.enabled == enabled) {
 		return;
 	}
 	wlr_scene_node_set_enabled(&ssd->titlebar.tree->node, enabled);
@@ -261,12 +264,8 @@ ssd_set_titlebar(struct ssd *ssd, bool enabled)
 }
 
 void
-ssd_destroy(struct ssd *ssd)
+ssd_handle::destroy_impl(struct ssd *ssd)
 {
-	if (!ssd) {
-		return;
-	}
-
 	/* Maybe reset hover view */
 	struct view *view = ssd->view;
 	if (g_server.hovered_button && node_view_from_node(
@@ -302,11 +301,9 @@ ssd_mode_parse(const char *mode)
 }
 
 void
-ssd_set_active(struct ssd *ssd, bool active)
+ssd_handle::set_active(bool active)
 {
-	if (!ssd) {
-		return;
-	}
+	CHECK_PTR_OR_RET(impl, ssd);
 	enum ssd_active_state active_state;
 	FOR_EACH_ACTIVE_STATE(active_state) {
 		wlr_scene_node_set_enabled(
@@ -324,11 +321,9 @@ ssd_set_active(struct ssd *ssd, bool active)
 }
 
 void
-ssd_enable_shade(struct ssd *ssd, bool enable)
+ssd_handle::enable_shade(bool enable)
 {
-	if (!ssd) {
-		return;
-	}
+	CHECK_PTR_OR_RET(impl, ssd);
 	ssd_titlebar_update(ssd);
 	ssd_border_update(ssd);
 	wlr_scene_node_set_enabled(&ssd->extents.tree->node, !enable);
@@ -336,30 +331,29 @@ ssd_enable_shade(struct ssd *ssd, bool enable)
 }
 
 void
-ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable)
+ssd_handle::enable_keybind_inhibit_indicator(bool enable)
 {
-	if (!ssd) {
-		return;
-	}
-
+	CHECK_PTR_OR_RET(impl, ssd);
 	float *color = enable ? g_theme.window_toggled_keybinds_color
 		: g_theme.window[THEME_ACTIVE].border_color;
 	wlr_scene_rect_set_color(ssd->border.subtrees[SSD_ACTIVE].top, color);
 }
 
 bool
-ssd_debug_is_root_node(const struct ssd *ssd, struct wlr_scene_node *node)
+ssd_handle::debug_is_root_node(struct wlr_scene_node *node)
 {
-	if (!ssd || !node) {
+	CHECK_PTR_OR_RET_VAL(impl, ssd, false);
+	if (!node) {
 		return false;
 	}
 	return node == &ssd->tree->node;
 }
 
 const char *
-ssd_debug_get_node_name(const struct ssd *ssd, struct wlr_scene_node *node)
+ssd_handle::debug_get_node_name(struct wlr_scene_node *node)
 {
-	if (!ssd || !node) {
+	CHECK_PTR_OR_RET_VAL(impl, ssd, NULL);
+	if (!node) {
 		return NULL;
 	}
 	if (node == &ssd->tree->node) {

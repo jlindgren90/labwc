@@ -187,6 +187,7 @@ struct ssd_button *ssd_button_create(
 /* SSD internal */
 void ssd_titlebar_create(struct ssd *ssd);
 void ssd_titlebar_update(struct ssd *ssd);
+void ssd_titlebar_update_title(struct ssd *ssd);
 void ssd_titlebar_destroy(struct ssd *ssd);
 bool ssd_should_be_squared(struct ssd *ssd);
 

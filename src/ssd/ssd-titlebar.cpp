@@ -103,7 +103,7 @@ ssd_titlebar_create(struct ssd *ssd)
 
 	update_visible_buttons(ssd);
 
-	ssd_update_title(ssd);
+	ssd_titlebar_update_title(ssd);
 
 	bool maximized = view->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
@@ -323,7 +323,7 @@ ssd_titlebar_update(struct ssd *ssd)
 		}
 	}
 
-	ssd_update_title(ssd);
+	ssd_titlebar_update_title(ssd);
 }
 
 void
@@ -420,9 +420,9 @@ get_title_offsets(struct ssd *ssd, int *offset_left, int *offset_right)
 }
 
 void
-ssd_update_title(struct ssd *ssd)
+ssd_titlebar_update_title(struct ssd *ssd)
 {
-	if (!ssd || !rc.show_title) {
+	if (!rc.show_title) {
 		return;
 	}
 
