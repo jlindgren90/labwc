@@ -88,7 +88,7 @@ desktop_focus_view(struct view *view, bool raise)
 		return;
 	}
 
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return;
 	}
 

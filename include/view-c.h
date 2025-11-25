@@ -8,6 +8,9 @@
 /* rust-friendly typedef */
 typedef struct view CView;
 
+void view_impl_map(CView *view);
+void view_impl_unmap(CView *view);
+
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_maximized(CView *view);
