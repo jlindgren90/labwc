@@ -28,6 +28,8 @@ pub type ViewId = u64;
 pub struct ViewState {
     app_id: *const c_char,
     title: *const c_char,
+    mapped: bool,
+    ever_mapped: bool,
     fullscreen: bool,
     maximized: ViewAxis,
     minimized: bool,
@@ -99,6 +101,27 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
             unsafe {
                 view_notify_title_change(view.c_ptr);
             }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_map(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.mapped = true;
+        unsafe {
+            view_impl_map(view.c_ptr);
+        }
+        view.state.ever_mapped = true;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_unmap(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.mapped = false;
+        unsafe {
+            view_impl_unmap(view.c_ptr);
         }
     }
 }

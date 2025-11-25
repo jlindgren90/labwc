@@ -352,7 +352,7 @@ handle_configure_timeout(void *data)
 	 * No need to do anything else if the view is just being slow to
 	 * map - the map handler will take care of the positioning.
 	 */
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return 0; /* ignored per wl_event_loop docs */
 	}
 
@@ -503,7 +503,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (!view->mapped && !view->output) {
+	if (!view->st->mapped && !view->output) {
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
 	bool maximized = toplevel->requested.maximized;
@@ -525,7 +525,7 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (!view->mapped && !view->output) {
+	if (!view->st->mapped && !view->output) {
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
 	set_fullscreen_from_request(view,
@@ -673,7 +673,7 @@ xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
 		if (view->type != LAB_XDG_SHELL_VIEW) {
 			continue;
 		}
-		if (!view->mapped) {
+		if (!view->st->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != toplevel) {
@@ -809,7 +809,7 @@ static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.map);
-	if (view->mapped) {
+	if (view->st->mapped) {
 		return;
 	}
 
@@ -821,9 +821,7 @@ handle_map(struct wl_listener *listener, void *data)
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
 
-	view->mapped = true;
-
-	if (!view->been_mapped) {
+	if (!view->st->ever_mapped) {
 		if (view_wants_decorations(view)) {
 			view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
 		} else {
@@ -861,17 +859,15 @@ handle_map(struct wl_listener *listener, void *data)
 		view_moved(view);
 	}
 
-	view_impl_map(view);
-	view->been_mapped = true;
+	view_map(view->id);
 }
 
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.unmap);
-	if (view->mapped) {
-		view->mapped = false;
-		view_impl_unmap(view);
+	if (view->st->mapped) {
+		view_unmap(view->id);
 	}
 }
 

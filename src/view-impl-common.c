@@ -11,7 +11,7 @@ view_impl_map(struct view *view)
 {
 	view_update_visibility(view);
 
-	if (!view->been_mapped) {
+	if (!view->st->ever_mapped) {
 		window_rules_apply(view, LAB_WINDOW_RULE_EVENT_ON_FIRST_MAP);
 	}
 

@@ -450,7 +450,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_maximize);
 	struct wlr_xwayland_surface *surf = xwayland_surface_from_view(view);
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 		/*
 		 * Set decorations early to avoid changing geometry
@@ -478,7 +478,7 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_fullscreen);
 	bool fullscreen = xwayland_surface_from_view(view)->fullscreen;
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 	}
 	view_set_fullscreen(view, fullscreen);
@@ -562,7 +562,7 @@ handle_set_strut_partial(struct wl_listener *listener, void *data)
 		wl_container_of(listener, xwayland_view, set_strut_partial);
 	struct view *view = &xwayland_view->base;
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		output_update_all_usable_areas(view->server, false);
 	}
 }
@@ -669,7 +669,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	struct view *view = &xwayland_view->base;
 	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		/* Probably shouldn't happen, but be sure */
 		return;
 	}
@@ -690,7 +690,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	 *   3. set maximized (geometry depends on decorations)
 	 */
 	view_set_fullscreen(view, xsurface->fullscreen);
-	if (!view->been_mapped) {
+	if (!view->st->ever_mapped) {
 		if (want_deco(xsurface)) {
 			view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
 		} else {
@@ -793,7 +793,7 @@ handle_map(struct wl_listener *listener, void *data)
 	assert(xwayland_surface->surface);
 	assert(xwayland_surface->surface == view->surface);
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		return;
 	}
 
@@ -804,8 +804,6 @@ handle_map(struct wl_listener *listener, void *data)
 	 * explicitly (calling it twice is harmless).
 	 */
 	handle_map_request(&xwayland_view->map_request, NULL);
-
-	view->mapped = true;
 
 	if (!view->content_tree) {
 		view->content_tree = wlr_scene_subsurface_tree_create(
@@ -819,7 +817,7 @@ handle_map(struct wl_listener *listener, void *data)
 
 	wlr_scene_node_set_enabled(&view->content_tree->node, !view->shaded);
 
-	if (!view->been_mapped) {
+	if (!view->st->ever_mapped) {
 		check_natural_geometry(view);
 		set_initial_position(view, xwayland_surface);
 		/*
@@ -844,19 +842,18 @@ handle_map(struct wl_listener *listener, void *data)
 		seat_focus_surface(&view->server->seat, view->surface);
 	}
 
-	view_impl_map(view);
-	view->been_mapped = true;
+	view_map(view->id);
 }
 
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.unmap);
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return;
 	}
-	view->mapped = false;
-	view_impl_unmap(view);
+
+	view_unmap(view->id);
 
 	/*
 	 * Destroy the content_tree at unmap. Alternatively, we could
@@ -918,7 +915,7 @@ xwayland_view_append_children(struct view *self, struct wl_array *children)
 		if (!view->surface) {
 			continue;
 		}
-		if (!view->mapped) {
+		if (!view->st->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != surface) {

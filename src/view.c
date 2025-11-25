@@ -383,7 +383,7 @@ view_is_focusable(struct view *view)
 	switch (view_wants_focus(view)) {
 	case VIEW_WANTS_FOCUS_ALWAYS:
 	case VIEW_WANTS_FOCUS_LIKELY:
-		return view->mapped;
+		return view->st->mapped;
 	default:
 		return false;
 	}
@@ -2367,7 +2367,7 @@ mappable_disconnect(struct mappable *mappable)
 void
 view_update_visibility(struct view *view)
 {
-	bool visible = view->mapped && !view->st->minimized;
+	bool visible = view->st->mapped && !view->st->minimized;
 	if (visible == view->scene_tree->node.enabled) {
 		return;
 	}
