@@ -7,7 +7,6 @@
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "output.h"
-#include "scaled-buffer/scaled-font-buffer.h"
 #include "scaled-buffer/scaled-icon-buffer.h"
 #include "ssd.h"
 #include "theme.h"
@@ -18,14 +17,13 @@ static void update_osd(void);
 static void
 destroy_osd_scenes(void)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (output->osd_scene.tree) {
-			wlr_scene_node_destroy(&output->osd_scene.tree->node);
-			output->osd_scene.tree = NULL;
+	for (auto &output : g_server.outputs) {
+		if (output.osd_scene.tree) {
+			wlr_scene_node_destroy(&output.osd_scene.tree->node);
+			output.osd_scene.tree = NULL;
 		}
-		wl_array_release(&output->osd_scene.items);
-		wl_array_init(&output->osd_scene.items);
+		wl_array_release(&output.osd_scene.items);
+		wl_array_init(&output.osd_scene.items);
 	}
 }
 
@@ -282,16 +280,15 @@ update_osd(void)
 
 	if (rc.window_switcher.show) {
 		/* Display the actual OSD */
-		struct output *output;
-		wl_list_for_each(output, &g_server.outputs, link) {
-			if (!output_is_usable(output)) {
+		for (auto &output : g_server.outputs) {
+			if (!output_is_usable(&output)) {
 				continue;
 			}
-			if (!output->osd_scene.tree) {
-				osd_impl->create(output, views);
-				assert(output->osd_scene.tree);
+			if (!output.osd_scene.tree) {
+				osd_impl->create(&output, views);
+				assert(output.osd_scene.tree);
 			}
-			osd_impl->update(output);
+			osd_impl->update(&output);
 		}
 	}
 

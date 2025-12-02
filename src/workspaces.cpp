@@ -76,13 +76,12 @@ _osd_update(void)
 	uint16_t width = margin * 2 + (marker_width < 200 ? 200 : marker_width);
 	uint16_t height = margin * (hide_boxes ? 2 : 3) + rect_height + font_height(&rc.font_osd);
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
+	for (auto &output : g_server.outputs) {
+		if (!output_is_usable(&output)) {
 			continue;
 		}
 		auto buffer = buffer_create_cairo(width, height,
-			output->wlr_output->scale);
+			output.wlr_output->scale);
 		cairo_t *cairo = cairo_create(buffer->surface);
 
 		/* Background */
@@ -152,25 +151,23 @@ _osd_update(void)
 		cairo_surface_flush(cairo_get_target(cairo));
 		cairo_destroy(cairo);
 
-		if (!output->workspace_osd) {
-			output->workspace_osd =
+		if (!output.workspace_osd) {
+			output.workspace_osd =
 				wlr_scene_buffer_create(&g_server.scene->tree,
 					NULL);
 		}
 		/* Position the whole thing */
 		struct wlr_box output_box;
 		wlr_output_layout_get_box(g_server.output_layout,
-			output->wlr_output, &output_box);
-		int lx = output->usable_area.x
-			+ (output->usable_area.width - width) / 2
-			+ output_box.x;
-		int ly = output->usable_area.y
-			+ (output->usable_area.height - height) / 2
+			output.wlr_output, &output_box);
+		int lx = output.usable_area.x
+			+ (output.usable_area.width - width) / 2 + output_box.x;
+		int ly = output.usable_area.y
+			+ (output.usable_area.height - height) / 2
 			+ output_box.y;
-		wlr_scene_node_set_position(&output->workspace_osd->node, lx, ly);
-		wlr_scene_buffer_set_buffer(output->workspace_osd,
-			buffer.get()); /* takes reference to wlr_buffer */
-		wlr_scene_buffer_set_dest_size(output->workspace_osd,
+		wlr_scene_node_set_position(&output.workspace_osd->node, lx, ly);
+		wlr_scene_buffer_set_buffer(output.workspace_osd, buffer.get());
+		wlr_scene_buffer_set_dest_size(output.workspace_osd,
 			buffer->logical_width, buffer->logical_height);
 	}
 }
@@ -286,10 +283,10 @@ _osd_show(void)
 	}
 
 	_osd_update();
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (output_is_usable(output) && output->workspace_osd) {
-			wlr_scene_node_set_enabled(&output->workspace_osd->node, true);
+	for (auto &output : g_server.outputs) {
+		if (output_is_usable(&output) && output.workspace_osd) {
+			wlr_scene_node_set_enabled(&output.workspace_osd->node,
+				true);
 		}
 	}
 	if (keyboard_get_all_modifiers()) {
@@ -412,13 +409,12 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 void
 workspaces_osd_hide(void)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output->workspace_osd) {
+	for (auto &output : g_server.outputs) {
+		if (!output.workspace_osd) {
 			continue;
 		}
-		wlr_scene_node_set_enabled(&output->workspace_osd->node, false);
-		wlr_scene_buffer_set_buffer(output->workspace_osd, NULL);
+		wlr_scene_node_set_enabled(&output.workspace_osd->node, false);
+		wlr_scene_buffer_set_buffer(output.workspace_osd, NULL);
 	}
 	g_seat.workspace_osd_shown_by_modifier = false;
 
