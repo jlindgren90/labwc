@@ -24,15 +24,15 @@ struct osd_thumbnail_scene_item {
 };
 
 static void
-render_node(struct server *server, struct wlr_render_pass *pass,
-		struct wlr_scene_node *node, int x, int y)
+render_node(struct wlr_render_pass *pass, struct wlr_scene_node *node,
+		int x, int y)
 {
 	switch (node->type) {
 	case WLR_SCENE_NODE_TREE: {
 		struct wlr_scene_tree *tree = wlr_scene_tree_from_node(node);
 		struct wlr_scene_node *child;
 		wl_list_for_each(child, &tree->children, link) {
-			render_node(server, pass, child, x + node->x, y + node->y);
+			render_node(pass, child, x + node->x, y + node->y);
 		}
 		break;
 	}
@@ -42,8 +42,9 @@ render_node(struct server *server, struct wlr_render_pass *pass,
 		if (!scene_buffer->buffer) {
 			break;
 		}
-		struct wlr_texture *texture = wlr_texture_from_buffer(
-			server->renderer, scene_buffer->buffer);
+		struct wlr_texture *texture =
+			wlr_texture_from_buffer(g_server.renderer,
+				scene_buffer->buffer);
 		if (!texture) {
 			break;
 		}
@@ -78,13 +79,13 @@ render_thumb(struct output *output, struct view *view)
 		 */
 		return NULL;
 	}
-	struct server *server = output->server;
-	struct wlr_buffer *buffer = wlr_allocator_create_buffer(server->allocator,
-		view->current.width, view->current.height,
-		&output->wlr_output->swapchain->format);
-	struct wlr_render_pass *pass = wlr_renderer_begin_buffer_pass(
-		server->renderer, buffer, NULL);
-	render_node(server, pass, &view->content_tree->node, 0, 0);
+	struct wlr_buffer *buffer =
+		wlr_allocator_create_buffer(g_server.allocator,
+			view->current.width, view->current.height,
+			&output->wlr_output->swapchain->format);
+	struct wlr_render_pass *pass =
+		wlr_renderer_begin_buffer_pass(g_server.renderer, buffer, NULL);
+	render_node(pass, &view->content_tree->node, 0, 0);
 	if (!wlr_render_pass_submit(pass)) {
 		wlr_log(WLR_ERROR, "failed to submit render pass");
 		wlr_buffer_drop(buffer);
@@ -113,8 +114,7 @@ static struct osd_thumbnail_scene_item *
 create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 		struct output *output)
 {
-	struct server *server = output->server;
-	struct theme *theme = server->theme;
+	struct theme *theme = g_server.theme;
 	struct window_switcher_thumbnail_theme *switcher_theme =
 		&theme->osd_window_switcher_thumbnail;
 	int padding = theme->border_width + switcher_theme->item_padding;
@@ -171,8 +171,8 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 
 	/* icon */
 	int icon_size = switcher_theme->item_icon_size;
-	struct scaled_icon_buffer *icon_buffer = scaled_icon_buffer_create(
-		item->tree, server, icon_size, icon_size);
+	struct scaled_icon_buffer *icon_buffer =
+		scaled_icon_buffer_create(item->tree, icon_size, icon_size);
 	scaled_icon_buffer_set_view(icon_buffer, view);
 	int x = (switcher_theme->item_width - icon_size) / 2;
 	int y = title_y - padding - icon_size + 10; /* slide by 10px */
@@ -216,7 +216,7 @@ osd_thumbnail_create(struct output *output, struct wl_array *views)
 {
 	assert(!output->osd_scene.tree);
 
-	struct theme *theme = output->server->theme;
+	struct theme *theme = g_server.theme;
 	struct window_switcher_thumbnail_theme *switcher_theme =
 		&theme->osd_window_switcher_thumbnail;
 	int padding = theme->osd_border_width + switcher_theme->padding;
@@ -268,7 +268,7 @@ osd_thumbnail_update(struct output *output)
 {
 	struct osd_thumbnail_scene_item *item;
 	wl_array_for_each(item, &output->osd_scene.items) {
-		bool active = (item->view == output->server->osd_state.cycle_view);
+		bool active = (item->view == g_server.osd_state.cycle_view);
 		wlr_scene_node_set_enabled(&item->active_bg->tree->node, active);
 		wlr_scene_node_set_enabled(
 			&item->active_title->scene_buffer->node, active);

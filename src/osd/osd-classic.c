@@ -27,12 +27,11 @@ osd_classic_create(struct output *output, struct wl_array *views)
 {
 	assert(!output->osd_scene.tree);
 
-	struct server *server = output->server;
-	struct theme *theme = server->theme;
+	struct theme *theme = g_server.theme;
 	struct window_switcher_classic_theme *switcher_theme =
 		&theme->osd_window_switcher_classic;
 	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
-	const char *workspace_name = server->workspaces.current->name;
+	const char *workspace_name = g_server.workspaces.current->name;
 
 	int w = switcher_theme->width;
 	if (switcher_theme->width_is_percent) {
@@ -140,7 +139,7 @@ osd_classic_create(struct output *output, struct wl_array *views)
 					switcher_theme->item_icon_size);
 				struct scaled_icon_buffer *icon_buffer =
 					scaled_icon_buffer_create(item_root,
-						server, icon_size, icon_size);
+						icon_size, icon_size);
 				scaled_icon_buffer_set_view(icon_buffer, *view);
 				node = &icon_buffer->scene_buffer->node;
 				height = icon_size;
@@ -203,7 +202,7 @@ osd_classic_update(struct output *output)
 	struct osd_classic_scene_item *item;
 	wl_array_for_each(item, &output->osd_scene.items) {
 		wlr_scene_node_set_enabled(item->highlight_outline,
-			item->view == output->server->osd_state.cycle_view);
+			item->view == g_server.osd_state.cycle_view);
 	}
 }
 

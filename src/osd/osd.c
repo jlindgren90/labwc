@@ -16,13 +16,13 @@
 #include "theme.h"
 #include "view.h"
 
-static void update_osd(struct server *server);
+static void update_osd(void);
 
 static void
-destroy_osd_scenes(struct server *server)
+destroy_osd_scenes(void)
 {
 	struct output *output;
-	wl_list_for_each(output, &server->outputs, link) {
+	wl_list_for_each(output, &g_server.outputs, link) {
 		if (output->osd_scene.tree) {
 			wlr_scene_node_destroy(&output->osd_scene.tree->node);
 			output->osd_scene.tree = NULL;
@@ -36,9 +36,8 @@ static void
 osd_update_preview_outlines(struct view *view)
 {
 	/* Create / Update preview outline tree */
-	struct server *server = view->server;
-	struct theme *theme = server->theme;
-	struct lab_scene_rect *rect = view->server->osd_state.preview_outline;
+	struct theme *theme = g_server.theme;
+	struct lab_scene_rect *rect = g_server.osd_state.preview_outline;
 	if (!rect) {
 		struct lab_scene_rect_options opts = {
 			.border_colors = (float *[3]) {
@@ -49,9 +48,10 @@ osd_update_preview_outlines(struct view *view)
 			.nr_borders = 3,
 			.border_width = theme->osd_window_switcher_preview_border_width,
 		};
-		rect = lab_scene_rect_create(&server->scene->tree, &opts);
-		wlr_scene_node_place_above(&rect->tree->node, &server->menu_tree->node);
-		server->osd_state.preview_outline = rect;
+		rect = lab_scene_rect_create(&g_server.scene->tree, &opts);
+		wlr_scene_node_place_above(&rect->tree->node,
+			&g_server.menu_tree->node);
+		g_server.osd_state.preview_outline = rect;
 	}
 
 	struct wlr_box geo = ssd_max_extents(view);
@@ -64,8 +64,7 @@ osd_update_preview_outlines(struct view *view)
  * If !start_view, the second focusable view is returned.
  */
 static struct view *
-get_next_cycle_view(struct server *server, struct view *start_view,
-		enum lab_cycle_dir dir)
+get_next_cycle_view(struct view *start_view, enum lab_cycle_dir dir)
 {
 	struct view *(*iter)(struct wl_list *head, struct view *view,
 		enum lab_view_criteria criteria);
@@ -85,19 +84,19 @@ get_next_cycle_view(struct server *server, struct view *start_view,
 	 *   ...
 	 */
 	if (!start_view && forwards) {
-		start_view = iter(&server->views, NULL, criteria);
+		start_view = iter(&g_server.views, NULL, criteria);
 	}
 
-	return iter(&server->views, start_view, criteria);
+	return iter(&g_server.views, start_view, criteria);
 }
 
 void
 osd_on_view_destroy(struct view *view)
 {
 	assert(view);
-	struct osd_state *osd_state = &view->server->osd_state;
+	struct osd_state *osd_state = &g_server.osd_state;
 
-	if (view->server->input_mode != LAB_INPUT_STATE_WINDOW_SWITCHER) {
+	if (g_server.input_mode != LAB_INPUT_STATE_WINDOW_SWITCHER) {
 		/* OSD not active, no need for clean up */
 		return;
 	}
@@ -109,8 +108,9 @@ osd_on_view_destroy(struct view *view)
 		 */
 
 		/* Also resets preview node */
-		osd_state->cycle_view = get_next_cycle_view(view->server,
-			osd_state->cycle_view, LAB_CYCLE_DIR_BACKWARD);
+		osd_state->cycle_view =
+			get_next_cycle_view(osd_state->cycle_view,
+				LAB_CYCLE_DIR_BACKWARD);
 
 		/*
 		 * If we cycled back to ourselves, then we have no more windows.
@@ -118,14 +118,14 @@ osd_on_view_destroy(struct view *view)
 		 */
 		if (osd_state->cycle_view == view || !osd_state->cycle_view) {
 			/* osd_finish() additionally resets cycle_view to NULL */
-			osd_finish(view->server);
+			osd_finish();
 		}
 	}
 
 	if (osd_state->cycle_view) {
 		/* Recreate the OSD to reflect the view has now gone. */
-		destroy_osd_scenes(view->server);
-		update_osd(view->server);
+		destroy_osd_scenes();
+		update_osd();
 	}
 
 	if (view->scene_tree) {
@@ -141,9 +141,9 @@ osd_on_view_destroy(struct view *view)
 }
 
 static void
-restore_preview_node(struct server *server)
+restore_preview_node(void)
 {
-	struct osd_state *osd_state = &server->osd_state;
+	struct osd_state *osd_state = &g_server.osd_state;
 	if (osd_state->preview_node) {
 		wlr_scene_node_reparent(osd_state->preview_node,
 			osd_state->preview_parent);
@@ -167,53 +167,54 @@ restore_preview_node(struct server *server)
 }
 
 void
-osd_begin(struct server *server, enum lab_cycle_dir direction)
+osd_begin(enum lab_cycle_dir direction)
 {
-	if (server->input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		return;
 	}
 
-	server->osd_state.cycle_view = get_next_cycle_view(server,
-		server->osd_state.cycle_view, direction);
+	g_server.osd_state.cycle_view =
+		get_next_cycle_view(g_server.osd_state.cycle_view, direction);
 
-	seat_focus_override_begin(&server->seat,
+	seat_focus_override_begin(&g_server.seat,
 		LAB_INPUT_STATE_WINDOW_SWITCHER, LAB_CURSOR_DEFAULT);
-	update_osd(server);
+	update_osd();
 
 	/* Update cursor, in case it is within the area covered by OSD */
-	cursor_update_focus(server);
+	cursor_update_focus();
 }
 
 void
-osd_cycle(struct server *server, enum lab_cycle_dir direction)
+osd_cycle(enum lab_cycle_dir direction)
 {
-	assert(server->input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER);
+	assert(g_server.input_mode == LAB_INPUT_STATE_WINDOW_SWITCHER);
 
-	server->osd_state.cycle_view = get_next_cycle_view(server,
-		server->osd_state.cycle_view, direction);
-	update_osd(server);
+	g_server.osd_state.cycle_view =
+		get_next_cycle_view(g_server.osd_state.cycle_view, direction);
+	update_osd();
 }
 
 void
-osd_finish(struct server *server)
+osd_finish(void)
 {
-	restore_preview_node(server);
-	seat_focus_override_end(&server->seat);
+	restore_preview_node();
+	seat_focus_override_end(&g_server.seat);
 
-	server->osd_state.preview_node = NULL;
-	server->osd_state.preview_anchor = NULL;
-	server->osd_state.cycle_view = NULL;
+	g_server.osd_state.preview_node = NULL;
+	g_server.osd_state.preview_anchor = NULL;
+	g_server.osd_state.cycle_view = NULL;
 
-	destroy_osd_scenes(server);
+	destroy_osd_scenes();
 
-	if (server->osd_state.preview_outline) {
+	if (g_server.osd_state.preview_outline) {
 		/* Destroy the whole multi_rect so we can easily react to new themes */
-		wlr_scene_node_destroy(&server->osd_state.preview_outline->tree->node);
-		server->osd_state.preview_outline = NULL;
+		wlr_scene_node_destroy(
+			&g_server.osd_state.preview_outline->tree->node);
+		g_server.osd_state.preview_outline = NULL;
 	}
 
 	/* Hiding OSD may need a cursor change */
-	cursor_update_focus(server);
+	cursor_update_focus();
 }
 
 static void
@@ -221,10 +222,10 @@ preview_cycled_view(struct view *view)
 {
 	assert(view);
 	assert(view->scene_tree);
-	struct osd_state *osd_state = &view->server->osd_state;
+	struct osd_state *osd_state = &g_server.osd_state;
 
 	/* Move previous selected node back to its original place */
-	restore_preview_node(view->server);
+	restore_preview_node();
 
 	/* Store some pointers so we can reset the preview later on */
 	osd_state->preview_node = &view->scene_tree->node;
@@ -247,22 +248,22 @@ preview_cycled_view(struct view *view)
 
 	/*
 	 * FIXME: This abuses an implementation detail of the always-on-top tree.
-	 *        Create a permanent server->osd_preview_tree instead that can
+	 *        Create a permanent g_server.osd_preview_tree instead that can
 	 *        also be used as parent for the preview outlines.
 	 */
 	wlr_scene_node_reparent(osd_state->preview_node,
-		view->server->view_tree_always_on_top);
+		g_server.view_tree_always_on_top);
 
 	/* Finally raise selected node to the top */
 	wlr_scene_node_raise_to_top(osd_state->preview_node);
 }
 
 static void
-update_osd(struct server *server)
+update_osd(void)
 {
 	struct wl_array views;
 	wl_array_init(&views);
-	view_array_append(server, &views, rc.window_switcher.criteria);
+	view_array_append(&views, rc.window_switcher.criteria);
 
 	struct osd_impl *osd_impl = NULL;
 	switch (rc.window_switcher.style) {
@@ -274,15 +275,15 @@ update_osd(struct server *server)
 		break;
 	}
 
-	if (!wl_array_len(&views) || !server->osd_state.cycle_view) {
-		osd_finish(server);
+	if (!wl_array_len(&views) || !g_server.osd_state.cycle_view) {
+		osd_finish();
 		goto out;
 	}
 
 	if (rc.window_switcher.show) {
 		/* Display the actual OSD */
 		struct output *output;
-		wl_list_for_each(output, &server->outputs, link) {
+		wl_list_for_each(output, &g_server.outputs, link) {
 			if (!output_is_usable(output)) {
 				continue;
 			}
@@ -296,13 +297,14 @@ update_osd(struct server *server)
 
 	/* Outline current window */
 	if (rc.window_switcher.outlines) {
-		if (view_is_focusable(server->osd_state.cycle_view)) {
-			osd_update_preview_outlines(server->osd_state.cycle_view);
+		if (view_is_focusable(g_server.osd_state.cycle_view)) {
+			osd_update_preview_outlines(
+				g_server.osd_state.cycle_view);
 		}
 	}
 
 	if (rc.window_switcher.preview) {
-		preview_cycled_view(server->osd_state.cycle_view);
+		preview_cycled_view(g_server.osd_state.cycle_view);
 	}
 out:
 	wl_array_release(&views);
