@@ -8,7 +8,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
 #include "buffer.h"
-#include "common/array.h"
 #include "common/box.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
@@ -846,31 +845,21 @@ xdg_toplevel_view::get_pid()
 	return pid;
 }
 
-struct token_data {
+struct token_data : public destroyable {
 	bool had_valid_surface;
 	bool had_valid_seat;
-	struct wl_listener destroy;
 };
-
-static void
-handle_xdg_activation_token_destroy(struct wl_listener *listener, void *data)
-{
-	struct token_data *token_data = wl_container_of(listener, token_data, destroy);
-	wl_list_remove(&token_data->destroy.link);
-	free(token_data);
-}
 
 static void
 handle_xdg_activation_new_token(struct wl_listener *listener, void *data)
 {
 	auto token = (wlr_xdg_activation_token_v1 *)data;
-	struct token_data *token_data = znew(*token_data);
+	auto token_data = new struct token_data();
 	token_data->had_valid_surface = !!token->surface;
 	token_data->had_valid_seat = !!token->seat;
 	token->data = token_data;
 
-	token_data->destroy.notify = handle_xdg_activation_token_destroy;
-	wl_signal_add(&token->events.destroy, &token_data->destroy);
+	CONNECT_LISTENER(token, token_data, destroy);
 }
 
 static void
