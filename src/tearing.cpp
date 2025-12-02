@@ -1,21 +1,19 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include <wlr/types/wlr_tearing_control_v1.h>
-#include "common/mem.h"
 #include "labwc.h"
 #include "view.h"
 
-struct tearing_controller {
+struct tearing_controller : public destroyable {
 	struct wlr_tearing_control_v1 *tearing_control;
-	struct wl_listener set_hint;
-	struct wl_listener destroy;
+	DECLARE_HANDLER(tearing_controller, set_hint);
 };
 
-static void
-handle_controller_set_hint(struct wl_listener *listener, void *data)
+void
+tearing_controller::handle_set_hint(void *)
 {
-	struct tearing_controller *controller = wl_container_of(listener, controller, set_hint);
-	struct view *view = view_from_wlr_surface(controller->tearing_control->surface);
+	struct view *view =
+		view_from_wlr_surface(this->tearing_control->surface);
 	if (view) {
 		/*
 		 * tearing_control->current is actually an enum:
@@ -24,23 +22,14 @@ handle_controller_set_hint(struct wl_listener *listener, void *data)
 		 *
 		 * Using it as a bool here allows us to not ship the XML.
 		 */
-		view->tearing_hint = controller->tearing_control->current;
+		view->tearing_hint = this->tearing_control->current;
 	}
-}
-
-static void
-handle_controller_destroy(struct wl_listener *listener, void *data)
-{
-	struct tearing_controller *controller = wl_container_of(listener, controller, destroy);
-	wl_list_remove(&controller->set_hint.link);
-	wl_list_remove(&controller->destroy.link);
-	free(controller);
 }
 
 void
 handle_tearing_new_object(struct wl_listener *listener, void *data)
 {
-	struct wlr_tearing_control_v1 *tearing_control = data;
+	auto tearing_control = (wlr_tearing_control_v1 *)data;
 
 	enum wp_tearing_control_v1_presentation_hint hint =
 		wlr_tearing_control_manager_v1_surface_hint_from_surface(
@@ -48,12 +37,9 @@ handle_tearing_new_object(struct wl_listener *listener, void *data)
 	wlr_log(WLR_DEBUG, "New presentation hint %d received for surface %p",
 		hint, tearing_control->surface);
 
-	struct tearing_controller *controller = znew(*controller);
+	auto controller = new tearing_controller();
 	controller->tearing_control = tearing_control;
 
-	controller->set_hint.notify = handle_controller_set_hint;
-	wl_signal_add(&tearing_control->events.set_hint, &controller->set_hint);
-
-	controller->destroy.notify = handle_controller_destroy;
-	wl_signal_add(&tearing_control->events.destroy, &controller->destroy);
+	CONNECT_LISTENER(tearing_control, controller, set_hint);
+	CONNECT_LISTENER(tearing_control, controller, destroy);
 }
