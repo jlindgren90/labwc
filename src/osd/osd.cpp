@@ -2,7 +2,6 @@
 #include "osd.h"
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "common/array.h"
 #include "common/lab-scene-rect.h"
 #include "common/scene-helpers.h"
 #include "config/rcxml.h"
@@ -65,10 +64,9 @@ osd_update_preview_outlines(struct view *view)
 static struct view *
 get_next_cycle_view(struct view *start_view, enum lab_cycle_dir dir)
 {
-	struct view *(*iter)(struct wl_list *head, struct view *view,
-		enum lab_view_criteria criteria);
 	bool forwards = dir == LAB_CYCLE_DIR_FORWARD;
-	iter = forwards ? view_next_no_head_stop : view_prev_no_head_stop;
+	auto begin = forwards ? g_views.begin() : g_views.rbegin();
+	auto pos = lab::find_ptr(begin, start_view);
 
 	enum lab_view_criteria criteria = rc.window_switcher.criteria;
 
@@ -82,11 +80,16 @@ get_next_cycle_view(struct view *start_view, enum lab_cycle_dir dir)
 	 *   View #3
 	 *   ...
 	 */
-	if (!start_view && forwards) {
-		start_view = iter(&g_server.views, NULL, criteria);
+	if (!pos && forwards) {
+		pos = view_find_matching(begin, criteria); // top view
 	}
-
-	return iter(&g_server.views, start_view, criteria);
+	if (pos) {
+		pos = view_find_matching(++pos, criteria); // next view
+	}
+	if (!pos) {
+		pos = view_find_matching(begin, criteria); // wrap around
+	}
+	return pos.get();
 }
 
 void
@@ -260,9 +263,7 @@ preview_cycled_view(struct view *view)
 static void
 update_osd(void)
 {
-	struct wl_array views;
-	wl_array_init(&views);
-	view_array_append(&views, rc.window_switcher.criteria);
+	auto views = view_list_matching(rc.window_switcher.criteria);
 
 	struct osd_impl *osd_impl = NULL;
 	switch (rc.window_switcher.style) {
@@ -274,9 +275,9 @@ update_osd(void)
 		break;
 	}
 
-	if (!wl_array_len(&views) || !g_server.osd_state.cycle_view) {
+	if (views.empty() || !g_server.osd_state.cycle_view) {
 		osd_finish();
-		goto out;
+		return;
 	}
 
 	if (rc.window_switcher.show) {
@@ -287,7 +288,7 @@ update_osd(void)
 				continue;
 			}
 			if (!output->osd_scene.tree) {
-				osd_impl->create(output, &views);
+				osd_impl->create(output, views);
 				assert(output->osd_scene.tree);
 			}
 			osd_impl->update(output);
@@ -305,6 +306,4 @@ update_osd(void)
 	if (rc.window_switcher.preview) {
 		preview_cycled_view(g_server.osd_state.cycle_view);
 	}
-out:
-	wl_array_release(&views);
 }

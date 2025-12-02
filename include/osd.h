@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
+#include "common/reflist.h"
 
 struct output;
 
@@ -74,7 +75,7 @@ struct osd_impl {
 	 * Create a scene-tree of OSD for an output.
 	 * This sets output->osd_scene.{items,tree}.
 	 */
-	void (*create)(struct output *output, struct wl_array *views);
+	void (*create)(struct output *output, reflist<view> &views);
 	/*
 	 * Update output->osd_scene.tree to highlight
 	 * server->osd_state.cycle_view.

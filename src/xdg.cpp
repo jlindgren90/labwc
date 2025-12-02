@@ -10,7 +10,6 @@
 #include "buffer.h"
 #include "common/array.h"
 #include "common/box.h"
-#include "common/macros.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "decorations.h"
@@ -32,15 +31,13 @@ static struct xdg_toplevel_view *
 xdg_toplevel_view_from_view(struct view *view)
 {
 	assert(view->type == LAB_XDG_SHELL_VIEW);
-	return (struct xdg_toplevel_view *)view;
+	return static_cast<xdg_toplevel_view *>(view);
 }
 
 struct wlr_xdg_surface *
 xdg_surface_from_view(struct view *view)
 {
-	assert(view->type == LAB_XDG_SHELL_VIEW);
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		(struct xdg_toplevel_view *)view;
+	auto xdg_toplevel_view = xdg_toplevel_view_from_view(view);
 	assert(xdg_toplevel_view->xdg_surface);
 	return xdg_toplevel_view->xdg_surface;
 }
@@ -54,12 +51,10 @@ xdg_toplevel_from_view(struct view *view)
 	return xdg_surface->toplevel;
 }
 
-static struct view_size_hints
-xdg_toplevel_view_get_size_hints(struct view *view)
+view_size_hints
+xdg_toplevel_view::get_size_hints()
 {
-	assert(view);
-
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	auto toplevel = xdg_toplevel_from_view(this);
 	struct wlr_xdg_toplevel_state *state = &toplevel->current;
 
 	return (struct view_size_hints){
@@ -68,13 +63,10 @@ xdg_toplevel_view_get_size_hints(struct view *view)
 	};
 }
 
-static bool
-xdg_toplevel_view_contains_window_type(struct view *view,
-		enum lab_window_type window_type)
+bool
+xdg_toplevel_view::contains_window_type(lab_window_type window_type)
 {
-	assert(view);
-
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	auto toplevel = xdg_toplevel_from_view(this);
 	struct wlr_xdg_toplevel_state *state = &toplevel->current;
 	bool is_dialog = (state->min_width != 0 && state->min_height != 0
 		&& (state->min_width == state->max_width
@@ -91,14 +83,11 @@ xdg_toplevel_view_contains_window_type(struct view *view,
 	}
 }
 
-static void
-handle_new_popup(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_new_popup(void *data)
 {
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		wl_container_of(listener, xdg_toplevel_view, new_popup);
-	struct view *view = &xdg_toplevel_view->base;
-	struct wlr_xdg_popup *wlr_popup = data;
-	xdg_popup_create(view, wlr_popup);
+	auto wlr_popup = (wlr_xdg_popup *)data;
+	xdg_popup_create(this, wlr_popup);
 }
 
 static void
@@ -183,13 +172,12 @@ center_fullscreen_if_needed(struct view *view)
 /* TODO: reorder so this forward declaration isn't needed */
 static void set_pending_configure_serial(struct view *view, uint32_t serial);
 
-static void
-handle_commit(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_commit(void *data)
 {
-	struct view *view = wl_container_of(listener, view, commit);
-	struct wlr_xdg_surface *xdg_surface = xdg_surface_from_view(view);
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
-	assert(view->surface);
+	auto view = this;
+	auto toplevel = xdg_toplevel_from_view(view);
+	assert(data && data == view->surface);
 
 	if (xdg_surface->initial_commit) {
 		uint32_t serial =
@@ -333,7 +321,7 @@ handle_commit(struct wl_listener *listener, void *data)
 static int
 handle_configure_timeout(void *data)
 {
-	struct view *view = data;
+	auto view = (struct view *)data;
 	assert(view->pending_configure_serial > 0);
 	assert(view->pending_configure_timeout);
 
@@ -413,38 +401,23 @@ set_pending_configure_serial(struct view *view, uint32_t serial)
 		CONFIGURE_TIMEOUT_MS);
 }
 
-static void
-handle_destroy(struct wl_listener *listener, void *data)
+xdg_toplevel_view::~xdg_toplevel_view()
 {
-	struct view *view = wl_container_of(listener, view, destroy);
-	assert(view->type == LAB_XDG_SHELL_VIEW);
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		xdg_toplevel_view_from_view(view);
-
 	struct wlr_xdg_popup *popup, *tmp;
-	wl_list_for_each_safe(popup, tmp, &xdg_toplevel_view->xdg_surface->popups, link) {
+	wl_list_for_each_safe(popup, tmp, &xdg_surface->popups, link) {
 		wlr_xdg_popup_destroy(popup);
 	}
 
-	xdg_toplevel_view->xdg_surface->data = NULL;
-	xdg_toplevel_view->xdg_surface = NULL;
+	xdg_surface->data = NULL;
 
-	/* Remove xdg-shell view specific listeners */
-	wl_list_remove(&xdg_toplevel_view->set_app_id.link);
-	wl_list_remove(&xdg_toplevel_view->request_show_window_menu.link);
-	wl_list_remove(&xdg_toplevel_view->new_popup.link);
-	wl_list_remove(&view->commit.link);
-
-	if (view->pending_configure_timeout) {
-		wl_event_source_remove(view->pending_configure_timeout);
-		view->pending_configure_timeout = NULL;
+	if (pending_configure_timeout) {
+		wl_event_source_remove(pending_configure_timeout);
+		pending_configure_timeout = NULL;
 	}
-
-	view_destroy(view);
 }
 
-static void
-handle_request_move(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_request_move(void *)
 {
 	/*
 	 * This event is raised when a client would like to begin an interactive
@@ -454,14 +427,13 @@ handle_request_move(struct wl_listener *listener, void *data)
 	 * this client, to prevent the client from requesting this whenever they
 	 * want.
 	 */
-	struct view *view = wl_container_of(listener, view, request_move);
-	if (view == g_seat.pressed.view) {
-		interactive_begin(view, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
+	if (this == g_seat.pressed.view) {
+		interactive_begin(this, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 	}
 }
 
-static void
-handle_request_resize(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_request_resize(void *data)
 {
 	/*
 	 * This event is raised when a client would like to begin an interactive
@@ -471,25 +443,23 @@ handle_request_resize(struct wl_listener *listener, void *data)
 	 * this client, to prevent the client from requesting this whenever they
 	 * want.
 	 */
-	struct wlr_xdg_toplevel_resize_event *event = data;
-	struct view *view = wl_container_of(listener, view, request_resize);
-	if (view == g_seat.pressed.view) {
-		interactive_begin(view, LAB_INPUT_STATE_RESIZE, event->edges);
+	auto event = (wlr_xdg_toplevel_resize_event *)data;
+	if (this == g_seat.pressed.view) {
+		interactive_begin(this, LAB_INPUT_STATE_RESIZE, event->edges);
 	}
 }
 
-static void
-handle_request_minimize(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_request_minimize(void *)
 {
-	struct view *view = wl_container_of(listener, view, request_minimize);
-	view_minimize(view, xdg_toplevel_from_view(view)->requested.minimized);
+	view_minimize(this, xdg_toplevel_from_view(this)->requested.minimized);
 }
 
-static void
-handle_request_maximize(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_request_maximize(void *)
 {
-	struct view *view = wl_container_of(listener, view, request_maximize);
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	auto view = this;
+	auto toplevel = xdg_toplevel_from_view(view);
 
 	if (!toplevel->base->initialized) {
 		/*
@@ -507,11 +477,11 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 		/*store_natural_geometry*/ true);
 }
 
-static void
-handle_request_fullscreen(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_request_fullscreen(void *)
 {
-	struct view *view = wl_container_of(listener, view, request_fullscreen);
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	auto view = this;
+	auto toplevel = xdg_toplevel_from_view(view);
 
 	if (!toplevel->base->initialized) {
 		/*
@@ -528,43 +498,37 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 		&xdg_toplevel_from_view(view)->requested);
 }
 
-static void
-handle_request_show_window_menu(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_request_show_window_menu(void *)
 {
-	struct xdg_toplevel_view *xdg_toplevel_view = wl_container_of(listener,
-		xdg_toplevel_view, request_show_window_menu);
-
 	struct menu *menu = menu_get_by_id("client-menu");
 	assert(menu);
-	menu->triggered_by_view = &xdg_toplevel_view->base;
+	menu->triggered_by_view = this;
 
 	struct wlr_cursor *cursor = g_seat.cursor;
 	menu_open_root(menu, cursor->x, cursor->y);
 }
 
-static void
-handle_set_title(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_set_title(void *)
 {
-	struct view *view = wl_container_of(listener, view, set_title);
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(this);
 
-	view_set_title(view, toplevel->title);
+	view_set_title(this, toplevel->title);
 }
 
-static void
-handle_set_app_id(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_set_app_id(void *)
 {
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		wl_container_of(listener, xdg_toplevel_view, set_app_id);
-	struct view *view = &xdg_toplevel_view->base;
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(this);
 
-	view_set_app_id(view, toplevel->app_id);
+	view_set_app_id(this, toplevel->app_id);
 }
 
-static void
-xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
+void
+xdg_toplevel_view::configure(wlr_box geo)
 {
+	auto view = this;
 	uint32_t serial = 0;
 
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
@@ -609,15 +573,16 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
 	}
 }
 
-static void
-xdg_toplevel_view_close(struct view *view)
+void
+xdg_toplevel_view::close()
 {
-	wlr_xdg_toplevel_send_close(xdg_toplevel_from_view(view));
+	wlr_xdg_toplevel_send_close(xdg_toplevel_from_view(this));
 }
 
-static void
-xdg_toplevel_view_maximize(struct view *view, enum view_axis maximized)
+void
+xdg_toplevel_view::maximize(view_axis maximized)
 {
+	auto view = this;
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented maximize notification for a non-intialized view");
 		return;
@@ -629,16 +594,16 @@ xdg_toplevel_view_maximize(struct view *view, enum view_axis maximized)
 	}
 }
 
-static void
-xdg_toplevel_view_minimize(struct view *view, bool minimized)
+void
+xdg_toplevel_view::minimize(bool minimized)
 {
 	/* noop */
 }
 
-static struct view *
-xdg_toplevel_view_get_parent(struct view *view)
+struct view *
+xdg_toplevel_view::get_parent()
 {
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
+	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(this);
 	return toplevel->parent ?
 		(struct view *)toplevel->parent->base->data : NULL;
 }
@@ -654,40 +619,41 @@ top_parent_of(struct view *view)
 }
 
 /* Return the most senior parent (=root) view */
-static struct view *
-xdg_toplevel_view_get_root(struct view *view)
+view *
+xdg_toplevel_view::get_root()
 {
-	struct wlr_xdg_toplevel *root = top_parent_of(view);
+	auto root = top_parent_of(this);
 	return (struct view *)root->base->data;
 }
 
-static void
-xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
+view_list
+xdg_toplevel_view::get_children()
 {
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(self);
-	struct view *view;
+	auto toplevel = xdg_toplevel_from_view(this);
+	view_list children;
 
-	wl_list_for_each_reverse(view, &g_server.views, link) {
-		if (view == self) {
+	for (auto &view : g_views.reversed()) {
+		if (&view == this) {
 			continue;
 		}
-		if (view->type != LAB_XDG_SHELL_VIEW) {
+		if (view.type != LAB_XDG_SHELL_VIEW) {
 			continue;
 		}
-		if (!view->mapped) {
+		if (!view.mapped) {
 			continue;
 		}
-		if (top_parent_of(view) != toplevel) {
+		if (top_parent_of(&view) != toplevel) {
 			continue;
 		}
-		struct view **child = wl_array_add(children, sizeof(*child));
-		*child = view;
+		children.append(&view);
 	}
+	return children;
 }
 
-static void
-xdg_toplevel_view_set_activated(struct view *view, bool activated)
+void
+xdg_toplevel_view::set_activated(bool activated)
 {
+	auto view = this;
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented activating a non-intialized view");
 		return;
@@ -699,9 +665,10 @@ xdg_toplevel_view_set_activated(struct view *view, bool activated)
 	}
 }
 
-static void
-xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
+void
+xdg_toplevel_view::set_fullscreen(bool fullscreen)
 {
+	auto view = this;
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented fullscreening a non-intialized view");
 		return;
@@ -717,14 +684,15 @@ xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
 	}
 }
 
-static void
-xdg_toplevel_view_notify_tiled(struct view *view)
+void
+xdg_toplevel_view::notify_tiled()
 {
 	/* Take no action if xdg-shell tiling is disabled */
 	if (rc.snap_tiling_events_mode == LAB_TILING_EVENTS_NEVER) {
 		return;
 	}
 
+	auto view = this;
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented tiling notification for a non-intialized view");
 		return;
@@ -782,7 +750,7 @@ set_initial_position(struct view *view)
 {
 	view_constrain_size_to_that_of_usable_area(view);
 
-	struct view *parent = xdg_toplevel_view_get_parent(view);
+	struct view *parent = view->get_parent();
 	if (parent) {
 		/* Child views are center-aligned relative to their parents */
 		view_set_output(view, parent->output);
@@ -794,10 +762,10 @@ set_initial_position(struct view *view)
 	view_place_by_policy(view, /* allow_cursor */ true, rc.placement_policy);
 }
 
-static void
-handle_map(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_map(void *)
 {
-	struct view *view = wl_container_of(listener, view, mappable.map);
+	auto view = this;
 	if (view->mapped) {
 		return;
 	}
@@ -854,20 +822,20 @@ handle_map(struct wl_listener *listener, void *data)
 	view->been_mapped = true;
 }
 
-static void
-handle_unmap(struct wl_listener *listener, void *data)
+void
+xdg_toplevel_view::handle_unmap(void *)
 {
-	struct view *view = wl_container_of(listener, view, mappable.unmap);
+	auto view = this;
 	if (view->mapped) {
 		view->mapped = false;
 		view_impl_unmap(view);
 	}
 }
 
-static pid_t
-xdg_view_get_pid(struct view *view)
+pid_t
+xdg_toplevel_view::get_pid()
 {
-	assert(view);
+	auto view = this;
 	pid_t pid = -1;
 
 	if (view->surface && view->surface->resource
@@ -877,22 +845,6 @@ xdg_view_get_pid(struct view *view)
 	}
 	return pid;
 }
-
-static const struct view_impl xdg_toplevel_view_impl = {
-	.configure = xdg_toplevel_view_configure,
-	.close = xdg_toplevel_view_close,
-	.set_activated = xdg_toplevel_view_set_activated,
-	.set_fullscreen = xdg_toplevel_view_set_fullscreen,
-	.notify_tiled = xdg_toplevel_view_notify_tiled,
-	.maximize = xdg_toplevel_view_maximize,
-	.minimize = xdg_toplevel_view_minimize,
-	.get_parent = xdg_toplevel_view_get_parent,
-	.get_root = xdg_toplevel_view_get_root,
-	.append_children = xdg_toplevel_view_append_children,
-	.get_size_hints = xdg_toplevel_view_get_size_hints,
-	.contains_window_type = xdg_toplevel_view_contains_window_type,
-	.get_pid = xdg_view_get_pid,
-};
 
 struct token_data {
 	bool had_valid_surface;
@@ -911,7 +863,7 @@ handle_xdg_activation_token_destroy(struct wl_listener *listener, void *data)
 static void
 handle_xdg_activation_new_token(struct wl_listener *listener, void *data)
 {
-	struct wlr_xdg_activation_token_v1 *token = data;
+	auto token = (wlr_xdg_activation_token_v1 *)data;
 	struct token_data *token_data = znew(*token_data);
 	token_data->had_valid_surface = !!token->surface;
 	token_data->had_valid_seat = !!token->seat;
@@ -924,8 +876,8 @@ handle_xdg_activation_new_token(struct wl_listener *listener, void *data)
 static void
 handle_xdg_activation_request(struct wl_listener *listener, void *data)
 {
-	const struct wlr_xdg_activation_v1_request_activate_event *event = data;
-	struct token_data *token_data = event->token->data;
+	auto event = (wlr_xdg_activation_v1_request_activate_event *)data;
+	auto token_data = (struct token_data *)event->token->data;
 	assert(token_data);
 
 	struct wlr_xdg_surface *xdg_surface =
@@ -933,7 +885,7 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 	if (!xdg_surface) {
 		return;
 	}
-	struct view *view = xdg_surface->data;
+	auto view = (struct view *)xdg_surface->data;
 
 	if (!view) {
 		wlr_log(WLR_INFO, "Not activating surface - no view attached to surface");
@@ -976,19 +928,12 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 static void
 handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 {
-	struct wlr_xdg_toplevel *xdg_toplevel = data;
-	struct wlr_xdg_surface *xdg_surface = xdg_toplevel->base;
+	auto xdg_toplevel = (wlr_xdg_toplevel *)data;
+	auto xdg_surface = xdg_toplevel->base;
 
 	assert(xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 
-	struct xdg_toplevel_view *xdg_toplevel_view = znew(*xdg_toplevel_view);
-	struct view *view = &xdg_toplevel_view->base;
-
-	view->type = LAB_XDG_SHELL_VIEW;
-	view->impl = &xdg_toplevel_view_impl;
-	view_init(view);
-
-	xdg_toplevel_view->xdg_surface = xdg_surface;
+	auto view = new xdg_toplevel_view(xdg_surface);
 
 	/*
 	 * Pick an output for the surface as soon as its created, so that the
@@ -1043,33 +988,32 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	view->surface = xdg_surface->surface;
 	view->surface->data = tree;
 
-	mappable_connect(&view->mappable, xdg_surface->surface,
-		handle_map, handle_unmap);
-
 	struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
-	CONNECT_SIGNAL(toplevel, view, destroy);
-	CONNECT_SIGNAL(toplevel, view, request_move);
-	CONNECT_SIGNAL(toplevel, view, request_resize);
-	CONNECT_SIGNAL(toplevel, view, request_minimize);
-	CONNECT_SIGNAL(toplevel, view, request_maximize);
-	CONNECT_SIGNAL(toplevel, view, request_fullscreen);
-	CONNECT_SIGNAL(toplevel, view, set_title);
-	CONNECT_SIGNAL(view->surface, view, commit);
+	CONNECT_LISTENER(toplevel, view, destroy);
+	CONNECT_LISTENER(toplevel, view, request_move);
+	CONNECT_LISTENER(toplevel, view, request_resize);
+	CONNECT_LISTENER(toplevel, view, request_minimize);
+	CONNECT_LISTENER(toplevel, view, request_maximize);
+	CONNECT_LISTENER(toplevel, view, request_fullscreen);
+	CONNECT_LISTENER(toplevel, view, set_title);
+	CONNECT_LISTENER(view->surface, view, map);
+	CONNECT_LISTENER(view->surface, view, unmap);
+	CONNECT_LISTENER(view->surface, view, commit);
 
 	/* Events specific to XDG toplevel views */
-	CONNECT_SIGNAL(toplevel, xdg_toplevel_view, set_app_id);
-	CONNECT_SIGNAL(toplevel, xdg_toplevel_view, request_show_window_menu);
-	CONNECT_SIGNAL(xdg_surface, xdg_toplevel_view, new_popup);
+	CONNECT_LISTENER(toplevel, view, set_app_id);
+	CONNECT_LISTENER(toplevel, view, request_show_window_menu);
+	CONNECT_LISTENER(xdg_surface, view, new_popup);
 
-	wl_list_insert(&g_server.views, &view->link);
+	g_views.prepend(view);
 }
 
 static void
 handle_xdg_toplevel_icon_set_icon(struct wl_listener *listener, void *data)
 {
-	struct wlr_xdg_toplevel_icon_manager_v1_set_icon_event *event = data;
-	struct wlr_xdg_surface *xdg_surface = event->toplevel->base;
-	struct view *view = xdg_surface->data;
+	auto event = (wlr_xdg_toplevel_icon_manager_v1_set_icon_event *)data;
+	auto xdg_surface = event->toplevel->base;
+	auto view = (struct view *)xdg_surface->data;
 	assert(view);
 
 	char *icon_name = NULL;

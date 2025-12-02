@@ -4,7 +4,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/render/allocator.h>
 #include "config/rcxml.h"
-#include "common/array.h"
 #include "common/box.h"
 #include "common/lab-scene-rect.h"
 #include "labwc.h"
@@ -213,7 +212,7 @@ get_items_geometry(struct output *output, int nr_thumbs,
 }
 
 static void
-osd_thumbnail_create(struct output *output, struct wl_array *views)
+osd_thumbnail_create(struct output *output, reflist<view> &views)
 {
 	assert(!output->osd_scene.tree);
 
@@ -223,17 +222,16 @@ osd_thumbnail_create(struct output *output, struct wl_array *views)
 
 	output->osd_scene.tree = wlr_scene_tree_create(output->osd_tree);
 
-	int nr_views = wl_array_len(views);
+	int nr_views = views.size();
 	assert(nr_views > 0);
 	int nr_rows, nr_cols;
 	get_items_geometry(output, nr_views, &nr_rows, &nr_cols);
 
 	/* items */
-	struct view **view;
 	int index = 0;
-	wl_array_for_each(view, views) {
+	for (auto &view : views) {
 		struct osd_thumbnail_scene_item *item = create_item_scene(
-			output->osd_scene.tree, *view, output);
+			output->osd_scene.tree, &view, output);
 		if (!item) {
 			break;
 		}
