@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <time.h>
 #include <wlr/backend/libinput.h>
+#include <wlr/backend/wayland.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_cursor_shape_v1.h>
 #include <wlr/types/wlr_data_device.h>
@@ -906,6 +907,19 @@ handle_motion(struct wl_listener *listener, void *data)
 			pointer_axis_step * scroll_factor * delta, 0,
 			WL_POINTER_AXIS_SOURCE_CONTINUOUS, event->time_msec);
 	} else {
+		/*
+		 * When running nested, both absolute and relative motion
+		 * events are received from the parent compositor. Ignore
+		 * the relative events since we will synthesize them in
+		 * handle_motion_absolute(). One exception: if a "locked"
+		 * constraint is active, then absolute motion events are
+		 * ignored, so pass the relative motion events through.
+		 */
+		if (wlr_input_device_is_wl(&event->pointer->base)
+				&& !cursor_locked(seat, event->pointer)) {
+			return;
+		}
+
 		wlr_relative_pointer_manager_v1_send_relative_motion(
 			server->relative_pointer_manager,
 			seat->seat, (uint64_t)event->time_msec * 1000,
@@ -936,6 +950,16 @@ handle_motion_absolute(struct wl_listener *listener, void *data)
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor,
 		&event->pointer->base, event->x, event->y, &lx, &ly);
+
+	/*
+	 * If a "locked" constraint is active, then seat->cursor->x/y
+	 * doesn't update and so the math to synthesize relative motion
+	 * events doesn't work. See also the comment re: running nested
+	 * in handle_motion().
+	 */
+	if (cursor_locked(seat, event->pointer)) {
+		return;
+	}
 
 	double dx = lx - seat->cursor->x;
 	double dy = ly - seat->cursor->y;
