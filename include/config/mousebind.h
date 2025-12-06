@@ -3,7 +3,6 @@
 #define LABWC_MOUSEBIND_H
 
 #include <stdbool.h>
-#include <wayland-util.h>
 #include "action.h"
 #include "common/node-type.h"
 
@@ -41,14 +40,14 @@ struct mousebind {
 	enum mouse_event mouse_event;
 	std::vector<action> actions;
 
-	struct wl_list link;     /* struct rcxml.mousebinds */
 	bool pressed_in_context; /* used in click events */
 };
 
 enum mouse_event mousebind_event_from_str(const char *str);
 uint32_t mousebind_button_from_str(const char *str, uint32_t *modifiers);
 enum direction mousebind_direction_from_str(const char *str, uint32_t *modifiers);
-struct mousebind *mousebind_create(const char *context);
-bool mousebind_the_same(struct mousebind *a, struct mousebind *b);
+mousebind *mousebind_append_new(std::vector<mousebind> &mousebinds,
+	const char *context);
+bool mousebind_the_same(mousebind &a, mousebind &b);
 
 #endif /* LABWC_MOUSEBIND_H */
