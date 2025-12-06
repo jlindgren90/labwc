@@ -50,10 +50,8 @@ interactive_anchor_to_cursor(struct wlr_box *geo)
 	g_server.grab_box.width = geo->width;
 	g_server.grab_box.height = geo->height;
 
-	geo->x = g_server.grab_box.x
-		+ (g_server.seat.cursor->x - g_server.grab_x);
-	geo->y = g_server.grab_box.y
-		+ (g_server.seat.cursor->y - g_server.grab_y);
+	geo->x = g_server.grab_box.x + (g_seat.cursor->x - g_server.grab_x);
+	geo->y = g_server.grab_box.y + (g_seat.cursor->y - g_server.grab_y);
 }
 
 void
@@ -64,8 +62,6 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	 * the compositor stops propagating pointer events to clients and
 	 * instead consumes them itself, to move or resize windows.
 	 */
-	struct seat *seat = &g_server.seat;
-
 	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		return;
 	}
@@ -98,7 +94,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		}
 
 		/* Prevent region snapping when just moving via A-Left mousebind */
-		seat->region_prevent_snap = keyboard_get_all_modifiers(seat);
+		g_seat.region_prevent_snap = keyboard_get_all_modifiers();
 
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
@@ -142,12 +138,12 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 
 	g_server.grabbed_view = view;
 	/* Remember view and cursor positions at start of move/resize */
-	g_server.grab_x = seat->cursor->x;
-	g_server.grab_y = seat->cursor->y;
+	g_server.grab_x = g_seat.cursor->x;
+	g_server.grab_y = g_seat.cursor->y;
 	g_server.grab_box = view->current;
 	g_server.resize_edges = edges;
 
-	seat_focus_override_begin(seat, mode, cursor_shape);
+	seat_focus_override_begin(mode, cursor_shape);
 
 	/*
 	 * Un-tile maximized/tiled view immediately if <unSnapThreshold> is
@@ -176,7 +172,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 }
 
 bool
-edge_from_cursor(struct seat *seat, struct output **dest_output,
+edge_from_cursor(struct output **dest_output,
 		enum lab_edge *edge1, enum lab_edge *edge2)
 {
 	*dest_output = NULL;
@@ -199,8 +195,8 @@ edge_from_cursor(struct seat *seat, struct output **dest_output,
 	*dest_output = output;
 
 	/* Translate into output local coordinates */
-	double cursor_x = seat->cursor->x;
-	double cursor_y = seat->cursor->y;
+	double cursor_x = g_seat.cursor->x;
+	double cursor_y = g_seat.cursor->y;
 	wlr_output_layout_output_coords(g_server.output_layout,
 		output->wlr_output, &cursor_x, &cursor_y);
 
@@ -246,7 +242,7 @@ snap_to_edge(struct view *view)
 {
 	struct output *output;
 	enum lab_edge edge1, edge2;
-	if (!edge_from_cursor(&g_server.seat, &output, &edge1, &edge2)) {
+	if (!edge_from_cursor(&output, &edge1, &edge2)) {
 		return false;
 	}
 	enum lab_edge edge = edge1 | edge2;
@@ -312,12 +308,12 @@ interactive_cancel(struct view *view)
 		return;
 	}
 
-	overlay_finish(&g_server.seat);
+	overlay_finish();
 
 	resize_indicator_hide(view);
 
 	g_server.grabbed_view = NULL;
 
 	/* Restore keyboard/pointer focus */
-	seat_focus_override_end(&g_server.seat);
+	seat_focus_override_end();
 }

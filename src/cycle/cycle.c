@@ -177,8 +177,7 @@ cycle_begin(enum lab_cycle_dir direction)
 	/* Pre-select the next view in the given direction */
 	g_server.cycle.selected_view = get_next_selected_view(direction);
 
-	seat_focus_override_begin(&g_server.seat,
-		LAB_INPUT_STATE_CYCLE, LAB_CURSOR_DEFAULT);
+	seat_focus_override_begin(LAB_INPUT_STATE_CYCLE, LAB_CURSOR_DEFAULT);
 	update_cycle();
 
 	/* Update cursor, in case it is within the area covered by OSD */
@@ -205,7 +204,7 @@ cycle_finish(bool switch_focus)
 	destroy_cycle();
 
 	/* FIXME: this sets focus to the old surface even with switch_focus=true */
-	seat_focus_override_end(&g_server.seat);
+	seat_focus_override_end();
 
 	/* Hiding OSD may need a cursor change */
 	cursor_update_focus();

@@ -6,9 +6,9 @@
 
 struct seat;
 
-void dnd_init(struct seat *seat);
-void dnd_icons_show(struct seat *seat, bool show);
-void dnd_icons_move(struct seat *seat, double x, double y);
-void dnd_finish(struct seat *seat);
+void dnd_init(void);
+void dnd_icons_show(bool show);
+void dnd_icons_move(double x, double y);
+void dnd_finish(void);
 
 #endif /* LABWC_DND_H */
