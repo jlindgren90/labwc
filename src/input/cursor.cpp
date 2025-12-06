@@ -637,23 +637,22 @@ cursor_process_motion(uint32_t time, double *sx, double *sy)
 		dnd_icons_move(g_seat.cursor->x, g_seat.cursor->y);
 	}
 
-	struct mousebind *mousebind;
-	wl_list_for_each(mousebind, &rc.mousebinds, link) {
+	for (auto &mousebind : rc.mousebinds) {
 		if (ctx.type == LAB_NODE_CLIENT
 				&& view_inhibits_actions(ctx.view,
-					mousebind->actions)) {
+					mousebind.actions)) {
 			continue;
 		}
-		if (mousebind->mouse_event == MOUSE_ACTION_DRAG
-				&& mousebind->pressed_in_context) {
+		if (mousebind.mouse_event == MOUSE_ACTION_DRAG
+				&& mousebind.pressed_in_context) {
 			/*
 			 * Use view and resize edges from the press
 			 * event (not the motion event) to prevent
 			 * moving/resizing the wrong view
 			 */
-			mousebind->pressed_in_context = false;
+			mousebind.pressed_in_context = false;
 			actions_run(g_seat.pressed.ctx.view,
-				mousebind->actions, &g_seat.pressed.ctx);
+				mousebind.actions, &g_seat.pressed.ctx);
 		}
 	}
 
@@ -978,30 +977,29 @@ process_release_mousebinding(struct cursor_context *ctx, uint32_t button)
 		return;
 	}
 
-	struct mousebind *mousebind;
 	uint32_t modifiers = keyboard_get_all_modifiers();
 
-	wl_list_for_each(mousebind, &rc.mousebinds, link) {
+	for (auto &mousebind : rc.mousebinds) {
 		if (ctx->type == LAB_NODE_CLIENT
 				&& view_inhibits_actions(ctx->view,
-					mousebind->actions)) {
+					mousebind.actions)) {
 			continue;
 		}
-		if (node_type_contains(mousebind->context, ctx->type)
-				&& mousebind->button == button
-				&& modifiers == mousebind->modifiers) {
-			switch (mousebind->mouse_event) {
+		if (node_type_contains(mousebind.context, ctx->type)
+				&& mousebind.button == button
+				&& modifiers == mousebind.modifiers) {
+			switch (mousebind.mouse_event) {
 			case MOUSE_ACTION_RELEASE:
 				break;
 			case MOUSE_ACTION_CLICK:
-				if (mousebind->pressed_in_context) {
+				if (mousebind.pressed_in_context) {
 					break;
 				}
 				continue;
 			default:
 				continue;
 			}
-			actions_run(ctx->view, mousebind->actions, ctx);
+			actions_run(ctx->view, mousebind.actions, ctx);
 		}
 	}
 }
@@ -1047,21 +1045,20 @@ process_press_mousebinding(struct cursor_context *ctx, uint32_t button)
 		return false;
 	}
 
-	struct mousebind *mousebind;
 	bool double_click = is_double_click(rc.doubleclick_time, button, ctx);
 	bool consumed_by_frame_context = false;
 	uint32_t modifiers = keyboard_get_all_modifiers();
 
-	wl_list_for_each(mousebind, &rc.mousebinds, link) {
+	for (auto &mousebind : rc.mousebinds) {
 		if (ctx->type == LAB_NODE_CLIENT
 				&& view_inhibits_actions(ctx->view,
-					mousebind->actions)) {
+					mousebind.actions)) {
 			continue;
 		}
-		if (node_type_contains(mousebind->context, ctx->type)
-				&& mousebind->button == button
-				&& modifiers == mousebind->modifiers) {
-			switch (mousebind->mouse_event) {
+		if (node_type_contains(mousebind.context, ctx->type)
+				&& mousebind.button == button
+				&& modifiers == mousebind.modifiers) {
+			switch (mousebind.mouse_event) {
 			case MOUSE_ACTION_DRAG: /* fallthrough */
 			case MOUSE_ACTION_CLICK:
 				/*
@@ -1072,10 +1069,10 @@ process_press_mousebinding(struct cursor_context *ctx, uint32_t button)
 				if (!double_click) {
 					/* Swallow the press event */
 					consumed_by_frame_context |=
-						mousebind->context == LAB_NODE_FRAME;
+						mousebind.context == LAB_NODE_FRAME;
 					consumed_by_frame_context |=
-						mousebind->context == LAB_NODE_ALL;
-					mousebind->pressed_in_context = true;
+						mousebind.context == LAB_NODE_ALL;
+					mousebind.pressed_in_context = true;
 				}
 				continue;
 			case MOUSE_ACTION_DOUBLECLICK:
@@ -1088,9 +1085,11 @@ process_press_mousebinding(struct cursor_context *ctx, uint32_t button)
 			default:
 				continue;
 			}
-			consumed_by_frame_context |= mousebind->context == LAB_NODE_FRAME;
-			consumed_by_frame_context |= mousebind->context == LAB_NODE_ALL;
-			actions_run(ctx->view, mousebind->actions, ctx);
+			consumed_by_frame_context |=
+				mousebind.context == LAB_NODE_FRAME;
+			consumed_by_frame_context |=
+				mousebind.context == LAB_NODE_ALL;
+			actions_run(ctx->view, mousebind.actions, ctx);
 		}
 	}
 	return consumed_by_frame_context;
@@ -1237,10 +1236,9 @@ bool
 cursor_finish_button_release(uint32_t button)
 {
 	/* Clear "pressed" status for all bindings of this mouse button */
-	struct mousebind *mousebind;
-	wl_list_for_each(mousebind, &rc.mousebinds, link) {
-		if (mousebind->button == button) {
-			mousebind->pressed_in_context = false;
+	for (auto &mousebind : rc.mousebinds) {
+		if (mousebind.button == button) {
+			mousebind.pressed_in_context = false;
 		}
 	}
 
@@ -1370,26 +1368,26 @@ process_cursor_axis(enum wl_pointer_axis orientation, double delta,
 
 	bool consumed = false;
 	if (direction != LAB_DIRECTION_INVALID) {
-		struct mousebind *mousebind;
-		wl_list_for_each(mousebind, &rc.mousebinds, link) {
+		for (auto &mousebind : rc.mousebinds) {
 			if (ctx.type == LAB_NODE_CLIENT
 					&& view_inhibits_actions(ctx.view,
-						mousebind->actions)) {
+						mousebind.actions)) {
 				continue;
 			}
-			if (node_type_contains(mousebind->context, ctx.type)
-					&& mousebind->direction == direction
-					&& modifiers == mousebind->modifiers
-					&& mousebind->mouse_event == MOUSE_ACTION_SCROLL) {
-				consumed |= mousebind->context == LAB_NODE_FRAME;
-				consumed |= mousebind->context == LAB_NODE_ALL;
+			if (node_type_contains(mousebind.context, ctx.type)
+					&& mousebind.direction == direction
+					&& modifiers == mousebind.modifiers
+					&& mousebind.mouse_event
+						== MOUSE_ACTION_SCROLL) {
+				consumed |= mousebind.context == LAB_NODE_FRAME;
+				consumed |= mousebind.context == LAB_NODE_ALL;
 				/*
 				 * Action may not be executed if the accumulated scroll delta
 				 * on touchpads or hi-res mice doesn't exceed the threshold
 				 */
 				if (info.run_action) {
-					actions_run(ctx.view,
-						mousebind->actions, &ctx);
+					actions_run(ctx.view, mousebind.actions,
+						&ctx);
 				}
 			}
 		}

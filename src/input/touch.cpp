@@ -164,12 +164,11 @@ handle_touch_down(struct wl_listener *listener, void *data)
 		double sy = ly - y_offset;
 
 		struct view *view = view_from_wlr_surface(touch_point->surface);
-		struct mousebind *mousebind;
-		wl_list_for_each(mousebind, &rc.mousebinds, link) {
-			if (mousebind->mouse_event == MOUSE_ACTION_PRESS
-					&& mousebind->button == BTN_LEFT
-					&& mousebind->context == LAB_NODE_CLIENT) {
-				actions_run(view, mousebind->actions, NULL);
+		for (auto &mousebind : rc.mousebinds) {
+			if (mousebind.mouse_event == MOUSE_ACTION_PRESS
+					&& mousebind.button == BTN_LEFT
+					&& mousebind.context == LAB_NODE_CLIENT) {
+				actions_run(view, mousebind.actions, NULL);
 			}
 		}
 
