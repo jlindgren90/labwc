@@ -29,7 +29,7 @@ struct field_converter {
 static const char *
 get_identifier(struct view *view, bool trim)
 {
-	const char *identifier = view->app_id;
+	const char *identifier = view->app_id.c();
 
 	/* remove the first two nodes of 'org.' strings */
 	if (trim && !strncmp(identifier, "org.", 4)) {
@@ -46,7 +46,7 @@ static const char *
 get_desktop_name(struct view *view)
 {
 #if HAVE_LIBSFDO
-	const char *name = desktop_entry_name_lookup(view->app_id);
+	const char *name = desktop_entry_name_lookup(view->app_id.c());
 	if (name) {
 		return name;
 	}
@@ -73,7 +73,7 @@ static const char *
 get_title_if_different(struct view *view)
 {
 	const char *identifier = get_identifier(view, /*trim*/ false);
-	const char *title = view->title;
+	const char *title = view->title.c();
 	return !strcmp(identifier, title) ? NULL : title;
 }
 
@@ -180,7 +180,7 @@ static void
 field_set_title(struct buf *buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: T */
-	buf_add(buf, view->title);
+	buf_add(buf, view->title.c());
 }
 
 static void
