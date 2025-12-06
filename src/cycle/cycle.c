@@ -25,17 +25,16 @@ static void
 update_preview_outlines(struct view *view)
 {
 	/* Create / Update preview outline tree */
-	struct theme *theme = g_server.theme;
 	struct lab_scene_rect *rect = g_server.cycle.preview_outline;
 	if (!rect) {
 		struct lab_scene_rect_options opts = {
 			.border_colors = (float *[3]) {
-				theme->osd_window_switcher_preview_border_color[0],
-				theme->osd_window_switcher_preview_border_color[1],
-				theme->osd_window_switcher_preview_border_color[2],
+				g_theme.osd_window_switcher_preview_border_color[0],
+				g_theme.osd_window_switcher_preview_border_color[1],
+				g_theme.osd_window_switcher_preview_border_color[2],
 			},
 			.nr_borders = 3,
-			.border_width = theme->osd_window_switcher_preview_border_width,
+			.border_width = g_theme.osd_window_switcher_preview_border_width,
 		};
 		rect = lab_scene_rect_create(&g_server.scene->tree, &opts);
 		wlr_scene_node_place_above(&rect->tree->node,

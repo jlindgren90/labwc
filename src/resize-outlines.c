@@ -24,10 +24,10 @@ resize_outlines_update(struct view *view, struct wlr_box new_geo)
 
 	if (!outlines->rect) {
 		struct lab_scene_rect_options opts = {
-			.border_colors = (float *[3]) {
-				g_server.theme->osd_bg_color,
-				g_server.theme->osd_label_text_color,
-				g_server.theme->osd_bg_color,
+			.border_colors = (float *[3]){
+				g_theme.osd_bg_color,
+				g_theme.osd_label_text_color,
+				g_theme.osd_bg_color,
 			},
 			.nr_borders = 3,
 			.border_width = 1,

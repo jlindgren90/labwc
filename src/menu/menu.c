@@ -36,7 +36,7 @@
 #define PIPEMENU_MAX_BUF_SIZE 1048576  /* 1 MiB */
 #define PIPEMENU_TIMEOUT_IN_MS 4000    /* 4 seconds */
 
-#define ICON_SIZE (rc.theme->menu_item_height - 2 * rc.theme->menu_items_padding_y)
+#define ICON_SIZE (g_theme.menu_item_height - 2 * g_theme.menu_items_padding_y)
 
 static bool waiting_for_pipe_menu;
 static struct menuitem *selected_item;
@@ -134,7 +134,6 @@ item_create(struct menu *menu, const char *text, const char *icon_name, bool sho
 	assert(menu);
 	assert(text);
 
-	struct theme *theme = g_server.theme;
 	struct menuitem *menuitem = znew(*menuitem);
 	menuitem->parent = menu;
 	menuitem->selectable = true;
@@ -151,8 +150,9 @@ item_create(struct menu *menu, const char *text, const char *icon_name, bool sho
 
 	menuitem->native_width = font_width(&rc.font_menuitem, text);
 	if (menuitem->arrow) {
-		menuitem->native_width += font_width(&rc.font_menuitem, menuitem->arrow)
-					+ theme->menu_items_padding_x;
+		menuitem->native_width +=
+			font_width(&rc.font_menuitem, menuitem->arrow)
+				+ g_theme.menu_items_padding_x;
 	}
 
 	wl_list_append(&menu->menuitems, &menuitem->link);
@@ -165,7 +165,6 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	float *bg_color)
 {
 	struct menu *menu = item->parent;
-	struct theme *theme = g_server.theme;
 
 	/* Tree to hold background and label buffers */
 	struct wlr_scene_tree *tree = wlr_scene_tree_create(item->tree);
@@ -173,13 +172,15 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	int icon_width = 0;
 	int icon_size = ICON_SIZE;
 	if (item->parent->has_icons) {
-		icon_width = theme->menu_items_padding_x + icon_size;
+		icon_width = g_theme.menu_items_padding_x + icon_size;
 	}
 
-	int bg_width = menu->size.width - 2 * theme->menu_border_width;
-	int arrow_width = item->arrow ?
-		font_width(&rc.font_menuitem, item->arrow) + theme->menu_items_padding_x : 0;
-	int label_max_width = bg_width - 2 * theme->menu_items_padding_x
+	int bg_width = menu->size.width - 2 * g_theme.menu_border_width;
+	int arrow_width = item->arrow
+		? font_width(&rc.font_menuitem, item->arrow)
+			+ g_theme.menu_items_padding_x
+		: 0;
+	int label_max_width = bg_width - 2 * g_theme.menu_items_padding_x
 		- arrow_width - icon_width;
 
 	if (label_max_width <= 0) {
@@ -188,7 +189,8 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	}
 
 	/* Create background */
-	wlr_scene_rect_create(tree, bg_width, theme->menu_item_height, bg_color);
+	wlr_scene_rect_create(tree, bg_width, g_theme.menu_item_height,
+		bg_color);
 
 	/* Create icon */
 	bool show_app_icon = !strcmp(item->parent->id, "client-list-combined-menu")
@@ -205,7 +207,8 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 				item->client_list_view);
 		}
 		wlr_scene_node_set_position(&icon_buffer->scene_buffer->node,
-			theme->menu_items_padding_x, theme->menu_items_padding_y);
+			g_theme.menu_items_padding_x,
+			g_theme.menu_items_padding_y);
 	}
 
 	/* Create label */
@@ -214,8 +217,8 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	scaled_font_buffer_update(label_buffer, item->text, label_max_width,
 		&rc.font_menuitem, text_color, bg_color);
 	/* Vertically center and left-align label */
-	int x = theme->menu_items_padding_x + icon_width;
-	int y = (theme->menu_item_height - label_buffer->height) / 2;
+	int x = g_theme.menu_items_padding_x + icon_width;
+	int y = (g_theme.menu_item_height - label_buffer->height) / 2;
 	wlr_scene_node_set_position(&label_buffer->scene_buffer->node, x, y);
 
 	if (!item->arrow) {
@@ -228,8 +231,8 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	scaled_font_buffer_update(arrow_buffer, item->arrow, -1,
 		&rc.font_menuitem, text_color, bg_color);
 	/* Vertically center and right-align arrow */
-	x += label_max_width + theme->menu_items_padding_x;
-	y = (theme->menu_item_height - label_buffer->height) / 2;
+	x += label_max_width + g_theme.menu_items_padding_x;
+	y = (g_theme.menu_item_height - label_buffer->height) / 2;
 	wlr_scene_node_set_position(&arrow_buffer->scene_buffer->node, x, y);
 
 	return tree;
@@ -241,7 +244,6 @@ item_create_scene(struct menuitem *menuitem, int *item_y)
 	assert(menuitem);
 	assert(menuitem->type == LAB_MENU_ITEM);
 	struct menu *menu = menuitem->parent;
-	struct theme *theme = g_server.theme;
 
 	/* Menu item root node */
 	menuitem->tree = wlr_scene_tree_create(menu->scene_tree);
@@ -250,18 +252,17 @@ item_create_scene(struct menuitem *menuitem, int *item_y)
 
 	/* Create scenes for unselected/selected states */
 	menuitem->normal_tree = item_create_scene_for_state(menuitem,
-		theme->menu_items_text_color,
-		theme->menu_items_bg_color);
+		g_theme.menu_items_text_color, g_theme.menu_items_bg_color);
 	menuitem->selected_tree = item_create_scene_for_state(menuitem,
-		theme->menu_items_active_text_color,
-		theme->menu_items_active_bg_color);
+		g_theme.menu_items_active_text_color,
+		g_theme.menu_items_active_bg_color);
 	/* Hide selected state */
 	wlr_scene_node_set_enabled(&menuitem->selected_tree->node, false);
 
 	/* Position the item in relation to its menu */
 	wlr_scene_node_set_position(&menuitem->tree->node,
-		theme->menu_border_width, *item_y);
-	*item_y += theme->menu_item_height;
+		g_theme.menu_border_width, *item_y);
+	*item_y += g_theme.menu_item_height;
 }
 
 static struct menuitem *
@@ -290,7 +291,6 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 	assert(menuitem);
 	assert(menuitem->type == LAB_MENU_SEPARATOR_LINE);
 	struct menu *menu = menuitem->parent;
-	struct theme *theme = g_server.theme;
 
 	/* Menu item root node */
 	menuitem->tree = wlr_scene_tree_create(menu->scene_tree);
@@ -300,10 +300,10 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 	/* Tree to hold background and line buffer */
 	menuitem->normal_tree = wlr_scene_tree_create(menuitem->tree);
 
-	int bg_height = theme->menu_separator_line_thickness
-		+ 2 * theme->menu_separator_padding_height;
-	int bg_width = menu->size.width - 2 * theme->menu_border_width;
-	int line_width = bg_width - 2 * theme->menu_separator_padding_width;
+	int bg_height = g_theme.menu_separator_line_thickness
+		+ 2 * g_theme.menu_separator_padding_height;
+	int bg_width = menu->size.width - 2 * g_theme.menu_border_width;
+	int line_width = bg_width - 2 * g_theme.menu_separator_padding_width;
 
 	if (line_width <= 0) {
 		wlr_log(WLR_ERROR, "not enough space for menu separator");
@@ -312,21 +312,21 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 
 	/* Item background nodes */
 	wlr_scene_rect_create(menuitem->normal_tree, bg_width, bg_height,
-		theme->menu_items_bg_color);
+		g_theme.menu_items_bg_color);
 
 	/* Draw separator line */
-	struct wlr_scene_rect *line_rect = wlr_scene_rect_create(
-		menuitem->normal_tree, line_width,
-		theme->menu_separator_line_thickness,
-		theme->menu_separator_color);
+	struct wlr_scene_rect *line_rect =
+		wlr_scene_rect_create(menuitem->normal_tree, line_width,
+			g_theme.menu_separator_line_thickness,
+			g_theme.menu_separator_color);
 
 	/* Vertically center-align separator line */
 	wlr_scene_node_set_position(&line_rect->node,
-		theme->menu_separator_padding_width,
-		theme->menu_separator_padding_height);
+		g_theme.menu_separator_padding_width,
+		g_theme.menu_separator_padding_height);
 error:
 	wlr_scene_node_set_position(&menuitem->tree->node,
-		theme->menu_border_width, *item_y);
+		g_theme.menu_border_width, *item_y);
 	*item_y += bg_height;
 }
 
@@ -336,9 +336,8 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 	assert(menuitem);
 	assert(menuitem->type == LAB_MENU_TITLE);
 	struct menu *menu = menuitem->parent;
-	struct theme *theme = g_server.theme;
-	float *bg_color = theme->menu_title_bg_color;
-	float *text_color = theme->menu_title_text_color;
+	float *bg_color = g_theme.menu_title_bg_color;
+	float *text_color = g_theme.menu_title_text_color;
 
 	/* Menu item root node */
 	menuitem->tree = wlr_scene_tree_create(menu->scene_tree);
@@ -348,8 +347,8 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 	/* Tree to hold background and text buffer */
 	menuitem->normal_tree = wlr_scene_tree_create(menuitem->tree);
 
-	int bg_width = menu->size.width - 2 * theme->menu_border_width;
-	int text_width = bg_width - 2 * theme->menu_items_padding_x;
+	int bg_width = menu->size.width - 2 * g_theme.menu_border_width;
+	int text_width = bg_width - 2 * g_theme.menu_items_padding_x;
 
 	if (text_width <= 0) {
 		wlr_log(WLR_ERROR, "not enough space for menu title");
@@ -357,8 +356,8 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 	}
 
 	/* Background */
-	wlr_scene_rect_create(menuitem->normal_tree,
-		bg_width, theme->menu_header_height, bg_color);
+	wlr_scene_rect_create(menuitem->normal_tree, bg_width,
+		g_theme.menu_header_height, bg_color);
 
 	/* Draw separator title */
 	struct scaled_font_buffer *title_font_buffer =
@@ -368,26 +367,26 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 		text_width, &rc.font_menuheader, text_color, bg_color);
 
 	int title_x = 0;
-	switch (theme->menu_title_text_justify) {
+	switch (g_theme.menu_title_text_justify) {
 	case LAB_JUSTIFY_CENTER:
 		title_x = (bg_width - menuitem->native_width) / 2;
 		title_x = MAX(title_x, 0);
 		break;
 	case LAB_JUSTIFY_LEFT:
-		title_x = theme->menu_items_padding_x;
+		title_x = g_theme.menu_items_padding_x;
 		break;
 	case LAB_JUSTIFY_RIGHT:
 		title_x = bg_width - menuitem->native_width
-				- theme->menu_items_padding_x;
+			- g_theme.menu_items_padding_x;
 		break;
 	}
-	int title_y = (theme->menu_header_height - title_font_buffer->height) / 2;
+	int title_y = (g_theme.menu_header_height - title_font_buffer->height) / 2;
 	wlr_scene_node_set_position(&title_font_buffer->scene_buffer->node,
 		title_x, title_y);
 error:
 	wlr_scene_node_set_position(&menuitem->tree->node,
-		theme->menu_border_width, *item_y);
-	*item_y += theme->menu_header_height;
+		g_theme.menu_border_width, *item_y);
+	*item_y += g_theme.menu_header_height;
 }
 
 static void item_destroy(struct menuitem *item);
@@ -410,7 +409,6 @@ static void
 menu_create_scene(struct menu *menu)
 {
 	struct menuitem *item;
-	struct theme *theme = g_server.theme;
 
 	assert(!menu->scene_tree);
 
@@ -421,19 +419,19 @@ menu_create_scene(struct menu *menu)
 	menu->size.width = 0;
 	wl_list_for_each(item, &menu->menuitems, link) {
 		int width = item->native_width
-			+ 2 * theme->menu_items_padding_x
-			+ 2 * theme->menu_border_width;
+			+ 2 * g_theme.menu_items_padding_x
+			+ 2 * g_theme.menu_border_width;
 		menu->size.width = MAX(menu->size.width, width);
 	}
 
 	if (menu->has_icons) {
-		menu->size.width += theme->menu_items_padding_x + ICON_SIZE;
+		menu->size.width += g_theme.menu_items_padding_x + ICON_SIZE;
 	}
-	menu->size.width = MAX(menu->size.width, theme->menu_min_width);
-	menu->size.width = MIN(menu->size.width, theme->menu_max_width);
+	menu->size.width = MAX(menu->size.width, g_theme.menu_min_width);
+	menu->size.width = MIN(menu->size.width, g_theme.menu_max_width);
 
 	/* Update all items for the new size */
-	int item_y = theme->menu_border_width;
+	int item_y = g_theme.menu_border_width;
 	wl_list_for_each(item, &menu->menuitems, link) {
 		assert(!item->tree);
 		switch (item->type) {
@@ -448,12 +446,12 @@ menu_create_scene(struct menu *menu)
 			break;
 		}
 	}
-	menu->size.height = item_y + theme->menu_border_width;
+	menu->size.height = item_y + g_theme.menu_border_width;
 
 	struct lab_scene_rect_options opts = {
-		.border_colors = (float *[1]) {theme->menu_border_color},
+		.border_colors = (float *[1]){g_theme.menu_border_color},
 		.nr_borders = 1,
-		.border_width = theme->menu_border_width,
+		.border_width = g_theme.menu_border_width,
 		.width = menu->size.width,
 		.height = menu->size.height,
 	};
@@ -708,18 +706,18 @@ parse_xml(const char *filename)
  * This box can be shrunk or expanded by menu overlaps and borders.
  */
 static struct wlr_box
-get_item_anchor_rect(struct theme *theme, struct menuitem *item)
+get_item_anchor_rect(struct menuitem *item)
 {
 	struct menu *menu = item->parent;
 	int menu_x = menu->scene_tree->node.x;
 	int menu_y = menu->scene_tree->node.y;
-	int overlap_x = theme->menu_overlap_x + theme->menu_border_width;
-	int overlap_y = theme->menu_overlap_y - theme->menu_border_width;
-	return (struct wlr_box) {
+	int overlap_x = g_theme.menu_overlap_x + g_theme.menu_border_width;
+	int overlap_y = g_theme.menu_overlap_y - g_theme.menu_border_width;
+	return (struct wlr_box){
 		.x = menu_x + overlap_x,
 		.y = menu_y + item->tree->node.y + overlap_y,
 		.width = menu->size.width - 2 * overlap_x,
-		.height = theme->menu_item_height - 2 * overlap_y,
+		.height = g_theme.menu_item_height - 2 * overlap_y,
 	};
 }
 
@@ -1349,8 +1347,7 @@ menu_process_item_selection(struct menuitem *item)
 		/* Ensure the submenu has its parent set correctly */
 		item->submenu->parent = item->parent;
 		/* And open the new submenu tree */
-		struct wlr_box anchor_rect =
-			get_item_anchor_rect(g_server.theme, item);
+		struct wlr_box anchor_rect = get_item_anchor_rect(item);
 		if (item->submenu->execute && !item->submenu->scene_tree) {
 			open_pipemenu_async(item->submenu, anchor_rect);
 		} else {
