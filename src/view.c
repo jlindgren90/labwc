@@ -167,11 +167,12 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (query->maximized != VIEW_AXIS_INVALID && view->maximized != query->maximized) {
+	if (query->maximized != VIEW_AXIS_INVALID
+			&& view->st->maximized != query->maximized) {
 		return false;
 	}
 
-	if (!query_tristate_match(query->iconified, view->minimized)) {
+	if (!query_tristate_match(query->iconified, view->st->minimized)) {
 		return false;
 	}
 
@@ -278,7 +279,7 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 		}
 	}
 	if (criteria & LAB_VIEW_CRITERIA_FULLSCREEN) {
-		if (!view->fullscreen) {
+		if (!view->st->fullscreen) {
 			return false;
 		}
 	}
@@ -462,7 +463,7 @@ view_discover_output(struct view *view, struct wlr_box *geometry)
 	if (output && output != view->output) {
 		view->output = output;
 		/* Show fullscreen views above top-layer */
-		if (view->fullscreen) {
+		if (view->st->fullscreen) {
 			desktop_update_top_layer_visibility(view->server);
 		}
 		return true;
@@ -492,7 +493,7 @@ view_set_activated(struct view *view, bool activated)
 			keyboard_update_layout(&view->server->seat, view->keyboard_layout);
 		}
 	}
-	output_set_has_fullscreen_view(view->output, view->fullscreen);
+	output_set_has_fullscreen_view(view->output, view->st->fullscreen);
 }
 
 void
@@ -505,7 +506,7 @@ view_set_output(struct view *view, struct output *output)
 	}
 	view->output = output;
 	/* Show fullscreen views above top-layer */
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		desktop_update_top_layer_visibility(view->server);
 	}
 }
@@ -594,7 +595,7 @@ void
 view_resize_relative(struct view *view, int left, int right, int top, int bottom)
 {
 	assert(view);
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
+	if (view->st->fullscreen || view->st->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
 	view_set_shade(view, false);
@@ -611,7 +612,7 @@ void
 view_move_relative(struct view *view, int x, int y)
 {
 	assert(view);
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		return;
 	}
 	view_maximize(view, VIEW_AXIS_NONE, /*store_natural_geometry*/ false);
@@ -733,15 +734,11 @@ static void
 _minimize(struct view *view, bool minimized)
 {
 	assert(view);
-	if (view->minimized == minimized) {
+	if (view->st->minimized == minimized) {
 		return;
 	}
 
-	if (view->impl->minimize) {
-		view->impl->minimize(view, minimized);
-	}
-
-	view->minimized = minimized;
+	view_minimize_internal(view->id, minimized);
 	wl_signal_emit_mutable(&view->events.minimized, NULL);
 
 	view_update_visibility(view);
@@ -914,7 +911,7 @@ view_store_natural_geometry(struct view *view)
 	 * Do not overwrite the stored geometry if fullscreen or tiled.
 	 * Maximized views are handled on a per-axis basis (see below).
 	 */
-	if (view->fullscreen || view_is_tiled(view)) {
+	if (view->st->fullscreen || view_is_tiled(view)) {
 		return;
 	}
 
@@ -925,11 +922,11 @@ view_store_natural_geometry(struct view *view)
 	 * xdg-toplevel configure event, which means the application should
 	 * choose its own size.
 	 */
-	if (!(view->maximized & VIEW_AXIS_HORIZONTAL)) {
+	if (!(view->st->maximized & VIEW_AXIS_HORIZONTAL)) {
 		view->natural_geometry.x = view->pending.x;
 		view->natural_geometry.width = view->pending.width;
 	}
-	if (!(view->maximized & VIEW_AXIS_VERTICAL)) {
+	if (!(view->st->maximized & VIEW_AXIS_VERTICAL)) {
 		view->natural_geometry.y = view->pending.y;
 		view->natural_geometry.height = view->pending.height;
 	}
@@ -1006,8 +1003,7 @@ view_cascade(struct view *view)
 		for_each_view(other_view, &view->server->views,
 				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 			struct wlr_box other = ssd_max_extents(other_view);
-			if (other_view == view
-					|| view->minimized
+			if (other_view == view || view->st->minimized
 					|| !box_intersects(&candidate, &other)) {
 				continue;
 			}
@@ -1070,7 +1066,7 @@ view_place_by_policy(struct view *view, bool allow_cursor,
 void
 view_constrain_size_to_that_of_usable_area(struct view *view)
 {
-	if (!view || !view->output || view->fullscreen) {
+	if (!view || !view->output || view->st->fullscreen) {
 		return;
 	}
 
@@ -1220,7 +1216,7 @@ static void
 view_apply_fullscreen_geometry(struct view *view)
 {
 	assert(view);
-	assert(view->fullscreen);
+	assert(view->st->fullscreen);
 	assert(output_is_usable(view->output));
 
 	struct wlr_box box = { 0 };
@@ -1233,7 +1229,7 @@ static void
 view_apply_maximized_geometry(struct view *view)
 {
 	assert(view);
-	assert(view->maximized != VIEW_AXIS_NONE);
+	assert(view->st->maximized != VIEW_AXIS_NONE);
 	struct output *output = view->output;
 	assert(output_is_usable(output));
 
@@ -1246,7 +1242,7 @@ view_apply_maximized_geometry(struct view *view)
 	 * center the unmaximized axis.
 	 */
 	struct wlr_box natural = view->natural_geometry;
-	if (view->maximized != VIEW_AXIS_BOTH
+	if (view->st->maximized != VIEW_AXIS_BOTH
 			&& !box_intersects(&box, &natural)) {
 		view_compute_centered_position(view, NULL,
 			natural.width, natural.height,
@@ -1261,10 +1257,10 @@ view_apply_maximized_geometry(struct view *view)
 		box.height -= border.top + border.bottom;
 	}
 
-	if (view->maximized == VIEW_AXIS_VERTICAL) {
+	if (view->st->maximized == VIEW_AXIS_VERTICAL) {
 		box.x = natural.x;
 		box.width = natural.width;
-	} else if (view->maximized == VIEW_AXIS_HORIZONTAL) {
+	} else if (view->st->maximized == VIEW_AXIS_HORIZONTAL) {
 		box.y = natural.y;
 		box.height = natural.height;
 	}
@@ -1282,9 +1278,9 @@ view_apply_special_geometry(struct view *view)
 		return;
 	}
 
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		view_apply_fullscreen_geometry(view);
-	} else if (view->maximized != VIEW_AXIS_NONE) {
+	} else if (view->st->maximized != VIEW_AXIS_NONE) {
 		view_apply_maximized_geometry(view);
 	} else if (view->tiled) {
 		view_apply_tiled_geometry(view);
@@ -1295,23 +1291,9 @@ view_apply_special_geometry(struct view *view)
 	}
 }
 
-/*
- * Sets maximized state without updating geometry. Used in interactive
- * move/resize. In most other cases, use view_maximize() instead.
- */
 void
-view_set_maximized(struct view *view, enum view_axis maximized)
+view_notify_maximized(struct view *view)
 {
-	assert(view);
-	if (view->maximized == maximized) {
-		return;
-	}
-
-	if (view->impl->maximize) {
-		view->impl->maximize(view, maximized);
-	}
-
-	view->maximized = maximized;
 	wl_signal_emit_mutable(&view->events.maximized, NULL);
 
 	/*
@@ -1351,7 +1333,7 @@ bool
 view_is_floating(struct view *view)
 {
 	assert(view);
-	return !(view->fullscreen || (view->maximized != VIEW_AXIS_NONE)
+	return !(view->st->fullscreen || (view->st->maximized != VIEW_AXIS_NONE)
 		|| view_is_tiled(view));
 }
 
@@ -1381,11 +1363,11 @@ view_maximize(struct view *view, enum view_axis axis,
 {
 	assert(view);
 
-	if (view->maximized == axis) {
+	if (view->st->maximized == axis) {
 		return;
 	}
 
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		return;
 	}
 
@@ -1424,7 +1406,7 @@ view_maximize(struct view *view, enum view_axis axis,
 		view->natural_geometry = view_get_fallback_natural_geometry(view);
 	}
 
-	view_set_maximized(view, axis);
+	view_set_maximized(view->id, axis);
 	if (view_is_floating(view)) {
 		view_apply_natural_geometry(view);
 	} else {
@@ -1440,7 +1422,7 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 	case VIEW_AXIS_HORIZONTAL:
 	case VIEW_AXIS_VERTICAL:
 		/* Toggle one axis (XOR) */
-		view_maximize(view, view->maximized ^ axis,
+		view_maximize(view, view->st->maximized ^ axis,
 			/*store_natural_geometry*/ true);
 		break;
 	case VIEW_AXIS_BOTH:
@@ -1448,8 +1430,10 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 		 * Maximize in both directions if unmaximized or partially
 		 * maximized, otherwise unmaximize.
 		 */
-		view_maximize(view, (view->maximized == VIEW_AXIS_BOTH) ?
-			VIEW_AXIS_NONE : VIEW_AXIS_BOTH,
+		view_maximize(view,
+			(view->st->maximized == VIEW_AXIS_BOTH)
+				? VIEW_AXIS_NONE
+				: VIEW_AXIS_BOTH,
 			/*store_natural_geometry*/ true);
 		break;
 	default:
@@ -1596,7 +1580,7 @@ undecorate(struct view *view)
 bool
 view_titlebar_visible(struct view *view)
 {
-	if (view->maximized == VIEW_AXIS_BOTH
+	if (view->st->maximized == VIEW_AXIS_BOTH
 			&& rc.hide_maximized_window_titlebar) {
 		return false;
 	}
@@ -1608,8 +1592,7 @@ view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode)
 {
 	assert(view);
 
-	if (view->shaded || view->fullscreen
-			|| mode == view->ssd_mode) {
+	if (view->shaded || view->st->fullscreen || mode == view->ssd_mode) {
 		return;
 	}
 
@@ -1636,46 +1619,14 @@ view_toggle_fullscreen(struct view *view)
 {
 	assert(view);
 
-	view_set_fullscreen(view, !view->fullscreen);
-}
-
-/* For internal use only. Does not update geometry. */
-static void
-set_fullscreen(struct view *view, bool fullscreen)
-{
-	/* When going fullscreen, unshade the window */
-	if (fullscreen) {
-		view_set_shade(view, false);
-	}
-
-	/* Hide decorations when going fullscreen */
-	if (fullscreen && view->ssd_mode) {
-		undecorate(view);
-	}
-
-	if (view->impl->set_fullscreen) {
-		view->impl->set_fullscreen(view, fullscreen);
-	}
-
-	view->fullscreen = fullscreen;
-	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
-
-	/* Re-show decorations when no longer fullscreen */
-	if (!fullscreen && view->ssd_mode) {
-		decorate(view);
-	}
-
-	/* Show fullscreen views above top-layer */
-	if (view->output) {
-		desktop_update_top_layer_visibility(view->server);
-	}
+	view_set_fullscreen(view, !view->st->fullscreen);
 }
 
 void
 view_set_fullscreen(struct view *view, bool fullscreen)
 {
 	assert(view);
-	if (fullscreen == view->fullscreen) {
+	if (fullscreen == view->st->fullscreen) {
 		return;
 	}
 	if (fullscreen) {
@@ -1689,17 +1640,34 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 		 * a fullscreen view.
 		 */
 		interactive_cancel(view);
+		/* When going fullscreen, unshade the window */
+		view_set_shade(view, false);
 		view_store_natural_geometry(view);
 		view_invalidate_last_layout_geometry(view);
 	}
 
-	set_fullscreen(view, fullscreen);
+	view_set_fullscreen_internal(view->id, fullscreen);
+	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
+
+	if (view->ssd_mode) {
+		if (fullscreen) {
+			/* Hide decorations when going fullscreen */
+			undecorate(view);
+		} else {
+			/* Re-show decorations when no longer fullscreen */
+			decorate(view);
+		}
+	}
+
 	if (view_is_floating(view)) {
 		view_apply_natural_geometry(view);
 	} else {
 		view_apply_special_geometry(view);
 	}
-	output_set_has_fullscreen_view(view->output, view->fullscreen);
+
+	/* Show fullscreen views above top-layer */
+	desktop_update_top_layer_visibility(view->server);
+	output_set_has_fullscreen_view(view->output, view->st->fullscreen);
 	/*
 	 * Entering/leaving fullscreen might result in a different
 	 * scene node ending up under the cursor even if view_moved()
@@ -1916,7 +1884,7 @@ view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windo
 	}
 
 	/* If the view is maximized, do not attempt to jump displays */
-	if (view->maximized != VIEW_AXIS_NONE) {
+	if (view->st->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
 
@@ -1985,7 +1953,7 @@ view_grow_to_edge(struct view *view, enum lab_edge direction)
 {
 	assert(view);
 	/* TODO: allow grow to edge if maximized along the other axis */
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
+	if (view->st->fullscreen || view->st->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
 
@@ -2007,7 +1975,7 @@ view_shrink_to_edge(struct view *view, enum lab_edge direction)
 	assert(view);
 
 	/* TODO: allow shrink to edge if maximized along the other axis */
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
+	if (view->st->fullscreen || view->st->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
 
@@ -2068,7 +2036,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 {
 	assert(view);
 
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		return;
 	}
 
@@ -2080,7 +2048,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 
 	view_set_shade(view, false);
 
-	if (lab_edge_is_cardinal(edge) && view->maximized == VIEW_AXIS_NONE
+	if (lab_edge_is_cardinal(edge) && view->st->maximized == VIEW_AXIS_NONE
 			&& view->tiled != LAB_EDGE_CENTER) {
 		enum lab_edge invert_edge = lab_edge_invert(edge);
 		/* Represents axis of snapping direction */
@@ -2122,7 +2090,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 		}
 	}
 
-	if (view->maximized != VIEW_AXIS_NONE) {
+	if (view->st->maximized != VIEW_AXIS_NONE) {
 		/* Unmaximize + keep using existing natural_geometry */
 		view_maximize(view, VIEW_AXIS_NONE,
 			/*store_natural_geometry*/ false);
@@ -2145,7 +2113,7 @@ view_snap_to_region(struct view *view, struct region *region,
 	assert(view);
 	assert(region);
 
-	if (view->fullscreen) {
+	if (view->st->fullscreen) {
 		return;
 	}
 
@@ -2157,7 +2125,7 @@ view_snap_to_region(struct view *view, struct region *region,
 
 	view_set_shade(view, false);
 
-	if (view->maximized != VIEW_AXIS_NONE) {
+	if (view->st->maximized != VIEW_AXIS_NONE) {
 		/* Unmaximize + keep using existing natural_geometry */
 		view_maximize(view, VIEW_AXIS_NONE,
 			/*store_natural_geometry*/ false);
@@ -2185,9 +2153,9 @@ view_move_to_output(struct view *view, struct output *output)
 		view->pending.y = output_area.y;
 		view_place_by_policy(view,
 				/* allow_cursor */ false, rc.placement_policy);
-	} else if (view->fullscreen) {
+	} else if (view->st->fullscreen) {
 		view_apply_fullscreen_geometry(view);
-	} else if (view->maximized != VIEW_AXIS_NONE) {
+	} else if (view->st->maximized != VIEW_AXIS_NONE) {
 		view_apply_maximized_geometry(view);
 	} else if (view->tiled) {
 		view_apply_tiled_geometry(view);
@@ -2332,7 +2300,7 @@ void
 view_reload_ssd(struct view *view)
 {
 	assert(view);
-	if (view->ssd_mode && !view->fullscreen) {
+	if (view->ssd_mode && !view->st->fullscreen) {
 		undecorate(view);
 		decorate(view);
 	}
@@ -2383,7 +2351,7 @@ mappable_disconnect(struct mappable *mappable)
 void
 view_update_visibility(struct view *view)
 {
-	bool visible = view->mapped && !view->minimized;
+	bool visible = view->mapped && !view->st->minimized;
 	if (visible == view->scene_tree->node.enabled) {
 		return;
 	}
@@ -2421,7 +2389,7 @@ view_update_visibility(struct view *view)
 	 * views. It should probably be combined with the existing
 	 * logic in desktop_update_top_layer_visibility().
 	 */
-	if (view->fullscreen && !visible) {
+	if (view->st->fullscreen && !visible) {
 		output_set_has_fullscreen_view(view->output, false);
 	}
 
@@ -2491,7 +2459,7 @@ view_init(struct view *view)
 {
 	assert(view);
 
-	view->id = view_add(view);
+	view->id = view_add(view, (view->type == LAB_XWAYLAND_VIEW));
 	view->st = view_get_state(view->id);
 	assert(view->st);
 

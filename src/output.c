@@ -65,7 +65,7 @@ output_get_tearing_allowance(struct output *output)
 	}
 
 	/* remaining tearing options apply only to full-screen windows */
-	if (!view->fullscreen) {
+	if (!view->st->fullscreen) {
 		return false;
 	}
 

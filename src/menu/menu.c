@@ -885,7 +885,7 @@ update_client_list_combined_menu(struct server *server)
 				if (view == server->active_view) {
 					buf_add(&buffer, "*");
 				}
-				if (view->minimized) {
+				if (view->st->minimized) {
 					buf_add_fmt(&buffer, "(%s)",
 						view->st->title);
 				} else {

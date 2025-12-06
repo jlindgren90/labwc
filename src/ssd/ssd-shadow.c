@@ -256,7 +256,7 @@ ssd_shadow_update(struct ssd *ssd)
 
 	struct view *view = ssd->view;
 	struct theme *theme = ssd->view->server->theme;
-	bool maximized = view->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 	bool tiled_shadows = false;
 	if (rc.shadows_on_tiled) {
 		if (rc.gap >= theme->window[SSD_ACTIVE].shadow_size
