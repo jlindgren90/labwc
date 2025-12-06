@@ -10,6 +10,7 @@ foreach module : ['view']
       'cbindgen',
       '@INPUT@',
       '-l', 'c',
+      '-c', '../cbindgen.toml',
       '-o', '@OUTPUT@'
     ],
     build_by_default: true

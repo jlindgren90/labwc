@@ -14,6 +14,9 @@
 #include "view-c.h"
 #include "view-rs.h"
 
+/* C -> rust compat */
+#define view_axis ViewAxis
+
 /*
  * Default minimal window size. Clients can explicitly set smaller values via
  * e.g. xdg_toplevel::set_min_size.
@@ -46,23 +49,6 @@ enum ssd_preference {
 	LAB_SSD_PREF_UNSPEC = 0,
 	LAB_SSD_PREF_CLIENT,
 	LAB_SSD_PREF_SERVER,
-};
-
-/**
- * Directions in which a view can be maximized. "None" is used
- * internally to mean "not maximized" but is not valid in rc.xml.
- * Therefore when parsing rc.xml, "None" means "Invalid".
- */
-enum view_axis {
-	VIEW_AXIS_NONE = 0,
-	VIEW_AXIS_HORIZONTAL = (1 << 0),
-	VIEW_AXIS_VERTICAL = (1 << 1),
-	VIEW_AXIS_BOTH = (VIEW_AXIS_HORIZONTAL | VIEW_AXIS_VERTICAL),
-	/*
-	 * If view_axis is treated as a bitfield, INVALID should never
-	 * set the HORIZONTAL or VERTICAL bits.
-	 */
-	VIEW_AXIS_INVALID = (1 << 2),
 };
 
 enum view_wants_focus {
@@ -110,10 +96,7 @@ struct view_impl {
 	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
 	void (*set_activated)(struct view *view, bool activated);
-	void (*set_fullscreen)(struct view *view, bool fullscreen);
 	void (*notify_tiled)(struct view *view);
-	void (*maximize)(struct view *view, enum view_axis maximized);
-	void (*minimize)(struct view *view, bool minimize);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
@@ -181,9 +164,6 @@ struct view {
 	enum lab_ssd_mode ssd_mode;
 	enum ssd_preference ssd_preference;
 	bool shaded;
-	bool minimized;
-	enum view_axis maximized;
-	bool fullscreen;
 	bool tearing_hint;
 	enum lab_tristate force_tearing;
 	bool visible_on_all_workspaces;
@@ -509,7 +489,6 @@ void view_place_by_policy(struct view *view, bool allow_cursor,
 	enum lab_placement_policy policy);
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
-void view_set_maximized(struct view *view, enum view_axis maximized);
 void view_set_untiled(struct view *view);
 void view_maximize(struct view *view, enum view_axis axis);
 void view_set_fullscreen(struct view *view, bool fullscreen);

@@ -134,16 +134,16 @@ toplevel_handle_send_state(struct wl_resource *resource, struct view *view)
 	uint32_t states[4];
 	size_t nstates = 0;
 
-	if (view->maximized == VIEW_AXIS_BOTH) {
+	if (view->st->maximized == VIEW_AXIS_BOTH) {
 		states[nstates++] = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MAXIMIZED;
 	}
-	if (view->minimized) {
+	if (view->st->minimized) {
 		states[nstates++] = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED;
 	}
 	if (view == view->server->active_view) {
 		states[nstates++] = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED;
 	}
-	if (view->fullscreen && wl_resource_get_version(resource)
+	if (view->st->fullscreen && wl_resource_get_version(resource)
 			>= ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN_SINCE_VERSION) {
 		states[nstates++] = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_FULLSCREEN;
 	}
