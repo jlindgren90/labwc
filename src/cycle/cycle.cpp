@@ -281,8 +281,7 @@ create_osd_on_output(struct output *output)
 static bool
 init_cycle(void)
 {
-	struct view *view;
-	for_each_view(view, &g_server.views, rc.window_switcher.criteria) {
+	for_each_view(view, g_views.begin(), rc.window_switcher.criteria) {
 		wl_list_append(&g_server.cycle.views, &view->cycle_link);
 	}
 	if (wl_list_empty(&g_server.cycle.views)) {
