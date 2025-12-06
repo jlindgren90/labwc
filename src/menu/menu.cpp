@@ -196,8 +196,8 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	bool show_app_icon = !strcmp(item->parent->id, "client-list-combined-menu")
 				&& item->client_list_view;
 	if (item->icon_name || show_app_icon) {
-		struct scaled_icon_buffer *icon_buffer =
-			scaled_icon_buffer_create(tree, icon_size, icon_size);
+		auto icon_buffer =
+			new scaled_icon_buffer(tree, icon_size, icon_size);
 		if (item->icon_name) {
 			/* icon set via <menu icon="..."> */
 			scaled_icon_buffer_set_icon_name(icon_buffer, item->icon_name);
@@ -212,8 +212,7 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	}
 
 	/* Create label */
-	struct scaled_font_buffer *label_buffer = scaled_font_buffer_create(tree);
-	assert(label_buffer);
+	auto label_buffer = new scaled_font_buffer(tree);
 	scaled_font_buffer_update(label_buffer, item->text, label_max_width,
 		&rc.font_menuitem, text_color, bg_color);
 	/* Vertically center and left-align label */
@@ -226,8 +225,7 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	}
 
 	/* Create arrow for submenu items */
-	struct scaled_font_buffer *arrow_buffer = scaled_font_buffer_create(tree);
-	assert(arrow_buffer);
+	auto arrow_buffer = new scaled_font_buffer(tree);
 	scaled_font_buffer_update(arrow_buffer, item->arrow, -1,
 		&rc.font_menuitem, text_color, bg_color);
 	/* Vertically center and right-align arrow */
@@ -362,9 +360,7 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 		g_theme.menu_header_height, bg_color);
 
 	/* Draw separator title */
-	struct scaled_font_buffer *title_font_buffer =
-		scaled_font_buffer_create(menuitem->normal_tree);
-	assert(title_font_buffer);
+	auto title_font_buffer = new scaled_font_buffer(menuitem->normal_tree);
 	scaled_font_buffer_update(title_font_buffer, menuitem->text,
 		text_width, &rc.font_menuheader, text_color, bg_color);
 
