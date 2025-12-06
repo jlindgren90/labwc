@@ -877,7 +877,8 @@ update_client_list_combined_menu(struct server *server)
 		wl_list_for_each(view, &server->views, link) {
 			if (view->workspace == workspace) {
 				if (!view->foreign_toplevel
-						|| string_null_or_empty(view->title)) {
+						|| string_null_or_empty(
+							view->st->title)) {
 					continue;
 				}
 
@@ -885,9 +886,10 @@ update_client_list_combined_menu(struct server *server)
 					buf_add(&buffer, "*");
 				}
 				if (view->minimized) {
-					buf_add_fmt(&buffer, "(%s)", view->title);
+					buf_add_fmt(&buffer, "(%s)",
+						view->st->title);
 				} else {
-					buf_add(&buffer, view->title);
+					buf_add(&buffer, view->st->title);
 				}
 				item = item_create(menu, buffer.data, NULL,
 					/*show arrow*/ false);

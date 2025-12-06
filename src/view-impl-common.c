@@ -33,7 +33,7 @@ view_impl_map(struct view *view)
 	}
 
 	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s",
-		view->app_id, view->title);
+		view->st->app_id, view->st->title);
 }
 
 void
