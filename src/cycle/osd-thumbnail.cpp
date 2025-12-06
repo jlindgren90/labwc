@@ -106,8 +106,7 @@ create_label(struct wlr_scene_tree *parent, struct view *view,
 	struct buf buf = BUF_INIT;
 	cycle_osd_field_set_custom(&buf, view,
 		rc.window_switcher.thumbnail_label_format);
-	struct scaled_font_buffer *buffer =
-		scaled_font_buffer_create(parent);
+	struct scaled_font_buffer *buffer = new scaled_font_buffer(parent);
 	scaled_font_buffer_update(buffer, buf.data,
 		switcher_theme->item_width - 2 * switcher_theme->item_padding,
 		&rc.font_osd, text_color, bg_color);
@@ -185,7 +184,7 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 	/* icon */
 	int icon_size = switcher_theme->item_icon_size;
 	struct scaled_icon_buffer *icon_buffer =
-		scaled_icon_buffer_create(tree, icon_size, icon_size);
+		new scaled_icon_buffer(tree, icon_size, icon_size);
 	scaled_icon_buffer_set_view(icon_buffer, view);
 	int x = (switcher_theme->item_width - icon_size) / 2;
 	int y = title_y - padding - icon_size + 10; /* slide by 10px */
