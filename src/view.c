@@ -68,7 +68,7 @@ security_context_from_view(struct view *view)
 	if (view && view->surface && view->surface->resource) {
 		struct wl_client *client = wl_resource_get_client(view->surface->resource);
 		return wlr_security_context_manager_v1_lookup_client(
-			view->server->security_context_manager_v1, client);
+			g_server.security_context_manager_v1, client);
 	}
 	return NULL;
 }
@@ -175,7 +175,8 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (!query_tristate_match(query->focused, view->server->active_view == view)) {
+	if (!query_tristate_match(query->focused,
+			g_server.active_view == view)) {
 		return false;
 	}
 
@@ -201,7 +202,7 @@ view_matches_query(struct view *view, struct view_query *query)
 
 	if (query->desktop) {
 		const char *view_workspace = view->workspace->name;
-		struct workspace *current = view->server->workspaces.current;
+		struct workspace *current = g_server.workspaces.current;
 
 		if (!strcasecmp(query->desktop, "other")) {
 			/* "other" means the view is NOT on the current desktop */
@@ -224,7 +225,7 @@ view_matches_query(struct view *view, struct view_query *query)
 	}
 
 	if (query->monitor) {
-		struct output *current = output_nearest_to_cursor(view->server);
+		struct output *current = output_nearest_to_cursor();
 		if (!strcasecmp(query->monitor, "current")) {
 			if (current != view->output) {
 				return false;
@@ -240,8 +241,7 @@ view_matches_query(struct view *view, struct view_query *query)
 				return false;
 			}
 		} else {
-			if (output_from_name(view->server, query->monitor)
-					!= view->output) {
+			if (output_from_name(query->monitor) != view->output) {
 				return false;
 			}
 		}
@@ -271,8 +271,8 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 		 * Always-on-top views are always on the current desktop and are
 		 * special in that they live in a different tree.
 		 */
-		struct server *server = view->server;
-		if (view->scene_tree->node.parent != server->workspaces.current->tree
+		if (view->scene_tree->node.parent
+				!= g_server.workspaces.current->tree
 				&& !view_is_always_on_top(view)) {
 			return false;
 		}
@@ -347,11 +347,10 @@ view_prev(struct wl_list *head, struct view *view, enum lab_view_criteria criter
 }
 
 void
-view_array_append(struct server *server, struct wl_array *views,
-		enum lab_view_criteria criteria)
+view_array_append(struct wl_array *views, enum lab_view_criteria criteria)
 {
 	struct view *view;
-	for_each_view(view, &server->views, criteria) {
+	for_each_view(view, &g_server.views, criteria) {
 		struct view **entry = wl_array_add(views, sizeof(*entry));
 		if (!entry) {
 			wlr_log(WLR_ERROR, "wl_array_add(): out of memory");
@@ -455,15 +454,14 @@ view_discover_output(struct view *view, struct wlr_box *geometry)
 	}
 
 	struct output *output =
-		output_nearest_to(view->server,
-			geometry->x + geometry->width / 2,
+		output_nearest_to(geometry->x + geometry->width / 2,
 			geometry->y + geometry->height / 2);
 
 	if (output && output != view->output) {
 		view->output = output;
 		/* Show fullscreen views above top-layer */
 		if (view->fullscreen) {
-			desktop_update_top_layer_visibility(view->server);
+			desktop_update_top_layer_visibility();
 		}
 		return true;
 	}
@@ -486,10 +484,12 @@ view_set_activated(struct view *view, bool activated)
 		if (!activated) {
 			/* Store configured keyboard layout per view */
 			view->keyboard_layout =
-				view->server->seat.keyboard_group->keyboard.modifiers.group;
+				g_server.seat.keyboard_group->keyboard.modifiers
+					.group;
 		} else {
 			/* Switch to previously stored keyboard layout */
-			keyboard_update_layout(&view->server->seat, view->keyboard_layout);
+			keyboard_update_layout(&g_server.seat,
+				view->keyboard_layout);
 		}
 	}
 	output_set_has_fullscreen_view(view->output, view->fullscreen);
@@ -506,7 +506,7 @@ view_set_output(struct view *view, struct output *output)
 	view->output = output;
 	/* Show fullscreen views above top-layer */
 	if (view->fullscreen) {
-		desktop_update_top_layer_visibility(view->server);
+		desktop_update_top_layer_visibility();
 	}
 }
 
@@ -523,10 +523,10 @@ static void
 view_update_outputs(struct view *view)
 {
 	struct output *output;
-	struct wlr_output_layout *layout = view->server->output_layout;
+	struct wlr_output_layout *layout = g_server.output_layout;
 
 	uint64_t new_outputs = 0;
-	wl_list_for_each(output, &view->server->outputs, link) {
+	wl_list_for_each(output, &g_server.outputs, link) {
 		if (output_is_usable(output) && wlr_output_layout_intersects(
 				layout, output->wlr_output, &view->current)) {
 			new_outputs |= output->id_bit;
@@ -536,7 +536,7 @@ view_update_outputs(struct view *view)
 	if (new_outputs != view->outputs) {
 		view->outputs = new_outputs;
 		wl_signal_emit_mutable(&view->events.new_outputs, NULL);
-		desktop_update_top_layer_visibility(view->server);
+		desktop_update_top_layer_visibility();
 	}
 }
 
@@ -575,8 +575,8 @@ view_moved(struct view *view)
 	}
 	view_update_outputs(view);
 	ssd_update_geometry(view->ssd);
-	cursor_update_focus(view->server);
-	if (rc.resize_indicator && view->server->grabbed_view == view) {
+	cursor_update_focus();
+	if (rc.resize_indicator && g_server.grabbed_view == view) {
 		resize_indicator_update(view);
 	}
 }
@@ -627,7 +627,7 @@ view_move_to_cursor(struct view *view)
 {
 	assert(view);
 
-	struct output *pending_output = output_nearest_to_cursor(view->server);
+	struct output *pending_output = output_nearest_to_cursor();
 	if (!output_is_usable(pending_output)) {
 		return;
 	}
@@ -643,8 +643,8 @@ view_move_to_cursor(struct view *view)
 	geo.width += margin.left + margin.right;
 	geo.height += margin.top + margin.bottom;
 
-	int x = view->server->seat.cursor->x - (geo.width / 2);
-	int y = view->server->seat.cursor->y - (geo.height / 2);
+	int x = g_server.seat.cursor->x - (geo.width / 2);
+	int y = g_server.seat.cursor->y - (geo.height / 2);
 
 	struct wlr_box usable = output_usable_area_in_layout_coords(pending_output);
 
@@ -782,7 +782,7 @@ view_minimize(struct view *view, bool minimized)
 {
 	assert(view);
 
-	if (view->server->input_mode == LAB_INPUT_STATE_CYCLE) {
+	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
 		wlr_log(WLR_ERROR, "not minimizing window while window switching");
 		return;
 	}
@@ -844,7 +844,7 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 
 	bool adjusted = false;
 	bool onscreen = false;
-	if (wlr_output_layout_intersects(view->server->output_layout,
+	if (wlr_output_layout_intersects(g_server.output_layout,
 			view->output->wlr_output, geometry)) {
 		/* Always make sure the titlebar starts within the usable area */
 		struct border margin = ssd_get_margin(view->ssd);
@@ -983,7 +983,7 @@ view_cascade(struct view *view)
 	/* TODO: move this logic to rcxml.c */
 	int offset_x = rc.placement_cascade_offset_x;
 	int offset_y = rc.placement_cascade_offset_y;
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 	int default_offset = theme->titlebar_height + theme->border_width + 5;
 	if (offset_x <= 0) {
 		offset_x = default_offset;
@@ -1003,7 +1003,7 @@ view_cascade(struct view *view)
 
 		/* Iterate over views from top to bottom */
 		struct view *other_view;
-		for_each_view(other_view, &view->server->views,
+		for_each_view(other_view, &g_server.views,
 				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
 			struct wlr_box other = ssd_max_extents(other_view);
 			if (other_view == view
@@ -1224,7 +1224,7 @@ view_apply_fullscreen_geometry(struct view *view)
 	assert(output_is_usable(view->output));
 
 	struct wlr_box box = { 0 };
-	wlr_output_layout_get_box(view->server->output_layout,
+	wlr_output_layout_get_box(g_server.output_layout,
 		view->output->wlr_output, &box);
 	view_move_resize(view, box);
 }
@@ -1517,8 +1517,8 @@ bool
 view_is_always_on_top(struct view *view)
 {
 	assert(view);
-	return view->scene_tree->node.parent ==
-		view->server->view_tree_always_on_top;
+	return view->scene_tree->node.parent
+		== g_server.view_tree_always_on_top;
 }
 
 void
@@ -1526,12 +1526,12 @@ view_toggle_always_on_top(struct view *view)
 {
 	assert(view);
 	if (view_is_always_on_top(view)) {
-		view->workspace = view->server->workspaces.current;
+		view->workspace = g_server.workspaces.current;
 		wlr_scene_node_reparent(&view->scene_tree->node,
 			view->workspace->tree);
 	} else {
 		wlr_scene_node_reparent(&view->scene_tree->node,
-			view->server->view_tree_always_on_top);
+			g_server.view_tree_always_on_top);
 	}
 }
 
@@ -1539,8 +1539,8 @@ bool
 view_is_always_on_bottom(struct view *view)
 {
 	assert(view);
-	return view->scene_tree->node.parent ==
-		view->server->view_tree_always_on_bottom;
+	return view->scene_tree->node.parent
+		== g_server.view_tree_always_on_bottom;
 }
 
 void
@@ -1548,12 +1548,12 @@ view_toggle_always_on_bottom(struct view *view)
 {
 	assert(view);
 	if (view_is_always_on_bottom(view)) {
-		view->workspace = view->server->workspaces.current;
+		view->workspace = g_server.workspaces.current;
 		wlr_scene_node_reparent(&view->scene_tree->node,
 			view->workspace->tree);
 	} else {
 		wlr_scene_node_reparent(&view->scene_tree->node,
-			view->server->view_tree_always_on_bottom);
+			g_server.view_tree_always_on_bottom);
 	}
 }
 
@@ -1581,8 +1581,7 @@ static void
 decorate(struct view *view)
 {
 	if (!view->ssd) {
-		view->ssd = ssd_create(view,
-			view == view->server->active_view);
+		view->ssd = ssd_create(view, view == g_server.active_view);
 	}
 }
 
@@ -1667,7 +1666,7 @@ set_fullscreen(struct view *view, bool fullscreen)
 
 	/* Show fullscreen views above top-layer */
 	if (view->output) {
-		desktop_update_top_layer_visibility(view->server);
+		desktop_update_top_layer_visibility();
 	}
 }
 
@@ -1705,7 +1704,7 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	 * scene node ending up under the cursor even if view_moved()
 	 * isn't called. Update cursor focus explicitly for that case.
 	 */
-	cursor_update_focus(view->server);
+	cursor_update_focus();
 }
 
 static bool
@@ -2215,7 +2214,7 @@ static void
 move_to_front(struct view *view)
 {
 	wl_list_remove(&view->link);
-	wl_list_insert(&view->server->views, &view->link);
+	wl_list_insert(&g_server.views, &view->link);
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 }
 
@@ -2223,7 +2222,7 @@ static void
 move_to_back(struct view *view)
 {
 	wl_list_remove(&view->link);
-	wl_list_append(&view->server->views, &view->link);
+	wl_list_append(&g_server.views, &view->link);
 	wlr_scene_node_lower_to_bottom(&view->scene_tree->node);
 }
 
@@ -2257,10 +2256,10 @@ view_move_to_front(struct view *view)
 	 * to an incorrect X window depending on timing. To mitigate the
 	 * race, perform an explicit flush after restacking.
 	 */
-	xwayland_flush(view->server);
+	xwayland_flush();
 #endif
-	cursor_update_focus(view->server);
-	desktop_update_top_layer_visibility(view->server);
+	cursor_update_focus();
+	desktop_update_top_layer_visibility();
 }
 
 void
@@ -2273,8 +2272,8 @@ view_move_to_back(struct view *view)
 	for_each_subview(root, move_to_back);
 	move_to_back(root);
 
-	cursor_update_focus(view->server);
-	desktop_update_top_layer_visibility(view->server);
+	cursor_update_focus();
+	desktop_update_top_layer_visibility();
 }
 
 struct view *
@@ -2409,7 +2408,6 @@ view_update_visibility(struct view *view)
 	}
 
 	wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
-	struct server *server = view->server;
 
 	if (visible) {
 		desktop_focus_view(view, /*raise*/ true);
@@ -2419,12 +2417,12 @@ view_update_visibility(struct view *view)
 		 * views mapped, a race condition can occur: after the
 		 * topmost view is unmapped, the next view under it is
 		 * offered focus, but is also unmapped before accepting
-		 * focus (so server->active_view remains NULL). To avoid
+		 * focus (so g_server.active_view remains NULL). To avoid
 		 * being left with no active view at all, check for that
 		 * case also.
 		 */
-		if (view == server->active_view || !server->active_view) {
-			desktop_focus_topmost_view(server);
+		if (view == g_server.active_view || !g_server.active_view) {
+			desktop_focus_topmost_view();
 		}
 	}
 
@@ -2432,7 +2430,7 @@ view_update_visibility(struct view *view)
 	 * Show top layer when a fullscreen view is hidden.
 	 * Hide it if a fullscreen view is shown (or uncovered).
 	 */
-	desktop_update_top_layer_visibility(server);
+	desktop_update_top_layer_visibility();
 
 	/*
 	 * We may need to disable adaptive sync if view was fullscreen.
@@ -2447,7 +2445,7 @@ view_update_visibility(struct view *view)
 
 	/* Update usable area to account for XWayland "struts" (panels) */
 	if (view_has_strut_partial(view)) {
-		output_update_all_usable_areas(server, false);
+		output_update_all_usable_areas(false);
 	}
 }
 
@@ -2466,7 +2464,7 @@ view_set_shade(struct view *view, bool shaded)
 	}
 
 	/* If this window is being resized, cancel the resize when shading */
-	if (shaded && view->server->input_mode == LAB_INPUT_STATE_RESIZE) {
+	if (shaded && g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
 		interactive_cancel(view);
 	}
 
@@ -2529,7 +2527,6 @@ void
 view_destroy(struct view *view)
 {
 	assert(view);
-	struct server *server = view->server;
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
 	snap_constraints_invalidate(view);
@@ -2554,17 +2551,17 @@ view_destroy(struct view *view)
 		view->foreign_toplevel = NULL;
 	}
 
-	if (server->grabbed_view == view) {
+	if (g_server.grabbed_view == view) {
 		/* Application got killed while moving around */
 		interactive_cancel(view);
 	}
 
-	if (server->active_view == view) {
-		server->active_view = NULL;
+	if (g_server.active_view == view) {
+		g_server.active_view = NULL;
 	}
 
-	if (server->session_lock_manager->last_active_view == view) {
-		server->session_lock_manager->last_active_view = NULL;
+	if (g_server.session_lock_manager->last_active_view == view) {
+		g_server.session_lock_manager->last_active_view = NULL;
 	}
 
 	if (view->tiled_region_evacuate) {
@@ -2572,7 +2569,7 @@ view_destroy(struct view *view)
 	}
 
 	/* TODO: call this on map/unmap instead */
-	cycle_reinitialize(server);
+	cycle_reinitialize();
 
 	undecorate(view);
 
@@ -2599,9 +2596,9 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
 
-	/* Remove view from server->views */
+	/* Remove view from g_server.views */
 	wl_list_remove(&view->link);
 	free(view);
 
-	cursor_update_focus(server);
+	cursor_update_focus();
 }
