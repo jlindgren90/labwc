@@ -10,6 +10,7 @@
 
 #include <cairo.h>
 #include <stdbool.h>
+#include "buffer.h"
 #include "common/node-type.h"
 
 struct lab_img;
@@ -154,14 +155,14 @@ struct theme {
 		 * image. It does not work for horizontal gradients.
 		 */
 		cairo_pattern_t *titlebar_pattern;
-		struct lab_data_buffer *titlebar_fill;
+		refptr<lab_data_buffer> titlebar_fill;
 
-		struct lab_data_buffer *corner_top_left_normal;
-		struct lab_data_buffer *corner_top_right_normal;
+		refptr<lab_data_buffer> corner_top_left_normal;
+		refptr<lab_data_buffer> corner_top_right_normal;
 
-		struct lab_data_buffer *shadow_corner_top;
-		struct lab_data_buffer *shadow_corner_bottom;
-		struct lab_data_buffer *shadow_edge;
+		refptr<lab_data_buffer> shadow_corner_top;
+		refptr<lab_data_buffer> shadow_corner_bottom;
+		refptr<lab_data_buffer> shadow_edge;
 	} window[2];
 
 	/* Derived from font sizes */

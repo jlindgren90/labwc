@@ -2,9 +2,8 @@
 
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "buffer.h"
+#include <wlr/util/log.h>
 #include "config/rcxml.h"
-#include "labwc.h"
 #include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
@@ -167,8 +166,10 @@ set_shadow_geometry(struct ssd *ssd)
 		 * portion.  Top and bottom are the same size (only the cutout
 		 * is different).  The buffers are square so width == height.
 		 */
-		int corner_size =
-			g_theme.window[active].shadow_corner_top->logical_height;
+		int corner_size = 0;
+		if (CHECK_PTR(g_theme.window[active].shadow_corner_top, corner)) {
+			corner_size = corner->logical_height;
+		}
 
 		set_shadow_parts_geometry(subtree, width, height,
 			titlebar_height, corner_size, inset,
@@ -218,12 +219,10 @@ ssd_shadow_create(struct ssd *ssd)
 
 		subtree->tree = wlr_scene_tree_create(ssd->shadow.tree);
 		struct wlr_scene_tree *parent = subtree->tree;
-		struct wlr_buffer *corner_top_buffer =
-			&g_theme.window[active].shadow_corner_top->base;
-		struct wlr_buffer *corner_bottom_buffer =
-			&g_theme.window[active].shadow_corner_bottom->base;
-		struct wlr_buffer *edge_buffer =
-			&g_theme.window[active].shadow_edge->base;
+
+		ASSERT_PTR(g_theme.window[active].shadow_corner_top, corner_top_buffer);
+		ASSERT_PTR(g_theme.window[active].shadow_corner_bottom, corner_bottom_buffer);
+		ASSERT_PTR(g_theme.window[active].shadow_edge, edge_buffer);
 
 		subtree->bottom_right = make_shadow(view, parent,
 			corner_bottom_buffer, WL_OUTPUT_TRANSFORM_NORMAL);

@@ -2,8 +2,8 @@
 #ifndef LABWC_IMG_XPM_H
 #define LABWC_IMG_XPM_H
 
-struct lab_data_buffer;
+#include "buffer.h"
 
-struct lab_data_buffer *img_xpm_load(const char *filename);
+refptr<lab_data_buffer> img_xpm_load(const char *filename);
 
 #endif /* LABWC_IMG_XPM_H */

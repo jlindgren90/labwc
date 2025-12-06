@@ -58,19 +58,10 @@ struct rounded_corner_ctx {
 
 #define zero_array(arr) memset(arr, 0, sizeof(arr))
 
-static struct lab_data_buffer *rounded_rect(struct rounded_corner_ctx *ctx);
+static refptr<lab_data_buffer> rounded_rect(struct rounded_corner_ctx *ctx);
 
 /* 1 degree in radians (=2π/360) */
 static const double deg = 0.017453292519943295;
-
-static void
-zdrop(struct lab_data_buffer **buffer)
-{
-	if (*buffer) {
-		wlr_buffer_drop(&(*buffer)->base);
-		*buffer = NULL;
-	}
-}
 
 /* Draw rounded-rectangular hover overlay on the button buffer */
 static void
@@ -1175,16 +1166,15 @@ theme_read(struct wl_list *paths)
 	}
 }
 
-static struct lab_data_buffer *
+static refptr<lab_data_buffer>
 rounded_rect(struct rounded_corner_ctx *ctx)
 {
 	double w = ctx->box->width;
 	double h = ctx->box->height;
 	double r = ctx->radius;
 
-	struct lab_data_buffer *buffer;
 	/* TODO: scale */
-	buffer = buffer_create_cairo(w, h, 1);
+	auto buffer = buffer_create_cairo(w, h, 1);
 
 	cairo_surface_t *surf = buffer->surface;
 	cairo_t *cairo = cairo_create(surf);
@@ -1386,11 +1376,11 @@ create_titlebar_pattern(const struct theme_background *bg, int height)
 	return pattern;
 }
 
-static struct lab_data_buffer *
+static refptr<lab_data_buffer>
 create_titlebar_fill(cairo_pattern_t *pattern, int height)
 {
 	/* create 1px wide buffer to be stretched horizontally */
-	struct lab_data_buffer *fill = buffer_create_cairo(1, height, 1);
+	auto fill = buffer_create_cairo(1, height, 1);
 
 	cairo_t *cairo = cairo_create(fill->surface);
 	cairo_set_source(cairo, pattern);
@@ -1590,14 +1580,14 @@ create_shadow(enum ssd_active_state active)
 		}
 	}
 
-	shadow_edge_gradient(g_theme.window[active].shadow_edge, visible_size,
-		total_size, g_theme.window[active].shadow_color);
-	shadow_corner_gradient(g_theme.window[active].shadow_corner_top,
+	shadow_edge_gradient(g_theme.window[active].shadow_edge.get(),
+		visible_size, total_size, g_theme.window[active].shadow_color);
+	shadow_corner_gradient(g_theme.window[active].shadow_corner_top.get(),
 		visible_size, total_size, g_theme.titlebar_height,
 		g_theme.window[active].shadow_color);
-	shadow_corner_gradient(g_theme.window[active].shadow_corner_bottom,
-		visible_size, total_size, 0,
-		g_theme.window[active].shadow_color);
+	shadow_corner_gradient(
+		g_theme.window[active].shadow_corner_bottom.get(), visible_size,
+		total_size, 0, g_theme.window[active].shadow_color);
 }
 
 static void
@@ -1879,11 +1869,11 @@ theme_finish(void)
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
 		zfree_pattern(g_theme.window[active].titlebar_pattern);
-		zdrop(&g_theme.window[active].titlebar_fill);
-		zdrop(&g_theme.window[active].corner_top_left_normal);
-		zdrop(&g_theme.window[active].corner_top_right_normal);
-		zdrop(&g_theme.window[active].shadow_corner_top);
-		zdrop(&g_theme.window[active].shadow_corner_bottom);
-		zdrop(&g_theme.window[active].shadow_edge);
+		g_theme.window[active].titlebar_fill.reset();
+		g_theme.window[active].corner_top_left_normal.reset();
+		g_theme.window[active].corner_top_right_normal.reset();
+		g_theme.window[active].shadow_corner_top.reset();
+		g_theme.window[active].shadow_corner_bottom.reset();
+		g_theme.window[active].shadow_edge.reset();
 	}
 }

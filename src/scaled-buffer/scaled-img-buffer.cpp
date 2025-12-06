@@ -7,13 +7,11 @@
 #include "node.h"
 #include "scaled-buffer/scaled-buffer.h"
 
-static struct lab_data_buffer *
+static refptr<lab_data_buffer>
 _create_buffer(struct scaled_buffer *scaled_buffer, double scale)
 {
 	struct scaled_img_buffer *self = scaled_buffer->data;
-	struct lab_data_buffer *buffer = lab_img_render(self->img,
-		self->width, self->height, scale);
-	return buffer;
+	return lab_img_render(self->img, self->width, self->height, scale);
 }
 
 static void
@@ -50,8 +48,7 @@ scaled_img_buffer_create(struct wlr_scene_tree *parent, struct lab_img *img,
 	assert(img);
 	assert(width >= 0 && height >= 0);
 
-	struct scaled_buffer *scaled_buffer = scaled_buffer_create(
-		parent, &impl, /* drop_buffer */ true);
+	auto scaled_buffer = scaled_buffer_create(parent, &impl);
 	struct scaled_img_buffer *self = znew(*self);
 	self->scaled_buffer = scaled_buffer;
 	self->scene_buffer = scaled_buffer->scene_buffer;
