@@ -10,6 +10,7 @@
 #include "common/edge.h"
 #include "common/listener.h"
 #include "common/reflist.h"
+#include "common/str.h"
 #include "config.h"
 #include "config/types.h"
 
@@ -155,8 +156,8 @@ struct view_data {
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
 
 	/* These are never NULL and an empty string is set instead. */
-	char *title;
-	char *app_id; /* WM_CLASS for xwayland windows */
+	lab_str title;
+	lab_str app_id; /* WM_CLASS for xwayland windows */
 
 	bool mapped;
 	bool been_mapped;
