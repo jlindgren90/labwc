@@ -107,9 +107,8 @@ desktop_entry_init(void)
 		| SFDO_ICON_THEME_LOAD_OPTION_RELAXED
 		| SFDO_ICON_THEME_LOAD_OPTION_ALLOW_MISSING;
 
-	sfdo->icon_theme = sfdo_icon_theme_load(
-		sfdo->icon_ctx,
-		rc.icon_theme_name, load_options);
+	sfdo->icon_theme = sfdo_icon_theme_load(sfdo->icon_ctx,
+		rc.icon_theme_name.c(), load_options);
 	if (!sfdo->icon_theme) {
 		/*
 		 * sfdo_icon_theme_load() falls back to hicolor theme with
@@ -118,7 +117,7 @@ desktop_entry_init(void)
 		 * So manually call sfdo_icon_theme_load() again here.
 		 */
 		wlr_log(WLR_ERROR, "Failed to load icon theme %s, falling back to 'hicolor'",
-			rc.icon_theme_name);
+			rc.icon_theme_name.c());
 
 		if (!debug_libsfdo) {
 			wlr_log(WLR_ERROR, "Further information is available by setting "
