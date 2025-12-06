@@ -1185,7 +1185,7 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 			break;
 		}
 		lab_str region_name = action.get_str("region", NULL);
-		struct region *region = regions_from_name(region_name.c(), output);
+		auto region = regions_from_name(region_name.c(), output);
 		if (region) {
 			if (action.type == ACTION_TYPE_TOGGLE_SNAP_TO_REGION
 					&& view->maximized == VIEW_AXIS_NONE
@@ -1196,7 +1196,7 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 				view_apply_natural_geometry(view);
 				break;
 			}
-			view_snap_to_region(view, region,
+			view_snap_to_region(view, region.get(),
 				/*store_natural_geometry*/ true);
 		} else {
 			wlr_log(WLR_ERROR, "Invalid SnapToRegion id: '%s'",
