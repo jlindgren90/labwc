@@ -11,10 +11,9 @@
 #include "common/string-helpers.h"
 #include "scaled-buffer/scaled-buffer.h"
 
-static struct lab_data_buffer *
+static refptr<lab_data_buffer>
 _create_buffer(struct scaled_buffer *scaled_buffer, double scale)
 {
-	struct lab_data_buffer *buffer = NULL;
 	struct scaled_font_buffer *self = scaled_buffer->data;
 	cairo_pattern_t *bg_pattern = self->bg_pattern;
 	cairo_pattern_t *solid_bg_pattern = NULL;
@@ -25,8 +24,8 @@ _create_buffer(struct scaled_buffer *scaled_buffer, double scale)
 	}
 
 	/* Buffer gets free'd automatically along the backing wlr_buffer */
-	font_buffer_create(&buffer, self->max_width, self->height, self->text,
-		&self->font, self->color, bg_pattern, scale);
+	auto buffer = font_buffer_create(self->max_width, self->height,
+		self->text, &self->font, self->color, bg_pattern, scale);
 
 	if (!buffer) {
 		wlr_log(WLR_ERROR, "font_buffer_create() failed");
@@ -79,8 +78,7 @@ scaled_font_buffer_create(struct wlr_scene_tree *parent)
 {
 	assert(parent);
 	struct scaled_font_buffer *self = znew(*self);
-	struct scaled_buffer *scaled_buffer = scaled_buffer_create(
-		parent, &impl, /* drop_buffer */ true);
+	auto scaled_buffer = scaled_buffer_create(parent, &impl);
 	if (!scaled_buffer) {
 		free(self);
 		return NULL;
