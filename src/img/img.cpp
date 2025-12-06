@@ -7,7 +7,6 @@
 #include "common/box.h"
 #include "common/graphic-helpers.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/string-helpers.h"
 #include "img/img-png.h"
 #if HAVE_RSVG
@@ -24,16 +23,27 @@ struct lab_img_data {
 	int refcount;
 
 	/* Handler for the loaded image file */
-	struct lab_data_buffer *buffer; /* for PNG/XBM/XPM image */
+	refptr<lab_data_buffer> buffer; /* for PNG/XBM/XPM image */
 #if HAVE_RSVG
 	RsvgHandle *svg; /* for SVG image */
 #endif
+
+	~lab_img_data();
 };
+
+lab_img_data::~lab_img_data()
+{
+#if HAVE_RSVG
+	if (svg) {
+		g_object_unref(svg);
+	}
+#endif
+}
 
 static struct lab_img *
 create_img(struct lab_img_data *img_data)
 {
-	struct lab_img *img = znew(*img);
+	auto img = new lab_img();
 	img->data = img_data;
 	img_data->refcount++;
 	wl_array_init(&img->modifiers);
@@ -47,7 +57,7 @@ lab_img_load(enum lab_img_type type, const char *path, float *xbm_color)
 		return NULL;
 	}
 
-	struct lab_img_data *img_data = znew(*img_data);
+	auto img_data = new lab_img_data();
 	img_data->type = type;
 
 	switch (type) {
@@ -76,7 +86,7 @@ lab_img_load(enum lab_img_type type, const char *path, float *xbm_color)
 	if (img_is_loaded) {
 		return create_img(img_data);
 	} else {
-		free(img_data);
+		delete img_data;
 		return NULL;
 	}
 }
@@ -84,12 +94,12 @@ lab_img_load(enum lab_img_type type, const char *path, float *xbm_color)
 struct lab_img *
 lab_img_load_from_bitmap(const char *bitmap, float *rgba)
 {
-	struct lab_data_buffer *buffer = img_xbm_load_from_bitmap(bitmap, rgba);
+	auto buffer = img_xbm_load_from_bitmap(bitmap, rgba);
 	if (!buffer) {
 		return NULL;
 	}
 
-	struct lab_img_data *img_data = znew(*img_data);
+	auto img_data = new lab_img_data();
 	img_data->type = LAB_IMG_XBM;
 	img_data->buffer = buffer;
 
@@ -111,42 +121,34 @@ lab_img_add_modifier(struct lab_img *img,  lab_img_modifier_func_t modifier)
 	*mod = modifier;
 }
 
-struct lab_data_buffer *
+refptr<lab_data_buffer>
 lab_img_render(struct lab_img *img, int width, int height, double scale)
 {
-	struct lab_data_buffer *buffer = NULL;
+	refptr<lab_data_buffer> buffer;
 
 	/* Render the image into the buffer for the given size */
-	switch (img->data->type) {
-	case LAB_IMG_PNG:
-	case LAB_IMG_XBM:
-	case LAB_IMG_XPM:
-		buffer = buffer_resize(img->data->buffer, width, height, scale);
-		break;
+	if (CHECK_PTR(img->data->buffer, orig)) {
+		buffer = buffer_scale_cairo_surface(orig->surface, width,
+			height, scale);
 #if HAVE_RSVG
-	case LAB_IMG_SVG:
+	} else if (img->data->svg) {
 		buffer = img_svg_render(img->data->svg, width, height, scale);
-		break;
 #endif
-	default:
-		break;
 	}
 
-	if (!buffer) {
-		return NULL;
-	}
+	if (CHECK_PTR(buffer, buf)) {
+		/* Apply modifiers to the buffer (e.g. draw hover overlay) */
+		cairo_t *cairo = cairo_create(buf->surface);
+		lab_img_modifier_func_t *modifier;
+		wl_array_for_each(modifier, &img->modifiers) {
+			cairo_save(cairo);
+			(*modifier)(cairo, width, height);
+			cairo_restore(cairo);
+		}
 
-	/* Apply modifiers to the buffer (e.g. draw hover overlay) */
-	cairo_t *cairo = cairo_create(buffer->surface);
-	lab_img_modifier_func_t *modifier;
-	wl_array_for_each(modifier, &img->modifiers) {
-		cairo_save(cairo);
-		(*modifier)(cairo, width, height);
-		cairo_restore(cairo);
+		cairo_surface_flush(buf->surface);
+		cairo_destroy(cairo);
 	}
-
-	cairo_surface_flush(buffer->surface);
-	cairo_destroy(cairo);
 
 	return buffer;
 }
@@ -160,19 +162,11 @@ lab_img_destroy(struct lab_img *img)
 
 	img->data->refcount--;
 	if (img->data->refcount == 0) {
-		if (img->data->buffer) {
-			wlr_buffer_drop(&img->data->buffer->base);
-		}
-#if HAVE_RSVG
-		if (img->data->svg) {
-			g_object_unref(img->data->svg);
-		}
-#endif
-		free(img->data);
+		delete img->data;
 	}
 
 	wl_array_release(&img->modifiers);
-	free(img);
+	delete img;
 }
 
 bool

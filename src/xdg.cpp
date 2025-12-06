@@ -1029,25 +1029,23 @@ handle_xdg_toplevel_icon_set_icon(struct wl_listener *listener, void *data)
 	assert(view);
 
 	char *icon_name = NULL;
-	struct wl_array buffers;
-	wl_array_init(&buffers);
+	reflist<lab_data_buffer> buffers;
 
 	if (event->icon) {
 		icon_name = event->icon->name;
 
 		struct wlr_xdg_toplevel_icon_v1_buffer *icon_buffer;
 		wl_list_for_each(icon_buffer, &event->icon->buffers, link) {
-			struct lab_data_buffer *buffer =
-				buffer_create_from_wlr_buffer(icon_buffer->buffer);
+			auto buffer = buffer_create_from_wlr_buffer(
+				icon_buffer->buffer);
 			if (buffer) {
-				array_add(&buffers, buffer);
+				buffers.append(buffer);
 			}
 		}
 	}
 
 	/* view takes ownership of the buffers */
-	view_set_icon(view, icon_name, &buffers);
-	wl_array_release(&buffers);
+	view_set_icon(view, icon_name, std::move(buffers));
 }
 
 void

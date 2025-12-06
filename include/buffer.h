@@ -27,22 +27,29 @@
 #define LABWC_BUFFER_H
 
 #include <cairo.h>
+#include <vector>
 #include <wlr/types/wlr_buffer.h>
+#include "common/refptr.h"
 
-struct lab_data_buffer {
-	struct wlr_buffer base;
+struct lab_data_buffer : public wlr_buffer, public refcounted<lab_data_buffer> {
+	static const wlr_buffer_impl impl;
 
-	bool surface_owns_data;
-	cairo_surface_t *surface;
-	void *data;
-	uint32_t format; /* currently always DRM_FORMAT_ARGB8888 */
-	size_t stride;
+	std::vector<uint8_t> buf;
+	cairo_surface_t *surface = nullptr;
+	uint8_t *data = nullptr;
+	uint32_t format = 0; // currently always DRM_FORMAT_ARGB8888
+	size_t stride = 0;
 	/*
 	 * The logical size of the surface in layout pixels.
 	 * The raw pixel data may be larger or smaller.
 	 */
-	uint32_t logical_width;
-	uint32_t logical_height;
+	uint32_t logical_width = 0;
+	uint32_t logical_height = 0;
+
+	lab_data_buffer(int width, int height);
+	~lab_data_buffer();
+
+	void last_unref();
 };
 
 /*
@@ -52,13 +59,13 @@ struct lab_data_buffer {
  * The logical size is set to the surface size in pixels, ignoring
  * device scale.
  */
-struct lab_data_buffer *buffer_adopt_cairo_surface(cairo_surface_t *surface);
+ref<lab_data_buffer> buffer_adopt_cairo_surface(cairo_surface_t *surface);
 
 /*
  * Create a buffer which holds a new CAIRO_FORMAT_ARGB32 image surface.
  * Additionally create a cairo context for drawing to the surface.
  */
-struct lab_data_buffer *buffer_create_cairo(uint32_t logical_width,
+ref<lab_data_buffer> buffer_create_cairo(uint32_t logical_width,
 	uint32_t logical_height, float scale);
 
 /*
@@ -67,21 +74,22 @@ struct lab_data_buffer *buffer_create_cairo(uint32_t logical_width,
  *
  * The logical size is set to the width and height of the pixel data.
  */
-struct lab_data_buffer *buffer_create_from_data(void *pixel_data, uint32_t width,
-	uint32_t height, uint32_t stride);
+ref<lab_data_buffer> buffer_create_from_data(std::vector<uint8_t> &&pixel_data,
+	uint32_t width, uint32_t height, uint32_t stride);
 
 /*
  * Create a lab_data_buffer from a wlr_buffer by copying its content.
  * The wlr_buffer must be backed by shm.
  */
-struct lab_data_buffer *buffer_create_from_wlr_buffer(
+refptr<lab_data_buffer> buffer_create_from_wlr_buffer(
 	struct wlr_buffer *wlr_buffer);
 
 /*
- * Resize a buffer to the given size. The source buffer is rendered at the
- * center of the output buffer and shrunk if it overflows from the output buffer.
+ * Create a buffer which holds a scaled copy of an existing cairo
+ * image surface. The source surface is rendered at the center of the
+ * output buffer and shrunk if it overflows from the output buffer.
  */
-struct lab_data_buffer *buffer_resize(struct lab_data_buffer *src_buffer,
+ref<lab_data_buffer> buffer_scale_cairo_surface(cairo_surface_t *surface,
 	int width, int height, double scale);
 
 #endif /* LABWC_BUFFER_H */
