@@ -256,7 +256,7 @@ xdg_toplevel_view::handle_commit(void *data)
 				&& extent.height == view->pending.height) {
 			wlr_log(WLR_DEBUG, "window geometry for client (%s) "
 				"appears to be incorrect - ignoring",
-				view->app_id);
+				view->app_id.c());
 			size = extent; /* Use surface extent instead */
 		}
 	}
@@ -326,7 +326,7 @@ handle_configure_timeout(void *data)
 	assert(view->pending_configure_timeout);
 
 	wlr_log(WLR_INFO, "client (%s) did not respond to configure request "
-		"in %d ms", view->app_id, CONFIGURE_TIMEOUT_MS);
+		"in %d ms", view->app_id.c(), CONFIGURE_TIMEOUT_MS);
 
 	wl_event_source_remove(view->pending_configure_timeout);
 	view->pending_configure_serial = 0;
