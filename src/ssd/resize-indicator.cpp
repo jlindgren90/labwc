@@ -48,7 +48,7 @@ resize_indicator_init(struct view *view)
 		g_theme.osd_border_color);
 	indicator->background = wlr_scene_rect_create(indicator->tree, 0, 0,
 		g_theme.osd_bg_color);
-	indicator->text = scaled_font_buffer_create(indicator->tree);
+	indicator->text = new scaled_font_buffer(indicator->tree);
 
 	wlr_scene_node_set_enabled(&indicator->tree->node, false);
 	resize_indicator_reconfigure_view(indicator);

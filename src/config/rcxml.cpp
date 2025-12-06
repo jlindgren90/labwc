@@ -894,7 +894,7 @@ static void
 set_font_attr(struct font *font, const char *nodename, const char *content)
 {
 	if (!strcmp(nodename, "name")) {
-		xstrdup_replace(font->name, content);
+		font->name = lab_str(content);
 	} else if (!strcmp(nodename, "size")) {
 		font->size = atoi(content);
 	} else if (!strcmp(nodename, "slant")) {
@@ -1742,19 +1742,19 @@ post_processing(void)
 	deduplicate_mouse_bindings();
 
 	if (!rc.font_activewindow.name) {
-		rc.font_activewindow.name = xstrdup("sans");
+		rc.font_activewindow.name = lab_str("sans");
 	}
 	if (!rc.font_inactivewindow.name) {
-		rc.font_inactivewindow.name = xstrdup("sans");
+		rc.font_inactivewindow.name = lab_str("sans");
 	}
 	if (!rc.font_menuheader.name) {
-		rc.font_menuheader.name = xstrdup("sans");
+		rc.font_menuheader.name = lab_str("sans");
 	}
 	if (!rc.font_menuitem.name) {
-		rc.font_menuitem.name = xstrdup("sans");
+		rc.font_menuitem.name = lab_str("sans");
 	}
 	if (!rc.font_osd.name) {
-		rc.font_osd.name = xstrdup("sans");
+		rc.font_osd.name = lab_str("sans");
 	}
 	if (!libinput_category_get_default()) {
 		/* So we set default values of <tap> and <scrollFactor> */
@@ -1955,11 +1955,11 @@ rcxml_read(const char *filename)
 void
 rcxml_finish(void)
 {
-	zfree(rc.font_activewindow.name);
-	zfree(rc.font_inactivewindow.name);
-	zfree(rc.font_menuheader.name);
-	zfree(rc.font_menuitem.name);
-	zfree(rc.font_osd.name);
+	rc.font_activewindow.name = lab_str();
+	rc.font_inactivewindow.name = lab_str();
+	rc.font_menuheader.name = lab_str();
+	rc.font_menuitem.name = lab_str();
+	rc.font_osd.name = lab_str();
 	zfree(rc.prompt_command);
 	zfree(rc.theme_name);
 	zfree(rc.icon_theme_name);
