@@ -11,7 +11,6 @@
 #include "common/mem.h"
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
-#include "img/img.h"
 #include "labwc.h"
 
 static const char *debug_libsfdo;
@@ -349,17 +348,17 @@ convert_img_type(enum sfdo_icon_file_format fmt)
 	}
 }
 
-struct lab_img *
+lab_img
 desktop_entry_load_icon(const char *icon_name, int size, float scale)
 {
 	/* static analyzer isn't able to detect the NULL check in string_null_or_empty() */
 	if (string_null_or_empty(icon_name) || !icon_name) {
-		return NULL;
+		return {};
 	}
 
 	struct sfdo *sfdo = g_server.sfdo;
 	if (!sfdo) {
-		return NULL;
+		return {};
 	}
 
 	/*
@@ -378,26 +377,26 @@ desktop_entry_load_icon(const char *icon_name, int size, float scale)
 	}
 	if (ret < 0) {
 		wlr_log(WLR_INFO, "failed to load icon file %s", icon_name);
-		return NULL;
+		return {};
 	}
 
 	wlr_log(WLR_DEBUG, "loading icon file %s", ctx.path);
-	struct lab_img *img = lab_img_load(convert_img_type(ctx.format), ctx.path, NULL);
+	auto img = lab_img::load(convert_img_type(ctx.format), ctx.path, NULL);
 
 	free(ctx.path);
 	return img;
 }
 
-struct lab_img *
+lab_img
 desktop_entry_load_icon_from_app_id(const char *app_id, int size, float scale)
 {
 	if (string_null_or_empty(app_id)) {
-		return NULL;
+		return {};
 	}
 
 	struct sfdo *sfdo = g_server.sfdo;
 	if (!sfdo) {
-		return NULL;
+		return {};
 	}
 
 	const char *icon_name = NULL;
@@ -406,8 +405,8 @@ desktop_entry_load_icon_from_app_id(const char *app_id, int size, float scale)
 		icon_name = sfdo_desktop_entry_get_icon(entry, NULL);
 	}
 
-	struct lab_img *img = desktop_entry_load_icon(icon_name, size, scale);
-	if (!img) {
+	auto img = desktop_entry_load_icon(icon_name, size, scale);
+	if (!img.valid()) {
 		/* Icon not defined in .desktop file or could not be loaded */
 		img = desktop_entry_load_icon(app_id, size, scale);
 	}

@@ -2,7 +2,6 @@
 
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
-#include "config/rcxml.h"
 #include "common/list.h"
 #include "common/mem.h"
 #include "node.h"
@@ -15,8 +14,7 @@
 
 struct ssd_button *
 attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
-		struct wlr_scene_tree *parent,
-		struct lab_img *imgs[LAB_BS_ALL + 1],
+		struct wlr_scene_tree *parent, lab_img imgs[LAB_BS_ALL + 1],
 		int x, int y, struct view *view)
 {
 	struct wlr_scene_tree *root = wlr_scene_tree_create(parent);
@@ -59,7 +57,7 @@ attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
 	} else {
 		for (uint8_t state_set = LAB_BS_DEFAULT;
 				state_set <= LAB_BS_ALL; state_set++) {
-			if (!imgs[state_set]) {
+			if (!imgs[state_set].valid()) {
 				continue;
 			}
 			struct scaled_img_buffer *img_buffer =

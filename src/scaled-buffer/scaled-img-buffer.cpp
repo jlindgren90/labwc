@@ -3,17 +3,6 @@
 #include "img/img.h"
 #include "node.h"
 
-refptr<lab_data_buffer>
-scaled_img_buffer::create_buffer(double scale)
-{
-	return lab_img_render(this->img, this->width, this->height, scale);
-}
-
-scaled_img_buffer::~scaled_img_buffer()
-{
-	lab_img_destroy(this->img);
-}
-
 bool
 scaled_img_buffer::equal(scaled_buffer &other)
 {
@@ -24,19 +13,19 @@ scaled_img_buffer::equal(scaled_buffer &other)
 	auto a = this;
 	auto b = static_cast<scaled_img_buffer *>(&other);
 
-	return lab_img_equal(a->img, b->img)
+	return a->img == b->img
 		&& a->width == b->width
 		&& a->height == b->height;
 }
 
-scaled_img_buffer::scaled_img_buffer(wlr_scene_tree *parent, lab_img *img,
+scaled_img_buffer::scaled_img_buffer(wlr_scene_tree *parent, const lab_img &img,
 		int width, int height)
 	: scaled_buffer(SCALED_IMG_BUFFER, parent)
 {
-	assert(img);
+	assert(img.valid());
 	assert(width >= 0 && height >= 0);
 
-	this->img = lab_img_copy(img);
+	this->img = img;
 	this->width = width;
 	this->height = height;
 
