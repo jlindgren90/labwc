@@ -30,7 +30,6 @@
 #include "config/tablet-tool.h"
 #include "config/touch.h"
 #include "cycle.h"
-#include "labwc.h"
 #include "regions.h"
 #include "ssd.h"
 #include "translate.h"
@@ -1054,7 +1053,7 @@ entry(xmlNode *node, char *nodename, char *content)
 	} else if (!strcmp(nodename, "default.mouse")) {
 		load_default_mouse_bindings();
 	} else if (!strcasecmp(nodename, "prefix.desktops")) {
-		xstrdup_replace(rc.workspace_config.prefix, content);
+		rc.workspace_config.prefix = lab_str(content);
 	} else if (!strcasecmp(nodename, "thumbnailLabelFormat.osd.windowSwitcher")) {
 		xstrdup_replace(rc.window_switcher.thumbnail_label_format, content);
 
@@ -1089,7 +1088,7 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &rc.primary_selection);
 
 	} else if (!strcasecmp(nodename, "promptCommand.core")) {
-		xstrdup_replace(rc.prompt_command, content);
+		rc.prompt_command = lab_str(content);
 
 	} else if (!strcmp(nodename, "policy.placement")) {
 		enum lab_placement_policy policy = view_placement_parse(content);
@@ -1101,11 +1100,11 @@ entry(xmlNode *node, char *nodename, char *content)
 	} else if (!strcasecmp(nodename, "y.cascadeOffset.placement")) {
 		rc.placement_cascade_offset_y = atoi(content);
 	} else if (!strcmp(nodename, "name.theme")) {
-		xstrdup_replace(rc.theme_name, content);
+		rc.theme_name = lab_str(content);
 	} else if (!strcmp(nodename, "icon.theme")) {
-		xstrdup_replace(rc.icon_theme_name, content);
+		rc.icon_theme_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "fallbackAppIcon.theme")) {
-		xstrdup_replace(rc.fallback_app_icon_name, content);
+		rc.fallback_app_icon_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "layout.titlebar.theme")) {
 		fill_title_layout(content);
 	} else if (!strcasecmp(nodename, "showTitle.titlebar.theme")) {
@@ -1315,7 +1314,7 @@ entry(xmlNode *node, char *nodename, char *content)
 	} else if (!strcasecmp(nodename, "mouseEmulation.tablet")) {
 		set_bool(content, &rc.tablet.force_mouse_emulation);
 	} else if (!strcasecmp(nodename, "mapToOutput.tablet")) {
-		xstrdup_replace(rc.tablet.output_name, content);
+		rc.tablet.output_name = lab_str(content);
 	} else if (!strcasecmp(nodename, "rotate.tablet")) {
 		rc.tablet.rotation = tablet_parse_rotation(atoi(content));
 	} else if (!strcasecmp(nodename, "left.area.tablet")) {
@@ -1442,7 +1441,6 @@ rcxml_init(void)
 	rc.doubleclick_time = 500;
 
 	rc.tablet.force_mouse_emulation = false;
-	rc.tablet.output_name = NULL;
 	rc.tablet.rotation = LAB_ROTATE_NONE;
 	rc.tablet.box = (struct wlr_fbox){0};
 	tablet_load_default_button_mappings();
@@ -1670,7 +1668,7 @@ post_processing(void)
 
 	if (!rc.prompt_command) {
 		rc.prompt_command =
-			xstrdup("labnag "
+			lab_str("labnag "
 				"--message '%m' "
 				"--button-dismiss '%n' "
 				"--button-dismiss '%y' "
@@ -1687,11 +1685,11 @@ post_processing(void)
 				"--timeout 0");
 	}
 	if (!rc.fallback_app_icon_name) {
-		rc.fallback_app_icon_name = xstrdup("labwc");
+		rc.fallback_app_icon_name = lab_str("labwc");
 	}
 
 	if (!rc.icon_theme_name && rc.theme_name) {
-		rc.icon_theme_name = xstrdup(rc.theme_name);
+		rc.icon_theme_name = lab_str(rc.theme_name);
 	}
 
 	if (!rc.title_layout_loaded) {
@@ -1752,15 +1750,16 @@ post_processing(void)
 	int nr_workspaces = wl_list_length(&rc.workspace_config.workspaces);
 	if (nr_workspaces < rc.workspace_config.min_nr_workspaces) {
 		if (!rc.workspace_config.prefix) {
-			rc.workspace_config.prefix = xstrdup(_("Workspace"));
+			rc.workspace_config.prefix = lab_str(_("Workspace"));
 		}
 
 		struct buf b = BUF_INIT;
 		struct workspace *workspace;
 		for (int i = nr_workspaces; i < rc.workspace_config.min_nr_workspaces; i++) {
 			workspace = znew(*workspace);
-			if (!string_null_or_empty(rc.workspace_config.prefix)) {
-				buf_add_fmt(&b, "%s ", rc.workspace_config.prefix);
+			if (rc.workspace_config.prefix) {
+				buf_add_fmt(&b, "%s ",
+					rc.workspace_config.prefix.c());
 			}
 			buf_add_fmt(&b, "%d", i + 1);
 			workspace->name = xstrdup(b.data);
@@ -1915,12 +1914,12 @@ rcxml_finish(void)
 	rc.font_menuheader.name = lab_str();
 	rc.font_menuitem.name = lab_str();
 	rc.font_osd.name = lab_str();
-	zfree(rc.prompt_command);
-	zfree(rc.theme_name);
-	zfree(rc.icon_theme_name);
-	zfree(rc.fallback_app_icon_name);
-	zfree(rc.workspace_config.prefix);
-	zfree(rc.tablet.output_name);
+	rc.prompt_command = lab_str();
+	rc.theme_name = lab_str();
+	rc.icon_theme_name = lab_str();
+	rc.fallback_app_icon_name = lab_str();
+	rc.workspace_config.prefix = lab_str();
+	rc.tablet.output_name = lab_str();
 	zfree(rc.window_switcher.thumbnail_label_format);
 
 	clear_title_layout();
