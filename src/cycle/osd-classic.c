@@ -31,9 +31,8 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 		const float *text_color, const float *bg_color,
 		int field_widths_sum, int x, int y)
 {
-	struct theme *theme = g_server.theme;
 	struct window_switcher_classic_theme *switcher_theme =
-		&theme->osd_window_switcher_classic;
+		&g_theme.osd_window_switcher_classic;
 
 	struct cycle_osd_field *field;
 	wl_list_for_each(field, &rc.window_switcher.fields, link) {
@@ -81,10 +80,9 @@ cycle_osd_classic_create(struct output *output)
 {
 	assert(!output->cycle_osd.tree && wl_list_empty(&output->cycle_osd.items));
 
-	struct theme *theme = g_server.theme;
 	struct window_switcher_classic_theme *switcher_theme =
-		&theme->osd_window_switcher_classic;
-	int padding = theme->osd_border_width + switcher_theme->padding;
+		&g_theme.osd_window_switcher_classic;
+	int padding = g_theme.osd_border_width + switcher_theme->padding;
 	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
 	const char *workspace_name = g_server.workspaces.current->name;
 	int nr_views = wl_list_length(&g_server.cycle.views);
@@ -105,14 +103,14 @@ cycle_osd_classic_create(struct output *output)
 
 	output->cycle_osd.tree = wlr_scene_tree_create(output->cycle_osd_tree);
 
-	float *text_color = theme->osd_label_text_color;
-	float *bg_color = theme->osd_bg_color;
+	float *text_color = g_theme.osd_label_text_color;
+	float *bg_color = g_theme.osd_bg_color;
 
 	/* Draw background */
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]) {theme->osd_border_color},
+		.border_colors = (float *[1]) {g_theme.osd_border_color},
 		.nr_borders = 1,
-		.border_width = theme->osd_border_width,
+		.border_width = g_theme.osd_border_width,
 		.bg_color = bg_color,
 		.width = w,
 		.height = h,

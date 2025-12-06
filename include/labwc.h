@@ -310,8 +310,6 @@ struct server {
 		struct lab_scene_rect *preview_outline;
 	} cycle;
 
-	struct theme *theme;
-
 	struct menu *menu_current;
 	struct wl_list menus;
 
