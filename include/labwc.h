@@ -13,6 +13,7 @@
 #define XCURSOR_SIZE 24
 
 struct wlr_xdg_popup;
+struct workspace;
 
 enum input_mode {
 	LAB_INPUT_STATE_PASSTHROUGH = 0,
@@ -251,9 +252,10 @@ struct server {
 
 	/* Workspaces */
 	struct {
-		struct wl_list all;  /* struct workspace.link */
-		struct workspace *current;
-		struct workspace *last;
+		ownlist<workspace> all;
+		// always non-null after workspaces_init()
+		refptr<workspace> current;
+		refptr<workspace> last;
 		struct lab_cosmic_workspace_manager *cosmic_manager;
 		struct lab_cosmic_workspace_group *cosmic_group;
 		struct lab_ext_workspace_manager *ext_manager;
