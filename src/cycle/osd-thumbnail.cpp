@@ -130,7 +130,8 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 	output->cycle_osd.thumbnail_items.push_back(cycle_osd_thumbnail_item());
 	auto item = &output->cycle_osd.thumbnail_items.back();
 	struct wlr_scene_tree *tree = wlr_scene_tree_create(parent);
-	node_descriptor_create(&tree->node, LAB_NODE_CYCLE_OSD_ITEM, NULL, item);
+	node_descriptor_create(&tree->node, LAB_NODE_CYCLE_OSD_ITEM, NULL,
+		&item->base);
 	item->base.tree = tree;
 	item->base.view = view;
 
