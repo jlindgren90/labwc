@@ -21,11 +21,6 @@
 #include "view.h"
 #include "workspaces.h"
 
-struct cycle_osd_classic_item {
-	struct cycle_osd_item base;
-	struct wlr_scene_tree *normal_tree, *active_tree;
-};
-
 static void
 create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 		const float *text_color, const float *bg_color,
@@ -73,7 +68,8 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 static void
 cycle_osd_classic_create(struct output *output)
 {
-	assert(!output->cycle_osd.tree && wl_list_empty(&output->cycle_osd.items));
+	assert(!output->cycle_osd.tree);
+	assert(output->cycle_osd.classic_items.empty());
 
 	struct window_switcher_classic_theme *switcher_theme =
 		&g_theme.osd_window_switcher_classic;
@@ -152,8 +148,8 @@ cycle_osd_classic_create(struct output *output)
 	/* Draw text for each node */
 	struct view *view;
 	wl_list_for_each(view, &g_server.cycle.views, cycle_link) {
-		struct cycle_osd_classic_item *item = znew(*item);
-		wl_list_append(&output->cycle_osd.items, &item->base.link);
+		output->cycle_osd.classic_items.push_back(cycle_osd_classic_item());
+		auto item = &output->cycle_osd.classic_items.back();
 		item->base.view = view;
 		item->base.tree = wlr_scene_tree_create(output->cycle_osd.tree);
 		node_descriptor_create(&item->base.tree->node,
@@ -220,11 +216,10 @@ cycle_osd_classic_create(struct output *output)
 static void
 cycle_osd_classic_update(struct output *output)
 {
-	struct cycle_osd_classic_item *item;
-	wl_list_for_each(item, &output->cycle_osd.items, base.link) {
-		bool active = item->base.view == g_server.cycle.selected_view;
-		wlr_scene_node_set_enabled(&item->normal_tree->node, !active);
-		wlr_scene_node_set_enabled(&item->active_tree->node, active);
+	for (auto &item : output->cycle_osd.classic_items) {
+		bool active = item.base.view == g_server.cycle.selected_view;
+		wlr_scene_node_set_enabled(&item.normal_tree->node, !active);
+		wlr_scene_node_set_enabled(&item.active_tree->node, active);
 	}
 }
 

@@ -19,13 +19,6 @@
 #include "theme.h"
 #include "view.h"
 
-struct cycle_osd_thumbnail_item {
-	struct cycle_osd_item base;
-	struct scaled_font_buffer *normal_label;
-	struct scaled_font_buffer *active_label;
-	struct lab_scene_rect *active_bg;
-};
-
 static void
 render_node(struct wlr_render_pass *pass, struct wlr_scene_node *node,
 		int x, int y)
@@ -134,8 +127,8 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 		return NULL;
 	}
 
-	struct cycle_osd_thumbnail_item *item = znew(*item);
-	wl_list_append(&output->cycle_osd.items, &item->base.link);
+	output->cycle_osd.thumbnail_items.push_back(cycle_osd_thumbnail_item());
+	auto item = &output->cycle_osd.thumbnail_items.back();
 	struct wlr_scene_tree *tree = wlr_scene_tree_create(parent);
 	node_descriptor_create(&tree->node, LAB_NODE_CYCLE_OSD_ITEM, NULL, item);
 	item->base.tree = tree;
@@ -227,7 +220,8 @@ get_items_geometry(struct output *output, int nr_thumbs,
 static void
 cycle_osd_thumbnail_create(struct output *output)
 {
-	assert(!output->cycle_osd.tree && wl_list_empty(&output->cycle_osd.items));
+	assert(!output->cycle_osd.tree);
+	assert(output->cycle_osd.thumbnail_items.empty());
 
 	struct window_switcher_thumbnail_theme *switcher_theme =
 		&g_theme.osd_window_switcher_thumbnail;
@@ -281,14 +275,13 @@ cycle_osd_thumbnail_create(struct output *output)
 static void
 cycle_osd_thumbnail_update(struct output *output)
 {
-	struct cycle_osd_thumbnail_item *item;
-	wl_list_for_each(item, &output->cycle_osd.items, base.link) {
-		bool active = (item->base.view == g_server.cycle.selected_view);
-		wlr_scene_node_set_enabled(&item->active_bg->tree->node, active);
+	for (auto &item : output->cycle_osd.thumbnail_items) {
+		bool active = (item.base.view == g_server.cycle.selected_view);
+		wlr_scene_node_set_enabled(&item.active_bg->tree->node, active);
 		wlr_scene_node_set_enabled(
-			&item->active_label->scene_buffer->node, active);
+			&item.active_label->scene_buffer->node, active);
 		wlr_scene_node_set_enabled(
-			&item->normal_label->scene_buffer->node, !active);
+			&item.normal_label->scene_buffer->node, !active);
 	}
 }
 
