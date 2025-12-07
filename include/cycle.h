@@ -76,12 +76,6 @@ bool cycle_osd_field_is_valid(struct cycle_osd_field *field);
 void cycle_osd_field_free(struct cycle_osd_field *field);
 
 /* Internal API */
-struct cycle_osd_item {
-	struct view *view;
-	struct wlr_scene_tree *tree;
-	struct wl_list link;
-};
-
 struct cycle_osd_impl {
 	/*
 	 * Create a scene-tree of OSD for an output.
