@@ -3,6 +3,7 @@
 #define LABWC_SSD_H
 
 #include "common/node-type.h"
+#include "common/refptr.h"
 #include "config/types.h"
 
 enum ssd_active_state {
@@ -25,11 +26,9 @@ struct wlr_cursor;
 #define SSD_SHADOW_INSET 0.3
 
 /* Forward declare arguments */
-struct server;
+struct border;
 struct ssd;
-struct ssd_button;
 struct view;
-struct wlr_scene;
 struct wlr_scene_node;
 
 /*
@@ -41,38 +40,50 @@ struct wlr_scene_node;
  *
  * NULL scene/view arguments are not allowed.
  */
-struct ssd *ssd_create(struct view *view, bool active);
-struct border ssd_get_margin(const struct ssd *ssd);
-int ssd_get_corner_width(void);
-void ssd_update_margin(struct ssd *ssd);
-void ssd_set_active(struct ssd *ssd, bool active);
-void ssd_update_title(struct ssd *ssd);
-void ssd_update_geometry(struct ssd *ssd);
-void ssd_destroy(struct ssd *ssd);
-void ssd_set_titlebar(struct ssd *ssd, bool enabled);
+class ssd_handle
+{
+public:
+	void create(view *view, bool active);
+	void destroy() { impl.reset(); }
 
-void ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable);
-void ssd_enable_shade(struct ssd *ssd, bool enable);
+	explicit operator bool() const { return (bool)impl; }
+
+	border get_margin();
+
+	void update_margin();
+	void set_active(bool active);
+	void update_title();
+	void update_geometry();
+	void set_titlebar(bool enabled);
+
+	void enable_keybind_inhibit_indicator(bool enable);
+	void enable_shade(bool enable);
+
+	/*
+	 * Returns a part type that represents a mouse context like
+	 * "Top", "Left" and "TRCorner" when the cursor is on the
+	 * window border or resizing handle.
+	 */
+	lab_node_type get_resizing_type(wlr_cursor *cursor);
+
+	bool debug_is_root_node(wlr_scene_node *node);
+	const char *debug_get_node_name(wlr_scene_node *node);
+
+private:
+	static void destroy_impl(ssd *);
+	ownptr<ssd, destroy_impl> impl;
+};
+
+int ssd_get_corner_width(void);
 
 void ssd_update_hovered_button(struct wlr_scene_node *node);
 
 /* Public SSD helpers */
 
-/*
- * Returns a part type that represents a mouse context like "Top", "Left" and
- * "TRCorner" when the cursor is on the window border or resizing handle.
- */
-enum lab_node_type ssd_get_resizing_type(const struct ssd *ssd,
-	struct wlr_cursor *cursor);
 enum lab_ssd_mode ssd_mode_parse(const char *mode);
 
 /* TODO: clean up / update */
 struct border ssd_thickness(struct view *view);
 struct wlr_box ssd_max_extents(struct view *view);
-
-/* SSD debug helpers */
-bool ssd_debug_is_root_node(const struct ssd *ssd, struct wlr_scene_node *node);
-const char *ssd_debug_get_node_name(const struct ssd *ssd,
-	struct wlr_scene_node *node);
 
 #endif /* LABWC_SSD_H */

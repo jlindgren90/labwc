@@ -20,7 +20,7 @@ static void
 edges_for_target_geometry(struct border *edges, struct view *view,
 		struct wlr_box target)
 {
-	struct border border = ssd_get_margin(view->ssd);
+	struct border border = view->ssd.get_margin();
 
 	/* Use the effective height to properly handle shaded views */
 	int eff_height = view->shaded ? 0 : target.height;
@@ -410,7 +410,7 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 			continue;
 		}
 
-		struct border border = ssd_get_margin(v->ssd);
+		struct border border = v->ssd.get_margin();
 
 		struct border win_edges = {
 			.top = v->current.y - border.top,
@@ -498,7 +498,7 @@ edges_adjust_move_coords(struct view *view, struct border edges,
 {
 	assert(view);
 
-	struct border border = ssd_get_margin(view->ssd);
+	struct border border = view->ssd.get_margin();
 	struct wlr_box *view_geom =
 		use_pending ? &view->pending : &view->current;
 
@@ -529,7 +529,7 @@ edges_adjust_resize_geom(struct view *view, struct border edges,
 {
 	assert(view);
 
-	struct border border = ssd_get_margin(view->ssd);
+	struct border border = view->ssd.get_margin();
 	struct wlr_box *view_geom =
 		use_pending ? &view->pending : &view->current;
 
