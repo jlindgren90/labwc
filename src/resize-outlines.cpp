@@ -36,7 +36,7 @@ resize_outlines_update(struct view *view, struct wlr_box new_geo)
 		outlines->rect = lab_scene_rect_create(view->scene_tree, &opts);
 	}
 
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = view->ssd.get_margin();
 	struct wlr_box box = {
 		.x = new_geo.x - margin.left,
 		.y = new_geo.y - margin.top,
