@@ -146,8 +146,7 @@ ssd_handle::create(view &view, bool active)
 	 * Attach node_descriptor to the root node so that get_cursor_context()
 	 * detect cursor hovering on borders and extents.
 	 */
-	node_descriptor_create(&ssd->tree->node,
-		LAB_NODE_SSD_ROOT, &view, /*data*/ NULL);
+	node_descriptor_create(&ssd->tree->node, LAB_NODE_SSD_ROOT, &view);
 
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
 	ssd->titlebar.height = g_theme.titlebar_height;

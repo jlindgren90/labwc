@@ -29,7 +29,7 @@ ssd_titlebar_create(struct ssd *ssd)
 
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
 	node_descriptor_create(&ssd->titlebar.tree->node,
-		LAB_NODE_TITLEBAR, view, /*data*/ NULL);
+		LAB_NODE_TITLEBAR, view);
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -72,7 +72,7 @@ ssd_titlebar_create(struct ssd *ssd)
 			g_theme.window[active].titlebar_pattern.get());
 		assert(subtree->title);
 		node_descriptor_create(&subtree->title->scene_buffer->node,
-			LAB_NODE_TITLE, view, /*data*/ NULL);
+			LAB_NODE_TITLE, view);
 
 		/* Buttons */
 		int x = g_theme.window_titlebar_padding_width;
@@ -479,10 +479,13 @@ ssd_update_hovered_button(struct wlr_scene_node *node)
 	struct ssd_button *button = NULL;
 
 	if (node && node->data) {
-		button = node_try_ssd_button_from_node(node);
-		if (button == g_server.hovered_button) {
-			/* Cursor is still on the same button */
-			return;
+		auto data = node_data_from_node(node);
+		if (std::holds_alternative<ssd_button *>(data)) {
+			button = std::get<ssd_button *>(data);
+			if (button == g_server.hovered_button) {
+				/* Cursor is still on the same button */
+				return;
+			}
 		}
 	}
 
