@@ -46,7 +46,7 @@ struct cycle_osd_item *
 node_cycle_osd_item_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
-	struct node_descriptor *node_descriptor = wlr_scene_node->data;
+	auto node_descriptor = (struct node_descriptor *)wlr_scene_node->data;
 	assert(node_descriptor->type == LAB_NODE_CYCLE_OSD_ITEM);
 	return (struct cycle_osd_item *)node_descriptor->data;
 }

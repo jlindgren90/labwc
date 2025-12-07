@@ -43,7 +43,6 @@ add_project_arguments(cc.get_supported_arguments([
 add_project_arguments([
   '-fno-exceptions',
   '-fno-rtti',
-  '-fpermissive',
   '-Wno-missing-field-initializers',
   '-Wno-narrowing',
   '-Wno-unused-parameter',
