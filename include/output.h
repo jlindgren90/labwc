@@ -11,6 +11,23 @@
 
 struct region;
 
+struct cycle_osd_item {
+	struct view *view;
+	struct wlr_scene_tree *tree;
+};
+
+struct cycle_osd_classic_item {
+	struct cycle_osd_item base;
+	struct wlr_scene_tree *normal_tree, *active_tree;
+};
+
+struct cycle_osd_thumbnail_item {
+	struct cycle_osd_item base;
+	struct scaled_font_buffer *normal_label;
+	struct scaled_font_buffer *active_label;
+	struct lab_scene_rect *active_bg;
+};
+
 struct output : public destroyable, public ref_guarded<output> {
 	struct wlr_output *wlr_output;
 	struct wlr_output_state pending;
@@ -22,7 +39,8 @@ struct output : public destroyable, public ref_guarded<output> {
 	struct wlr_scene_buffer *workspace_osd;
 
 	struct cycle_osd_scene {
-		struct wl_list items; /* struct cycle_osd_item */
+		std::vector<cycle_osd_classic_item> classic_items;
+		std::vector<cycle_osd_thumbnail_item> thumbnail_items;
 		struct wlr_scene_tree *tree;
 	} cycle_osd;
 
