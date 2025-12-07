@@ -874,8 +874,7 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	xsurface->data = view;
 
 	view->scene_tree = wlr_scene_tree_create(view->workspace->tree);
-	node_descriptor_create(&view->scene_tree->node,
-		LAB_NODE_VIEW, view, /*data*/ NULL);
+	node_descriptor_create(&view->scene_tree->node, LAB_NODE_VIEW, view);
 
 	CONNECT_LISTENER(xsurface, view, destroy);
 	CONNECT_LISTENER(xsurface, view, request_minimize);

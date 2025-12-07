@@ -121,7 +121,7 @@ cycle_on_cursor_release(struct wlr_scene_node *node)
 {
 	assert(g_server.input_mode == LAB_INPUT_STATE_CYCLE);
 
-	struct cycle_osd_item *item = node_cycle_osd_item_from_node(node);
+	auto item = std::get<cycle_osd_item *>(node_data_from_node(node));
 	g_server.cycle.selected_view = item->view;
 	cycle_finish(/*switch_focus*/ true);
 }

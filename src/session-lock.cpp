@@ -159,7 +159,7 @@ session_lock::handle_new_surface(void *data)
 	die_if_null(surface_tree);
 
 	node_descriptor_create(&surface_tree->node,
-		LAB_NODE_SESSION_LOCK_SURFACE, /*view*/ NULL, /*data*/ NULL);
+		LAB_NODE_SESSION_LOCK_SURFACE, /*view*/ NULL);
 
 	lock_output->surface.reset(new session_lock_surface(lock_output,
 		lock_surface));

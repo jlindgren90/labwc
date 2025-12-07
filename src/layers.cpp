@@ -49,7 +49,8 @@ arrange_one_layer(const struct wlr_box *full_area, struct wlr_box *usable_area,
 {
 	struct wlr_scene_node *node;
 	wl_list_for_each(node, &tree->children, link) {
-		struct lab_layer_surface *surface = node_layer_surface_from_node(node);
+		auto surface = std::get<lab_layer_surface *>(
+			node_data_from_node(node));
 		struct wlr_scene_layer_surface_v1 *scene = surface->scene_layer_surface;
 		if (!scene->layer_surface->initialized) {
 			continue;
@@ -158,7 +159,8 @@ try_to_focus_next_layer_or_toplevel(void)
 		 * iterate in reverse to process last client first.
 		 */
 		wl_list_for_each_reverse(node, &tree->children, link) {
-			struct lab_layer_surface *layer = node_layer_surface_from_node(node);
+			auto layer = std::get<lab_layer_surface *>(
+				node_data_from_node(node));
 			struct wlr_scene_layer_surface_v1 *scene = layer->scene_layer_surface;
 			struct wlr_layer_surface_v1 *layer_surface = scene->layer_surface;
 			/*

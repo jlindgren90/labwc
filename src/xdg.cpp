@@ -956,8 +956,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	die_if_null(tree);
 
 	view->content_tree = tree;
-	node_descriptor_create(&view->scene_tree->node,
-		LAB_NODE_VIEW, view, /*data*/ NULL);
+	node_descriptor_create(&view->scene_tree->node, LAB_NODE_VIEW, view);
 
 	/*
 	 * The xdg_toplevel_decoration and kde_server_decoration protocols

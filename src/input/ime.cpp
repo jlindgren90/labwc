@@ -400,7 +400,7 @@ handle_input_method_new_popup_surface(struct wl_listener *listener, void *data)
 	die_if_null(popup->tree);
 
 	node_descriptor_create(&popup->tree->node, LAB_NODE_IME_POPUP,
-		/*view*/ NULL, /*data*/ NULL);
+		/*view*/ NULL);
 
 	wl_list_insert(&relay->popups, &popup->link);
 

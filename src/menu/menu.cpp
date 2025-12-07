@@ -1383,7 +1383,7 @@ void
 menu_process_cursor_motion(struct wlr_scene_node *node)
 {
 	assert(node && node->data);
-	struct menuitem *item = node_menuitem_from_node(node);
+	auto item = std::get<menuitem *>(node_data_from_node(node));
 	menu_process_item_selection(item);
 }
 
