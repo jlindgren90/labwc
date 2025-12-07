@@ -309,7 +309,7 @@ get_cursor_context(void)
 	}
 #endif
 	while (node) {
-		struct node_descriptor *desc = node->data;
+		auto desc = (node_descriptor *)node->data;
 		if (desc) {
 			switch (desc->type) {
 			case LAB_NODE_VIEW:

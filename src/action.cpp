@@ -1052,7 +1052,7 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 			 * Otherwise, fall back to determining the resize edges from
 			 * the current cursor position (existing behaviour).
 			 */
-			enum lab_edge resize_edges =
+			auto resize_edges = (lab_edge)
 				action.get_int("direction", LAB_EDGE_NONE);
 			if (resize_edges == LAB_EDGE_NONE) {
 				resize_edges = cursor_get_resize_edges(
