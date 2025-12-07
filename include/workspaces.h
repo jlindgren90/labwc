@@ -2,22 +2,16 @@
 #ifndef LABWC_WORKSPACES_H
 #define LABWC_WORKSPACES_H
 
-#include <stdbool.h>
-#include <wayland-util.h>
 #include <wayland-server-core.h>
+#include "common/refptr.h"
+#include "common/str.h"
 
 struct seat;
 struct server;
 struct wlr_scene_tree;
 
-/* Double use: as config in config/rcxml.c and as instance in workspaces.c */
-struct workspace {
-	struct wl_list link; /*
-			      * struct server.workspaces
-			      * struct rcxml.workspace_config.workspaces
-			      */
-
-	char *name;
+struct workspace : public ref_guarded<workspace> {
+	lab_str name;
 	struct wlr_scene_tree *tree;
 
 	struct lab_cosmic_workspace *cosmic_workspace;
@@ -34,6 +28,10 @@ struct workspace {
 		struct wl_listener assign;
 		struct wl_listener remove;
 	} on_ext;
+
+	~workspace();
+
+	bool has_views();
 };
 
 void workspaces_init(void);

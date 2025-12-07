@@ -42,8 +42,8 @@ struct xwayland_view : public view {
 	wlr_xwayland_surface *const xwayland_surface;
 	bool focused_before_map = false;
 
-	xwayland_view(wlr_xwayland_surface *xsurface)
-		: view(LAB_XWAYLAND_VIEW), xwayland_surface(xsurface) {}
+	xwayland_view(wlr_xwayland_surface *xsurface, struct workspace &workspace)
+		: view(LAB_XWAYLAND_VIEW, workspace), xwayland_surface(xsurface) {}
 	~xwayland_view();
 
 	void configure(wlr_box geo) override;

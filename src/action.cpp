@@ -1148,13 +1148,13 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 		 * removed the action during the initial parsing step as it is
 		 * a required argument for both SendToDesktop and GoToDesktop.
 		 */
+		ASSERT_PTR(g_server.workspaces.current, current);
 		struct workspace *target_workspace =
-			workspaces_find(g_server.workspaces.current, to.c(), wrap);
+			workspaces_find(current, to.c(), wrap);
 		if (action.type == ACTION_TYPE_GO_TO_DESKTOP) {
 			bool toggle = action.get_bool("toggle", false);
-			if (target_workspace == g_server.workspaces.current
-				&& toggle) {
-				target_workspace = g_server.workspaces.last;
+			if (target_workspace == current && toggle) {
+				target_workspace = g_server.workspaces.last.get();
 			}
 		}
 		if (!target_workspace) {
