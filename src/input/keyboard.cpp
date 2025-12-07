@@ -8,7 +8,6 @@
 #include <wlr/types/wlr_keyboard_group.h>
 #include <wlr/types/wlr_seat.h>
 #include "action.h"
-#include "common/macros.h"
 #include "config/keybind.h"
 #include "config/rcxml.h"
 #include "cycle.h"
@@ -44,6 +43,11 @@ static bool should_cancel_cycling_on_next_key_release;
 
 static struct keybind *cur_keybind;
 
+keyboard::~keyboard()
+{
+	keyboard_cancel_keybind_repeat(this);
+}
+
 /* Called on --reconfigure to prevent segfault when handling release keybinds */
 void
 keyboard_reset_current_keybind(void)
@@ -69,14 +73,13 @@ keyboard_get_all_modifiers(void)
 	 * hide the window switcher and workspace OSDs and to indicate if the user wants
 	 * to snap a window to a region during a window move operation.
 	 */
-	struct input *input;
 	uint32_t modifiers =
 		wlr_keyboard_get_modifiers(&g_seat.keyboard_group->keyboard);
-	wl_list_for_each(input, &g_seat.inputs, link) {
-		if (input->wlr_input_device->type != WLR_INPUT_DEVICE_KEYBOARD) {
+	for (auto &input : g_seat.inputs) {
+		if (input.wlr_input_device->type != WLR_INPUT_DEVICE_KEYBOARD) {
 			continue;
 		}
-		struct keyboard *kb = wl_container_of(input, kb, base);
+		auto kb = static_cast<keyboard *>(&input);
 		if (kb->is_virtual) {
 			modifiers |= wlr_keyboard_get_modifiers(kb->wlr_keyboard);
 		}
@@ -87,7 +90,7 @@ keyboard_get_all_modifiers(void)
 static struct wlr_seat_client *
 seat_client_from_keyboard_resource(struct wl_resource *resource)
 {
-	return wl_resource_get_user_data(resource);
+	return (wlr_seat_client *)wl_resource_get_user_data(resource);
 }
 
 static void
@@ -127,11 +130,10 @@ broadcast_modifiers_to_unfocused_clients(struct wlr_seat *seat,
 	}
 }
 
-static void
-handle_modifiers(struct wl_listener *listener, void *data)
+void
+keyboard::handle_modifiers(void *)
 {
-	struct keyboard *keyboard =
-		wl_container_of(listener, keyboard, modifiers);
+	auto keyboard = this;
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
@@ -551,7 +553,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 static int
 handle_keybind_repeat(void *data)
 {
-	struct keyboard *keyboard = data;
+	auto keyboard = (struct keyboard *)data;
 	assert(keyboard->keybind_repeat);
 	assert(keyboard->keybind_repeat_rate > 0);
 
@@ -600,22 +602,20 @@ keyboard_cancel_keybind_repeat(struct keyboard *keyboard)
 void
 keyboard_cancel_all_keybind_repeats(void)
 {
-	struct input *input;
-	struct keyboard *kb;
-	wl_list_for_each(input, &g_seat.inputs, link) {
-		if (input->wlr_input_device->type == WLR_INPUT_DEVICE_KEYBOARD) {
-			kb = wl_container_of(input, kb, base);
+	for (auto &input : g_seat.inputs) {
+		if (input.wlr_input_device->type == WLR_INPUT_DEVICE_KEYBOARD) {
+			auto kb = static_cast<keyboard *>(&input);
 			keyboard_cancel_keybind_repeat(kb);
 		}
 	}
 }
 
-static void
-handle_key(struct wl_listener *listener, void *data)
+void
+keyboard::handle_key(void *data)
 {
 	/* This event is raised when a key is pressed or released. */
-	struct keyboard *keyboard = wl_container_of(listener, keyboard, key);
-	struct wlr_keyboard_key_event *event = data;
+	auto keyboard = this;
+	auto event = (wlr_keyboard_key_event *)data;
 	struct wlr_seat *wlr_seat = g_seat.seat;
 	idle_manager_notify_activity(g_seat.seat);
 
@@ -680,16 +680,14 @@ keyboard_set_numlock(struct wlr_keyboard *keyboard)
 void
 keyboard_update_layout(xkb_layout_index_t layout)
 {
-	struct input *input;
-	struct keyboard *keyboard;
 	struct wlr_keyboard *kb = NULL;
 
 	/* We are not using wlr_seat_get_keyboard() here because it might be a virtual one */
-	wl_list_for_each(input, &g_seat.inputs, link) {
-		if (input->wlr_input_device->type != WLR_INPUT_DEVICE_KEYBOARD) {
+	for (auto &input : g_seat.inputs) {
+		if (input.wlr_input_device->type != WLR_INPUT_DEVICE_KEYBOARD) {
 			continue;
 		}
-		keyboard = (struct keyboard *)input;
+		auto keyboard = static_cast<::keyboard *>(&input);
 		if (keyboard->is_virtual) {
 			continue;
 		}
@@ -797,8 +795,8 @@ keyboard_group_init(void)
 void
 keyboard_setup_handlers(struct keyboard *keyboard)
 {
-	CONNECT_SIGNAL(keyboard->wlr_keyboard, keyboard, key);
-	CONNECT_SIGNAL(keyboard->wlr_keyboard, keyboard, modifiers);
+	CONNECT_LISTENER(keyboard->wlr_keyboard, keyboard, key);
+	CONNECT_LISTENER(keyboard->wlr_keyboard, keyboard, modifiers);
 }
 
 void
