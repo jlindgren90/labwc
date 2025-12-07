@@ -1871,30 +1871,7 @@ rcxml_read(const char *filename)
 void
 rcxml_finish(void)
 {
-	rc.font_activewindow.name = lab_str();
-	rc.font_inactivewindow.name = lab_str();
-	rc.font_menuheader.name = lab_str();
-	rc.font_menuitem.name = lab_str();
-	rc.font_osd.name = lab_str();
-	rc.prompt_command = lab_str();
-	rc.theme_name = lab_str();
-	rc.icon_theme_name = lab_str();
-	rc.fallback_app_icon_name = lab_str();
-	rc.workspace_config.prefix = lab_str();
-	rc.tablet.output_name = lab_str();
-	rc.window_switcher.thumbnail_label_format = lab_str();
-
-	clear_title_layout();
-
-	rc.usable_area_overrides.clear();
-	rc.keybinds.clear();
-	rc.mousebinds.clear();
-	rc.touch_configs.clear();
-	rc.libinput_categories.clear();
-	rc.workspace_config.names.clear();
-	rc.regions.clear();
-	rc.window_switcher.fields.clear();
-	rc.window_rules.clear();
+	rc = rcxml();
 
 	/* Reset state vars for starting fresh when Reload is triggered */
 	mouse_scroll_factor = -1;
