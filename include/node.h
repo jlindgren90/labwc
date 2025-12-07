@@ -2,6 +2,7 @@
 #ifndef LABWC_NODE_DESCRIPTOR_H
 #define LABWC_NODE_DESCRIPTOR_H
 
+#include <variant>
 #include <wayland-server-core.h>
 #include "common/listener.h"
 #include "common/node-type.h"
@@ -9,10 +10,14 @@
 
 struct wlr_scene_node;
 
+using node_data_ptr = std::variant<std::monostate, struct cycle_osd_item *,
+	struct lab_layer_surface *, struct lab_layer_popup *, struct menuitem *,
+	struct ssd_button *>;
+
 struct node_descriptor : public destroyable {
 	enum lab_node_type type;
 	weakptr<struct view> view;
-	void *data;
+	node_data_ptr data;
 };
 
 /**
@@ -32,7 +37,8 @@ struct node_descriptor : public destroyable {
  *   - LAB_NODE_BUTTON_*       struct ssd_button
  */
 void node_descriptor_create(struct wlr_scene_node *scene_node,
-	enum lab_node_type type, struct view *view, void *data);
+	enum lab_node_type type, struct view *view,
+	node_data_ptr data = node_data_ptr());
 
 /**
  * node_view_from_node - return view struct from node
@@ -40,32 +46,6 @@ void node_descriptor_create(struct wlr_scene_node *scene_node,
  */
 struct view *node_view_from_node(struct wlr_scene_node *wlr_scene_node);
 
-/**
- * node_lab_surface_from_node - return lab_layer_surface struct from node
- * @wlr_scene_node: wlr_scene_node from which to return data
- */
-struct lab_layer_surface *node_layer_surface_from_node(
-	struct wlr_scene_node *wlr_scene_node);
-
-/**
- * node_menuitem_from_node - return menuitem struct from node
- * @wlr_scene_node: wlr_scene_node from which to return data
- */
-struct menuitem *node_menuitem_from_node(
-	struct wlr_scene_node *wlr_scene_node);
-
-/**
- * node_cycle_osd_item_from_node - return cycle OSD item struct from node
- * @wlr_scene_node: wlr_scene_node from which to return data
- */
-struct cycle_osd_item *node_cycle_osd_item_from_node(
-	struct wlr_scene_node *wlr_scene_node);
-
-/**
- * node_try_ssd_button_from_node - return ssd_button or NULL from node
- * @wlr_scene_node: wlr_scene_node from which to return data
- */
-struct ssd_button *node_try_ssd_button_from_node(
-	struct wlr_scene_node *wlr_scene_node);
+node_data_ptr node_data_from_node(struct wlr_scene_node *wlr_scene_node);
 
 #endif /* LABWC_NODE_DESCRIPTOR_H */
