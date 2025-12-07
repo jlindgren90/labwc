@@ -73,7 +73,7 @@ lab_wlr_scene_output_commit(struct wlr_scene_output *scene_output,
 	assert(scene_output);
 	assert(state);
 	struct wlr_output *wlr_output = scene_output->output;
-	auto output = (::output *)wlr_output->data;
+	auto output = (struct output *)wlr_output->data;
 	bool wants_magnification = output_wants_magnification(output);
 
 	/*

@@ -1826,25 +1826,5 @@ theme_init(const char *theme_name)
 void
 theme_finish(void)
 {
-	for (int type = LAB_NODE_BUTTON_FIRST;
-			type <= LAB_NODE_BUTTON_LAST; type++) {
-		for (uint8_t state_set = LAB_BS_DEFAULT;
-				state_set <= LAB_BS_ALL; state_set++) {
-			g_theme.window[SSD_INACTIVE]
-				.button_imgs[type][state_set] = lab_img();
-			g_theme.window[SSD_ACTIVE]
-				.button_imgs[type][state_set] = lab_img();
-		}
-	}
-
-	enum ssd_active_state active;
-	FOR_EACH_ACTIVE_STATE(active) {
-		g_theme.window[active].titlebar_pattern.reset();
-		g_theme.window[active].titlebar_fill.reset();
-		g_theme.window[active].corner_top_left_normal.reset();
-		g_theme.window[active].corner_top_right_normal.reset();
-		g_theme.window[active].shadow_corner_top.reset();
-		g_theme.window[active].shadow_corner_bottom.reset();
-		g_theme.window[active].shadow_edge.reset();
-	}
+	g_theme = theme();
 }
