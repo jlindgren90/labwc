@@ -13,6 +13,7 @@
 #include "common/str.h"
 #include "config.h"
 #include "config/types.h"
+#include "ssd.h"
 
 /*
  * Default minimal window size. Clients can explicitly set smaller values via
@@ -216,7 +217,7 @@ struct view_data {
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
 
-	struct ssd *ssd;
+	ssd_handle ssd;
 	struct resize_indicator resize_indicator;
 	struct resize_outlines resize_outlines;
 
