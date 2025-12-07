@@ -34,13 +34,12 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 	struct window_switcher_classic_theme *switcher_theme =
 		&g_theme.osd_window_switcher_classic;
 
-	struct cycle_osd_field *field;
-	wl_list_for_each(field, &rc.window_switcher.fields, link) {
-		int field_width = field_widths_sum * field->width / 100.0;
+	for (auto &field : rc.window_switcher.fields) {
+		int field_width = field_widths_sum * field.width / 100.0;
 		struct wlr_scene_node *node = NULL;
 		int height = -1;
 
-		if (field->content == LAB_FIELD_ICON) {
+		if (field.content == LAB_FIELD_ICON) {
 			int icon_size = MIN(field_width,
 				switcher_theme->item_icon_size);
 			struct scaled_icon_buffer *icon_buffer =
@@ -51,7 +50,7 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 			height = icon_size;
 		} else {
 			struct buf buf = BUF_INIT;
-			cycle_osd_field_get_content(field, &buf, view);
+			cycle_osd_field_get_content(&field, &buf, view);
 
 			if (!string_null_or_empty(buf.data)) {
 				struct scaled_font_buffer *font_buffer =
@@ -142,7 +141,7 @@ cycle_osd_classic_create(struct output *output)
 	}
 
 { /* !goto */
-	int nr_fields = wl_list_length(&rc.window_switcher.fields);
+	int nr_fields = rc.window_switcher.fields.size();
 
 	/* This is the width of the area available for text fields */
 	int field_widths_sum = w - 2 * padding
