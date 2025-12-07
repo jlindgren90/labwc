@@ -312,9 +312,8 @@ init_cycle(void)
 		/* Create OSD */
 		switch (rc.window_switcher.output_criteria) {
 		case CYCLE_OSD_OUTPUT_ALL: {
-			struct output *output;
-			wl_list_for_each(output, &g_server.outputs, link) {
-				create_osd_on_output(output);
+			for (auto &output : g_server.outputs) {
+				create_osd_on_output(&output);
 			}
 			break;
 		}
@@ -344,10 +343,9 @@ update_cycle(void)
 	struct cycle_state *cycle = &g_server.cycle;
 
 	if (rc.window_switcher.show) {
-		struct output *output;
-		wl_list_for_each(output, &g_server.outputs, link) {
-			if (output->cycle_osd.tree) {
-				get_osd_impl()->update(output);
+		for (auto &output : g_server.outputs) {
+			if (output.cycle_osd.tree) {
+				get_osd_impl()->update(&output);
 			}
 		}
 	}
@@ -368,16 +366,15 @@ update_cycle(void)
 static void
 destroy_cycle(void)
 {
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
+	for (auto &output : g_server.outputs) {
 		struct cycle_osd_item *item, *tmp;
-		wl_list_for_each_safe(item, tmp, &output->cycle_osd.items, link) {
+		wl_list_for_each_safe(item, tmp, &output.cycle_osd.items, link) {
 			wl_list_remove(&item->link);
 			free(item);
 		}
-		if (output->cycle_osd.tree) {
-			wlr_scene_node_destroy(&output->cycle_osd.tree->node);
-			output->cycle_osd.tree = NULL;
+		if (output.cycle_osd.tree) {
+			wlr_scene_node_destroy(&output.cycle_osd.tree->node);
+			output.cycle_osd.tree = NULL;
 		}
 	}
 

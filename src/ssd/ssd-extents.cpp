@@ -119,13 +119,12 @@ ssd_extents_update(struct ssd *ssd)
 	 */
 	pixman_region32_t usable;
 	pixman_region32_init(&usable);
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!view_on_output(view, output)) {
+	for (auto &output : g_server.outputs) {
+		if (!view_on_output(view, &output)) {
 			continue;
 		}
 		struct wlr_box usable_area =
-			output_usable_area_in_layout_coords(output);
+			output_usable_area_in_layout_coords(&output);
 		pixman_region32_union_rect(&usable, &usable, usable_area.x,
 			usable_area.y, usable_area.width, usable_area.height);
 	}

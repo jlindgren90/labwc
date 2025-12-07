@@ -17,6 +17,7 @@
 #include "labwc.h"
 #include "libinput.h"
 #include "menu/menu.h"
+#include "output.h"
 #include "regions.h"
 #include "theme.h"
 #include "translate.h"
