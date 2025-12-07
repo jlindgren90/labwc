@@ -14,6 +14,7 @@
 #include "config/rcxml.h"
 #include "config/session.h"
 #include "cycle.h"
+#include "input/input.h"
 #include "labwc.h"
 #include "libinput.h"
 #include "menu/menu.h"

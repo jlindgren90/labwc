@@ -2,6 +2,12 @@
 #include "input/input.h"
 #include "input/cursor.h"
 #include "input/keyboard.h"
+#include "labwc.h"
+
+input::~input()
+{
+	g_seat.inputs.remove(this);
+}
 
 void
 input_handlers_init(void)
