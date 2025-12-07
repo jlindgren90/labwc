@@ -327,9 +327,8 @@ handle_new_session_lock(struct wl_listener *listener, void *data)
 	manager->last_active_view = g_server.active_view;
 	seat_focus_surface(NULL);
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		session_lock_output_create(manager, output);
+	for (auto &output : g_server.outputs) {
+		session_lock_output_create(manager, &output);
 	}
 
 	manager->lock_new_surface.notify = handle_new_surface;
@@ -381,9 +380,8 @@ session_lock_update_for_layout_change(void)
 		return;
 	}
 
-	struct output *output;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		align_session_lock_tree(output);
+	for (auto &output : g_server.outputs) {
+		align_session_lock_tree(&output);
 	}
 
 	struct session_lock_manager *manager = g_server.session_lock_manager;

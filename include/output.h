@@ -4,14 +4,14 @@
 
 #include <wlr/types/wlr_output.h>
 #include "common/edge.h"
+#include "common/listener.h"
 #include "common/reflist.h"
 
 #define LAB_NR_LAYERS (4)
 
 struct region;
 
-struct output {
-	struct wl_list link; /* server.outputs */
+struct output : public destroyable, public ref_guarded<output> {
 	struct wlr_output *wlr_output;
 	struct wlr_output_state pending;
 	struct wlr_scene_output *scene_output;
@@ -31,10 +31,6 @@ struct output {
 
 	ownlist<region> regions;
 
-	struct wl_listener destroy;
-	struct wl_listener frame;
-	struct wl_listener request_state;
-
 	/*
 	 * Unique power-of-two ID used in bitsets such as view->outputs.
 	 * (This assumes there are never more than 64 outputs connected
@@ -48,6 +44,11 @@ struct output {
 	uint64_t id_bit;
 
 	bool gamma_lut_changed;
+
+	~output();
+
+	DECLARE_HANDLER(output, frame);
+	DECLARE_HANDLER(output, request_state);
 };
 
 #undef LAB_NR_LAYERS
