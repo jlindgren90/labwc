@@ -11,6 +11,7 @@
 #include "common/spawn.h"
 #include "config/rcxml.h"
 #include "config/session.h"
+#include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "regions.h"

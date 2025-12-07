@@ -4,6 +4,7 @@
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
+#include "common/str.h"
 
 struct output;
 
@@ -38,8 +39,7 @@ enum cycle_osd_field_content {
 struct cycle_osd_field {
 	enum cycle_osd_field_content content;
 	int width;
-	char *format;
-	struct wl_list link; /* struct rcxml.window_switcher.fields */
+	lab_str format;
 };
 
 struct buf;
