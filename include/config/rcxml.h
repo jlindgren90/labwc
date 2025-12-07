@@ -46,7 +46,6 @@ enum tiling_events_mode {
 };
 
 struct action;
-struct buf;
 struct cycle_osd_field;
 struct keybind;
 struct libinput_category;
@@ -189,7 +188,7 @@ struct rcxml {
 		std::vector<cycle_osd_field> fields;
 		enum cycle_osd_style style;
 		enum cycle_osd_output_criteria output_criteria;
-		char *thumbnail_label_format;
+		lab_str thumbnail_label_format;
 	} window_switcher;
 
 	std::vector<window_rule> window_rules;

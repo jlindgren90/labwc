@@ -49,20 +49,16 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 			node = &icon_buffer->scene_buffer->node;
 			height = icon_size;
 		} else {
-			struct buf buf = BUF_INIT;
-			cycle_osd_field_get_content(&field, &buf, view);
-
-			if (!string_null_or_empty(buf.data)) {
+			lab_str buf = cycle_osd_field_get_content(&field, view);
+			if (buf) {
 				struct scaled_font_buffer *font_buffer =
 					new scaled_font_buffer(parent);
-				scaled_font_buffer_update(font_buffer,
-					buf.data, field_width,
-					&rc.font_osd, text_color, bg_color);
+				scaled_font_buffer_update(font_buffer, buf.c(),
+					field_width, &rc.font_osd, text_color,
+					bg_color);
 				node = &font_buffer->scene_buffer->node;
 				height = font_height(&rc.font_osd);
 			}
-
-			buf_reset(&buf);
 		}
 
 		if (node) {
