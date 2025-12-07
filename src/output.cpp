@@ -23,7 +23,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "config/rcxml.h"
 #include "labwc.h"
@@ -521,8 +520,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 	CONNECT_LISTENER(wlr_output, output, destroy);
 	CONNECT_LISTENER(wlr_output, output, frame);
 	CONNECT_LISTENER(wlr_output, output, request_state);
-
-	wl_list_init(&output->cycle_osd.items);
 
 	/*
 	 * Create layer-trees (background, bottom, top and overlay) and

@@ -367,11 +367,8 @@ static void
 destroy_cycle(void)
 {
 	for (auto &output : g_server.outputs) {
-		struct cycle_osd_item *item, *tmp;
-		wl_list_for_each_safe(item, tmp, &output.cycle_osd.items, link) {
-			wl_list_remove(&item->link);
-			free(item);
-		}
+		output.cycle_osd.classic_items.clear();
+		output.cycle_osd.thumbnail_items.clear();
 		if (output.cycle_osd.tree) {
 			wlr_scene_node_destroy(&output.cycle_osd.tree->node);
 			output.cycle_osd.tree = NULL;
