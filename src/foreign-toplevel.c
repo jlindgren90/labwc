@@ -178,8 +178,8 @@ create_toplevel_handle(struct view *view, struct wl_resource *manager_resource)
 	zwlr_foreign_toplevel_manager_v1_send_toplevel(manager_resource,
 		resource);
 
-	zwlr_foreign_toplevel_handle_v1_send_title(resource, view->title);
-	zwlr_foreign_toplevel_handle_v1_send_app_id(resource, view->app_id);
+	zwlr_foreign_toplevel_handle_v1_send_title(resource, view->st->title);
+	zwlr_foreign_toplevel_handle_v1_send_app_id(resource, view->st->app_id);
 	toplevel_handle_send_state(resource, view);
 	zwlr_foreign_toplevel_handle_v1_send_done(resource);
 }
@@ -227,7 +227,7 @@ foreign_toplevel_update_app_id(struct view *view)
 {
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &view->foreign_toplevel_resources) {
-		zwlr_foreign_toplevel_handle_v1_send_app_id(resource, view->app_id);
+		zwlr_foreign_toplevel_handle_v1_send_app_id(resource, view->st->app_id);
 		zwlr_foreign_toplevel_handle_v1_send_done(resource);
 	}
 }
@@ -237,7 +237,7 @@ foreign_toplevel_update_title(struct view *view)
 {
 	struct wl_resource *resource;
 	wl_resource_for_each(resource, &view->foreign_toplevel_resources) {
-		zwlr_foreign_toplevel_handle_v1_send_title(resource, view->title);
+		zwlr_foreign_toplevel_handle_v1_send_title(resource, view->st->title);
 		zwlr_foreign_toplevel_handle_v1_send_done(resource);
 	}
 }

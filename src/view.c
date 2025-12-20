@@ -133,11 +133,11 @@ view_contains_window_type(struct view *view, enum lab_window_type window_type)
 bool
 view_matches_query(struct view *view, struct view_query *query)
 {
-	if (!query_str_match(query->identifier, view->app_id)) {
+	if (!query_str_match(query->identifier, view->st->app_id)) {
 		return false;
 	}
 
-	if (!query_str_match(query->title, view->title)) {
+	if (!query_str_match(query->title, view->st->title)) {
 		return false;
 	}
 
@@ -2318,36 +2318,16 @@ view_has_strut_partial(struct view *view)
 }
 
 void
-view_set_title(struct view *view, const char *title)
+view_notify_title_change(struct view *view)
 {
-	assert(view);
-	if (!title) {
-		title = "";
-	}
-
-	if (!strcmp(view->title, title)) {
-		return;
-	}
-	xstrdup_replace(view->title, title);
-
 	ssd_update_title(view->ssd);
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
 	foreign_toplevel_update_title(view);
 }
 
 void
-view_set_app_id(struct view *view, const char *app_id)
+view_notify_app_id_change(struct view *view)
 {
-	assert(view);
-	if (!app_id) {
-		app_id = "";
-	}
-
-	if (!strcmp(view->app_id, app_id)) {
-		return;
-	}
-	xstrdup_replace(view->app_id, app_id);
-
 	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
 	foreign_toplevel_update_app_id(view);
 }
@@ -2515,15 +2495,16 @@ view_init(struct view *view)
 {
 	assert(view);
 
+	view->id = view_add(view);
+	view->st = view_get_state(view->id);
+	assert(view->st);
+
 	wl_list_init(&view->foreign_toplevel_resources);
 
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
 	wl_signal_init(&view->events.set_icon);
 	wl_signal_init(&view->events.destroy);
-
-	view->title = xstrdup("");
-	view->app_id = xstrdup("");
 }
 
 void
@@ -2546,9 +2527,6 @@ view_destroy(struct view *view)
 	wl_list_remove(&view->request_fullscreen.link);
 	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->destroy.link);
-
-	zfree(view->title);
-	zfree(view->app_id);
 
 	foreign_toplevel_disable(view);
 
@@ -2591,6 +2569,8 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.new_title.listener_list));
 	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
+
+	view_remove(view->id);
 
 	/* Remove view from server->views */
 	wl_list_remove(&view->link);
