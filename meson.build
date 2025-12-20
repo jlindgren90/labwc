@@ -1,6 +1,6 @@
 project(
   'labwc',
-  'c',
+  ['c', 'cpp'],
   version: '0.9.3',
   license: 'GPL-2.0-only',
   meson_version: '>=0.59.0',
@@ -14,7 +14,7 @@ add_project_arguments(
   [
     '-DWLR_USE_UNSTABLE',
   ],
-  language: 'c',
+  language: ['c', 'cpp'],
 )
 
 cc = meson.get_compiler('c')
@@ -40,6 +40,15 @@ add_project_arguments(cc.get_supported_arguments([
   '-Wno-expansion-to-defined',
 ]), language: 'c')
 
+add_project_arguments([
+  '-fno-exceptions',
+  '-fno-rtti',
+  '-fpermissive',
+  '-Wno-missing-field-initializers',
+  '-Wno-narrowing',
+  '-Wno-unused-parameter',
+], language: 'cpp')
+
 version='"@0@"'.format(meson.project_version())
 git = find_program('git', native: true, required: false)
 if git.found()
@@ -48,7 +57,7 @@ if git.found()
     version = '"@0@"'.format(git_commit.stdout().strip())
   endif
 endif
-add_project_arguments('-DLABWC_VERSION=@0@'.format(version), language: 'c')
+add_project_arguments('-DLABWC_VERSION=@0@'.format(version), language: ['c', 'cpp'])
 
 # jlindgren: force use of wlroots subproject
 wlroots = subproject('wlroots').get_variable('wlroots')
