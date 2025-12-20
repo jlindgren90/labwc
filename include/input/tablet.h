@@ -10,7 +10,6 @@ struct wlr_device;
 struct wlr_input_device;
 
 struct drawing_tablet_tool {
-	struct seat *seat;
 	struct wlr_tablet_v2_tablet_tool *tool_v2;
 
 	/*
@@ -37,7 +36,6 @@ struct drawing_tablet_tool {
 
 struct drawing_tablet {
 	struct wlr_input_device *wlr_input_device;
-	struct seat *seat;
 	struct wlr_tablet *tablet;
 	struct wlr_tablet_v2_tablet *tablet_v2;
 	struct {
@@ -46,9 +44,9 @@ struct drawing_tablet {
 	struct wl_list link; /* seat.tablets */
 };
 
-void tablet_init(struct seat *seat);
-void tablet_finish(struct seat *seat);
-void tablet_create(struct seat *seat, struct wlr_input_device *wlr_input_device);
-bool tablet_tool_has_focused_surface(struct seat *seat);
+void tablet_init(void);
+void tablet_finish(void);
+void tablet_create(struct wlr_input_device *wlr_input_device);
+bool tablet_tool_has_focused_surface(void);
 
 #endif /* LABWC_TABLET_H */

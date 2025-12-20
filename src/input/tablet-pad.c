@@ -15,17 +15,17 @@
 #include "labwc.h"
 
 void
-tablet_pad_attach_tablet(struct seat *seat)
+tablet_pad_attach_tablet(void)
 {
 	/* reset all tablet - pad links */
 	struct drawing_tablet_pad *pad;
-	wl_list_for_each(pad, &seat->tablet_pads, link) {
+	wl_list_for_each(pad, &g_seat.tablet_pads, link) {
 		pad->tablet = NULL;
 	}
 
 	/* loop over all tablets and all pads and link by device group */
 	struct drawing_tablet *tablet;
-	wl_list_for_each(tablet, &seat->tablets, link) {
+	wl_list_for_each(tablet, &g_seat.tablets, link) {
 		if (!wlr_input_device_is_libinput(tablet->wlr_input_device)) {
 			/*
 			 * Prevent iterating over non-libinput devices. This might
@@ -40,7 +40,7 @@ tablet_pad_attach_tablet(struct seat *seat)
 		struct libinput_device_group *tablet_group =
 			libinput_device_get_device_group(tablet_device);
 
-		wl_list_for_each(pad, &seat->tablet_pads, link) {
+		wl_list_for_each(pad, &g_seat.tablet_pads, link) {
 			if (!wlr_input_device_is_libinput(pad->wlr_input_device)) {
 				continue;
 			}
@@ -69,14 +69,14 @@ handle_surface_destroy(struct wl_listener *listener, void *data)
 }
 
 void
-tablet_pad_enter_surface(struct seat *seat, struct wlr_surface *surface)
+tablet_pad_enter_surface(struct wlr_surface *surface)
 {
 	if (!surface) {
 		return;
 	}
 
 	struct drawing_tablet_pad *pad;
-	wl_list_for_each(pad, &seat->tablet_pads, link) {
+	wl_list_for_each(pad, &g_seat.tablet_pads, link) {
 		/* pad needs a linked tablet and both need tablet-v2 support */
 		if (pad->tablet && pad->pad_v2 && pad->tablet->tablet_v2) {
 			if (pad->current_surface) {
@@ -117,7 +117,7 @@ handle_button(struct wl_listener *listener, void *data)
 	} else {
 		uint32_t button = tablet_get_mapped_button(ev->button);
 		if (button) {
-			cursor_emulate_button(pad->seat, button,
+			cursor_emulate_button(button,
 				ev->state == WLR_BUTTON_PRESSED
 					? WL_POINTER_BUTTON_STATE_PRESSED
 					: WL_POINTER_BUTTON_STATE_RELEASED,
@@ -176,16 +176,15 @@ handle_destroy(struct wl_listener *listener, void *data)
 }
 
 void
-tablet_pad_create(struct seat *seat, struct wlr_input_device *wlr_device)
+tablet_pad_create(struct wlr_input_device *wlr_device)
 {
 	wlr_log(WLR_DEBUG, "setting up tablet pad");
 	struct drawing_tablet_pad *pad = znew(*pad);
-	pad->seat = seat;
 	pad->wlr_input_device = wlr_device;
 	pad->pad = wlr_tablet_pad_from_input_device(wlr_device);
 	if (g_server.tablet_manager) {
 		pad->pad_v2 = wlr_tablet_pad_create(g_server.tablet_manager,
-			seat->seat, wlr_device);
+			g_seat.seat, wlr_device);
 	}
 	pad->pad->data = pad;
 	wlr_log(WLR_INFO, "tablet pad capabilities: %zu button(s) %zu strip(s) %zu ring(s)",
@@ -196,6 +195,6 @@ tablet_pad_create(struct seat *seat, struct wlr_input_device *wlr_device)
 	CONNECT_SIGNAL(pad->pad, &pad->handlers, ring);
 	CONNECT_SIGNAL(pad->pad, &pad->handlers, strip);
 	CONNECT_SIGNAL(wlr_device, &pad->handlers, destroy);
-	wl_list_insert(&seat->tablet_pads, &pad->link);
-	tablet_pad_attach_tablet(pad->seat);
+	wl_list_insert(&g_seat.tablet_pads, &pad->link);
+	tablet_pad_attach_tablet();
 }

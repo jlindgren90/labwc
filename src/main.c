@@ -19,6 +19,7 @@
  * initialization order.
  */
 struct rcxml rc;
+struct seat g_seat;
 struct server g_server;
 
 static const struct option long_options[] = {

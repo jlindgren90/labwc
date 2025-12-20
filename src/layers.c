@@ -142,7 +142,6 @@ has_exclusive_interactivity(struct wlr_scene_layer_surface_v1 *scene)
 static void
 try_to_focus_next_layer_or_toplevel(void)
 {
-	struct seat *seat = &g_server.seat;
 	struct output *output = output_nearest_to_cursor();
 	if (!output) {
 		goto no_output;
@@ -170,7 +169,7 @@ try_to_focus_next_layer_or_toplevel(void)
 			}
 			if (has_exclusive_interactivity(scene)) {
 				wlr_log(WLR_DEBUG, "focus next exclusive layer client");
-				seat_set_focus_layer(seat, layer_surface);
+				seat_set_focus_layer(layer_surface);
 				return;
 			}
 		}
@@ -181,19 +180,19 @@ try_to_focus_next_layer_or_toplevel(void)
 	 * one exists on the current workspace.
 	 */
 no_output:
-	if (seat->focused_layer) {
-		seat_set_focus_layer(seat, NULL);
+	if (g_seat.focused_layer) {
+		seat_set_focus_layer(NULL);
 	}
 }
 
 static bool
-focused_layer_has_exclusive_interactivity(struct seat *seat)
+focused_layer_has_exclusive_interactivity(void)
 {
-	if (!seat->focused_layer) {
+	if (!g_seat.focused_layer) {
 		return false;
 	}
-	return seat->focused_layer->current.keyboard_interactive ==
-		ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE;
+	return g_seat.focused_layer->current.keyboard_interactive
+		== ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE;
 }
 
 /*
@@ -201,39 +200,39 @@ focused_layer_has_exclusive_interactivity(struct seat *seat)
  * than the layer with current keyboard focus.
  */
 static bool
-has_precedence(struct seat *seat, enum zwlr_layer_shell_v1_layer layer)
+has_precedence(enum zwlr_layer_shell_v1_layer layer)
 {
-	if (!seat->focused_layer) {
+	if (!g_seat.focused_layer) {
 		return true;
 	}
-	if (!focused_layer_has_exclusive_interactivity(seat)) {
+	if (!focused_layer_has_exclusive_interactivity()) {
 		return true;
 	}
-	if (layer >= seat->focused_layer->current.layer) {
+	if (layer >= g_seat.focused_layer->current.layer) {
 		return true;
 	}
 	return false;
 }
 
 void
-layer_try_set_focus(struct seat *seat, struct wlr_layer_surface_v1 *layer_surface)
+layer_try_set_focus(struct wlr_layer_surface_v1 *layer_surface)
 {
 	switch (layer_surface->current.keyboard_interactive) {
 	case ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE:
 		wlr_log(WLR_DEBUG, "interactive-exclusive '%p'", layer_surface);
-		if (has_precedence(seat, layer_surface->current.layer)) {
-			seat_set_focus_layer(seat, layer_surface);
+		if (has_precedence(layer_surface->current.layer)) {
+			seat_set_focus_layer(layer_surface);
 		}
 		break;
 	case ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND:
 		wlr_log(WLR_DEBUG, "interactive-on-demand '%p'", layer_surface);
-		if (!focused_layer_has_exclusive_interactivity(seat)) {
-			seat_set_focus_layer(seat, layer_surface);
+		if (!focused_layer_has_exclusive_interactivity()) {
+			seat_set_focus_layer(layer_surface);
 		}
 		break;
 	case ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE:
 		wlr_log(WLR_DEBUG, "interactive-none '%p'", layer_surface);
-		if (seat->focused_layer == layer_surface) {
+		if (g_seat.focused_layer == layer_surface) {
 			try_to_focus_next_layer_or_toplevel();
 		}
 		break;
@@ -277,8 +276,7 @@ handle_surface_commit(struct wl_listener *listener, void *data)
 		 * cursor-button-press).
 		 */
 		if (is_on_demand(layer_surface)) {
-			struct seat *seat = &g_server.seat;
-			if (seat->focused_layer == layer_surface) {
+			if (g_seat.focused_layer == layer_surface) {
 				/*
 				 * Must be change from EXCLUSIVE to ON_DEMAND,
 				 * so we should give us focus.
@@ -288,8 +286,7 @@ handle_surface_commit(struct wl_listener *listener, void *data)
 			goto out;
 		}
 		/* Handle EXCLUSIVE and NONE requests */
-		struct seat *seat = &g_server.seat;
-		layer_try_set_focus(seat, layer_surface);
+		layer_try_set_focus(layer_surface);
 	}
 out:
 
@@ -310,15 +307,13 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 	struct lab_layer_surface *layer =
 		wl_container_of(listener, layer, node_destroy);
 
-	struct seat *seat = &g_server.seat;
-
 	/*
 	 * If the surface of this node has the current keyboard focus, then we
-	 * have to deal with `seat->focused_layer` to avoid UAF bugs, for
+	 * have to deal with `g_seat.focused_layer` to avoid UAF bugs, for
 	 * example on TTY change. See issue #2863
 	 */
-	if (layer->layer_surface == seat->focused_layer) {
-		seat_set_focus_layer(seat, NULL);
+	if (layer->layer_surface == g_seat.focused_layer) {
+		seat_set_focus_layer(NULL);
 	}
 
 	/*
@@ -372,8 +367,7 @@ handle_unmap(struct wl_listener *listener, void *data)
 	if (layer_surface->output) {
 		output_update_usable_area(layer_surface->output->data);
 	}
-	struct seat *seat = &g_server.seat;
-	if (seat->focused_layer == layer_surface) {
+	if (g_seat.focused_layer == layer_surface) {
 		try_to_focus_next_layer_or_toplevel();
 	}
 
@@ -396,9 +390,7 @@ handle_map(struct wl_listener *listener, void *data)
 	 * automatically based on the position of the surface and outputs in
 	 * the scene. See wlr_scene_surface_create() documentation.
 	 */
-
-	struct seat *seat = &g_server.seat;
-	layer_try_set_focus(seat, layer->scene_layer_surface->layer_surface);
+	layer_try_set_focus(layer->scene_layer_surface->layer_surface);
 }
 
 static void
@@ -580,8 +572,7 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 	if (!layer_surface->output) {
 		struct wlr_output *output =
 			wlr_output_layout_output_at(g_server.output_layout,
-				g_server.seat.cursor->x,
-				g_server.seat.cursor->y);
+				g_seat.cursor->x, g_seat.cursor->y);
 		if (!output) {
 			wlr_log(WLR_INFO,
 				"No output available to assign layer surface");

@@ -4,7 +4,7 @@
 
 struct seat;
 
-void gestures_init(struct seat *seat);
-void gestures_finish(struct seat *seat);
+void gestures_init(void);
+void gestures_finish(void);
 
 #endif /* LABWC_GESTURES_H */

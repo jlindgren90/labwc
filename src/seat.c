@@ -363,42 +363,42 @@ output_by_name(const char *name)
 }
 
 static void
-map_input_to_output(struct seat *seat, struct wlr_input_device *dev, char *output_name)
+map_input_to_output(struct wlr_input_device *dev, char *output_name)
 {
 	struct wlr_output *output = NULL;
 	if (output_name) {
 		output = output_by_name(output_name);
 	}
-	wlr_cursor_map_input_to_output(seat->cursor, dev, output);
-	wlr_cursor_map_input_to_region(seat->cursor, dev, NULL);
+	wlr_cursor_map_input_to_output(g_seat.cursor, dev, output);
+	wlr_cursor_map_input_to_region(g_seat.cursor, dev, NULL);
 }
 
 static void
-map_pointer_to_output(struct seat *seat, struct wlr_input_device *dev)
+map_pointer_to_output(struct wlr_input_device *dev)
 {
 	struct wlr_pointer *pointer = wlr_pointer_from_input_device(dev);
 	wlr_log(WLR_INFO, "map pointer to output %s", pointer->output_name);
-	map_input_to_output(seat, dev, pointer->output_name);
+	map_input_to_output(dev, pointer->output_name);
 }
 
 static struct input *
-new_pointer(struct seat *seat, struct wlr_input_device *dev)
+new_pointer(struct wlr_input_device *dev)
 {
 	struct input *input = znew(*input);
 	input->wlr_input_device = dev;
 	dev->data = input;
 	configure_libinput(dev);
-	wlr_cursor_attach_input_device(seat->cursor, dev);
+	wlr_cursor_attach_input_device(g_seat.cursor, dev);
 
 	/* In support of running with WLR_WL_OUTPUTS set to >=2 */
 	if (dev->type == WLR_INPUT_DEVICE_POINTER) {
-		map_pointer_to_output(seat, dev);
+		map_pointer_to_output(dev);
 	}
 	return input;
 }
 
 static struct input *
-new_keyboard(struct seat *seat, struct wlr_input_device *device, bool is_virtual)
+new_keyboard(struct wlr_input_device *device, bool is_virtual)
 {
 	struct wlr_keyboard *kb = wlr_keyboard_from_input_device(device);
 
@@ -410,12 +410,12 @@ new_keyboard(struct seat *seat, struct wlr_input_device *device, bool is_virtual
 
 	configure_libinput(device);
 
-	if (!seat->keyboard_group->keyboard.keymap) {
+	if (!g_seat.keyboard_group->keyboard.keymap) {
 		wlr_log(WLR_ERROR, "cannot set keymap");
 		exit(EXIT_FAILURE);
 	}
 
-	wlr_keyboard_set_keymap(kb, seat->keyboard_group->keyboard.keymap);
+	wlr_keyboard_set_keymap(kb, g_seat.keyboard_group->keyboard.keymap);
 
 	/*
 	 * This needs to be before wlr_keyboard_group_add_keyboard().
@@ -429,18 +429,18 @@ new_keyboard(struct seat *seat, struct wlr_input_device *device, bool is_virtual
 		/* key repeat information is usually synchronized via the keyboard group */
 		wlr_keyboard_set_repeat_info(kb, rc.repeat_rate, rc.repeat_delay);
 	} else {
-		wlr_keyboard_group_add_keyboard(seat->keyboard_group, kb);
+		wlr_keyboard_group_add_keyboard(g_seat.keyboard_group, kb);
 	}
 
 	keyboard_setup_handlers(keyboard);
 
-	wlr_seat_set_keyboard(seat->seat, kb);
+	wlr_seat_set_keyboard(g_seat.seat, kb);
 
 	return (struct input *)keyboard;
 }
 
 static void
-map_touch_to_output(struct seat *seat, struct wlr_input_device *dev)
+map_touch_to_output(struct wlr_input_device *dev)
 {
 	struct wlr_touch *touch = wlr_touch_from_input_device(dev);
 
@@ -453,53 +453,53 @@ map_touch_to_output(struct seat *seat, struct wlr_input_device *dev)
 
 	char *output_name = touch->output_name ? touch->output_name : touch_config_output_name;
 	wlr_log(WLR_INFO, "map touch to output %s", output_name ? output_name : "unknown");
-	map_input_to_output(seat, dev, output_name);
+	map_input_to_output(dev, output_name);
 }
 
 static struct input *
-new_touch(struct seat *seat, struct wlr_input_device *dev)
+new_touch(struct wlr_input_device *dev)
 {
 	struct input *input = znew(*input);
 	input->wlr_input_device = dev;
 	dev->data = input;
 	configure_libinput(dev);
-	wlr_cursor_attach_input_device(seat->cursor, dev);
+	wlr_cursor_attach_input_device(g_seat.cursor, dev);
 	/* In support of running with WLR_WL_OUTPUTS set to >=2 */
-	map_touch_to_output(seat, dev);
+	map_touch_to_output(dev);
 
 	return input;
 }
 
 static struct input *
-new_tablet(struct seat *seat, struct wlr_input_device *dev)
+new_tablet(struct wlr_input_device *dev)
 {
 	struct input *input = znew(*input);
 	input->wlr_input_device = dev;
-	tablet_create(seat, dev);
-	wlr_cursor_attach_input_device(seat->cursor, dev);
+	tablet_create(dev);
+	wlr_cursor_attach_input_device(g_seat.cursor, dev);
 	wlr_log(WLR_INFO, "map tablet to output %s", rc.tablet.output_name);
-	map_input_to_output(seat, dev, rc.tablet.output_name);
+	map_input_to_output(dev, rc.tablet.output_name);
 
 	return input;
 }
 
 static struct input *
-new_tablet_pad(struct seat *seat, struct wlr_input_device *dev)
+new_tablet_pad(struct wlr_input_device *dev)
 {
 	struct input *input = znew(*input);
 	input->wlr_input_device = dev;
-	tablet_pad_create(seat, dev);
+	tablet_pad_create(dev);
 
 	return input;
 }
 
 static void
-seat_update_capabilities(struct seat *seat)
+seat_update_capabilities(void)
 {
 	struct input *input = NULL;
 	uint32_t caps = 0;
 
-	wl_list_for_each(input, &seat->inputs, link) {
+	wl_list_for_each(input, &g_seat.inputs, link) {
 		switch (input->wlr_input_device->type) {
 		case WLR_INPUT_DEVICE_KEYBOARD:
 			caps |= WL_SEAT_CAPABILITY_KEYBOARD;
@@ -515,64 +515,61 @@ seat_update_capabilities(struct seat *seat)
 			break;
 		}
 	}
-	wlr_seat_set_capabilities(seat->seat, caps);
+	wlr_seat_set_capabilities(g_seat.seat, caps);
 }
 
 static void
-seat_add_device(struct seat *seat, struct input *input)
+seat_add_device(struct input *input)
 {
-	input->seat = seat;
 	input->destroy.notify = input_device_destroy;
 	wl_signal_add(&input->wlr_input_device->events.destroy, &input->destroy);
-	wl_list_insert(&seat->inputs, &input->link);
+	wl_list_insert(&g_seat.inputs, &input->link);
 
-	seat_update_capabilities(seat);
+	seat_update_capabilities();
 }
 
 static void
 handle_new_input(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, new_input);
 	struct wlr_input_device *device = data;
 	struct input *input = NULL;
 
 	switch (device->type) {
 	case WLR_INPUT_DEVICE_KEYBOARD:
-		input = new_keyboard(seat, device, false);
+		input = new_keyboard(device, false);
 		break;
 	case WLR_INPUT_DEVICE_POINTER:
-		input = new_pointer(seat, device);
+		input = new_pointer(device);
 		break;
 	case WLR_INPUT_DEVICE_TOUCH:
-		input = new_touch(seat, device);
+		input = new_touch(device);
 		break;
 	case WLR_INPUT_DEVICE_TABLET:
-		input = new_tablet(seat, device);
+		input = new_tablet(device);
 		break;
 	case WLR_INPUT_DEVICE_TABLET_PAD:
-		input = new_tablet_pad(seat, device);
+		input = new_tablet_pad(device);
 		break;
 	default:
 		wlr_log(WLR_INFO, "unsupported input device");
 		return;
 	}
 
-	seat_add_device(seat, input);
+	seat_add_device(input);
 }
 
 static void
 handle_new_virtual_pointer(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, new_virtual_pointer);
 	struct wlr_virtual_pointer_v1_new_pointer_event *event = data;
 	struct wlr_virtual_pointer_v1 *pointer = event->new_pointer;
 	struct wlr_input_device *device = &pointer->pointer.base;
 
-	struct input *input = new_pointer(seat, device);
+	struct input *input = new_pointer(device);
 	device->data = input;
-	seat_add_device(seat, input);
+	seat_add_device(input);
 	if (event->suggested_output) {
-		wlr_cursor_map_input_to_output(seat->cursor, device,
+		wlr_cursor_map_input_to_output(g_seat.cursor, device,
 			event->suggested_output);
 	}
 }
@@ -580,19 +577,17 @@ handle_new_virtual_pointer(struct wl_listener *listener, void *data)
 static void
 handle_new_virtual_keyboard(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, new_virtual_keyboard);
 	struct wlr_virtual_keyboard_v1 *virtual_keyboard = data;
 	struct wlr_input_device *device = &virtual_keyboard->keyboard.base;
 
-	struct input *input = new_keyboard(seat, device, true);
+	struct input *input = new_keyboard(device, true);
 	device->data = input;
-	seat_add_device(seat, input);
+	seat_add_device(input);
 }
 
 static void
 handle_focus_change(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat, focus_change);
 	struct wlr_seat_keyboard_focus_change_event *event = data;
 	struct wlr_surface *surface = event->new_surface;
 	struct view *view = surface ? view_from_wlr_surface(surface) : NULL;
@@ -619,7 +614,7 @@ handle_focus_change(struct wl_listener *listener, void *data)
 		}
 		if (view) {
 			view_set_activated(view, true);
-			tablet_pad_enter_surface(seat, surface);
+			tablet_pad_enter_surface(surface);
 		}
 		g_server.active_view = view;
 	}
@@ -628,85 +623,82 @@ handle_focus_change(struct wl_listener *listener, void *data)
 void
 seat_init(void)
 {
-	struct seat *seat = &g_server.seat;
-
-	seat->seat = wlr_seat_create(g_server.wl_display, "seat0");
-	if (!seat->seat) {
+	g_seat.seat = wlr_seat_create(g_server.wl_display, "seat0");
+	if (!g_seat.seat) {
 		wlr_log(WLR_ERROR, "cannot allocate seat");
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&seat->touch_points);
-	wl_list_init(&seat->constraint_commit.link);
-	wl_list_init(&seat->inputs);
+	wl_list_init(&g_seat.touch_points);
+	wl_list_init(&g_seat.constraint_commit.link);
+	wl_list_init(&g_seat.inputs);
 
-	CONNECT_SIGNAL(g_server.backend, seat, new_input);
-	CONNECT_SIGNAL(&seat->seat->keyboard_state, seat, focus_change);
+	CONNECT_SIGNAL(g_server.backend, &g_seat, new_input);
+	CONNECT_SIGNAL(&g_seat.seat->keyboard_state, &g_seat, focus_change);
 
-	seat->virtual_pointer =
+	g_seat.virtual_pointer =
 		wlr_virtual_pointer_manager_v1_create(g_server.wl_display);
-	CONNECT_SIGNAL(seat->virtual_pointer, seat, new_virtual_pointer);
+	CONNECT_SIGNAL(g_seat.virtual_pointer, &g_seat, new_virtual_pointer);
 
-	seat->virtual_keyboard =
+	g_seat.virtual_keyboard =
 		wlr_virtual_keyboard_manager_v1_create(g_server.wl_display);
-	CONNECT_SIGNAL(seat->virtual_keyboard, seat, new_virtual_keyboard);
+	CONNECT_SIGNAL(g_seat.virtual_keyboard, &g_seat, new_virtual_keyboard);
 
-	seat->input_method_relay = input_method_relay_create(seat);
+	g_seat.input_method_relay = input_method_relay_create();
 
-	seat->xcursor_manager = NULL;
-	seat->cursor_visible = true;
-	seat->cursor = wlr_cursor_create();
-	if (!seat->cursor) {
+	g_seat.xcursor_manager = NULL;
+	g_seat.cursor_visible = true;
+	g_seat.cursor = wlr_cursor_create();
+	if (!g_seat.cursor) {
 		wlr_log(WLR_ERROR, "unable to create cursor");
 		exit(EXIT_FAILURE);
 	}
-	wlr_cursor_attach_output_layout(seat->cursor, g_server.output_layout);
+	wlr_cursor_attach_output_layout(g_seat.cursor, g_server.output_layout);
 
-	wl_list_init(&seat->tablets);
-	wl_list_init(&seat->tablet_tools);
-	wl_list_init(&seat->tablet_pads);
+	wl_list_init(&g_seat.tablets);
+	wl_list_init(&g_seat.tablet_tools);
+	wl_list_init(&g_seat.tablet_pads);
 
-	input_handlers_init(seat);
+	input_handlers_init();
 }
 
 void
 seat_finish(void)
 {
-	struct seat *seat = &g_server.seat;
-	wl_list_remove(&seat->new_input.link);
-	wl_list_remove(&seat->focus_change.link);
-	wl_list_remove(&seat->new_virtual_pointer.link);
-	wl_list_remove(&seat->new_virtual_keyboard.link);
+	wl_list_remove(&g_seat.new_input.link);
+	wl_list_remove(&g_seat.focus_change.link);
+	wl_list_remove(&g_seat.new_virtual_pointer.link);
+	wl_list_remove(&g_seat.new_virtual_keyboard.link);
 
 	struct input *input, *next;
-	wl_list_for_each_safe(input, next, &seat->inputs, link) {
+	wl_list_for_each_safe(input, next, &g_seat.inputs, link) {
 		input_device_destroy(&input->destroy, NULL);
 	}
 
-	if (seat->workspace_osd_timer) {
-		wl_event_source_remove(seat->workspace_osd_timer);
-		seat->workspace_osd_timer = NULL;
+	if (g_seat.workspace_osd_timer) {
+		wl_event_source_remove(g_seat.workspace_osd_timer);
+		g_seat.workspace_osd_timer = NULL;
 	}
-	overlay_finish(seat);
+	overlay_finish();
 
-	input_handlers_finish(seat);
-	input_method_relay_finish(seat->input_method_relay);
+	input_handlers_finish();
+	input_method_relay_finish(g_seat.input_method_relay);
 }
 
 static void
-configure_keyboard(struct seat *seat, struct input *input)
+configure_keyboard(struct input *input)
 {
 	struct wlr_input_device *device = input->wlr_input_device;
 	assert(device->type == WLR_INPUT_DEVICE_KEYBOARD);
 	struct keyboard *keyboard = (struct keyboard *)input;
 	struct wlr_keyboard *kb = wlr_keyboard_from_input_device(device);
-	keyboard_configure(seat, kb, keyboard->is_virtual);
+	keyboard_configure(kb, keyboard->is_virtual);
 }
 
 void
-seat_pointer_end_grab(struct seat *seat, struct wlr_surface *surface)
+seat_pointer_end_grab(struct wlr_surface *surface)
 {
-	if (!surface || !wlr_seat_pointer_has_grab(seat->seat)) {
+	if (!surface || !wlr_seat_pointer_has_grab(g_seat.seat)) {
 		return;
 	}
 
@@ -721,7 +713,7 @@ seat_pointer_end_grab(struct seat *seat, struct wlr_surface *surface)
 		 * on button notifications in another client (observed in GTK4),
 		 * so end the grab manually.
 		 */
-		wlr_seat_pointer_end_grab(seat->seat);
+		wlr_seat_pointer_end_grab(g_seat.seat);
 	}
 }
 
@@ -729,27 +721,27 @@ seat_pointer_end_grab(struct seat *seat, struct wlr_surface *surface)
 void
 seat_reconfigure(void)
 {
-	struct seat *seat = &g_server.seat;
 	struct input *input;
-	cursor_reload(seat);
-	overlay_finish(seat);
+	cursor_reload();
+	overlay_finish();
 	keyboard_reset_current_keybind();
-	wl_list_for_each(input, &seat->inputs, link) {
+	wl_list_for_each(input, &g_seat.inputs, link) {
 		switch (input->wlr_input_device->type) {
 		case WLR_INPUT_DEVICE_KEYBOARD:
 			configure_libinput(input->wlr_input_device);
-			configure_keyboard(seat, input);
+			configure_keyboard(input);
 			break;
 		case WLR_INPUT_DEVICE_POINTER:
 			configure_libinput(input->wlr_input_device);
-			map_pointer_to_output(seat, input->wlr_input_device);
+			map_pointer_to_output(input->wlr_input_device);
 			break;
 		case WLR_INPUT_DEVICE_TOUCH:
 			configure_libinput(input->wlr_input_device);
-			map_touch_to_output(seat, input->wlr_input_device);
+			map_touch_to_output(input->wlr_input_device);
 			break;
 		case WLR_INPUT_DEVICE_TABLET:
-			map_input_to_output(seat, input->wlr_input_device, rc.tablet.output_name);
+			map_input_to_output(input->wlr_input_device,
+				rc.tablet.output_name);
 			break;
 		default:
 			break;
@@ -758,13 +750,14 @@ seat_reconfigure(void)
 }
 
 static void
-seat_focus(struct seat *seat, struct wlr_surface *surface,
-		bool replace_exclusive_layer, bool is_lock_surface)
+seat_focus(struct wlr_surface *surface, bool replace_exclusive_layer,
+		bool is_lock_surface)
 {
 	/* Respect layer-shell exclusive keyboard-interactivity. */
-	if (seat->focused_layer && seat->focused_layer->current.keyboard_interactive
-			== ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE
-				&& !replace_exclusive_layer) {
+	if (g_seat.focused_layer
+			&& g_seat.focused_layer->current.keyboard_interactive
+				== ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE
+			&& !replace_exclusive_layer) {
 		return;
 	}
 
@@ -778,18 +771,19 @@ seat_focus(struct seat *seat, struct wlr_surface *surface,
 	}
 
 	if (!surface) {
-		wlr_seat_keyboard_notify_clear_focus(seat->seat);
-		input_method_relay_set_focus(seat->input_method_relay, NULL);
+		wlr_seat_keyboard_notify_clear_focus(g_seat.seat);
+		input_method_relay_set_focus(g_seat.input_method_relay, NULL);
 		return;
 	}
 
-	if (!wlr_seat_get_keyboard(seat->seat)) {
+	if (!wlr_seat_get_keyboard(g_seat.seat)) {
 		/*
 		 * wlr_seat_keyboard_notify_enter() sends wl_keyboard.modifiers,
 		 * but it may crash some apps (e.g. Chromium) if
 		 * wl_keyboard.keymap is not sent beforehand.
 		 */
-		wlr_seat_set_keyboard(seat->seat, &seat->keyboard_group->keyboard);
+		wlr_seat_set_keyboard(g_seat.seat,
+			&g_seat.keyboard_group->keyboard);
 	}
 
 	/*
@@ -802,63 +796,65 @@ seat_focus(struct seat *seat, struct wlr_surface *surface,
 	uint32_t *pressed_sent_keycodes = key_state_pressed_sent_keycodes();
 	int nr_pressed_sent_keycodes = key_state_nr_pressed_sent_keycodes();
 
-	struct wlr_keyboard *kb = &seat->keyboard_group->keyboard;
-	wlr_seat_keyboard_notify_enter(seat->seat, surface,
-		pressed_sent_keycodes, nr_pressed_sent_keycodes, &kb->modifiers);
+	struct wlr_keyboard *kb = &g_seat.keyboard_group->keyboard;
+	wlr_seat_keyboard_notify_enter(g_seat.seat, surface,
+		pressed_sent_keycodes, nr_pressed_sent_keycodes,
+		&kb->modifiers);
 
-	input_method_relay_set_focus(seat->input_method_relay, surface);
+	input_method_relay_set_focus(g_seat.input_method_relay, surface);
 
 	struct wlr_pointer_constraint_v1 *constraint =
 		wlr_pointer_constraints_v1_constraint_for_surface(
-			g_server.constraints, surface, seat->seat);
+			g_server.constraints, surface, g_seat.seat);
 	constrain_cursor(constraint);
 }
 
 void
-seat_focus_surface(struct seat *seat, struct wlr_surface *surface)
+seat_focus_surface(struct wlr_surface *surface)
 {
 	/* Don't update focus while window switcher, Move/Resize and menu interaction */
 	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		return;
 	}
-	seat_focus(seat, surface, /*replace_exclusive_layer*/ false,
+	seat_focus(surface, /*replace_exclusive_layer*/ false,
 		/*is_lock_surface*/ false);
 }
 
 void
-seat_focus_lock_surface(struct seat *seat, struct wlr_surface *surface)
+seat_focus_lock_surface(struct wlr_surface *surface)
 {
-	seat_focus(seat, surface, /*replace_exclusive_layer*/ true,
+	seat_focus(surface, /*replace_exclusive_layer*/ true,
 		/*is_lock_surface*/ true);
 }
 
 void
-seat_set_focus_layer(struct seat *seat, struct wlr_layer_surface_v1 *layer)
+seat_set_focus_layer(struct wlr_layer_surface_v1 *layer)
 {
 	if (!layer) {
-		seat->focused_layer = NULL;
+		g_seat.focused_layer = NULL;
 		desktop_focus_topmost_view();
 		return;
 	}
-	seat_focus(seat, layer->surface, /*replace_exclusive_layer*/ true,
+	seat_focus(layer->surface, /*replace_exclusive_layer*/ true,
 		/*is_lock_surface*/ false);
-	seat->focused_layer = layer;
+	g_seat.focused_layer = layer;
 }
 
 void
-seat_output_layout_changed(struct seat *seat)
+seat_output_layout_changed(void)
 {
 	struct input *input = NULL;
-	wl_list_for_each(input, &seat->inputs, link) {
+	wl_list_for_each(input, &g_seat.inputs, link) {
 		switch (input->wlr_input_device->type) {
 		case WLR_INPUT_DEVICE_POINTER:
-			map_pointer_to_output(seat, input->wlr_input_device);
+			map_pointer_to_output(input->wlr_input_device);
 			break;
 		case WLR_INPUT_DEVICE_TOUCH:
-			map_touch_to_output(seat, input->wlr_input_device);
+			map_touch_to_output(input->wlr_input_device);
 			break;
 		case WLR_INPUT_DEVICE_TABLET:
-			map_input_to_output(seat, input->wlr_input_device, rc.tablet.output_name);
+			map_input_to_output(input->wlr_input_device,
+				rc.tablet.output_name);
 			break;
 		default:
 			break;
@@ -869,48 +865,47 @@ seat_output_layout_changed(struct seat *seat)
 static void
 handle_focus_override_surface_destroy(struct wl_listener *listener, void *data)
 {
-	struct seat *seat = wl_container_of(listener, seat,
-		focus_override.surface_destroy);
-	wl_list_remove(&seat->focus_override.surface_destroy.link);
-	seat->focus_override.surface = NULL;
+	wl_list_remove(&g_seat.focus_override.surface_destroy.link);
+	g_seat.focus_override.surface = NULL;
 }
 
 void
-seat_focus_override_begin(struct seat *seat, enum input_mode input_mode,
-	enum lab_cursors cursor_shape)
+seat_focus_override_begin(enum input_mode input_mode,
+		enum lab_cursors cursor_shape)
 {
-	assert(!seat->focus_override.surface);
+	assert(!g_seat.focus_override.surface);
 	assert(g_server.input_mode == LAB_INPUT_STATE_PASSTHROUGH);
 
 	g_server.input_mode = input_mode;
 
-	seat->focus_override.surface = seat->seat->keyboard_state.focused_surface;
-	if (seat->focus_override.surface) {
-		seat->focus_override.surface_destroy.notify =
+	g_seat.focus_override.surface =
+		g_seat.seat->keyboard_state.focused_surface;
+	if (g_seat.focus_override.surface) {
+		g_seat.focus_override.surface_destroy.notify =
 			handle_focus_override_surface_destroy;
-		wl_signal_add(&seat->focus_override.surface->events.destroy,
-			&seat->focus_override.surface_destroy);
+		wl_signal_add(&g_seat.focus_override.surface->events.destroy,
+			&g_seat.focus_override.surface_destroy);
 	}
 
-	seat_focus(seat, NULL, /*replace_exclusive_layer*/ false,
+	seat_focus(NULL, /*replace_exclusive_layer*/ false,
 		/*is_lock_surface*/ false);
-	wlr_seat_pointer_clear_focus(seat->seat);
-	cursor_set(seat, cursor_shape);
+	wlr_seat_pointer_clear_focus(g_seat.seat);
+	cursor_set(cursor_shape);
 }
 
 void
-seat_focus_override_end(struct seat *seat)
+seat_focus_override_end(void)
 {
 	g_server.input_mode = LAB_INPUT_STATE_PASSTHROUGH;
 
-	if (seat->focus_override.surface) {
-		if (!seat->seat->keyboard_state.focused_surface) {
-			seat_focus(seat, seat->focus_override.surface,
+	if (g_seat.focus_override.surface) {
+		if (!g_seat.seat->keyboard_state.focused_surface) {
+			seat_focus(g_seat.focus_override.surface,
 				/*replace_exclusive_layer*/ false,
 				/*is_lock_surface*/ false);
 		}
-		wl_list_remove(&seat->focus_override.surface_destroy.link);
-		seat->focus_override.surface = NULL;
+		wl_list_remove(&g_seat.focus_override.surface_destroy.link);
+		g_seat.focus_override.surface = NULL;
 	}
 
 	cursor_update_focus();
