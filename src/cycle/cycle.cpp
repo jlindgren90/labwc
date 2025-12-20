@@ -295,10 +295,10 @@ insert_view_ordered_by_age(struct wl_list *views, struct view *new_view)
 static bool
 init_cycle(void)
 {
-	struct view *view;
-	for_each_view(view, &g_server.views, rc.window_switcher.criteria) {
+	for_each_view(view, g_views.begin(), rc.window_switcher.criteria) {
 		if (rc.window_switcher.order == WINDOW_SWITCHER_ORDER_AGE) {
-			insert_view_ordered_by_age(&g_server.cycle.views, view);
+			insert_view_ordered_by_age(&g_server.cycle.views,
+				view.get());
 		} else {
 			wl_list_append(&g_server.cycle.views, &view->cycle_link);
 		}
