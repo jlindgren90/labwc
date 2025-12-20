@@ -20,7 +20,6 @@ struct wlr_input_device;
 
 struct drawing_tablet_pad {
 	struct wlr_input_device *wlr_input_device;
-	struct seat *seat;
 	struct wlr_tablet_pad *pad;
 	struct wlr_tablet_v2_tablet_pad *pad_v2;
 	struct drawing_tablet *tablet;
@@ -35,8 +34,8 @@ struct drawing_tablet_pad {
 	struct wl_list link; /* seat.tablet_pads */
 };
 
-void tablet_pad_create(struct seat *seat, struct wlr_input_device *wlr_input_device);
-void tablet_pad_attach_tablet(struct seat *seat);
-void tablet_pad_enter_surface(struct seat *seat, struct wlr_surface *wlr_surface);
+void tablet_pad_create(struct wlr_input_device *wlr_input_device);
+void tablet_pad_attach_tablet(void);
+void tablet_pad_enter_surface(struct wlr_surface *wlr_surface);
 
 #endif /* LABWC_TABLET_PAD_H */
