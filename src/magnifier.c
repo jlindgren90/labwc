@@ -50,8 +50,8 @@ magnifier_draw(struct output *output, struct wlr_buffer *output_buffer, struct w
 	};
 
 	/* Cursor position in per-output logical coordinate */
-	double cursor_logical_x = g_server.seat.cursor->x;
-	double cursor_logical_y = g_server.seat.cursor->y;
+	double cursor_logical_x = g_seat.cursor->x;
+	double cursor_logical_y = g_seat.cursor->y;
 	wlr_output_layout_output_coords(g_server.output_layout,
 		output->wlr_output, &cursor_logical_x, &cursor_logical_y);
 	/* Cursor position in per-output physical coordinate */
@@ -225,7 +225,7 @@ output_wants_magnification(struct output *output)
 {
 	static double x = -1;
 	static double y = -1;
-	struct wlr_cursor *cursor = g_server.seat.cursor;
+	struct wlr_cursor *cursor = g_seat.cursor;
 	if (!magnify_on) {
 		x = -1;
 		y = -1;

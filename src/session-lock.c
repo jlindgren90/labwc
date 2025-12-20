@@ -30,7 +30,7 @@ static void
 focus_surface(struct session_lock_manager *manager, struct wlr_surface *focused)
 {
 	manager->focused = focused;
-	seat_focus_lock_surface(&g_server.seat, focused);
+	seat_focus_lock_surface(focused);
 }
 
 static void
@@ -335,7 +335,7 @@ handle_new_session_lock(struct wl_listener *listener, void *data)
 
 	/* Remember the focused view to restore it on unlock */
 	manager->last_active_view = g_server.active_view;
-	seat_focus_surface(&g_server.seat, NULL);
+	seat_focus_surface(NULL);
 
 	struct output *output;
 	wl_list_for_each(output, &g_server.outputs, link) {

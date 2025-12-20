@@ -484,12 +484,10 @@ view_set_activated(struct view *view, bool activated)
 		if (!activated) {
 			/* Store configured keyboard layout per view */
 			view->keyboard_layout =
-				g_server.seat.keyboard_group->keyboard.modifiers
-					.group;
+				g_seat.keyboard_group->keyboard.modifiers.group;
 		} else {
 			/* Switch to previously stored keyboard layout */
-			keyboard_update_layout(&g_server.seat,
-				view->keyboard_layout);
+			keyboard_update_layout(view->keyboard_layout);
 		}
 	}
 	output_set_has_fullscreen_view(view->output, view->fullscreen);
@@ -658,8 +656,8 @@ view_move_to_cursor(struct view *view)
 	geo.width += margin.left + margin.right;
 	geo.height += margin.top + margin.bottom;
 
-	int x = g_server.seat.cursor->x - (geo.width / 2);
-	int y = g_server.seat.cursor->y - (geo.height / 2);
+	int x = g_seat.cursor->x - (geo.width / 2);
+	int y = g_seat.cursor->y - (geo.height / 2);
 
 	struct wlr_box usable = output_usable_area_in_layout_coords(pending_output);
 
