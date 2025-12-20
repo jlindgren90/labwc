@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* view-impl-common.c: common code for shell view->impl functions */
 #include "view-impl-common.h"
-#include "foreign-toplevel/foreign.h"
+#include "foreign-toplevel.h"
 #include "labwc.h"
 #include "view.h"
 #include "window-rules.h"
@@ -20,16 +20,10 @@ view_impl_map(struct view *view)
 	 * Also exclude unfocusable views (popups, floating toolbars,
 	 * etc.) as these should not be shown in taskbars/docks/etc.
 	 */
-	if (!view->foreign_toplevel && view_is_focusable(view)
+	if (!view->foreign_toplevel_enabled && view_is_focusable(view)
 			&& window_rules_get_property(view, "skipTaskbar")
 				!= LAB_PROP_TRUE) {
-		view->foreign_toplevel = foreign_toplevel_create(view);
-
-		struct view *parent = view->impl->get_parent(view);
-		if (parent && parent->foreign_toplevel) {
-			foreign_toplevel_set_parent(view->foreign_toplevel,
-				parent->foreign_toplevel);
-		}
+		foreign_toplevel_enable(view);
 	}
 
 	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s",
@@ -45,10 +39,7 @@ view_impl_unmap(struct view *view)
 	 * Destroy the foreign toplevel handle so the unmapped view
 	 * doesn't show up in panels and the like.
 	 */
-	if (view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
-	}
+	foreign_toplevel_disable(view);
 }
 
 static bool

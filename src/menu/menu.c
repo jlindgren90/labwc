@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <libxml/parser.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -876,7 +875,7 @@ update_client_list_combined_menu(struct server *server)
 
 		wl_list_for_each(view, &server->views, link) {
 			if (view->workspace == workspace) {
-				if (!view->foreign_toplevel
+				if (!view->foreign_toplevel_enabled
 						|| string_null_or_empty(view->title)) {
 					continue;
 				}

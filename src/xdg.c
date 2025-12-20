@@ -15,7 +15,7 @@
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "decorations.h"
-#include "foreign-toplevel/foreign.h"
+#include "foreign-toplevel.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "node.h"

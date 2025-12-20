@@ -16,7 +16,7 @@
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "cycle.h"
-#include "foreign-toplevel/foreign.h"
+#include "foreign-toplevel.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "menu/menu.h"
@@ -479,8 +479,7 @@ view_set_activated(struct view *view, bool activated)
 	if (view->impl->set_activated) {
 		view->impl->set_activated(view, activated);
 	}
-
-	wl_signal_emit_mutable(&view->events.activated, &activated);
+	foreign_toplevel_update_state(view);
 
 	if (rc.kb_layout_per_window) {
 		if (!activated) {
@@ -535,7 +534,6 @@ view_update_outputs(struct view *view)
 
 	if (new_outputs != view->outputs) {
 		view->outputs = new_outputs;
-		wl_signal_emit_mutable(&view->events.new_outputs, NULL);
 		desktop_update_top_layer_visibility(view->server);
 	}
 }
@@ -742,8 +740,7 @@ _minimize(struct view *view, bool minimized)
 	}
 
 	view->minimized = minimized;
-	wl_signal_emit_mutable(&view->events.minimized, NULL);
-
+	foreign_toplevel_update_state(view);
 	view_update_visibility(view);
 }
 
@@ -1312,8 +1309,7 @@ view_set_maximized(struct view *view, enum view_axis maximized)
 	}
 
 	view->maximized = maximized;
-	wl_signal_emit_mutable(&view->events.maximized, NULL);
-
+	foreign_toplevel_update_state(view);
 	/*
 	 * Ensure that follow-up actions like SnapToEdge / SnapToRegion
 	 * use up-to-date SSD margin information. Otherwise we will end
@@ -1659,7 +1655,7 @@ set_fullscreen(struct view *view, bool fullscreen)
 	}
 
 	view->fullscreen = fullscreen;
-	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
+	foreign_toplevel_update_state(view);
 
 	/* Re-show decorations when no longer fullscreen */
 	if (!fullscreen && view->ssd_mode) {
@@ -2336,6 +2332,7 @@ view_set_title(struct view *view, const char *title)
 
 	ssd_update_title(view->ssd);
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
+	foreign_toplevel_update_title(view);
 }
 
 void
@@ -2352,6 +2349,7 @@ view_set_app_id(struct view *view, const char *app_id)
 	xstrdup_replace(view->app_id, app_id);
 
 	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
+	foreign_toplevel_update_app_id(view);
 }
 
 void
@@ -2517,13 +2515,10 @@ view_init(struct view *view)
 {
 	assert(view);
 
+	wl_list_init(&view->foreign_toplevel_resources);
+
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
-	wl_signal_init(&view->events.new_outputs);
-	wl_signal_init(&view->events.maximized);
-	wl_signal_init(&view->events.minimized);
-	wl_signal_init(&view->events.fullscreened);
-	wl_signal_init(&view->events.activated);
 	wl_signal_init(&view->events.set_icon);
 	wl_signal_init(&view->events.destroy);
 
@@ -2555,10 +2550,7 @@ view_destroy(struct view *view)
 	zfree(view->title);
 	zfree(view->app_id);
 
-	if (view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
-	}
+	foreign_toplevel_disable(view);
 
 	if (server->grabbed_view == view) {
 		/* Application got killed while moving around */
@@ -2597,11 +2589,6 @@ view_destroy(struct view *view)
 
 	assert(wl_list_empty(&view->events.new_app_id.listener_list));
 	assert(wl_list_empty(&view->events.new_title.listener_list));
-	assert(wl_list_empty(&view->events.new_outputs.listener_list));
-	assert(wl_list_empty(&view->events.maximized.listener_list));
-	assert(wl_list_empty(&view->events.minimized.listener_list));
-	assert(wl_list_empty(&view->events.fullscreened.listener_list));
-	assert(wl_list_empty(&view->events.activated.listener_list));
 	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
 

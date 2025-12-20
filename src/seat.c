@@ -615,14 +615,19 @@ handle_focus_change(struct wl_listener *listener, void *data)
 	}
 
 	if (view != server->active_view) {
-		if (server->active_view) {
-			view_set_activated(server->active_view, false);
+		/*
+		 * Update server->active_view first as it's referenced
+		 * in foreign_toplevel_update_state().
+		 */
+		struct view *prev = server->active_view;
+		server->active_view = view;
+		if (prev) {
+			view_set_activated(prev, false);
 		}
 		if (view) {
 			view_set_activated(view, true);
 			tablet_pad_enter_surface(seat, surface);
 		}
-		server->active_view = view;
 	}
 }
 

@@ -279,8 +279,8 @@ struct server {
 
 	struct session_lock_manager *session_lock_manager;
 
-	struct wlr_foreign_toplevel_manager_v1 *foreign_toplevel_manager;
-	struct wlr_ext_foreign_toplevel_list_v1 *foreign_toplevel_list;
+	struct wl_global *foreign_toplevel_global;
+	struct wl_list foreign_toplevel_resources;
 
 	struct wlr_drm_lease_v1_manager *drm_lease_manager;
 	struct wl_listener drm_lease_request;
