@@ -63,10 +63,10 @@ void cycle_reinitialize(void);
 void cycle_on_cursor_release(struct wlr_scene_node *node);
 
 /* Used by osd.c internally to render window switcher fields */
-void cycle_osd_field_get_content(struct cycle_osd_field *field,
-	struct buf *buf, struct view *view);
+lab_str cycle_osd_field_get_content(struct cycle_osd_field *field,
+	struct view *view);
 /* Sets view info to buf according to format */
-void cycle_osd_field_set_custom(struct buf *buf, struct view *view,
+void cycle_osd_field_set_custom(lab_str &buf, struct view *view,
 	const char *format);
 
 /* Used by rcxml.c when parsing the config */

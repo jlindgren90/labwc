@@ -685,10 +685,11 @@ handle_view_destroy(struct wl_listener *listener, void *data)
 	prompt->view = NULL;
 }
 
-static void
-print_prompt_command(struct buf *buf, const char *format, action &action)
+static lab_str
+print_prompt_command(const char *format, action &action)
 {
 	assert(format);
+	lab_str buf;
 
 	for (const char *p = format; *p; p++) {
 		/*
@@ -696,7 +697,7 @@ print_prompt_command(struct buf *buf, const char *format, action &action)
 		 * keep adding it to the buffer
 		 */
 		if (*p != '%') {
-			buf_add_char(buf, *p);
+			buf += *p;
 			continue;
 		}
 
@@ -705,20 +706,20 @@ print_prompt_command(struct buf *buf, const char *format, action &action)
 
 		switch (*p) {
 		case 'm':
-			buf_add(buf, action.get_str("message.prompt",
-				"Choose wisely").c());
+			buf += action.get_str("message.prompt",
+				"Choose wisely");
 			break;
 		case 'n':
-			buf_add(buf, _("No"));
+			buf += _("No");
 			break;
 		case 'y':
-			buf_add(buf, _("Yes"));
+			buf += _("Yes");
 			break;
 		case 'b':
-			buf_add_hex_color(buf, g_theme.osd_bg_color);
+			buf += hex_color_to_str(g_theme.osd_bg_color);
 			break;
 		case 't':
-			buf_add_hex_color(buf, g_theme.osd_label_text_color);
+			buf += hex_color_to_str(g_theme.osd_label_text_color);
 			break;
 		default:
 			wlr_log(WLR_ERROR,
@@ -726,23 +727,23 @@ print_prompt_command(struct buf *buf, const char *format, action &action)
 			break;
 		}
 	}
+
+	return buf;
 }
 
 static void
 action_prompt_create(struct view *view, action &action)
 {
-	struct buf command = BUF_INIT;
-	print_prompt_command(&command, rc.prompt_command.c(), action);
+	lab_str command = print_prompt_command(rc.prompt_command.c(), action);
 
-	wlr_log(WLR_INFO, "prompt command: '%s'", command.data);
+	wlr_log(WLR_INFO, "prompt command: '%s'", command.c());
 
 	int pipe_fd;
-	pid_t prompt_pid = spawn_piped(command.data, &pipe_fd);
+	pid_t prompt_pid = spawn_piped(command.c(), &pipe_fd);
 	if (prompt_pid < 0) {
 		wlr_log(WLR_ERROR, "Failed to create action prompt");
-		goto cleanup;
+		return;
 	}
-{ /* !goto */
 	/* FIXME: closing stdout might confuse clients */
 	close(pipe_fd);
 
@@ -759,9 +760,6 @@ action_prompt_create(struct view *view, action &action)
 	}
 
 	wl_list_insert(&prompts, &prompt->link);
-
-} cleanup:
-	buf_reset(&command);
 }
 
 void
@@ -907,11 +905,9 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 		debug_dump_scene();
 		break;
 	case ACTION_TYPE_EXECUTE: {
-		auto cmd = BUF_INIT;
-		buf_add(&cmd, action.get_str("command", NULL).c());
-		buf_expand_tilde(&cmd);
-		spawn_async_no_shell(cmd.data);
-		buf_reset(&cmd);
+		lab_str cmd = action.get_str("command", NULL);
+		cmd = buf_expand_tilde(cmd.c());
+		spawn_async_no_shell(cmd.c());
 		break;
 	}
 	case ACTION_TYPE_EXIT:

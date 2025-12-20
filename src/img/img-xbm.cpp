@@ -8,14 +8,15 @@
 #define _POSIX_C_SOURCE 200809L
 #include "img/img-xbm.h"
 #include <assert.h>
+#include <fstream>
+#include <sstream>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <vector>
-#include "common/buf.h"
-#include "common/string-helpers.h"
 #include "buffer.h"
+#include "common/string-helpers.h"
 
 enum token_type {
 	TOKEN_NONE = 0,
@@ -262,12 +263,13 @@ img_xbm_load(const char *filename, float *rgba)
 	uint32_t color = argb32(rgba);
 
 	/* Read file into memory as it's easier to tokenize that way */
-	struct buf token_buf = buf_from_file(filename);
-	if (token_buf.len) {
-		auto tokens = tokenize_xbm(token_buf.data);
+	std::ifstream ifs(filename);
+	if (ifs.good()) {
+		std::ostringstream oss;
+		oss << ifs.rdbuf();
+		auto tokens = tokenize_xbm(oss.str().data());
 		pixmap = parse_xbm_tokens(&tokens[0], color);
 	}
-	buf_reset(&token_buf);
 	if (pixmap.data.empty()) {
 		return {};
 	}

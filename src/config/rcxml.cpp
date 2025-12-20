@@ -2,8 +2,10 @@
 #define _POSIX_C_SOURCE 200809L
 #include "config/rcxml.h"
 #include <assert.h>
+#include <fstream>
 #include <glib.h>
 #include <libxml/parser.h>
+#include <sstream>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,10 +14,8 @@
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include "action.h"
-#include "common/buf.h"
 #include "common/dir.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "common/nodename.h"
 #include "common/parse-bool.h"
 #include "common/parse-double.h"
@@ -1040,7 +1040,7 @@ entry(xmlNode *node, char *nodename, char *content)
 	} else if (!strcasecmp(nodename, "prefix.desktops")) {
 		rc.workspace_config.prefix = lab_str(content);
 	} else if (!strcasecmp(nodename, "thumbnailLabelFormat.osd.windowSwitcher")) {
-		xstrdup_replace(rc.window_switcher.thumbnail_label_format, content);
+		rc.window_switcher.thumbnail_label_format = lab_str(content);
 
 	} else if (!lab_xml_node_is_leaf(node)) {
 		/* parse children of nested nodes other than above */
@@ -1350,10 +1350,10 @@ traverse(xmlNode *node)
 }
 
 static void
-rcxml_parse_xml(struct buf *b)
+rcxml_parse_xml(const std::string &buf)
 {
 	int options = 0;
-	xmlDoc *d = xmlReadMemory(b->data, b->len, NULL, NULL, options);
+	xmlDoc *d = xmlReadMemory(buf.data(), buf.size(), NULL, NULL, options);
 	if (!d) {
 		wlr_log(WLR_ERROR, "error parsing config file");
 		return;
@@ -1439,7 +1439,7 @@ rcxml_init(void)
 	rc.window_switcher.show = true;
 	rc.window_switcher.style = CYCLE_OSD_STYLE_CLASSIC;
 	rc.window_switcher.output_criteria = CYCLE_OSD_OUTPUT_ALL;
-	rc.window_switcher.thumbnail_label_format = xstrdup("%T");
+	rc.window_switcher.thumbnail_label_format = lab_str("%T");
 	rc.window_switcher.preview = true;
 	rc.window_switcher.outlines = true;
 	rc.window_switcher.unshade = true;
@@ -1723,17 +1723,15 @@ post_processing(void)
 			rc.workspace_config.prefix = lab_str(_("Workspace"));
 		}
 
-		struct buf b = BUF_INIT;
 		for (int i = nr_workspaces; i < rc.workspace_config.min_nr_workspaces; i++) {
+			lab_str buf;
 			if (rc.workspace_config.prefix) {
-				buf_add_fmt(&b, "%s ",
+				buf += strdup_printf("%s ",
 					rc.workspace_config.prefix.c());
 			}
-			buf_add_fmt(&b, "%d", i + 1);
-			rc.workspace_config.names.push_back(lab_str(b.data));
-			buf_clear(&b);
+			buf += strdup_printf("%d", i + 1);
+			rc.workspace_config.names.push_back(buf);
 		}
-		buf_reset(&b);
 	}
 	if (rc.workspace_config.popuptime == INT_MIN) {
 		rc.workspace_config.popuptime = 1000;
@@ -1852,15 +1850,16 @@ rcxml_read(const char *filename)
 	for (int idx = 0; idx < num_paths; idx++) {
 		auto &path = should_merge_config ?
 			paths[(num_paths - 1) - idx] : paths[idx];
-		struct buf b = buf_from_file(path.c());
-		if (!b.len) {
+		std::ifstream ifs(path);
+		if (!ifs.good()) {
 			continue;
 		}
 
 		wlr_log(WLR_INFO, "read config file %s", path.c());
 
-		rcxml_parse_xml(&b);
-		buf_reset(&b);
+		std::ostringstream oss;
+		oss << ifs.rdbuf();
+		rcxml_parse_xml(oss.str());
 		if (!should_merge_config) {
 			break;
 		}
@@ -1883,7 +1882,7 @@ rcxml_finish(void)
 	rc.fallback_app_icon_name = lab_str();
 	rc.workspace_config.prefix = lab_str();
 	rc.tablet.output_name = lab_str();
-	zfree(rc.window_switcher.thumbnail_label_format);
+	rc.window_switcher.thumbnail_label_format = lab_str();
 
 	clear_title_layout();
 
