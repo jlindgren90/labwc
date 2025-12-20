@@ -48,19 +48,19 @@ struct server;
 struct wlr_scene_node;
 
 /* Begin window switcher */
-void cycle_begin(struct server *server, enum lab_cycle_dir direction);
+void cycle_begin(enum lab_cycle_dir direction);
 
 /* Cycle the selected view in the window switcher */
-void cycle_step(struct server *server, enum lab_cycle_dir direction);
+void cycle_step(enum lab_cycle_dir direction);
 
 /* Closes the OSD */
-void cycle_finish(struct server *server, bool switch_focus);
+void cycle_finish(bool switch_focus);
 
 /* Re-initialize the window switcher */
-void cycle_reinitialize(struct server *server);
+void cycle_reinitialize(void);
 
 /* Focus the clicked window and close OSD */
-void cycle_on_cursor_release(struct server *server, struct wlr_scene_node *node);
+void cycle_on_cursor_release(struct wlr_scene_node *node);
 
 /* Used by osd.c internally to render window switcher fields */
 void cycle_osd_field_get_content(struct cycle_osd_field *field,
