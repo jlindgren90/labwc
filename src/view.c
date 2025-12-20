@@ -614,7 +614,7 @@ view_move_relative(struct view *view, int x, int y)
 	if (view->fullscreen) {
 		return;
 	}
-	view_maximize(view, VIEW_AXIS_NONE, /*store_natural_geometry*/ false);
+	view_maximize(view, VIEW_AXIS_NONE);
 	if (view_is_tiled(view)) {
 		view_set_untiled(view);
 		view_move_resize(view, view->natural_geometry);
@@ -632,7 +632,7 @@ view_move_to_cursor(struct view *view)
 		return;
 	}
 	view_set_fullscreen(view, false);
-	view_maximize(view, VIEW_AXIS_NONE, /*store_natural_geometry*/ false);
+	view_maximize(view, VIEW_AXIS_NONE);
 	if (view_is_tiled(view)) {
 		view_set_untiled(view);
 		view_move_resize(view, view->natural_geometry);
@@ -1376,8 +1376,7 @@ view_set_untiled(struct view *view)
 }
 
 void
-view_maximize(struct view *view, enum view_axis axis,
-		bool store_natural_geometry)
+view_maximize(struct view *view, enum view_axis axis)
 {
 	assert(view);
 
@@ -1390,6 +1389,10 @@ view_maximize(struct view *view, enum view_axis axis,
 	}
 
 	view_set_shade(view, false);
+
+	bool store_natural_geometry =
+		(view->server->input_mode != LAB_INPUT_STATE_MOVE
+			|| view != view->server->grabbed_view);
 
 	if (axis != VIEW_AXIS_NONE) {
 		/*
@@ -1440,8 +1443,7 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 	case VIEW_AXIS_HORIZONTAL:
 	case VIEW_AXIS_VERTICAL:
 		/* Toggle one axis (XOR) */
-		view_maximize(view, view->maximized ^ axis,
-			/*store_natural_geometry*/ true);
+		view_maximize(view, view->maximized ^ axis);
 		break;
 	case VIEW_AXIS_BOTH:
 		/*
@@ -1449,8 +1451,7 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 		 * maximized, otherwise unmaximize.
 		 */
 		view_maximize(view, (view->maximized == VIEW_AXIS_BOTH) ?
-			VIEW_AXIS_NONE : VIEW_AXIS_BOTH,
-			/*store_natural_geometry*/ true);
+			VIEW_AXIS_NONE : VIEW_AXIS_BOTH);
 		break;
 	default:
 		break;
@@ -2064,7 +2065,7 @@ view_placement_parse(const char *policy)
 
 void
 view_snap_to_edge(struct view *view, enum lab_edge edge,
-		bool across_outputs, bool combine, bool store_natural_geometry)
+		bool across_outputs, bool combine)
 {
 	assert(view);
 
@@ -2079,6 +2080,10 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	}
 
 	view_set_shade(view, false);
+
+	bool store_natural_geometry =
+		(view->server->input_mode != LAB_INPUT_STATE_MOVE
+			|| view != view->server->grabbed_view);
 
 	if (lab_edge_is_cardinal(edge) && view->maximized == VIEW_AXIS_NONE
 			&& view->tiled != LAB_EDGE_CENTER) {
@@ -2124,8 +2129,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 
 	if (view->maximized != VIEW_AXIS_NONE) {
 		/* Unmaximize + keep using existing natural_geometry */
-		view_maximize(view, VIEW_AXIS_NONE,
-			/*store_natural_geometry*/ false);
+		view_maximize(view, VIEW_AXIS_NONE);
 	} else if (store_natural_geometry) {
 		/* store current geometry as new natural_geometry */
 		view_store_natural_geometry(view);
@@ -2139,8 +2143,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 }
 
 void
-view_snap_to_region(struct view *view, struct region *region,
-		bool store_natural_geometry)
+view_snap_to_region(struct view *view, struct region *region)
 {
 	assert(view);
 	assert(region);
@@ -2157,10 +2160,13 @@ view_snap_to_region(struct view *view, struct region *region,
 
 	view_set_shade(view, false);
 
+	bool store_natural_geometry =
+		(view->server->input_mode != LAB_INPUT_STATE_MOVE
+			|| view != view->server->grabbed_view);
+
 	if (view->maximized != VIEW_AXIS_NONE) {
 		/* Unmaximize + keep using existing natural_geometry */
-		view_maximize(view, VIEW_AXIS_NONE,
-			/*store_natural_geometry*/ false);
+		view_maximize(view, VIEW_AXIS_NONE);
 	} else if (store_natural_geometry) {
 		/* store current geometry as new natural_geometry */
 		view_store_natural_geometry(view);
@@ -2193,7 +2199,7 @@ view_move_to_output(struct view *view, struct output *output)
 		view_apply_tiled_geometry(view);
 	} else if (view->tiled_region) {
 		struct region *region = regions_from_name(view->tiled_region->name, output);
-		view_snap_to_region(view, region, /*store_natural_geometry*/ false);
+		view_snap_to_region(view, region);
 	}
 }
 
