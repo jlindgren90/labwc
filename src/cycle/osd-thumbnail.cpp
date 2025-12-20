@@ -103,14 +103,13 @@ create_label(struct wlr_scene_tree *parent, struct view *view,
 		struct window_switcher_thumbnail_theme *switcher_theme,
 		const float *text_color, const float *bg_color, int y)
 {
-	struct buf buf = BUF_INIT;
-	cycle_osd_field_set_custom(&buf, view,
-		rc.window_switcher.thumbnail_label_format);
+	lab_str buf;
+	cycle_osd_field_set_custom(buf, view,
+		rc.window_switcher.thumbnail_label_format.c());
 	struct scaled_font_buffer *buffer = new scaled_font_buffer(parent);
-	scaled_font_buffer_update(buffer, buf.data,
+	scaled_font_buffer_update(buffer, buf.c(),
 		switcher_theme->item_width - 2 * switcher_theme->item_padding,
 		&rc.font_osd, text_color, bg_color);
-	buf_reset(&buf);
 	wlr_scene_node_set_position(&buffer->scene_buffer->node,
 		(switcher_theme->item_width - buffer->width) / 2, y);
 	return buffer;
