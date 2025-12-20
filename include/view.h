@@ -355,7 +355,7 @@ struct xdg_toplevel_view : public view {
 	void handle_set_title(void *) override;
 
 	/* Optional black background fill behind fullscreen view */
-	struct wlr_scene_rect *fullscreen_bg;
+	struct wlr_scene_rect *fullscreen_bg = nullptr;
 
 	/* Events unique to xdg-toplevel views */
 	DECLARE_HANDLER(xdg_toplevel_view, set_app_id);
