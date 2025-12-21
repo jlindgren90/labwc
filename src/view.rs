@@ -10,7 +10,7 @@ use util::cstring;
 // Therefore when parsing rc.xml, "None" means "Invalid".
 //
 #[repr(C)]
-#[derive(Clone, Default, PartialEq)]
+#[derive(Clone, Copy, Default, PartialEq)]
 #[allow(dead_code)]
 pub enum ViewAxis {
     #[default]
@@ -30,6 +30,7 @@ pub struct ViewState {
     title: *const c_char,
     mapped: bool,
     ever_mapped: bool,
+    activated: bool,
     fullscreen: bool,
     maximized: ViewAxis,
     minimized: bool,
@@ -107,21 +108,49 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 
 #[no_mangle]
 pub extern "C" fn view_map(id: ViewId) {
+    let mut view_ptr = std::ptr::null_mut();
+    let mut first_map = false;
     if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view_ptr = view.c_ptr;
+        first_map = !view.state.ever_mapped;
         view.state.mapped = true;
-        unsafe {
-            view_impl_map(view.c_ptr);
-        }
         view.state.ever_mapped = true;
+    }
+    // view_impl_map() will call into view_set_activated_internal()
+    // so needs to be called after unborrowing views
+    if !view_ptr.is_null() {
+        unsafe {
+            view_impl_map(view_ptr, first_map as i32);
+        }
     }
 }
 
 #[no_mangle]
 pub extern "C" fn view_unmap(id: ViewId) {
+    let mut view_ptr = std::ptr::null_mut();
     if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view_ptr = view.c_ptr;
         view.state.mapped = false;
+    }
+    // view_impl_unmap() will call into view_set_activated_internal()
+    // so needs to be called after unborrowing views
+    if !view_ptr.is_null() {
         unsafe {
-            view_impl_unmap(view.c_ptr);
+            view_impl_unmap(view_ptr);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_activated_internal(id: ViewId, activated: bool) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.activated = activated;
+        unsafe {
+            if view.is_xwayland {
+                xwayland_view_set_activated(view.c_ptr, activated as i32);
+            } else {
+                xdg_toplevel_view_set_activated(view.c_ptr, activated as i32);
+            }
         }
     }
 }
@@ -129,6 +158,7 @@ pub extern "C" fn view_unmap(id: ViewId) {
 #[no_mangle]
 pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.fullscreen = fullscreen;
         unsafe {
             if view.is_xwayland {
                 xwayland_view_set_fullscreen(view.c_ptr, fullscreen as i32);
@@ -136,7 +166,6 @@ pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
                 xdg_toplevel_view_set_fullscreen(view.c_ptr, fullscreen as i32);
             }
         }
-        view.state.fullscreen = fullscreen;
     }
 }
 
@@ -149,15 +178,13 @@ pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
         if view.state.maximized == maximized {
             return;
         }
-        unsafe {
-            if view.is_xwayland {
-                xwayland_view_maximize(view.c_ptr, maximized.clone() as i32);
-            } else {
-                xdg_toplevel_view_maximize(view.c_ptr, maximized.clone() as i32);
-            }
-        }
         view.state.maximized = maximized;
         unsafe {
+            if view.is_xwayland {
+                xwayland_view_maximize(view.c_ptr, maximized as i32);
+            } else {
+                xdg_toplevel_view_maximize(view.c_ptr, maximized as i32);
+            }
             view_notify_maximized(view.c_ptr);
         }
     }
@@ -166,6 +193,7 @@ pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
 #[no_mangle]
 pub extern "C" fn view_minimize_internal(id: ViewId, minimized: bool) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.minimized = minimized;
         unsafe {
             if view.is_xwayland {
                 xwayland_view_minimize(view.c_ptr, minimized as i32);
@@ -173,7 +201,6 @@ pub extern "C" fn view_minimize_internal(id: ViewId, minimized: bool) {
                 // no-op for xdg-shell view
             }
         }
-        view.state.minimized = minimized;
     }
 }
 

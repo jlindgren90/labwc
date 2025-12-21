@@ -7,11 +7,11 @@
 #include "window-rules.h"
 
 void
-view_impl_map(struct view *view)
+view_impl_map(struct view *view, int first_map)
 {
 	view_update_visibility(view);
 
-	if (!view->st->ever_mapped) {
+	if (first_map) {
 		window_rules_apply(view, LAB_WINDOW_RULE_EVENT_ON_FIRST_MAP);
 	}
 

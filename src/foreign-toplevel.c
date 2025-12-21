@@ -140,7 +140,7 @@ toplevel_handle_send_state(struct wl_resource *resource, struct view *view)
 	if (view->st->minimized) {
 		states[nstates++] = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_MINIMIZED;
 	}
-	if (view == view->server->active_view) {
+	if (view->st->activated) {
 		states[nstates++] = ZWLR_FOREIGN_TOPLEVEL_HANDLE_V1_STATE_ACTIVATED;
 	}
 	if (view->st->fullscreen && wl_resource_get_version(resource)

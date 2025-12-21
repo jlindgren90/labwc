@@ -932,8 +932,8 @@ xwayland_view_is_modal_dialog(struct view *self)
 	return xwayland_surface_from_view(self)->modal;
 }
 
-static void
-xwayland_view_set_activated(struct view *view, bool activated)
+void
+xwayland_view_set_activated(struct view *view, int activated)
 {
 	struct wlr_xwayland_surface *xwayland_surface =
 		xwayland_surface_from_view(view);
@@ -968,7 +968,6 @@ xwayland_view_get_pid(struct view *view)
 static const struct view_impl xwayland_view_impl = {
 	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
-	.set_activated = xwayland_view_set_activated,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,
 	.append_children = xwayland_view_append_children,

@@ -694,8 +694,8 @@ xdg_toplevel_view_is_modal_dialog(struct view *view)
 	return dialog->modal;
 }
 
-static void
-xdg_toplevel_view_set_activated(struct view *view, bool activated)
+void
+xdg_toplevel_view_set_activated(struct view *view, int activated)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented activating a non-intialized view");
@@ -886,7 +886,6 @@ xdg_view_get_pid(struct view *view)
 static const struct view_impl xdg_toplevel_view_impl = {
 	.configure = xdg_toplevel_view_configure,
 	.close = xdg_toplevel_view_close,
-	.set_activated = xdg_toplevel_view_set_activated,
 	.notify_tiled = xdg_toplevel_view_notify_tiled,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,

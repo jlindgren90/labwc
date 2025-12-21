@@ -476,11 +476,9 @@ void
 view_set_activated(struct view *view, bool activated)
 {
 	assert(view);
-	ssd_set_active(view->ssd, activated);
-	if (view->impl->set_activated) {
-		view->impl->set_activated(view, activated);
-	}
+	view_set_activated_internal(view->id, activated);
 	foreign_toplevel_update_state(view);
+	ssd_set_active(view->ssd, activated);
 
 	if (rc.kb_layout_per_window) {
 		if (!activated) {

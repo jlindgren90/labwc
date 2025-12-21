@@ -95,7 +95,6 @@ struct view_size_hints {
 struct view_impl {
 	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
-	void (*set_activated)(struct view *view, bool activated);
 	void (*notify_tiled)(struct view *view);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);

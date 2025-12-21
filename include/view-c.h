@@ -8,7 +8,7 @@
 /* rust-friendly typedef */
 typedef struct view CView;
 
-void view_impl_map(CView *view);
+void view_impl_map(CView *view, /*bool*/ int first_map);
 void view_impl_unmap(CView *view);
 
 void view_notify_app_id_change(CView *view);
@@ -16,10 +16,12 @@ void view_notify_title_change(CView *view);
 void view_notify_maximized(CView *view);
 
 void xdg_toplevel_view_maximize(CView *view, /*enum view_axis*/ int maximized);
+void xdg_toplevel_view_set_activated(CView *view, /*bool*/ int activated);
 void xdg_toplevel_view_set_fullscreen(CView *view, /*bool*/ int fullscreen);
 
 void xwayland_view_maximize(CView *view, /*enum view_axis*/ int maximized);
 void xwayland_view_minimize(CView *view, /*bool*/ int minimized);
+void xwayland_view_set_activated(CView *view, /*bool*/ int activated);
 void xwayland_view_set_fullscreen(CView *view, /*bool*/ int fullscreen);
 
 #endif /* LABWC_VIEW_IMPL_H */
