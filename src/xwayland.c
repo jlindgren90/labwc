@@ -424,7 +424,7 @@ handle_set_title(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_title);
 	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	view_set_title(view, xwayland_view->xwayland_surface->title);
+	view_set_title(view->id, xwayland_view->xwayland_surface->title);
 }
 
 static void
@@ -443,7 +443,7 @@ handle_set_class(struct wl_listener *listener, void *data)
 	 * 'instance' except for being capitalized. We want lowercase
 	 * here since we use the app_id for icon lookups.
 	 */
-	view_set_app_id(view, xwayland_view->xwayland_surface->instance);
+	view_set_app_id(view->id, xwayland_view->xwayland_surface->instance);
 }
 
 static void
