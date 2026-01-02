@@ -598,8 +598,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.resize_minimum_area = MAX(0, atoi(content));
 	} else if (!strcasecmp(nodename, "ignoreButtonReleasePeriod.menu")) {
 		rc.menu_ignore_button_release_period = atoi(content);
-	} else if (!strcasecmp(nodename, "showIcons.menu")) {
-		set_bool(content, &rc.menu_show_icons);
 	}
 
 	return false;
@@ -678,7 +676,6 @@ rcxml_init(void)
 	rc.resize_minimum_area = 8;
 
 	rc.menu_ignore_button_release_period = 250;
-	rc.menu_show_icons = true;
 }
 
 static void
