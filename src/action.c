@@ -9,9 +9,7 @@
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
-#include "action-prompt-codes.h"
 #include "common/buf.h"
-#include "common/macros.h"
 #include "common/list.h"
 #include "common/mem.h"
 #include "common/parse-bool.h"
@@ -28,15 +26,12 @@
 #include "regions.h"
 #include "ssd.h"
 #include "theme.h"
-#include "translate.h"
 #include "view.h"
 
 enum action_arg_type {
 	LAB_ACTION_ARG_STR = 0,
 	LAB_ACTION_ARG_BOOL,
 	LAB_ACTION_ARG_INT,
-	LAB_ACTION_ARG_QUERY_LIST,
-	LAB_ACTION_ARG_ACTION_LIST,
 };
 
 struct action_arg {
@@ -59,11 +54,6 @@ struct action_arg_bool {
 struct action_arg_int {
 	struct action_arg base;
 	int value;
-};
-
-struct action_arg_list {
-	struct action_arg base;
-	struct wl_list value;
 };
 
 enum action_type {
@@ -109,8 +99,6 @@ enum action_type {
 	ACTION_TYPE_FOCUS_OUTPUT,
 	ACTION_TYPE_MOVE_TO_OUTPUT,
 	ACTION_TYPE_FIT_TO_OUTPUT,
-	ACTION_TYPE_IF,
-	ACTION_TYPE_FOR_EACH,
 	ACTION_TYPE_VIRTUAL_OUTPUT_ADD,
 	ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE,
 	ACTION_TYPE_AUTO_PLACE,
@@ -171,8 +159,6 @@ const char *action_names[] = {
 	"FocusOutput",
 	"MoveToOutput",
 	"FitToOutput",
-	"If",
-	"ForEach",
 	"VirtualOutputAdd",
 	"VirtualOutputRemove",
 	"AutoPlace",
@@ -228,30 +214,6 @@ action_arg_add_int(struct action *action, const char *key, int value)
 	wl_list_append(&action->args, &arg->base.link);
 }
 
-static void
-action_arg_add_list(struct action *action, const char *key, enum action_arg_type type)
-{
-	assert(action);
-	assert(key);
-	struct action_arg_list *arg = znew(*arg);
-	arg->base.type = type;
-	arg->base.key = xstrdup(key);
-	wl_list_init(&arg->value);
-	wl_list_append(&action->args, &arg->base.link);
-}
-
-void
-action_arg_add_querylist(struct action *action, const char *key)
-{
-	action_arg_add_list(action, key, LAB_ACTION_ARG_QUERY_LIST);
-}
-
-void
-action_arg_add_actionlist(struct action *action, const char *key)
-{
-	action_arg_add_list(action, key, LAB_ACTION_ARG_ACTION_LIST);
-}
-
 static void *
 action_get_arg(struct action *action, const char *key, enum action_arg_type type)
 {
@@ -285,20 +247,6 @@ action_get_int(struct action *action, const char *key, int default_value)
 {
 	struct action_arg_int *arg = action_get_arg(action, key, LAB_ACTION_ARG_INT);
 	return arg ? arg->value : default_value;
-}
-
-struct wl_list *
-action_get_querylist(struct action *action, const char *key)
-{
-	struct action_arg_list *arg = action_get_arg(action, key, LAB_ACTION_ARG_QUERY_LIST);
-	return arg ? &arg->value : NULL;
-}
-
-struct wl_list *
-action_get_actionlist(struct action *action, const char *key)
-{
-	struct action_arg_list *arg = action_get_arg(action, key, LAB_ACTION_ARG_ACTION_LIST);
-	return arg ? &arg->value : NULL;
 }
 
 void
@@ -514,11 +462,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 			goto cleanup;
 		}
 		break;
-	case ACTION_TYPE_IF:
-		if (!strcmp(argument, "message.prompt")) {
-			action_arg_add_str(action, "message.prompt", content);
-		}
-		goto cleanup;
 	}
 
 	wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s'",
@@ -571,36 +514,6 @@ actions_contain_toggle_keybinds(struct wl_list *action_list)
 	return false;
 }
 
-static bool
-action_list_is_valid(struct wl_list *actions)
-{
-	assert(actions);
-
-	struct action *action;
-	wl_list_for_each(action, actions, link) {
-		if (!action_is_valid(action)) {
-			return false;
-		}
-	}
-	return true;
-}
-
-static bool
-action_branches_are_valid(struct action *action)
-{
-	static const char * const branches[] = { "then", "else", "none" };
-	for (size_t i = 0; i < ARRAY_SIZE(branches); i++) {
-		struct wl_list *children =
-			action_get_actionlist(action, branches[i]);
-		if (children && !action_list_is_valid(children)) {
-			wlr_log(WLR_ERROR, "Invalid action in %s '%s' branch",
-				action_names[action->type], branches[i]);
-			return false;
-		}
-	}
-	return true;
-}
-
 /* Checks for *required* arguments */
 bool
 action_is_valid(struct action *action)
@@ -627,9 +540,6 @@ action_is_valid(struct action *action)
 	case ACTION_TYPE_SNAP_TO_REGION:
 		arg_name = "region";
 		break;
-	case ACTION_TYPE_IF:
-	case ACTION_TYPE_FOR_EACH:
-		return action_branches_are_valid(action);
 	default:
 		/* No arguments required */
 		return true;
@@ -661,15 +571,6 @@ action_free(struct action *action)
 		if (arg->type == LAB_ACTION_ARG_STR) {
 			struct action_arg_str *str_arg = (struct action_arg_str *)arg;
 			zfree(str_arg->value);
-		} else if (arg->type == LAB_ACTION_ARG_ACTION_LIST) {
-			struct action_arg_list *list_arg = (struct action_arg_list *)arg;
-			action_list_free(&list_arg->value);
-		} else if (arg->type == LAB_ACTION_ARG_QUERY_LIST) {
-			struct action_arg_list *list_arg = (struct action_arg_list *)arg;
-			struct view_query *elm, *next;
-			wl_list_for_each_safe(elm, next, &list_arg->value, link) {
-				view_query_free(elm);
-			}
 		}
 		zfree(arg);
 	}
@@ -793,179 +694,6 @@ view_for_action(struct view *activator, struct action *action, struct cursor_con
 	default:
 		return g_server.active_view;
 	}
-}
-
-struct action_prompt {
-	/* Set when created */
-	struct action *action;
-	struct view *view;
-
-	/* Set when executed */
-	pid_t pid;
-
-	struct {
-		struct wl_listener destroy;
-	} on_view;
-	struct wl_list link;
-};
-
-static struct wl_list prompts = WL_LIST_INIT(&prompts);
-
-static void
-action_prompt_destroy(struct action_prompt *prompt)
-{
-	wl_list_remove(&prompt->on_view.destroy.link);
-	wl_list_remove(&prompt->link);
-	free(prompt);
-}
-
-static void
-handle_view_destroy(struct wl_listener *listener, void *data)
-{
-	struct action_prompt *prompt = wl_container_of(listener, prompt, on_view.destroy);
-	wl_list_remove(&prompt->on_view.destroy.link);
-	wl_list_init(&prompt->on_view.destroy.link);
-	prompt->view = NULL;
-}
-
-static void
-print_prompt_command(struct buf *buf, const char *format,
-		struct action *action)
-{
-	assert(format);
-
-	for (const char *p = format; *p; p++) {
-		/*
-		 * If we're not on a conversion specifier (like %m) then just
-		 * keep adding it to the buffer
-		 */
-		if (*p != '%') {
-			buf_add_char(buf, *p);
-			continue;
-		}
-
-		/* Process the %* conversion specifier */
-		++p;
-
-		switch (*p) {
-		case 'm':
-			buf_add(buf, action_get_str(action,
-					"message.prompt", "Choose wisely"));
-			break;
-		case 'n':
-			buf_add(buf, _("No"));
-			break;
-		case 'y':
-			buf_add(buf, _("Yes"));
-			break;
-		case 'b':
-			buf_add_hex_color(buf, g_theme.osd_bg_color);
-			break;
-		case 't':
-			buf_add_hex_color(buf, g_theme.osd_label_text_color);
-			break;
-		default:
-			wlr_log(WLR_ERROR,
-				"invalid prompt command conversion specifier '%c'", *p);
-			break;
-		}
-	}
-}
-
-static void
-action_prompt_create(struct view *view, struct action *action)
-{
-	struct buf command = BUF_INIT;
-	print_prompt_command(&command, rc.prompt_command, action);
-
-	wlr_log(WLR_INFO, "prompt command: '%s'", command.data);
-
-	int pipe_fd;
-	pid_t prompt_pid = spawn_piped(command.data, &pipe_fd);
-	if (prompt_pid < 0) {
-		wlr_log(WLR_ERROR, "Failed to create action prompt");
-		goto cleanup;
-	}
-	/* FIXME: closing stdout might confuse clients */
-	close(pipe_fd);
-
-	struct action_prompt *prompt = znew(*prompt);
-	prompt->action = action;
-	prompt->view = view;
-	prompt->pid = prompt_pid;
-	if (view) {
-		prompt->on_view.destroy.notify = handle_view_destroy;
-		wl_signal_add(&view->events.destroy, &prompt->on_view.destroy);
-	} else {
-		/* Allows removing during destroy */
-		wl_list_init(&prompt->on_view.destroy.link);
-	}
-
-	wl_list_insert(&prompts, &prompt->link);
-
-cleanup:
-	buf_reset(&command);
-}
-
-void
-action_prompts_destroy(void)
-{
-	struct action_prompt *prompt, *tmp;
-	wl_list_for_each_safe(prompt, tmp, &prompts, link) {
-		action_prompt_destroy(prompt);
-	}
-}
-
-bool
-action_check_prompt_result(pid_t pid, int exit_code)
-{
-	struct action_prompt *prompt, *tmp;
-	wl_list_for_each_safe(prompt, tmp, &prompts, link) {
-		if (prompt->pid != pid) {
-			continue;
-		}
-
-		wlr_log(WLR_INFO, "Found pending prompt for exit code %d", exit_code);
-		struct wl_list *actions = NULL;
-		if (exit_code == LAB_EXIT_SUCCESS) {
-			wlr_log(WLR_INFO, "Selected the 'then' branch");
-			actions = action_get_actionlist(prompt->action, "then");
-		} else if (exit_code == LAB_EXIT_CANCELLED) {
-			/* no-op */
-		} else {
-			wlr_log(WLR_INFO, "Selected the 'else' branch");
-			actions = action_get_actionlist(prompt->action, "else");
-		}
-		if (actions) {
-			wlr_log(WLR_INFO, "Running actions");
-			actions_run(prompt->view, actions, /*cursor_ctx*/ NULL);
-		} else {
-			wlr_log(WLR_INFO, "No actions for selected branch");
-		}
-		action_prompt_destroy(prompt);
-		return true;
-	}
-	return false;
-}
-
-static bool
-match_queries(struct view *view, struct action *action)
-{
-	assert(view);
-
-	struct wl_list *queries = action_get_querylist(action, "query");
-	if (!queries) {
-		return true;
-	}
-
-	/* All queries are OR'ed */
-	struct view_query *query;
-	wl_list_for_each(query, queries, link) {
-		if (view_matches_query(view, query)) {
-			return true;
-		}
-	}
-	return false;
 }
 
 static struct output *
@@ -1352,56 +1080,6 @@ run_action(struct view *view, struct action *action,
 			get_target_output(output, action);
 		if (target_output) {
 			desktop_focus_output(target_output);
-		}
-		break;
-	}
-	case ACTION_TYPE_IF: {
-		/* At least one of the queries was matched or there was no query */
-		if (action_get_str(action, "message.prompt", NULL)) {
-			/*
-			 * We delay the selection and execution of the
-			 * branch until we get a response from the user.
-			 */
-			action_prompt_create(view, action);
-		} else if (view) {
-			struct wl_list *actions;
-			if (match_queries(view, action)) {
-				actions = action_get_actionlist(action, "then");
-			} else {
-				actions = action_get_actionlist(action, "else");
-			}
-			if (actions) {
-				actions_run(view, actions, ctx);
-			}
-		}
-		break;
-	}
-	case ACTION_TYPE_FOR_EACH: {
-		struct wl_list *actions = NULL;
-		bool matches = false;
-
-		struct wl_array views;
-		wl_array_init(&views);
-		view_array_append(&views, LAB_VIEW_CRITERIA_NONE);
-
-		struct view **item;
-		wl_array_for_each(item, &views) {
-			if (match_queries(*item, action)) {
-				matches = true;
-				actions = action_get_actionlist(action, "then");
-			} else {
-				actions = action_get_actionlist(action, "else");
-			}
-			if (actions) {
-				actions_run(*item, actions, ctx);
-			}
-		}
-		wl_array_release(&views);
-		if (!matches) {
-			actions = action_get_actionlist(action, "none");
-			if (actions) {
-				actions_run(view, actions, NULL);
-			}
 		}
 		break;
 	}
