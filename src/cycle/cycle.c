@@ -257,13 +257,7 @@ preview_selected_view(struct view *view)
 static struct cycle_osd_impl *
 get_osd_impl(void)
 {
-	switch (rc.window_switcher.style) {
-	case CYCLE_OSD_STYLE_CLASSIC:
-		return &cycle_osd_classic_impl;
-	case CYCLE_OSD_STYLE_THUMBNAIL:
-		return &cycle_osd_thumbnail_impl;
-	}
-	return NULL;
+	return &cycle_osd_classic_impl;
 }
 
 static void

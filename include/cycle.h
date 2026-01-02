@@ -94,6 +94,5 @@ struct cycle_osd_impl {
 };
 
 extern struct cycle_osd_impl cycle_osd_classic_impl;
-extern struct cycle_osd_impl cycle_osd_thumbnail_impl;
 
 #endif // LABWC_CYCLE_H

@@ -748,8 +748,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		load_default_key_bindings();
 	} else if (!strcmp(nodename, "default.mouse")) {
 		load_default_mouse_bindings();
-	} else if (!strcasecmp(nodename, "thumbnailLabelFormat.osd.windowSwitcher")) {
-		xstrdup_replace(rc.window_switcher.thumbnail_label_format, content);
 
 	} else if (!lab_xml_node_is_leaf(node)) {
 		/* parse children of nested nodes other than above */
@@ -873,15 +871,6 @@ entry(xmlNode *node, char *nodename, char *content)
 	 */
 	} else if (!strcasecmp(nodename, "show.osd.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.show);
-	} else if (!strcasecmp(nodename, "style.osd.windowSwitcher")) {
-		if (!strcasecmp(content, "classic")) {
-			rc.window_switcher.style = CYCLE_OSD_STYLE_CLASSIC;
-		} else if (!strcasecmp(content, "thumbnail")) {
-			rc.window_switcher.style = CYCLE_OSD_STYLE_THUMBNAIL;
-		} else {
-			wlr_log(WLR_ERROR, "Invalid windowSwitcher style '%s': "
-				"should be one of classic|thumbnail", content);
-		}
 	} else if (!strcasecmp(nodename, "output.osd.windowSwitcher")) {
 		if (!strcasecmp(content, "all")) {
 			rc.window_switcher.output_criteria = CYCLE_OSD_OUTPUT_ALL;
@@ -903,19 +892,11 @@ entry(xmlNode *node, char *nodename, char *content)
 				"should be one of focus|age", content);
 		}
 
-	/* The following two are for backward compatibility only. */
+	/* The following is for backward compatibility only. */
 	} else if (!strcasecmp(nodename, "show.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.show);
 		wlr_log(WLR_ERROR, "<windowSwitcher show=\"\" /> is deprecated."
 			" Use <windowSwitcher><osd show=\"\" />");
-	} else if (!strcasecmp(nodename, "style.windowSwitcher")) {
-		if (!strcasecmp(content, "classic")) {
-			rc.window_switcher.style = CYCLE_OSD_STYLE_CLASSIC;
-		} else if (!strcasecmp(content, "thumbnail")) {
-			rc.window_switcher.style = CYCLE_OSD_STYLE_THUMBNAIL;
-		}
-		wlr_log(WLR_ERROR, "<windowSwitcher style=\"\" /> is deprecated."
-			" Use <windowSwitcher><osd style=\"\" />");
 
 	} else if (!strcasecmp(nodename, "preview.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.preview);
@@ -1090,9 +1071,7 @@ rcxml_init(void)
 	rc.snap_top_maximize = true;
 
 	rc.window_switcher.show = true;
-	rc.window_switcher.style = CYCLE_OSD_STYLE_CLASSIC;
 	rc.window_switcher.output_criteria = CYCLE_OSD_OUTPUT_ALL;
-	rc.window_switcher.thumbnail_label_format = xstrdup("%T");
 	rc.window_switcher.preview = true;
 	rc.window_switcher.outlines = true;
 	rc.window_switcher.unshade = true;
@@ -1468,7 +1447,6 @@ rcxml_finish(void)
 	zfree(rc.theme_name);
 	zfree(rc.icon_theme_name);
 	zfree(rc.fallback_app_icon_name);
-	zfree(rc.window_switcher.thumbnail_label_format);
 
 	clear_title_layout();
 

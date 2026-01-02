@@ -68,11 +68,6 @@ enum window_switcher_order {
 	WINDOW_SWITCHER_ORDER_AGE,
 };
 
-enum cycle_osd_style {
-	CYCLE_OSD_STYLE_CLASSIC,
-	CYCLE_OSD_STYLE_THUMBNAIL,
-};
-
 enum cycle_osd_output_criteria {
 	CYCLE_OSD_OUTPUT_ALL,
 	CYCLE_OSD_OUTPUT_CURSOR,
