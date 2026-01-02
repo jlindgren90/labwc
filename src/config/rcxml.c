@@ -750,12 +750,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &value);
 		rc.kb_numlock_enable = value ? LAB_STATE_ENABLED
 			: LAB_STATE_DISABLED;
-	} else if (!strcasecmp(nodename, "layoutScope.keyboard")) {
-		/*
-		 * This can be changed to an enum later on
-		 * if we decide to also support "application".
-		 */
-		rc.kb_layout_per_window = !strcasecmp(content, "window");
 	} else if (!strcasecmp(nodename, "screenEdgeStrength.resistance")) {
 		rc.screen_edge_strength = atoi(content);
 	} else if (!strcasecmp(nodename, "windowEdgeStrength.resistance")) {
@@ -876,7 +870,6 @@ rcxml_init(void)
 	rc.repeat_rate = 25;
 	rc.repeat_delay = 600;
 	rc.kb_numlock_enable = LAB_STATE_UNSPECIFIED;
-	rc.kb_layout_per_window = false;
 	rc.screen_edge_strength = 20;
 	rc.window_edge_strength = 20;
 	rc.unsnap_threshold = 20;
