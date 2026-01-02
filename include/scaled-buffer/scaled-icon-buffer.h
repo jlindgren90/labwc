@@ -22,8 +22,6 @@ struct scaled_icon_buffer {
 		struct wl_listener set_icon;
 		struct wl_listener destroy;
 	} on_view;
-	/* for general icon (e.g. in menus) */
-	char *icon_name;
 
 	int width;
 	int height;
@@ -40,8 +38,5 @@ struct scaled_icon_buffer *scaled_icon_buffer_create(
 
 void scaled_icon_buffer_set_view(struct scaled_icon_buffer *self,
 	struct view *view);
-
-void scaled_icon_buffer_set_icon_name(struct scaled_icon_buffer *self,
-	const char *icon_name);
 
 #endif /* LABWC_SCALED_ICON_BUFFER_H */

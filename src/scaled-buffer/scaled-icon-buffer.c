@@ -103,17 +103,6 @@ _create_buffer(struct scaled_buffer *scaled_buffer, double scale)
 	struct lab_img *img = NULL;
 	struct lab_data_buffer *buffer = NULL;
 
-	if (self->icon_name) {
-		/* generic icon (e.g. menu icons) */
-		img = desktop_entry_load_icon(self->icon_name, icon_size,
-			scale);
-		if (img) {
-			wlr_log(WLR_DEBUG, "loaded icon by icon name");
-			return img_to_buffer(img, self->width, self->height, scale);
-		}
-		return NULL;
-	}
-
 	/* window icon */
 	buffer = load_client_icon(self, icon_size, scale);
 	if (buffer) {
@@ -166,7 +155,6 @@ _destroy(struct scaled_buffer *scaled_buffer)
 	free(self->view_app_id);
 	free(self->view_icon_name);
 	set_icon_buffers(self, NULL);
-	free(self->icon_name);
 	free(self);
 }
 
@@ -189,7 +177,6 @@ _equal(struct scaled_buffer *scaled_buffer_a,
 	return str_equal(a->view_app_id, b->view_app_id)
 		&& str_equal(a->view_icon_name, b->view_icon_name)
 		&& icon_buffers_equal(&a->view_icon_buffers, &b->view_icon_buffers)
-		&& str_equal(a->icon_name, b->icon_name)
 		&& a->width == b->width
 		&& a->height == b->height;
 }
@@ -296,16 +283,4 @@ scaled_icon_buffer_set_view(struct scaled_icon_buffer *self, struct view *view)
 
 	handle_view_set_icon(&self->on_view.set_icon, NULL);
 	handle_view_new_app_id(&self->on_view.new_app_id, NULL);
-}
-
-void
-scaled_icon_buffer_set_icon_name(struct scaled_icon_buffer *self,
-	const char *icon_name)
-{
-	assert(icon_name);
-	if (str_equal(self->icon_name, icon_name)) {
-		return;
-	}
-	xstrdup_replace(self->icon_name, icon_name);
-	scaled_buffer_request_update(self->scaled_buffer, self->width, self->height);
 }
