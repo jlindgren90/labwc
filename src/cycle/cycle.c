@@ -12,7 +12,6 @@
 #include "node.h"
 #include "output.h"
 #include "scaled-buffer/scaled-font-buffer.h"
-#include "scaled-buffer/scaled-icon-buffer.h"
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"

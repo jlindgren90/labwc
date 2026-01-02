@@ -4,6 +4,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
+#include "buffer.h"
 #include "common/buf.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
@@ -41,13 +42,17 @@ create_fields_scene(struct server *server, struct view *view,
 		int height = -1;
 
 		if (field->content == LAB_FIELD_ICON) {
-			int icon_size = MIN(field_width,
-				switcher_theme->item_icon_size);
-			struct scaled_icon_buffer *icon_buffer =
-				scaled_icon_buffer_create(parent,
-					server, icon_size, icon_size);
-			scaled_icon_buffer_set_view(icon_buffer, view);
-			node = &icon_buffer->scene_buffer->node;
+			int icon_size =
+				MIN(field_width, theme->window_icon_size);
+			struct wlr_scene_buffer *scene_buffer =
+				wlr_scene_buffer_create(parent, NULL);
+			wlr_scene_buffer_set_dest_size(scene_buffer,
+				icon_size, icon_size);
+			struct lab_data_buffer *buffer =
+				view_get_icon_buffer(view);
+			wlr_scene_buffer_set_buffer(scene_buffer,
+				buffer ? &buffer->base : NULL);
+			node = &scene_buffer->node;
 			height = icon_size;
 		} else {
 			struct buf buf = BUF_INIT;
