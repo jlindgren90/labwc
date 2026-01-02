@@ -73,7 +73,6 @@ struct rcxml {
 	bool reuse_output_mode;
 	bool xwayland_persistence;
 	bool primary_selection;
-	char *prompt_command;
 
 	/* placement */
 	enum lab_placement_policy placement_policy;

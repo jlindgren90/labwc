@@ -28,7 +28,6 @@
 #include "config/mousebind.h"
 #include "cycle.h"
 #include "regions.h"
-#include "ssd.h"
 #include "view.h"
 #include "window-rules.h"
 
@@ -399,83 +398,12 @@ fill_regions(xmlNode *node)
 }
 
 static void
-fill_action_query(struct action *action, xmlNode *node, struct view_query *query)
-{
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "identifier")) {
-			xstrdup_replace(query->identifier, content);
-		} else if (!strcasecmp(key, "title")) {
-			xstrdup_replace(query->title, content);
-		} else if (!strcmp(key, "type")) {
-			query->window_type = parse_window_type(content);
-		} else if (!strcasecmp(key, "sandboxEngine")) {
-			xstrdup_replace(query->sandbox_engine, content);
-		} else if (!strcasecmp(key, "sandboxAppId")) {
-			xstrdup_replace(query->sandbox_app_id, content);
-		} else if (!strcasecmp(key, "shaded")) {
-			query->shaded = parse_tristate(content);
-		} else if (!strcasecmp(key, "maximized")) {
-			query->maximized = view_axis_parse(content);
-		} else if (!strcasecmp(key, "iconified")) {
-			query->iconified = parse_tristate(content);
-		} else if (!strcasecmp(key, "focused")) {
-			query->focused = parse_tristate(content);
-		} else if (!strcasecmp(key, "tiled")) {
-			query->tiled = lab_edge_parse(content,
-				/*tiled*/ true, /*any*/ true);
-		} else if (!strcasecmp(key, "tiled_region")) {
-			xstrdup_replace(query->tiled_region, content);
-		} else if (!strcasecmp(key, "decoration")) {
-			query->decoration = ssd_mode_parse(content);
-		} else if (!strcasecmp(key, "monitor")) {
-			xstrdup_replace(query->monitor, content);
-		}
-	}
-}
-
-static void
 parse_action_args(xmlNode *node, struct action *action)
 {
 	xmlNode *child;
 	char *key, *content;
 	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "query")) {
-			struct wl_list *querylist =
-				action_get_querylist(action, "query");
-			if (!querylist) {
-				action_arg_add_querylist(action, "query");
-				querylist = action_get_querylist(action, "query");
-			}
-			struct view_query *query = view_query_create();
-			fill_action_query(action, child, query);
-			wl_list_append(querylist, &query->link);
-		} else if (!strcasecmp(key, "then")) {
-			struct wl_list *actions =
-				action_get_actionlist(action, "then");
-			if (!actions) {
-				action_arg_add_actionlist(action, "then");
-				actions = action_get_actionlist(action, "then");
-			}
-			append_parsed_actions(child, actions);
-		} else if (!strcasecmp(key, "else")) {
-			struct wl_list *actions =
-				action_get_actionlist(action, "else");
-			if (!actions) {
-				action_arg_add_actionlist(action, "else");
-				actions = action_get_actionlist(action, "else");
-			}
-			append_parsed_actions(child, actions);
-		} else if (!strcasecmp(key, "none")) {
-			struct wl_list *actions =
-				action_get_actionlist(action, "none");
-			if (!actions) {
-				action_arg_add_actionlist(action, "none");
-				actions = action_get_actionlist(action, "none");
-			}
-			append_parsed_actions(child, actions);
-		} else if (!strcasecmp(key, "name")) {
+		if (!strcasecmp(key, "name")) {
 			/* Ignore <action name=""> */
 		} else if (lab_xml_node_is_leaf(child)) {
 			/* Handle normal action args */
@@ -1039,9 +967,6 @@ entry(xmlNode *node, char *nodename, char *content)
 	} else if (!strcasecmp(nodename, "primarySelection.core")) {
 		set_bool(content, &rc.primary_selection);
 
-	} else if (!strcasecmp(nodename, "promptCommand.core")) {
-		xstrdup_replace(rc.prompt_command, content);
-
 	} else if (!strcmp(nodename, "policy.placement")) {
 		enum lab_placement_policy policy = view_placement_parse(content);
 		if (policy != LAB_PLACE_INVALID) {
@@ -1580,24 +1505,6 @@ post_processing(void)
 		load_default_mouse_bindings();
 	}
 
-	if (!rc.prompt_command) {
-		rc.prompt_command =
-			xstrdup("labnag "
-				"--message '%m' "
-				"--button-dismiss '%n' "
-				"--button-dismiss '%y' "
-				"--background-color '%b' "
-				"--text-color '%t' "
-				"--button-border-color '%t' "
-				"--border-bottom-color '%t' "
-				"--button-background-color '%b' "
-				"--button-text-color '%t' "
-				"--border-bottom-size 1 "
-				"--button-border-size 3 "
-				"--keyboard-focus on-demand "
-				"--layer overlay "
-				"--timeout 0");
-	}
 	if (!rc.fallback_app_icon_name) {
 		rc.fallback_app_icon_name = xstrdup("labwc");
 	}
@@ -1825,7 +1732,6 @@ rcxml_finish(void)
 	zfree(rc.font_menuheader.name);
 	zfree(rc.font_menuitem.name);
 	zfree(rc.font_osd.name);
-	zfree(rc.prompt_command);
 	zfree(rc.theme_name);
 	zfree(rc.icon_theme_name);
 	zfree(rc.fallback_app_icon_name);
