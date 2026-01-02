@@ -81,7 +81,6 @@ struct rcxml {
 	uint32_t allowed_interfaces;
 	bool xwayland_persistence;
 	bool primary_selection;
-	char *prompt_command;
 
 	/* placement */
 	enum lab_placement_policy placement_policy;
