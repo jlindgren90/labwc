@@ -174,7 +174,6 @@ struct view {
 	bool fullscreen;
 	enum lab_edge tiled;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
-	xkb_layout_index_t keyboard_layout;
 
 	/*
 	 * Geometry of the wlr_surface contained within the view, as
