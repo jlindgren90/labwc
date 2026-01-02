@@ -35,8 +35,6 @@
 #define PIPEMENU_MAX_BUF_SIZE 1048576  /* 1 MiB */
 #define PIPEMENU_TIMEOUT_IN_MS 4000    /* 4 seconds */
 
-#define ICON_SIZE (g_theme.menu_item_height - 2 * g_theme.menu_items_padding_y)
-
 static bool waiting_for_pipe_menu;
 static struct menuitem *selected_item;
 
@@ -129,7 +127,7 @@ validate(void)
 }
 
 static struct menuitem *
-item_create(struct menu *menu, const char *text, const char *icon_name, bool show_arrow)
+item_create(struct menu *menu, const char *text, bool show_arrow)
 {
 	assert(menu);
 	assert(text);
@@ -140,13 +138,6 @@ item_create(struct menu *menu, const char *text, const char *icon_name, bool sho
 	menuitem->type = LAB_MENU_ITEM;
 	menuitem->text = xstrdup(text);
 	menuitem->arrow = show_arrow ? "›" : NULL;
-
-#if HAVE_LIBSFDO
-	if (rc.menu_show_icons && !string_null_or_empty(icon_name)) {
-		menuitem->icon_name = xstrdup(icon_name);
-		menu->has_icons = true;
-	}
-#endif
 
 	menuitem->native_width = font_width(&rc.font_menuitem, text);
 	if (menuitem->arrow) {
@@ -168,17 +159,11 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	/* Tree to hold background and label buffers */
 	struct wlr_scene_tree *tree = wlr_scene_tree_create(item->tree);
 
-	int icon_width = 0;
-	int icon_size = ICON_SIZE;
-	if (item->parent->has_icons) {
-		icon_width = g_theme.menu_items_padding_x + icon_size;
-	}
-
 	int bg_width = menu->size.width - 2 * g_theme.menu_border_width;
 	int arrow_width = item->arrow ?
 		font_width(&rc.font_menuitem, item->arrow) + g_theme.menu_items_padding_x : 0;
-	int label_max_width = bg_width - 2 * g_theme.menu_items_padding_x
-		- arrow_width - icon_width;
+	int label_max_width =
+		bg_width - 2 * g_theme.menu_items_padding_x - arrow_width;
 
 	if (label_max_width <= 0) {
 		wlr_log(WLR_ERROR, "not enough space for menu contents");
@@ -188,25 +173,13 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	/* Create background */
 	wlr_scene_rect_create(tree, bg_width, g_theme.menu_item_height, bg_color);
 
-	/* Create icon */
-	if (item->icon_name) {
-		struct scaled_icon_buffer *icon_buffer = scaled_icon_buffer_create(
-			tree, icon_size, icon_size);
-		if (item->icon_name) {
-			/* icon set via <menu icon="..."> */
-			scaled_icon_buffer_set_icon_name(icon_buffer, item->icon_name);
-		}
-		wlr_scene_node_set_position(&icon_buffer->scene_buffer->node,
-			g_theme.menu_items_padding_x, g_theme.menu_items_padding_y);
-	}
-
 	/* Create label */
 	struct scaled_font_buffer *label_buffer = scaled_font_buffer_create(tree);
 	assert(label_buffer);
 	scaled_font_buffer_update(label_buffer, item->text, label_max_width,
 		&rc.font_menuitem, text_color, bg_color);
 	/* Vertically center and left-align label */
-	int x = g_theme.menu_items_padding_x + icon_width;
+	int x = g_theme.menu_items_padding_x;
 	int y = (g_theme.menu_item_height - label_buffer->height) / 2;
 	wlr_scene_node_set_position(&label_buffer->scene_buffer->node, x, y);
 
@@ -414,9 +387,6 @@ menu_create_scene(struct menu *menu)
 		menu->size.width = MAX(menu->size.width, width);
 	}
 
-	if (menu->has_icons) {
-		menu->size.width += g_theme.menu_items_padding_x + ICON_SIZE;
-	}
 	menu->size.width = MAX(menu->size.width, g_theme.menu_min_width);
 	menu->size.width = MIN(menu->size.width, g_theme.menu_max_width);
 
@@ -462,19 +432,17 @@ static void
 fill_item(struct menu *menu, xmlNode *node)
 {
 	char *label = (char *)xmlGetProp(node, (xmlChar *)"label");
-	char *icon_name = (char *)xmlGetProp(node, (xmlChar *)"icon");
 	if (!label) {
 		wlr_log(WLR_ERROR, "missing label in <item>");
 		goto out;
 	}
 
-	struct menuitem *item = item_create(menu, label, icon_name, false);
+	struct menuitem *item = item_create(menu, label, false);
 	lab_xml_expand_dotted_attributes(node);
 	append_parsed_actions(node, &item->actions);
 
 out:
 	xmlFree(label);
-	xmlFree(icon_name);
 }
 
 static void
@@ -486,7 +454,6 @@ item_destroy(struct menuitem *item)
 		wlr_scene_node_destroy(&item->tree->node);
 	}
 	free(item->text);
-	free(item->icon_name);
 	free(item);
 }
 
@@ -505,7 +472,6 @@ static void
 fill_menu(struct menu *parent, xmlNode *n)
 {
 	char *label = (char *)xmlGetProp(n, (const xmlChar *)"label");
-	char *icon_name = (char *)xmlGetProp(n, (const xmlChar *)"icon");
 	char *execute = (char *)xmlGetProp(n, (const xmlChar *)"execute");
 	char *id = (char *)xmlGetProp(n, (const xmlChar *)"id");
 
@@ -530,7 +496,7 @@ fill_menu(struct menu *parent, xmlNode *n)
 			 */
 		} else {
 			struct menuitem *item = item_create(parent, label,
-				icon_name, /* arrow */ true);
+				/* arrow */ true);
 			item->submenu = pipemenu;
 		}
 	} else if ((label && parent) || !parent) {
@@ -555,16 +521,13 @@ fill_menu(struct menu *parent, xmlNode *n)
 		 * and "client-menu".
 		 */
 		struct menu *menu = menu_create(parent, id, label);
-		if (icon_name) {
-			menu->icon_name = xstrdup(icon_name);
-		}
 		if (label && parent) {
 			/*
 			 * In a nested (inline) menu definition we need to
 			 * create an item pointing to the new submenu
 			 */
-			struct menuitem *item = item_create(parent, label,
-				icon_name, true);
+			struct menuitem *item =
+				item_create(parent, label, true);
 			item->submenu = menu;
 		}
 		fill_menu_children(menu, n);
@@ -600,13 +563,11 @@ fill_menu(struct menu *parent, xmlNode *n)
 			iter = iter->parent;
 		}
 
-		struct menuitem *item = item_create(parent, menu->label,
-			icon_name ? icon_name : menu->icon_name, true);
+		struct menuitem *item = item_create(parent, menu->label, true);
 		item->submenu = menu;
 	}
 error:
 	xmlFree(label);
-	xmlFree(icon_name);
 	xmlFree(execute);
 	xmlFree(id);
 }
@@ -777,15 +738,15 @@ init_rootmenu(void)
 	if (!menu) {
 		menu = menu_create(NULL, "root-menu", "");
 
-		item = item_create(menu, _("Terminal"), NULL, false);
+		item = item_create(menu, _("Terminal"), false);
 		struct action *action = item_add_action(item, "Execute");
 		action_arg_add_str(action, "command", "lab-sensible-terminal");
 
 		separator_create(menu, NULL);
 
-		item = item_create(menu, _("Reconfigure"), NULL, false);
+		item = item_create(menu, _("Reconfigure"), false);
 		item_add_action(item, "Reconfigure");
-		item = item_create(menu, _("Exit"), NULL, false);
+		item = item_create(menu, _("Exit"), false);
 		item_add_action(item, "Exit");
 	}
 }
@@ -799,16 +760,16 @@ init_windowmenu(void)
 	/* Default menu if no menu.xml found */
 	if (!menu) {
 		menu = menu_create(NULL, "client-menu", "");
-		item = item_create(menu, _("Minimize"), NULL, false);
+		item = item_create(menu, _("Minimize"), false);
 		item_add_action(item, "Iconify");
-		item = item_create(menu, _("Maximize"), NULL, false);
+		item = item_create(menu, _("Maximize"), false);
 		item_add_action(item, "ToggleMaximize");
-		item = item_create(menu, _("Fullscreen"), NULL, false);
+		item = item_create(menu, _("Fullscreen"), false);
 		item_add_action(item, "ToggleFullscreen");
-		item = item_create(menu, _("Always on Top"), NULL, false);
+		item = item_create(menu, _("Always on Top"), false);
 		item_add_action(item, "ToggleAlwaysOnTop");
 
-		item = item_create(menu, _("Close"), NULL, false);
+		item = item_create(menu, _("Close"), false);
 		item_add_action(item, "Close");
 	}
 }
@@ -883,7 +844,6 @@ menu_free(struct menu *menu)
 	wl_list_remove(&menu->link);
 	zfree(menu->id);
 	zfree(menu->label);
-	zfree(menu->icon_name);
 	zfree(menu->execute);
 	zfree(menu);
 }

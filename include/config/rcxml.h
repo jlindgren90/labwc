@@ -59,7 +59,6 @@ struct rcxml {
 
 	/* Menu */
 	unsigned int menu_ignore_button_release_period;
-	bool menu_show_icons;
 };
 
 extern struct rcxml rc;
