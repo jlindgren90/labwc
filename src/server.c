@@ -77,9 +77,6 @@
 static void
 reload_config_and_theme(struct server *server)
 {
-	/* Avoid UAF when dialog client is used during reconfigure */
-	action_prompts_destroy();
-
 	scaled_buffer_invalidate_sharing();
 	rcxml_finish();
 	rcxml_read(rc.config_file);
@@ -160,11 +157,6 @@ handle_sigchld(int signal, void *data)
 	const char *signame;
 	switch (info.si_code) {
 	case CLD_EXITED:
-		if (!action_check_prompt_result(info.si_pid, info.si_status)) {
-			wlr_log(info.si_status == 0 ? WLR_DEBUG : WLR_ERROR,
-				"spawned child %ld exited with %d",
-				(long)info.si_pid, info.si_status);
-		}
 		break;
 	case CLD_KILLED:
 	case CLD_DUMPED:
@@ -173,8 +165,6 @@ handle_sigchld(int signal, void *data)
 			"spawned child %ld terminated with signal %d (%s)",
 				(long)info.si_pid, info.si_status,
 				signame ? signame : "unknown");
-		/* Allow cleanup of killed prompt */
-		action_check_prompt_result(info.si_pid, -info.si_status);
 		break;
 	default:
 		wlr_log(WLR_ERROR,
