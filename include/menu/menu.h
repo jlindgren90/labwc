@@ -21,7 +21,6 @@ enum menuitem_type {
 struct menuitem {
 	struct wl_list actions;
 	char *text;
-	char *icon_name;
 	const char *arrow;
 	uint32_t accelerator;
 	struct menu *parent;
@@ -40,7 +39,6 @@ struct menuitem {
 struct menu {
 	char *id;
 	char *label;
-	char *icon_name;
 	char *execute;
 	struct menu *parent;
 	struct menu_pipe_context *pipe_ctx;
@@ -57,7 +55,6 @@ struct menu {
 	struct wlr_scene_tree *scene_tree;
 	bool is_pipemenu_child;
 	bool align_left;
-	bool has_icons;
 
 	/* Used to match a window-menu to the view that triggered it. */
 	struct view *triggered_by_view;  /* may be NULL */
