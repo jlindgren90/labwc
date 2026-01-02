@@ -1,9 +1,0 @@
-/* SPDX-License-Identifier: GPL-2.0-only */
-#ifndef LABWC_ACTION_PROMPT_CODES_H
-#define LABWC_ACTION_PROMPT_CODES_H
-
-#define LAB_EXIT_FAILURE 255
-#define LAB_EXIT_CANCELLED 254
-#define LAB_EXIT_SUCCESS 0
-
-#endif /* LABWC_ACTION_PROMPT_CODES_H */
