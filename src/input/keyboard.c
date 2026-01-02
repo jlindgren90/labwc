@@ -706,30 +706,6 @@ keyboard_update_layout(struct seat *seat, xkb_layout_index_t layout)
 		kb->modifiers.latched, kb->modifiers.locked, layout);
 }
 
-static void
-reset_window_keyboard_layout_groups(struct server *server)
-{
-	if (!rc.kb_layout_per_window) {
-		return;
-	}
-
-	/*
-	 * Technically it would be possible to reconcile previous group indices
-	 * to new group ones if particular layouts exist in both old and new,
-	 * but let's keep it simple for now and just reset them all.
-	 */
-	struct view *view;
-	for_each_view(view, &server->views, LAB_VIEW_CRITERIA_NONE) {
-		view->keyboard_layout = 0;
-	}
-
-	struct view *active_view = server->active_view;
-	if (!active_view) {
-		return;
-	}
-	keyboard_update_layout(&server->seat, active_view->keyboard_layout);
-}
-
 /*
  * Set layout based on environment variables XKB_DEFAULT_LAYOUT,
  * XKB_DEFAULT_OPTIONS, and friends.
@@ -754,7 +730,6 @@ set_layout(struct server *server, struct wlr_keyboard *kb)
 	if (keymap && !layout_empty) {
 		if (!wlr_keyboard_keymaps_match(kb->keymap, keymap)) {
 			wlr_keyboard_set_keymap(kb, keymap);
-			reset_window_keyboard_layout_groups(server);
 		}
 		xkb_keymap_unref(keymap);
 	} else {

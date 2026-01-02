@@ -95,7 +95,6 @@ struct rcxml {
 	int repeat_rate;
 	int repeat_delay;
 	enum lab_tristate kb_numlock_enable;
-	bool kb_layout_per_window;
 	struct wl_list keybinds;   /* struct keybind.link */
 
 	/* mouse */
