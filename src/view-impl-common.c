@@ -8,7 +8,6 @@
 void
 view_impl_map(struct view *view)
 {
-	view_set_mapped(view->id);
 	view_update_visibility(view);
 
 	/*
@@ -16,7 +15,7 @@ view_impl_map(struct view *view)
 	 * (popups, floating toolbars, etc.) as these should not be
 	 * shown in taskbars/docks/etc.
 	 */
-	if (!view->foreign_toplevel && view_is_focusable(view)) {
+	if (!view->foreign_toplevel && view->st->focusable) {
 		view->foreign_toplevel = foreign_toplevel_create(view);
 
 		struct view *parent = view->impl->get_parent(view);

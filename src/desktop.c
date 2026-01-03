@@ -46,17 +46,17 @@ static void
 set_or_offer_focus(struct view *view)
 {
 	struct seat *seat = &view->server->seat;
-	switch (view_wants_focus(view)) {
-	case VIEW_WANTS_FOCUS_ALWAYS:
+	switch (view->st->focus_mode) {
+	case VIEW_FOCUS_MODE_ALWAYS:
 		if (view->surface != seat->seat->keyboard_state.focused_surface) {
 			seat_focus_surface(seat, view->surface);
 		}
 		break;
-	case VIEW_WANTS_FOCUS_LIKELY:
-	case VIEW_WANTS_FOCUS_UNLIKELY:
-		view_offer_focus(view);
+	case VIEW_FOCUS_MODE_LIKELY:
+	case VIEW_FOCUS_MODE_UNLIKELY:
+		view_offer_focus(view->id);
 		break;
-	case VIEW_WANTS_FOCUS_NEVER:
+	case VIEW_FOCUS_MODE_NEVER:
 		break;
 	}
 }
@@ -136,7 +136,7 @@ desktop_topmost_focusable_view(struct server *server)
 			continue;
 		}
 		view = node_view_from_node(node);
-		if (view_is_focusable(view) && !view->st->minimized) {
+		if (view->st->focusable && !view->st->minimized) {
 			return view;
 		}
 	}
@@ -174,7 +174,7 @@ desktop_focus_output(struct output *output)
 			continue;
 		}
 		view = node_view_from_node(node);
-		if (!view_is_focusable(view)) {
+		if (!view->st->focusable) {
 			continue;
 		}
 		if (wlr_output_layout_intersects(layout,

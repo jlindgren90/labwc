@@ -16,6 +16,7 @@ void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 
 void xwayland_view_maximize(CView *view, /*enum view_axis*/ int maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);
+void xwayland_view_offer_focus(CView *view);
 void xwayland_view_set_activated(CView *view, _Bool activated);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 

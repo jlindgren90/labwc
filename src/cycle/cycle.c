@@ -338,9 +338,7 @@ update_cycle(struct server *server)
 
 	/* Outline current window */
 	if (rc.window_switcher.outlines) {
-		if (view_is_focusable(server->cycle.selected_view)) {
-			update_preview_outlines(server->cycle.selected_view);
-		}
+		update_preview_outlines(cycle->selected_view);
 	}
 }
 

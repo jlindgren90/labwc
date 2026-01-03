@@ -813,6 +813,7 @@ handle_map(struct wl_listener *listener, void *data)
 		view_moved(view);
 	}
 
+	view_set_mapped(view->id, VIEW_FOCUS_MODE_ALWAYS);
 	view_impl_map(view);
 }
 
