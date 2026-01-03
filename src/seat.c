@@ -675,10 +675,6 @@ seat_finish(void)
 		input_device_destroy(&input->destroy, NULL);
 	}
 
-	if (g_seat.workspace_osd_timer) {
-		wl_event_source_remove(g_seat.workspace_osd_timer);
-		g_seat.workspace_osd_timer = NULL;
-	}
 	overlay_finish();
 
 	input_handlers_finish();

@@ -19,7 +19,6 @@
 #include "scaled-buffer/scaled-icon-buffer.h"
 #include "theme.h"
 #include "view.h"
-#include "workspaces.h"
 
 struct cycle_osd_classic_item {
 	struct cycle_osd_item base;
@@ -83,8 +82,6 @@ cycle_osd_classic_create(struct output *output)
 	struct window_switcher_classic_theme *switcher_theme =
 		&g_theme.osd_window_switcher_classic;
 	int padding = g_theme.osd_border_width + switcher_theme->padding;
-	bool show_workspace = wl_list_length(&rc.workspace_config.workspaces) > 1;
-	const char *workspace_name = g_server.workspaces.current->name;
 	int nr_views = wl_list_length(&g_server.cycle.views);
 
 	struct wlr_box output_box;
@@ -96,10 +93,6 @@ cycle_osd_classic_create(struct output *output)
 		w = output_box.width * switcher_theme->width / 100;
 	}
 	int h = nr_views * switcher_theme->item_height + 2 * padding;
-	if (show_workspace) {
-		/* workspace indicator */
-		h += switcher_theme->item_height;
-	}
 
 	output->cycle_osd.tree = wlr_scene_tree_create(output->cycle_osd_tree);
 
@@ -118,29 +111,6 @@ cycle_osd_classic_create(struct output *output)
 	lab_scene_rect_create(output->cycle_osd.tree, &bg_opts);
 
 	int y = padding;
-
-	/* Draw workspace indicator */
-	if (show_workspace) {
-		struct font font = rc.font_osd;
-		font.weight = PANGO_WEIGHT_BOLD;
-
-		/* Center workspace indicator on the x axis */
-		int x = (w - font_width(&font, workspace_name)) / 2;
-		if (x < 0) {
-			wlr_log(WLR_ERROR,
-				"not enough space for workspace name in osd");
-			goto error;
-		}
-
-		struct scaled_font_buffer *font_buffer =
-			scaled_font_buffer_create(output->cycle_osd.tree);
-		wlr_scene_node_set_position(&font_buffer->scene_buffer->node,
-			x, y + (switcher_theme->item_height - font_height(&font)) / 2);
-		scaled_font_buffer_update(font_buffer, workspace_name, 0,
-			&font, text_color, bg_color);
-		y += switcher_theme->item_height;
-	}
-
 	int nr_fields = wl_list_length(&rc.window_switcher.fields);
 
 	/* This is the width of the area available for text fields */

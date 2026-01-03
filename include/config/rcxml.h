@@ -162,13 +162,6 @@ struct rcxml {
 	int resize_corner_range;
 	int resize_minimum_area;
 
-	struct {
-		int popuptime;
-		int min_nr_workspaces;
-		char *prefix;
-		struct wl_list workspaces;  /* struct workspace.link */
-	} workspace_config;
-
 	/* Regions */
 	struct wl_list regions;  /* struct region.link */
 

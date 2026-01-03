@@ -130,10 +130,6 @@ ssd_titlebar_create(struct ssd *ssd)
 	if (view->shaded) {
 		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, true);
 	}
-
-	if (view->visible_on_all_workspaces) {
-		set_alt_button_icon(ssd, LAB_NODE_BUTTON_OMNIPRESENT, true);
-	}
 }
 
 static void
@@ -292,12 +288,6 @@ ssd_titlebar_update(struct ssd *ssd)
 	if (ssd->state.was_shaded != view->shaded) {
 		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, view->shaded);
 		ssd->state.was_shaded = view->shaded;
-	}
-
-	if (ssd->state.was_omnipresent != view->visible_on_all_workspaces) {
-		set_alt_button_icon(ssd, LAB_NODE_BUTTON_OMNIPRESENT,
-			view->visible_on_all_workspaces);
-		ssd->state.was_omnipresent = view->visible_on_all_workspaces;
 	}
 
 	if (width == ssd->state.geometry.width) {

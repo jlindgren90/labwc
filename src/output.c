@@ -31,8 +31,6 @@
 #include "node.h"
 #include "output-state.h"
 #include "output-virtual.h"
-#include "protocols/cosmic-workspaces.h"
-#include "protocols/ext-workspace.h"
 #include "regions.h"
 #include "session-lock.h"
 #include "view.h"
@@ -274,11 +272,6 @@ add_output_to_layout(struct output *output)
 		wlr_scene_output_layout_add_output(g_server.scene_layout,
 			layout_output, output->scene_output);
 	}
-
-	lab_cosmic_workspace_group_output_enter(
-		g_server.workspaces.cosmic_group, output->wlr_output);
-	lab_ext_workspace_group_output_enter(g_server.workspaces.ext_group,
-		output->wlr_output);
 
 	/* (Re-)create regions from config */
 	regions_reconfigure_output(output);
@@ -722,13 +715,6 @@ output_config_apply(struct wlr_output_configuration_v1 *config)
 			}
 		} else if (was_in_layout) {
 			regions_evacuate_output(output);
-
-			lab_cosmic_workspace_group_output_leave(
-				g_server.workspaces.cosmic_group,
-				output->wlr_output);
-			lab_ext_workspace_group_output_leave(
-				g_server.workspaces.ext_group,
-				output->wlr_output);
 
 			/*
 			 * At time of writing, wlr_output_layout_remove()

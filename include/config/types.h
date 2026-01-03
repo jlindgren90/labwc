@@ -62,12 +62,6 @@ enum lab_view_criteria {
 	/* No filter -> all focusable views */
 	LAB_VIEW_CRITERIA_NONE = 0,
 
-	/*
-	 * Includes always-on-top views, e.g.
-	 * what is visible on the current workspace
-	 */
-	LAB_VIEW_CRITERIA_CURRENT_WORKSPACE       = 1 << 0,
-
 	/* Positive criteria */
 	LAB_VIEW_CRITERIA_FULLSCREEN              = 1 << 1,
 	LAB_VIEW_CRITERIA_ALWAYS_ON_TOP           = 1 << 2,
@@ -76,7 +70,6 @@ enum lab_view_criteria {
 	/* Negative criteria */
 	LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP        = 1 << 6,
 	LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER = 1 << 7,
-	LAB_VIEW_CRITERIA_NO_OMNIPRESENT          = 1 << 8,
 };
 
 /*
