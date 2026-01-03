@@ -705,11 +705,6 @@ xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
 static void
 xdg_toplevel_view_notify_tiled(struct view *view)
 {
-	/* Take no action if xdg-shell tiling is disabled */
-	if (rc.snap_tiling_events_mode == LAB_TILING_EVENTS_NEVER) {
-		return;
-	}
-
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented tiling notification for a non-intialized view");
 		return;
@@ -717,42 +712,32 @@ xdg_toplevel_view_notify_tiled(struct view *view)
 
 	enum lab_edge edge = LAB_EDGE_NONE;
 
-	bool want_edge = rc.snap_tiling_events_mode & LAB_TILING_EVENTS_EDGE;
-	bool want_region = rc.snap_tiling_events_mode & LAB_TILING_EVENTS_REGION;
-
 	/*
 	 * Edge-snapped view are considered tiled on the snapped edge and those
 	 * perpendicular to it.
 	 */
-	if (want_edge) {
-		switch (view->tiled) {
-		case LAB_EDGE_LEFT:
-			edge = LAB_EDGES_EXCEPT_RIGHT;
-			break;
-		case LAB_EDGE_RIGHT:
-			edge = LAB_EDGES_EXCEPT_LEFT;
-			break;
-		case LAB_EDGE_TOP:
-			edge = LAB_EDGES_EXCEPT_BOTTOM;
-			break;
-		case LAB_EDGE_BOTTOM:
-			edge = LAB_EDGES_EXCEPT_TOP;
-			break;
-		case LAB_EDGES_TOP_LEFT:
-		case LAB_EDGES_TOP_RIGHT:
-		case LAB_EDGES_BOTTOM_LEFT:
-		case LAB_EDGES_BOTTOM_RIGHT:
-			edge = view->tiled;
-			break;
-		/* TODO: LAB_EDGE_CENTER? */
-		default:
-			edge = LAB_EDGE_NONE;
-		}
-	}
-
-	if (want_region && view->tiled_region) {
-		/* Region-snapped views are considered tiled on all edges */
-		edge = LAB_EDGES_ALL;
+	switch (view->tiled) {
+	case LAB_EDGE_LEFT:
+		edge = LAB_EDGES_EXCEPT_RIGHT;
+		break;
+	case LAB_EDGE_RIGHT:
+		edge = LAB_EDGES_EXCEPT_LEFT;
+		break;
+	case LAB_EDGE_TOP:
+		edge = LAB_EDGES_EXCEPT_BOTTOM;
+		break;
+	case LAB_EDGE_BOTTOM:
+		edge = LAB_EDGES_EXCEPT_TOP;
+		break;
+	case LAB_EDGES_TOP_LEFT:
+	case LAB_EDGES_TOP_RIGHT:
+	case LAB_EDGES_BOTTOM_LEFT:
+	case LAB_EDGES_BOTTOM_RIGHT:
+		edge = view->tiled;
+		break;
+	/* TODO: LAB_EDGE_CENTER? */
+	default:
+		edge = LAB_EDGE_NONE;
 	}
 
 	uint32_t serial =

@@ -20,7 +20,6 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "regions.h"
 #include "resize-indicator.h"
 #include "session-lock.h"
 #include "ssd.h"
@@ -791,83 +790,6 @@ view_apply_natural_geometry(struct view *view)
 	view_move_resize(view, geometry);
 }
 
-struct wlr_box
-view_get_region_snap_box(struct view *view, struct region *region)
-{
-	struct wlr_box geo = region->geo;
-
-	/* Adjust for rc.gap */
-	if (rc.gap) {
-		double half_gap = rc.gap / 2.0;
-		struct wlr_fbox offset = {
-			.x = half_gap,
-			.y = half_gap,
-			.width = -rc.gap,
-			.height = -rc.gap
-		};
-		struct wlr_box usable =
-			output_usable_area_in_layout_coords(region->output);
-		if (geo.x == usable.x) {
-			offset.x += half_gap;
-			offset.width -= half_gap;
-		}
-		if (geo.y == usable.y) {
-			offset.y += half_gap;
-			offset.height -= half_gap;
-		}
-		if (geo.x + geo.width == usable.x + usable.width) {
-			offset.width -= half_gap;
-		}
-		if (geo.y + geo.height == usable.y + usable.height) {
-			offset.height -= half_gap;
-		}
-		geo.x += offset.x;
-		geo.y += offset.y;
-		geo.width += offset.width;
-		geo.height += offset.height;
-	}
-
-	/* And adjust for current view */
-	if (view) {
-		struct border margin = ssd_get_margin(view->ssd);
-		geo.x += margin.left;
-		geo.y += margin.top;
-		geo.width -= margin.left + margin.right;
-		geo.height -= margin.top + margin.bottom;
-	}
-
-	return geo;
-}
-
-static void
-view_apply_region_geometry(struct view *view)
-{
-	assert(view);
-	assert(view->tiled_region || view->tiled_region_evacuate);
-	struct output *output = view->output;
-	assert(output_is_usable(output));
-
-	if (view->tiled_region_evacuate) {
-		/* View was evacuated from a destroying output */
-		/* Get new output local region, may be NULL */
-		view->tiled_region = regions_from_name(
-			view->tiled_region_evacuate, output);
-
-		/* Get rid of the evacuate instruction */
-		zfree(view->tiled_region_evacuate);
-
-		if (!view->tiled_region) {
-			/* Existing region name doesn't exist in rc.xml anymore */
-			view_set_untiled(view);
-			view_apply_natural_geometry(view);
-			return;
-		}
-	}
-
-	struct wlr_box geo = view_get_region_snap_box(view, view->tiled_region);
-	view_move_resize(view, geo);
-}
-
 static void
 view_apply_tiled_geometry(struct view *view)
 {
@@ -951,8 +873,6 @@ view_apply_special_geometry(struct view *view)
 		view_apply_maximized_geometry(view);
 	} else if (view->tiled) {
 		view_apply_tiled_geometry(view);
-	} else if (view->tiled_region || view->tiled_region_evacuate) {
-		view_apply_region_geometry(view);
 	} else {
 		assert(false); // not reached
 	}
@@ -989,25 +909,7 @@ bool
 view_is_tiled(struct view *view)
 {
 	assert(view);
-	return (view->tiled || view->tiled_region
-		|| view->tiled_region_evacuate);
-}
-
-bool
-view_is_tiled_and_notify_tiled(struct view *view)
-{
-	switch (rc.snap_tiling_events_mode) {
-	case LAB_TILING_EVENTS_NEVER:
-		return false;
-	case LAB_TILING_EVENTS_REGION:
-		return view->tiled_region || view->tiled_region_evacuate;
-	case LAB_TILING_EVENTS_EDGE:
-		return view->tiled;
-	case LAB_TILING_EVENTS_ALWAYS:
-		return view_is_tiled(view);
-	}
-
-	return false;
+	return view->tiled != LAB_EDGE_NONE;
 }
 
 bool
@@ -1033,8 +935,6 @@ view_set_untiled(struct view *view)
 {
 	assert(view);
 	view->tiled = LAB_EDGE_NONE;
-	view->tiled_region = NULL;
-	zfree(view->tiled_region_evacuate);
 	view_notify_tiled(view);
 }
 
@@ -1480,17 +1380,6 @@ view_adjust_for_layout_change(struct view *view)
 }
 
 void
-view_evacuate_region(struct view *view)
-{
-	assert(view);
-	assert(view->tiled_region);
-	if (!view->tiled_region_evacuate) {
-		view->tiled_region_evacuate = xstrdup(view->tiled_region->name);
-	}
-	view->tiled_region = NULL;
-}
-
-void
 view_on_output_destroy(struct view *view)
 {
 	assert(view);
@@ -1593,39 +1482,6 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 }
 
 void
-view_snap_to_region(struct view *view, struct region *region)
-{
-	assert(view);
-	assert(region);
-
-	if (view->fullscreen) {
-		return;
-	}
-
-	/* view_apply_region_geometry() needs a usable output */
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not snapping to region");
-		return;
-	}
-
-	bool store_natural_geometry = !in_interactive_move(view);
-	view_set_shade(view, false);
-
-	if (view->maximized != VIEW_AXIS_NONE) {
-		/* Unmaximize + keep using existing natural_geometry */
-		view_maximize(view, VIEW_AXIS_NONE);
-	} else if (store_natural_geometry) {
-		/* store current geometry as new natural_geometry */
-		view_store_natural_geometry(view);
-		view_invalidate_last_layout_geometry(view);
-	}
-	view_set_untiled(view);
-	view->tiled_region = region;
-	view_notify_tiled(view);
-	view_apply_region_geometry(view);
-}
-
-void
 view_move_to_output(struct view *view, struct output *output)
 {
 	assert(view);
@@ -1643,9 +1499,6 @@ view_move_to_output(struct view *view, struct output *output)
 		view_apply_maximized_geometry(view);
 	} else if (view->tiled) {
 		view_apply_tiled_geometry(view);
-	} else if (view->tiled_region) {
-		struct region *region = regions_from_name(view->tiled_region->name, output);
-		view_snap_to_region(view, region);
 	}
 }
 
@@ -2016,10 +1869,6 @@ view_destroy(struct view *view)
 
 	if (server->session_lock_manager->last_active_view == view) {
 		server->session_lock_manager->last_active_view = NULL;
-	}
-
-	if (view->tiled_region_evacuate) {
-		zfree(view->tiled_region_evacuate);
 	}
 
 	/* TODO: call this on map/unmap instead */

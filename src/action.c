@@ -24,7 +24,6 @@
 #include "menu/menu.h"
 #include "output.h"
 #include "output-virtual.h"
-#include "regions.h"
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"
@@ -91,8 +90,6 @@ enum action_type {
 	ACTION_TYPE_RESIZETO,
 	ACTION_TYPE_MOVETO_CURSOR,
 	ACTION_TYPE_MOVE_RELATIVE,
-	ACTION_TYPE_TOGGLE_SNAP_TO_REGION,
-	ACTION_TYPE_SNAP_TO_REGION,
 	ACTION_TYPE_UNSNAP,
 	ACTION_TYPE_TOGGLE_KEYBINDS,
 	ACTION_TYPE_FOCUS_OUTPUT,
@@ -148,8 +145,6 @@ const char *action_names[] = {
 	"ResizeTo",
 	"MoveToCursor",
 	"MoveRelative",
-	"ToggleSnapToRegion",
-	"SnapToRegion",
 	"UnSnap",
 	"ToggleKeybinds",
 	"FocusOutput",
@@ -367,13 +362,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 			goto cleanup;
 		}
 		break;
-	case ACTION_TYPE_TOGGLE_SNAP_TO_REGION:
-	case ACTION_TYPE_SNAP_TO_REGION:
-		if (!strcmp(argument, "region")) {
-			action_arg_add_str(action, argument, content);
-			goto cleanup;
-		}
-		break;
 	case ACTION_TYPE_FOCUS_OUTPUT:
 	case ACTION_TYPE_MOVE_TO_OUTPUT:
 		if (!strcmp(argument, "output")) {
@@ -479,10 +467,6 @@ action_is_valid(struct action *action)
 		break;
 	case ACTION_TYPE_SHOW_MENU:
 		arg_name = "menu";
-		break;
-	case ACTION_TYPE_TOGGLE_SNAP_TO_REGION:
-	case ACTION_TYPE_SNAP_TO_REGION:
-		arg_name = "region";
 		break;
 	default:
 		/* No arguments required */
@@ -947,33 +931,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 		}
 		view_constrain_size_to_that_of_usable_area(view);
 		break;
-	case ACTION_TYPE_TOGGLE_SNAP_TO_REGION:
-	case ACTION_TYPE_SNAP_TO_REGION: {
-		if (!view) {
-			break;
-		}
-		struct output *output = view->output;
-		if (!output) {
-			break;
-		}
-		const char *region_name = action_get_str(action, "region", NULL);
-		struct region *region = regions_from_name(region_name, output);
-		if (region) {
-			if (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_REGION
-					&& view->maximized == VIEW_AXIS_NONE
-					&& !view->fullscreen
-					&& view_is_tiled(view)
-					&& view->tiled_region == region) {
-				view_set_untiled(view);
-				view_apply_natural_geometry(view);
-				break;
-			}
-			view_snap_to_region(view, region);
-		} else {
-			wlr_log(WLR_ERROR, "Invalid SnapToRegion id: '%s'", region_name);
-		}
-		break;
-	}
 	case ACTION_TYPE_UNSNAP:
 		if (view && !view->fullscreen && !view_is_floating(view)) {
 			view_maximize(view, VIEW_AXIS_NONE);

@@ -31,7 +31,6 @@
 #include "node.h"
 #include "output-state.h"
 #include "output-virtual.h"
-#include "regions.h"
 #include "session-lock.h"
 #include "view.h"
 #include "xwayland.h"
@@ -165,8 +164,6 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct output *output = wl_container_of(listener, output, destroy);
 	struct seat *seat = &output->server->seat;
-	regions_evacuate_output(output);
-	regions_destroy(seat, &output->regions);
 	if (seat->overlay.active.output == output) {
 		overlay_finish(seat);
 	}
@@ -278,9 +275,6 @@ add_output_to_layout(struct server *server, struct output *output)
 		wlr_scene_output_layout_add_output(server->scene_layout,
 			layout_output, output->scene_output);
 	}
-
-	/* (Re-)create regions from config */
-	regions_reconfigure_output(output);
 
 	/* Create lock surface if needed */
 	if (server->session_lock_manager->locked) {
@@ -534,7 +528,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 	output->request_state.notify = handle_output_request_state;
 	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
 
-	wl_list_init(&output->regions);
 	wl_list_init(&output->cycle_osd.items);
 
 	/*
@@ -720,8 +713,6 @@ output_config_apply(struct server *server,
 					head->state.x, head->state.y);
 			}
 		} else if (was_in_layout) {
-			regions_evacuate_output(output);
-
 			/*
 			 * At time of writing, wlr_output_layout_remove()
 			 * indirectly destroys the wlr_scene_output, but
@@ -1084,7 +1075,6 @@ void
 output_update_usable_area(struct output *output)
 {
 	if (update_usable_area(output)) {
-		regions_update_geometry(output);
 #if HAVE_XWAYLAND
 		xwayland_update_workarea(output->server);
 #endif
@@ -1101,9 +1091,6 @@ output_update_all_usable_areas(struct server *server, bool layout_changed)
 	wl_list_for_each(output, &server->outputs, link) {
 		if (update_usable_area(output)) {
 			usable_area_changed = true;
-			regions_update_geometry(output);
-		} else if (layout_changed) {
-			regions_update_geometry(output);
 		}
 	}
 	if (usable_area_changed || layout_changed) {

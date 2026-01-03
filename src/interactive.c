@@ -5,7 +5,6 @@
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "output.h"
-#include "regions.h"
 #include "resize-indicator.h"
 #include "view.h"
 
@@ -278,21 +277,6 @@ snap_to_edge(struct view *view)
 	return true;
 }
 
-static bool
-snap_to_region(struct view *view)
-{
-	if (!regions_should_snap(view->server)) {
-		return false;
-	}
-
-	struct region *region = regions_from_cursor(view->server);
-	if (region) {
-		view_snap_to_region(view, region);
-		return true;
-	}
-	return false;
-}
-
 void
 interactive_finish(struct view *view)
 {
@@ -301,9 +285,7 @@ interactive_finish(struct view *view)
 	}
 
 	if (view->server->input_mode == LAB_INPUT_STATE_MOVE) {
-		if (!snap_to_region(view)) {
-			snap_to_edge(view);
-		}
+		snap_to_edge(view);
 	}
 
 	interactive_cancel(view);

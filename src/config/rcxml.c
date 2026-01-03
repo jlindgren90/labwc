@@ -27,7 +27,6 @@
 #include "config/libinput.h"
 #include "config/mousebind.h"
 #include "cycle.h"
-#include "regions.h"
 #include "view.h"
 
 /* for backward compatibility of <mouse><scrollFactor> */
@@ -212,55 +211,6 @@ fill_window_switcher_fields(xmlNode *node)
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		if (!strcasecmp(key, "field")) {
 			fill_window_switcher_field(child);
-		}
-	}
-}
-
-static void
-fill_region(xmlNode *node)
-{
-	struct region *region = znew(*region);
-	wl_list_append(&rc.regions, &region->link);
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "name")) {
-			xstrdup_replace(region->name, content);
-		} else if (strstr("xywidtheight", key)
-				&& !strchr(content, '%')) {
-			wlr_log(WLR_ERROR, "Removing invalid region "
-				"'%s': %s='%s' misses a trailing %%",
-				region->name, key, content);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			zfree(region);
-			return;
-		} else if (!strcmp(key, "x")) {
-			region->percentage.x = atoi(content);
-		} else if (!strcmp(key, "y")) {
-			region->percentage.y = atoi(content);
-		} else if (!strcmp(key, "width")) {
-			region->percentage.width = atoi(content);
-		} else if (!strcmp(key, "height")) {
-			region->percentage.height = atoi(content);
-		} else {
-			wlr_log(WLR_ERROR, "Unexpected data in region "
-				"parser: %s=\"%s\"", key, content);
-		}
-	}
-}
-
-static void
-fill_regions(xmlNode *node)
-{
-	/* TODO: make sure <regions> is empty here */
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "region")) {
-			fill_region(child);
 		}
 	}
 }
@@ -788,8 +738,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		fill_mouse_context(node);
 	} else if (!strcasecmp(nodename, "device.libinput")) {
 		fill_libinput_category(node);
-	} else if (!strcasecmp(nodename, "regions")) {
-		fill_regions(node);
 	} else if (!strcasecmp(nodename, "fields.windowSwitcher")) {
 		fill_window_switcher_fields(node);
 	} else if (!strcasecmp(nodename, "font.theme")) {
@@ -915,18 +863,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.snap_overlay_delay_outer = atoi(content);
 	} else if (!strcasecmp(nodename, "topMaximize.snapping")) {
 		set_bool(content, &rc.snap_top_maximize);
-	} else if (!strcasecmp(nodename, "notifyClient.snapping")) {
-		if (!strcasecmp(content, "always")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_ALWAYS;
-		} else if (!strcasecmp(content, "region")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_REGION;
-		} else if (!strcasecmp(content, "edge")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_EDGE;
-		} else if (!strcasecmp(content, "never")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_NEVER;
-		} else {
-			wlr_log(WLR_ERROR, "ignoring invalid value for notifyClient");
-		}
 
 	/*
 	 * <windowSwitcher preview="" outlines="">
@@ -1102,7 +1038,6 @@ rcxml_init(void)
 		wl_list_init(&rc.keybinds);
 		wl_list_init(&rc.mousebinds);
 		wl_list_init(&rc.libinput_categories);
-		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.fields);
 		wl_list_init(&rc.window_rules);
 	}
@@ -1153,7 +1088,6 @@ rcxml_init(void)
 	rc.snap_overlay_delay_inner = 500;
 	rc.snap_overlay_delay_outer = 500;
 	rc.snap_top_maximize = true;
-	rc.snap_tiling_events_mode = LAB_TILING_EVENTS_ALWAYS;
 
 	rc.window_switcher.show = true;
 	rc.window_switcher.style = CYCLE_OSD_STYLE_CLASSIC;
@@ -1456,25 +1390,6 @@ validate_actions(void)
 static void
 validate(void)
 {
-	/* Regions */
-	struct region *region, *region_tmp;
-	wl_list_for_each_safe(region, region_tmp, &rc.regions, link) {
-		struct wlr_box box = region->percentage;
-		bool invalid = !region->name
-			|| box.x < 0 || box.x > 100
-			|| box.y < 0 || box.y > 100
-			|| box.width <= 0 || box.width > 100
-			|| box.height <= 0 || box.height > 100;
-		if (invalid) {
-			wlr_log(WLR_ERROR,
-				"Removing invalid region '%s': %d%% x %d%% @ %d%%,%d%%",
-				region->name, box.width, box.height, box.x, box.y);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			free(region);
-		}
-	}
-
 	validate_actions();
 
 	/* OSD fields */
@@ -1584,8 +1499,6 @@ rcxml_finish(void)
 		zfree(l->name);
 		zfree(l);
 	}
-
-	regions_destroy(NULL, &rc.regions);
 
 	clear_window_switcher_fields();
 

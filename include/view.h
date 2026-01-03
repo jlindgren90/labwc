@@ -184,11 +184,6 @@ struct view {
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 	xkb_layout_index_t keyboard_layout;
 
-	/* Pointer to an output owned struct region, may be NULL */
-	struct region *tiled_region;
-	/* Set to region->name when tiled_region is free'd by a destroying output */
-	char *tiled_region_evacuate;
-
 	/*
 	 * Geometry of the wlr_surface contained within the view, as
 	 * currently displayed. Should be kept in sync with the
@@ -375,7 +370,6 @@ enum view_wants_focus view_wants_focus(struct view *view);
 /* If view is NULL, the size of SSD is not considered */
 struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
 	enum lab_edge edge);
-struct wlr_box view_get_region_snap_box(struct view *view, struct region *region);
 
 /**
  * view_is_focusable() - Check whether or not a view can be focused
@@ -470,7 +464,6 @@ void view_toggle_always_on_top(struct view *view);
 void view_toggle_always_on_bottom(struct view *view);
 
 bool view_is_tiled(struct view *view);
-bool view_is_tiled_and_notify_tiled(struct view *view);
 bool view_is_floating(struct view *view);
 bool view_titlebar_visible(struct view *view);
 void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
@@ -480,7 +473,6 @@ void view_invalidate_last_layout_geometry(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
 void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool combine);
-void view_snap_to_region(struct view *view, struct region *region);
 void view_move_to_output(struct view *view, struct output *output);
 
 void view_move_to_front(struct view *view);
@@ -516,7 +508,6 @@ void view_set_icon(struct view *view, const char *icon_name,
 struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);
 
-void view_evacuate_region(struct view *view);
 void view_on_output_destroy(struct view *view);
 void view_update_visibility(struct view *view);
 

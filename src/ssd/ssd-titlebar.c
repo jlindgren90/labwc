@@ -506,7 +506,6 @@ ssd_should_be_squared(struct ssd *ssd)
 	struct view *view = ssd->view;
 	int corner_width = ssd_get_corner_width();
 
-	return (view_is_tiled_and_notify_tiled(view)
-			|| view->current.width < corner_width * 2)
+	return (view_is_tiled(view) || view->current.width < corner_width * 2)
 		&& view->maximized != VIEW_AXIS_BOTH;
 }

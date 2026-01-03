@@ -36,14 +36,6 @@ enum tearing_mode {
 	LAB_TEARING_FULLSCREEN_FORCED,
 };
 
-enum tiling_events_mode {
-	LAB_TILING_EVENTS_NEVER = 0,
-	LAB_TILING_EVENTS_REGION = 1 << 0,
-	LAB_TILING_EVENTS_EDGE = 1 << 1,
-	LAB_TILING_EVENTS_ALWAYS =
-		(LAB_TILING_EVENTS_REGION | LAB_TILING_EVENTS_EDGE),
-};
-
 struct buf;
 
 struct button_map_entry {
@@ -135,15 +127,11 @@ struct rcxml {
 	int snap_overlay_delay_inner;
 	int snap_overlay_delay_outer;
 	bool snap_top_maximize;
-	enum tiling_events_mode snap_tiling_events_mode;
 
 	enum resize_indicator_mode resize_indicator;
 	bool resize_draw_contents;
 	int resize_corner_range;
 	int resize_minimum_area;
-
-	/* Regions */
-	struct wl_list regions;  /* struct region.link */
 
 	/* Window Switcher */
 	struct {
