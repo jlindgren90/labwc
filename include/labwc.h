@@ -57,8 +57,6 @@ struct seat {
 	/* if set, views cannot receive focus */
 	struct wlr_layer_surface_v1 *focused_layer;
 
-	struct input_method_relay *input_method_relay;
-
 	/**
 	 * Cursor context saved when a mouse button is pressed on a view/surface.
 	 * It is used to send cursor motion events to a surface even though

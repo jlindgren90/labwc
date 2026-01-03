@@ -121,23 +121,6 @@ struct rcxml {
 	long doubleclick_time;     /* in ms */
 	struct wl_list mousebinds; /* struct mousebind.link */
 
-	/* touch tablet */
-	struct wl_list touch_configs;
-
-	/* graphics tablet */
-	struct tablet_config {
-		bool force_mouse_emulation;
-		char *output_name;
-		struct wlr_fbox box;
-		enum lab_rotation rotation;
-		uint16_t button_map_count;
-		struct button_map_entry button_map[BUTTON_MAP_MAX];
-	} tablet;
-	struct tablet_tool_config {
-		enum lab_motion motion;
-		double relative_motion_sensitivity;
-	} tablet_tool;
-
 	/* libinput */
 	struct wl_list libinput_categories;
 

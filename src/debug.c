@@ -6,7 +6,6 @@
 #include "common/lab-scene-rect.h"
 #include "common/scene-helpers.h"
 #include "common/string-helpers.h"
-#include "input/ime.h"
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
@@ -133,11 +132,6 @@ get_special(struct wlr_scene_node *node)
 	if (g_seat.overlay.rect && node == &g_seat.overlay.rect->tree->node) {
 		/* Created on-demand */
 		return "seat->overlay.rect";
-	}
-	if (g_seat.input_method_relay->popup_tree
-			&& node == &g_seat.input_method_relay->popup_tree->node) {
-		/* Created on-demand */
-		return "g_seat.im_relay->popup_tree";
 	}
 	if (g_server.cycle.preview_outline
 			&& node == &g_server.cycle.preview_outline->tree->node) {
