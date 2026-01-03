@@ -751,8 +751,6 @@ handle_map(struct wl_listener *listener, void *data)
 		}
 	}
 
-	wlr_scene_node_set_enabled(&view->content_tree->node, !view->shaded);
-
 	if (!view->been_mapped) {
 		check_natural_geometry(view);
 		set_initial_position(view, xwayland_surface);

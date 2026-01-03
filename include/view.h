@@ -173,7 +173,6 @@ struct view {
 	uint64_t creation_id;
 	enum lab_ssd_mode ssd_mode;
 	enum ssd_preference ssd_preference;
-	bool shaded;
 	bool minimized;
 	enum view_axis maximized;
 	bool fullscreen;
@@ -433,13 +432,6 @@ void view_store_natural_geometry(struct view *view);
 void view_apply_natural_geometry(struct view *view);
 
 /**
- * view_effective_height - effective height of view, with respect to shaded state
- * @view: view for which effective height is desired
- * @use_pending: if false, report current height; otherwise, report pending height
- */
-int view_effective_height(struct view *view, bool use_pending);
-
-/**
  * view_center - center view within some region
  * @view: view to be centered
  * @ref: optional reference region (in layout coordinates) to center
@@ -498,8 +490,6 @@ bool view_has_strut_partial(struct view *view);
 void view_set_title(struct view *view, const char *title);
 void view_set_app_id(struct view *view, const char *app_id);
 void view_reload_ssd(struct view *view);
-
-void view_set_shade(struct view *view, bool shaded);
 
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, const char *icon_name,

@@ -97,9 +97,6 @@ enum action_type {
 	ACTION_TYPE_VIRTUAL_OUTPUT_ADD,
 	ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE,
 	ACTION_TYPE_TOGGLE_TEARING,
-	ACTION_TYPE_SHADE,
-	ACTION_TYPE_UNSHADE,
-	ACTION_TYPE_TOGGLE_SHADE,
 	ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION,
@@ -149,9 +146,6 @@ const char *action_names[] = {
 	"VirtualOutputAdd",
 	"VirtualOutputRemove",
 	"ToggleTearing",
-	"Shade",
-	"Unshade",
-	"ToggleShade",
 	"EnableScrollWheelEmulation",
 	"DisableScrollWheelEmulation",
 	"ToggleScrollWheelEmulation",
@@ -888,7 +882,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 				.width = width ? : view->pending.width,
 				.height = height ? : view->pending.height,
 			};
-			view_set_shade(view, false);
 			view_move_resize(view, box);
 		}
 		break;
@@ -978,21 +971,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 			wlr_log(WLR_ERROR, "force tearing %sabled",
 				view->force_tearing == LAB_STATE_ENABLED
 					? "en" : "dis");
-		}
-		break;
-	case ACTION_TYPE_TOGGLE_SHADE:
-		if (view) {
-			view_set_shade(view, !view->shaded);
-		}
-		break;
-	case ACTION_TYPE_SHADE:
-		if (view) {
-			view_set_shade(view, true);
-		}
-		break;
-	case ACTION_TYPE_UNSHADE:
-		if (view) {
-			view_set_shade(view, false);
 		}
 		break;
 	case ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION:

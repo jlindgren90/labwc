@@ -377,7 +377,6 @@ view_resize_relative(struct view *view, int left, int right, int top, int bottom
 	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
 		return;
 	}
-	view_set_shade(view, false);
 	struct wlr_box newgeo = view->pending;
 	newgeo.x -= left;
 	newgeo.width += left + right;
@@ -706,18 +705,6 @@ view_store_natural_geometry(struct view *view)
 	}
 }
 
-int
-view_effective_height(struct view *view, bool use_pending)
-{
-	assert(view);
-
-	if (view->shaded) {
-		return 0;
-	}
-
-	return use_pending ? view->pending.height : view->current.height;
-}
-
 void
 view_center(struct view *view, const struct wlr_box *ref)
 {
@@ -959,7 +946,6 @@ view_maximize(struct view *view, enum view_axis axis)
 	}
 
 	bool store_natural_geometry = !in_interactive_move(view);
-	view_set_shade(view, false);
 
 	if (axis != VIEW_AXIS_NONE) {
 		/*
@@ -1144,8 +1130,7 @@ view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode)
 {
 	assert(view);
 
-	if (view->shaded || view->fullscreen
-			|| mode == view->ssd_mode) {
+	if (view->fullscreen || mode == view->ssd_mode) {
 		return;
 	}
 
@@ -1179,11 +1164,6 @@ view_toggle_fullscreen(struct view *view)
 static void
 set_fullscreen(struct view *view, bool fullscreen)
 {
-	/* When going fullscreen, unshade the window */
-	if (fullscreen) {
-		view_set_shade(view, false);
-	}
-
 	/* Hide decorations when going fullscreen */
 	if (fullscreen && view->ssd_mode) {
 		undecorate(view);
@@ -1422,7 +1402,6 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	}
 
 	bool store_natural_geometry = !in_interactive_move(view);
-	view_set_shade(view, false);
 
 	if (lab_edge_is_cardinal(edge) && view->maximized == VIEW_AXIS_NONE
 			&& view->tiled != LAB_EDGE_CENTER) {
@@ -1753,38 +1732,6 @@ view_update_visibility(struct view *view)
 	/* Update usable area to account for XWayland "struts" (panels) */
 	if (view_has_strut_partial(view)) {
 		output_update_all_usable_areas(server, false);
-	}
-}
-
-void
-view_set_shade(struct view *view, bool shaded)
-{
-	assert(view);
-
-	if (view->shaded == shaded) {
-		return;
-	}
-
-	/* Views without a title-bar or SSD cannot be shaded */
-	if (shaded && (!view->ssd || !view_titlebar_visible(view))) {
-		return;
-	}
-
-	/* If this window is being resized, cancel the resize when shading */
-	if (shaded && view->server->input_mode == LAB_INPUT_STATE_RESIZE) {
-		interactive_cancel(view);
-	}
-
-	view->shaded = shaded;
-	ssd_enable_shade(view->ssd, view->shaded);
-	/*
-	 * An unmapped view may not have a content tree. When the view
-	 * is mapped again, the new content tree will be hidden by the
-	 * map handler, if the view is still shaded at that point.
-	 */
-	if (view->content_tree) {
-		wlr_scene_node_set_enabled(&view->content_tree->node,
-			!view->shaded);
 	}
 }
 

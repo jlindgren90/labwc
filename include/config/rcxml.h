@@ -138,7 +138,6 @@ struct rcxml {
 		bool show;
 		bool preview;
 		bool outlines;
-		bool unshade;
 		enum lab_view_criteria criteria;
 		struct wl_list fields;  /* struct window_switcher_field.link */
 		enum cycle_osd_output_criteria output_criteria;

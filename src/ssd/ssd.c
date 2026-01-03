@@ -67,14 +67,11 @@ ssd_max_extents(struct view *view)
 	assert(view);
 	struct border border = ssd_thickness(view);
 
-	int eff_width = view->current.width;
-	int eff_height = view_effective_height(view, /* use_pending */ false);
-
 	return (struct wlr_box){
 		.x = view->current.x - border.left,
 		.y = view->current.y - border.top,
-		.width = eff_width + border.left + border.right,
-		.height = eff_height + border.top + border.bottom,
+		.width = view->current.width + border.left + border.right,
+		.height = view->current.height + border.top + border.bottom,
 	};
 }
 
@@ -96,7 +93,6 @@ ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 	}
 
 	struct wlr_box view_box = view->current;
-	view_box.height = view_effective_height(view, /* use_pending */ false);
 
 	if (view_titlebar_visible(view)) {
 		/* If the titlebar is visible, consider it part of the view */
@@ -213,10 +209,8 @@ ssd_update_geometry(struct ssd *ssd)
 	struct wlr_box cached = ssd->state.geometry;
 	struct wlr_box current = view->current;
 
-	int eff_width = current.width;
-	int eff_height = view_effective_height(view, /* use_pending */ false);
-
-	bool update_area = eff_width != cached.width || eff_height != cached.height;
+	bool update_area = current.width != cached.width
+		|| current.height != cached.height;
 	bool update_extents = update_area
 		|| current.x != cached.x || current.y != cached.y;
 
@@ -224,7 +218,6 @@ ssd_update_geometry(struct ssd *ssd)
 	bool squared = ssd_should_be_squared(ssd);
 
 	bool state_changed = ssd->state.was_maximized != maximized
-		|| ssd->state.was_shaded != view->shaded
 		|| ssd->state.was_squared != squared;
 
 	/*
@@ -324,18 +317,6 @@ ssd_set_active(struct ssd *ssd, bool active)
 				active == active_state);
 		}
 	}
-}
-
-void
-ssd_enable_shade(struct ssd *ssd, bool enable)
-{
-	if (!ssd) {
-		return;
-	}
-	ssd_titlebar_update(ssd);
-	ssd_border_update(ssd);
-	wlr_scene_node_set_enabled(&ssd->extents.tree->node, !enable);
-	ssd_shadow_update(ssd);
 }
 
 void

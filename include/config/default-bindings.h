@@ -220,16 +220,6 @@ static struct mouse_combos {
 		.action = "Unfocus",
 	}, {
 		.context = "Titlebar",
-		.button = "Up",
-		.event = "Scroll",
-		.action = "Shade",
-	}, {
-		.context = "Titlebar",
-		.button = "Down",
-		.event = "Scroll",
-		.action = "Unshade",
-	}, {
-		.context = "Titlebar",
 		.button = "Down",
 		.event = "Scroll",
 		.action = "Focus",
@@ -281,11 +271,6 @@ static struct mouse_combos {
 		.button = "Left",
 		.event = "Click",
 		.action = "ToggleMaximize",
-	}, {
-		.context = "Shade",
-		.button = "Left",
-		.event = "Click",
-		.action = "ToggleShade",
 	}, {
 		.context = "Maximize",
 		.button = "Right",

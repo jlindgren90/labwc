@@ -95,8 +95,6 @@ fill_section(const char *content, enum lab_node_type *buttons, int *count,
 			type = LAB_NODE_BUTTON_MAXIMIZE;
 		} else if (!strcmp(identifier, "close")) {
 			type = LAB_NODE_BUTTON_CLOSE;
-		} else if (!strcmp(identifier, "shade")) {
-			type = LAB_NODE_BUTTON_SHADE;
 		} else {
 			wlr_log(WLR_ERROR, "invalid titleLayout identifier '%s'",
 				identifier);
@@ -902,8 +900,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &rc.window_switcher.preview);
 	} else if (!strcasecmp(nodename, "outlines.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.outlines);
-	} else if (!strcasecmp(nodename, "unshade.windowSwitcher")) {
-		set_bool(content, &rc.window_switcher.unshade);
 
 	/* Remove this long term - just a friendly warning for now */
 	} else if (strstr(nodename, "windowswitcher.core")) {
@@ -1074,7 +1070,6 @@ rcxml_init(void)
 	rc.window_switcher.output_criteria = CYCLE_OSD_OUTPUT_ALL;
 	rc.window_switcher.preview = true;
 	rc.window_switcher.outlines = true;
-	rc.window_switcher.unshade = true;
 	rc.window_switcher.criteria = LAB_VIEW_CRITERIA_ROOT_TOPLEVEL;
 	rc.window_switcher.order = WINDOW_SWITCHER_ORDER_FOCUS;
 
