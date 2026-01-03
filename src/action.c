@@ -123,9 +123,6 @@ enum action_type {
 	ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION,
-	ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION,
-	ACTION_TYPE_DISABLE_TABLET_MOUSE_EMULATION,
-	ACTION_TYPE_TOGGLE_TABLET_MOUSE_EMULATION,
 	ACTION_TYPE_TOGGLE_MAGNIFY,
 	ACTION_TYPE_ZOOM_IN,
 	ACTION_TYPE_ZOOM_OUT,
@@ -189,9 +186,6 @@ const char *action_names[] = {
 	"EnableScrollWheelEmulation",
 	"DisableScrollWheelEmulation",
 	"ToggleScrollWheelEmulation",
-	"EnableTabletMouseEmulation",
-	"DisableTabletMouseEmulation",
-	"ToggleTabletMouseEmulation",
 	"ToggleMagnify",
 	"ZoomIn",
 	"ZoomOut",
@@ -1447,15 +1441,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 	case ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION:
 		server->seat.cursor_scroll_wheel_emulation =
 			!server->seat.cursor_scroll_wheel_emulation;
-		break;
-	case ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION:
-		rc.tablet.force_mouse_emulation = true;
-		break;
-	case ACTION_TYPE_DISABLE_TABLET_MOUSE_EMULATION:
-		rc.tablet.force_mouse_emulation = false;
-		break;
-	case ACTION_TYPE_TOGGLE_TABLET_MOUSE_EMULATION:
-		rc.tablet.force_mouse_emulation = !rc.tablet.force_mouse_emulation;
 		break;
 	case ACTION_TYPE_TOGGLE_MAGNIFY:
 		magnifier_toggle(server);
