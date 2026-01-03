@@ -120,9 +120,6 @@ struct action_arg_list {
 	X(ENABLE_SCROLL_WHEEL_EMULATION, "EnableScrollWheelEmulation") \
 	X(DISABLE_SCROLL_WHEEL_EMULATION, "DisableScrollWheelEmulation") \
 	X(TOGGLE_SCROLL_WHEEL_EMULATION, "ToggleScrollWheelEmulation") \
-	X(ENABLE_TABLET_MOUSE_EMULATION, "EnableTabletMouseEmulation") \
-	X(DISABLE_TABLET_MOUSE_EMULATION, "DisableTabletMouseEmulation") \
-	X(TOGGLE_TABLET_MOUSE_EMULATION, "ToggleTabletMouseEmulation") \
 	X(TOGGLE_MAGNIFY, "ToggleMagnify") \
 	X(ZOOM_IN, "ZoomIn") \
 	X(ZOOM_OUT, "ZoomOut") \
@@ -1448,15 +1445,6 @@ run_action(struct view *view, struct action *action,
 	case ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION:
 		g_seat.cursor_scroll_wheel_emulation =
 			!g_seat.cursor_scroll_wheel_emulation;
-		break;
-	case ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION:
-		rc.tablet.force_mouse_emulation = true;
-		break;
-	case ACTION_TYPE_DISABLE_TABLET_MOUSE_EMULATION:
-		rc.tablet.force_mouse_emulation = false;
-		break;
-	case ACTION_TYPE_TOGGLE_TABLET_MOUSE_EMULATION:
-		rc.tablet.force_mouse_emulation = !rc.tablet.force_mouse_emulation;
 		break;
 	case ACTION_TYPE_TOGGLE_MAGNIFY:
 		magnifier_toggle();
