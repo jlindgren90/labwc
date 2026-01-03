@@ -8,6 +8,7 @@
 void
 view_impl_map(struct view *view)
 {
+	view_set_mapped(view->id);
 	view_update_visibility(view);
 
 	/*
@@ -32,6 +33,7 @@ view_impl_map(struct view *view)
 void
 view_impl_unmap(struct view *view)
 {
+	view_set_unmapped(view->id);
 	view_update_visibility(view);
 
 	/*

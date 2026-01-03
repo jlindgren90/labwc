@@ -385,7 +385,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_maximize);
 	struct wlr_xwayland_surface *surf = xwayland_surface_from_view(view);
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 		/*
 		 * Set decorations early to avoid changing geometry
@@ -413,7 +413,7 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_fullscreen);
 	bool fullscreen = xwayland_surface_from_view(view)->fullscreen;
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 	}
 	view_set_fullscreen(view, fullscreen);
@@ -497,7 +497,7 @@ handle_set_strut_partial(struct wl_listener *listener, void *data)
 		wl_container_of(listener, xwayland_view, set_strut_partial);
 	struct view *view = &xwayland_view->base;
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		output_update_all_usable_areas(view->server, false);
 	}
 }
@@ -604,7 +604,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	struct view *view = &xwayland_view->base;
 	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		/* Probably shouldn't happen, but be sure */
 		return;
 	}
@@ -625,7 +625,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	 *   3. set maximized (geometry depends on decorations)
 	 */
 	view_set_fullscreen(view, xsurface->fullscreen);
-	if (!view->been_mapped) {
+	if (!view->st->ever_mapped) {
 		if (want_deco(xsurface)) {
 			view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
 		} else {
@@ -727,7 +727,7 @@ handle_map(struct wl_listener *listener, void *data)
 	assert(xwayland_surface->surface);
 	assert(xwayland_surface->surface == view->surface);
 
-	if (view->mapped) {
+	if (view->st->mapped) {
 		return;
 	}
 
@@ -739,8 +739,6 @@ handle_map(struct wl_listener *listener, void *data)
 	 */
 	handle_map_request(&xwayland_view->map_request, NULL);
 
-	view->mapped = true;
-
 	if (!view->content_tree) {
 		view->content_tree = wlr_scene_subsurface_tree_create(
 			view->scene_tree, view->surface);
@@ -751,7 +749,7 @@ handle_map(struct wl_listener *listener, void *data)
 		}
 	}
 
-	if (!view->been_mapped) {
+	if (!view->st->ever_mapped) {
 		check_natural_geometry(view);
 		set_initial_position(view, xwayland_surface);
 		/*
@@ -777,17 +775,16 @@ handle_map(struct wl_listener *listener, void *data)
 	}
 
 	view_impl_map(view);
-	view->been_mapped = true;
 }
 
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.unmap);
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return;
 	}
-	view->mapped = false;
+
 	view_impl_unmap(view);
 
 	/*
@@ -802,14 +799,14 @@ handle_unmap(struct wl_listener *listener, void *data)
 	}
 }
 
-static void
-xwayland_view_maximize(struct view *view, enum view_axis maximized)
+void
+xwayland_view_maximize(struct view *view, int maximized)
 {
 	wlr_xwayland_surface_set_maximized(xwayland_surface_from_view(view),
 		maximized & VIEW_AXIS_HORIZONTAL, maximized & VIEW_AXIS_VERTICAL);
 }
 
-static void
+void
 xwayland_view_minimize(struct view *view, bool minimized)
 {
 	wlr_xwayland_surface_set_minimized(xwayland_surface_from_view(view),
@@ -850,7 +847,7 @@ xwayland_view_append_children(struct view *self, struct wl_array *children)
 		if (!view->surface) {
 			continue;
 		}
-		if (!view->mapped) {
+		if (!view->st->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != surface) {
@@ -867,7 +864,7 @@ xwayland_view_is_modal_dialog(struct view *self)
 	return xwayland_surface_from_view(self)->modal;
 }
 
-static void
+void
 xwayland_view_set_activated(struct view *view, bool activated)
 {
 	struct wlr_xwayland_surface *xwayland_surface =
@@ -880,7 +877,7 @@ xwayland_view_set_activated(struct view *view, bool activated)
 	wlr_xwayland_surface_activate(xwayland_surface, activated);
 }
 
-static void
+void
 xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 {
 	wlr_xwayland_surface_set_fullscreen(xwayland_surface_from_view(view),
@@ -903,10 +900,6 @@ xwayland_view_get_pid(struct view *view)
 static const struct view_impl xwayland_view_impl = {
 	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
-	.set_activated = xwayland_view_set_activated,
-	.set_fullscreen = xwayland_view_set_fullscreen,
-	.maximize = xwayland_view_maximize,
-	.minimize = xwayland_view_minimize,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,
 	.append_children = xwayland_view_append_children,
