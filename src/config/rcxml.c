@@ -26,9 +26,6 @@
 #include "config/keybind.h"
 #include "config/libinput.h"
 #include "config/mousebind.h"
-#include "config/tablet.h"
-#include "config/tablet-tool.h"
-#include "config/touch.h"
 #include "cycle.h"
 #include "regions.h"
 #include "ssd.h"
@@ -607,52 +604,6 @@ fill_mouse_context(xmlNode *node)
 	}
 }
 
-static void
-fill_touch(xmlNode *node)
-{
-	struct touch_config_entry *touch_config = znew(*touch_config);
-	wl_list_append(&rc.touch_configs, &touch_config->link);
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "deviceName")) {
-			xstrdup_replace(touch_config->device_name, content);
-		} else if (!strcasecmp(key, "mapToOutput")) {
-			xstrdup_replace(touch_config->output_name, content);
-		} else if (!strcasecmp(key, "mouseEmulation")) {
-			set_bool(content, &touch_config->force_mouse_emulation);
-		} else {
-			wlr_log(WLR_ERROR, "Unexpected data in touch parser: %s=\"%s\"",
-				key, content);
-		}
-	}
-}
-
-static void
-fill_tablet_button_map(xmlNode *node)
-{
-	uint32_t map_from;
-	uint32_t map_to;
-	char buf[256];
-
-	if (lab_xml_get_string(node, "button", buf, sizeof(buf))) {
-		map_from = tablet_button_from_str(buf);
-	} else {
-		wlr_log(WLR_ERROR, "Invalid 'button' argument for tablet button mapping");
-		return;
-	}
-
-	if (lab_xml_get_string(node, "to", buf, sizeof(buf))) {
-		map_to = mousebind_button_from_str(buf, NULL);
-	} else {
-		wlr_log(WLR_ERROR, "Invalid 'to' argument for tablet button mapping");
-		return;
-	}
-
-	tablet_button_mapping_add(map_from, map_to);
-}
-
 static int
 get_accel_profile(const char *s)
 {
@@ -1039,8 +990,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		fill_keybind(node);
 	} else if (!strcasecmp(nodename, "context.mouse")) {
 		fill_mouse_context(node);
-	} else if (!strcasecmp(nodename, "touch")) {
-		fill_touch(node);
 	} else if (!strcasecmp(nodename, "device.libinput")) {
 		fill_libinput_category(node);
 	} else if (!strcasecmp(nodename, "regions")) {
@@ -1051,8 +1000,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		fill_window_rules(node);
 	} else if (!strcasecmp(nodename, "font.theme")) {
 		fill_font(node);
-	} else if (!strcasecmp(nodename, "map.tablet")) {
-		fill_tablet_button_map(node);
 
 	/* handle nodes without content, e.g. <keyboard><default /> */
 	} else if (!strcmp(nodename, "default.keyboard")) {
@@ -1302,25 +1249,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.resize_corner_range = atoi(content);
 	} else if (!strcasecmp(nodename, "minimumArea.resize")) {
 		rc.resize_minimum_area = MAX(0, atoi(content));
-	} else if (!strcasecmp(nodename, "mouseEmulation.tablet")) {
-		set_bool(content, &rc.tablet.force_mouse_emulation);
-	} else if (!strcasecmp(nodename, "mapToOutput.tablet")) {
-		xstrdup_replace(rc.tablet.output_name, content);
-	} else if (!strcasecmp(nodename, "rotate.tablet")) {
-		rc.tablet.rotation = tablet_parse_rotation(atoi(content));
-	} else if (!strcasecmp(nodename, "left.area.tablet")) {
-		rc.tablet.box.x = tablet_get_dbl_if_positive(content, "left");
-	} else if (!strcasecmp(nodename, "top.area.tablet")) {
-		rc.tablet.box.y = tablet_get_dbl_if_positive(content, "top");
-	} else if (!strcasecmp(nodename, "width.area.tablet")) {
-		rc.tablet.box.width = tablet_get_dbl_if_positive(content, "width");
-	} else if (!strcasecmp(nodename, "height.area.tablet")) {
-		rc.tablet.box.height = tablet_get_dbl_if_positive(content, "height");
-	} else if (!strcasecmp(nodename, "motion.tabletTool")) {
-		rc.tablet_tool.motion = tablet_parse_motion(content);
-	} else if (!strcasecmp(nodename, "relativeMotionSensitivity.tabletTool")) {
-		rc.tablet_tool.relative_motion_sensitivity =
-			tablet_get_dbl_if_positive(content, "relativeMotionSensitivity");
 	} else if (!strcasecmp(nodename, "ignoreButtonReleasePeriod.menu")) {
 		rc.menu_ignore_button_release_period = atoi(content);
 	} else if (!strcasecmp(nodename, "showIcons.menu")) {
@@ -1396,7 +1324,6 @@ rcxml_init(void)
 		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.osd.fields);
 		wl_list_init(&rc.window_rules);
-		wl_list_init(&rc.touch_configs);
 	}
 	has_run = true;
 
@@ -1432,14 +1359,6 @@ rcxml_init(void)
 	rc.raise_on_focus = false;
 
 	rc.doubleclick_time = 500;
-
-	rc.tablet.force_mouse_emulation = false;
-	rc.tablet.output_name = NULL;
-	rc.tablet.rotation = LAB_ROTATE_NONE;
-	rc.tablet.box = (struct wlr_fbox){0};
-	tablet_load_default_button_mappings();
-	rc.tablet_tool.motion = LAB_MOTION_ABSOLUTE;
-	rc.tablet_tool.relative_motion_sensitivity = 1.0;
 
 	rc.repeat_rate = 25;
 	rc.repeat_delay = 600;
@@ -1908,7 +1827,6 @@ rcxml_finish(void)
 	zfree(rc.theme_name);
 	zfree(rc.icon_theme_name);
 	zfree(rc.fallback_app_icon_name);
-	zfree(rc.tablet.output_name);
 	zfree(rc.window_switcher.osd.thumbnail_label_format);
 
 	clear_title_layout();
@@ -1932,14 +1850,6 @@ rcxml_finish(void)
 		wl_list_remove(&m->link);
 		action_list_free(&m->actions);
 		zfree(m);
-	}
-
-	struct touch_config_entry *touch_config, *touch_config_tmp;
-	wl_list_for_each_safe(touch_config, touch_config_tmp, &rc.touch_configs, link) {
-		wl_list_remove(&touch_config->link);
-		zfree(touch_config->device_name);
-		zfree(touch_config->output_name);
-		zfree(touch_config);
 	}
 
 	struct libinput_category *l, *l_tmp;
