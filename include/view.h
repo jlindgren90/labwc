@@ -176,8 +176,6 @@ struct view {
 	bool minimized;
 	enum view_axis maximized;
 	bool fullscreen;
-	bool tearing_hint;
-	enum lab_tristate force_tearing;
 	enum lab_edge tiled;
 	enum lab_edge edges_visible;
 	bool inhibits_keybinds; /* also inhibits mousebinds */

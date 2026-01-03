@@ -29,13 +29,6 @@ enum resize_indicator_mode {
 	LAB_RESIZE_INDICATOR_NON_PIXEL
 };
 
-enum tearing_mode {
-	LAB_TEARING_DISABLED = 0,
-	LAB_TEARING_ENABLED,
-	LAB_TEARING_FULLSCREEN,
-	LAB_TEARING_FULLSCREEN_FORCED,
-};
-
 struct buf;
 
 struct button_map_entry {
@@ -60,7 +53,6 @@ struct rcxml {
 	bool hide_maximized_window_titlebar;
 	int gap;
 	enum adaptive_sync_mode adaptive_sync;
-	enum tearing_mode allow_tearing;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;
 	bool xwayland_persistence;

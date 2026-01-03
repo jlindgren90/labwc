@@ -272,9 +272,6 @@ struct server {
 	struct wlr_pointer_constraints_v1 *constraints;
 	struct wl_listener new_constraint;
 
-	struct wlr_tearing_control_manager_v1 *tearing_control;
-	struct wl_listener tearing_new_object;
-
 	struct wlr_input_method_manager_v2 *input_method_manager;
 	struct wlr_text_input_manager_v3 *text_input_manager;
 
@@ -412,8 +409,6 @@ void interactive_cancel(struct view *view);
  */
 bool edge_from_cursor(struct seat *seat, struct output **dest_output,
 	enum lab_edge *edge1, enum lab_edge *edge2);
-
-void handle_tearing_new_object(struct wl_listener *listener, void *data);
 
 void server_init(struct server *server);
 void server_start(struct server *server);

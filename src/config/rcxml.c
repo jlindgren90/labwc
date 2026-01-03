@@ -702,20 +702,6 @@ set_adaptive_sync_mode(const char *str, enum adaptive_sync_mode *variable)
 	}
 }
 
-static void
-set_tearing_mode(const char *str, enum tearing_mode *variable)
-{
-	if (!strcasecmp(str, "fullscreen")) {
-		*variable = LAB_TEARING_FULLSCREEN;
-	} else if (!strcasecmp(str, "fullscreenForced")) {
-		*variable = LAB_TEARING_FULLSCREEN_FORCED;
-	} else if (parse_bool(str, -1) == 1) {
-		*variable = LAB_TEARING_ENABLED;
-	} else {
-		*variable = LAB_TEARING_DISABLED;
-	}
-}
-
 /* Returns true if the node's children should also be traversed */
 static bool
 entry(xmlNode *node, char *nodename, char *content)
@@ -766,8 +752,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.gap = atoi(content);
 	} else if (!strcasecmp(nodename, "adaptiveSync.core")) {
 		set_adaptive_sync_mode(content, &rc.adaptive_sync);
-	} else if (!strcasecmp(nodename, "allowTearing.core")) {
-		set_tearing_mode(content, &rc.allow_tearing);
 	} else if (!strcasecmp(nodename, "autoEnableOutputs.core")) {
 		set_bool(content, &rc.auto_enable_outputs);
 	} else if (!strcasecmp(nodename, "reuseOutputMode.core")) {
@@ -1031,7 +1015,6 @@ rcxml_init(void)
 
 	rc.gap = 0;
 	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;
-	rc.allow_tearing = LAB_TEARING_DISABLED;
 	rc.auto_enable_outputs = true;
 	rc.reuse_output_mode = false;
 	rc.xwayland_persistence = false;

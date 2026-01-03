@@ -32,7 +32,6 @@
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_tablet_v2.h>
-#include <wlr/types/wlr_tearing_control_v1.h>
 #include <wlr/types/wlr_text_input_v3.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xdg_foreign_registry.h>
@@ -682,10 +681,6 @@ server_init(struct server *server)
 	wl_signal_add(&server->output_power_manager_v1->events.set_mode,
 		&server->output_power_manager_set_mode);
 
-	server->tearing_control = wlr_tearing_control_manager_v1_create(server->wl_display, 1);
-	server->tearing_new_object.notify = handle_tearing_new_object;
-	wl_signal_add(&server->tearing_control->events.new_object, &server->tearing_new_object);
-
 	server->tablet_manager = wlr_tablet_v2_create(server->wl_display);
 
 	layers_init(server);
@@ -755,7 +750,6 @@ server_finish(struct server *server)
 	xdg_server_decoration_finish(server);
 	wl_list_remove(&server->new_constraint.link);
 	wl_list_remove(&server->output_power_manager_set_mode.link);
-	wl_list_remove(&server->tearing_new_object.link);
 	if (server->drm_lease_request.notify) {
 		wl_list_remove(&server->drm_lease_request.link);
 		server->drm_lease_request.notify = NULL;

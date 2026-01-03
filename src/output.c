@@ -34,47 +34,6 @@
 #include "view.h"
 #include "xwayland.h"
 
-bool
-output_get_tearing_allowance(struct output *output)
-{
-	struct server *server = output->server;
-
-	/* never allow tearing when disabled */
-	if (!rc.allow_tearing) {
-		return false;
-	}
-
-	struct view *view = server->active_view;
-
-	/* tearing is only allowed for the output with the active view */
-	if (!view || view->output != output) {
-		return false;
-	}
-
-	/* allow tearing for any window when requested or forced */
-	if (rc.allow_tearing == LAB_TEARING_ENABLED) {
-		if (view->force_tearing == LAB_STATE_UNSPECIFIED) {
-			return view->tearing_hint;
-		} else {
-			return view->force_tearing == LAB_STATE_ENABLED;
-		}
-	}
-
-	/* remaining tearing options apply only to full-screen windows */
-	if (!view->fullscreen) {
-		return false;
-	}
-
-	if (view->force_tearing == LAB_STATE_UNSPECIFIED) {
-		/* honor the tearing hint or the fullscreen-force preference */
-		return view->tearing_hint ||
-			rc.allow_tearing == LAB_TEARING_FULLSCREEN_FORCED;
-	}
-
-	/* honor tearing as requested by action */
-	return view->force_tearing == LAB_STATE_ENABLED;
-}
-
 static void
 output_apply_gamma(struct output *output)
 {
@@ -145,12 +104,8 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		 */
 		output_apply_gamma(output);
 	} else {
-		struct wlr_scene_output *scene_output = output->scene_output;
-		struct wlr_output_state *pending = &output->pending;
-
-		pending->tearing_page_flip = output_get_tearing_allowance(output);
-
-		lab_wlr_scene_output_commit(scene_output, pending);
+		lab_wlr_scene_output_commit(output->scene_output,
+			&output->pending);
 	}
 
 	struct timespec now = { 0 };

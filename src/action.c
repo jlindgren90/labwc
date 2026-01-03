@@ -93,7 +93,6 @@ enum action_type {
 	ACTION_TYPE_FOCUS_OUTPUT,
 	ACTION_TYPE_MOVE_TO_OUTPUT,
 	ACTION_TYPE_FIT_TO_OUTPUT,
-	ACTION_TYPE_TOGGLE_TEARING,
 	ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION,
@@ -140,7 +139,6 @@ const char *action_names[] = {
 	"FocusOutput",
 	"MoveToOutput",
 	"FitToOutput",
-	"ToggleTearing",
 	"EnableScrollWheelEmulation",
 	"DisableScrollWheelEmulation",
 	"ToggleScrollWheelEmulation",
@@ -926,26 +924,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 		}
 		break;
 	}
-	case ACTION_TYPE_TOGGLE_TEARING:
-		if (view) {
-			switch (view->force_tearing) {
-			case LAB_STATE_UNSPECIFIED:
-				view->force_tearing =
-					output_get_tearing_allowance(view->output)
-						? LAB_STATE_DISABLED : LAB_STATE_ENABLED;
-				break;
-			case LAB_STATE_DISABLED:
-				view->force_tearing = LAB_STATE_ENABLED;
-				break;
-			case LAB_STATE_ENABLED:
-				view->force_tearing = LAB_STATE_DISABLED;
-				break;
-			}
-			wlr_log(WLR_ERROR, "force tearing %sabled",
-				view->force_tearing == LAB_STATE_ENABLED
-					? "en" : "dis");
-		}
-		break;
 	case ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION:
 		server->seat.cursor_scroll_wheel_emulation = true;
 		break;
