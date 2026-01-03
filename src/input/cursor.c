@@ -24,10 +24,7 @@
 #include "cycle.h"
 #include "dnd.h"
 #include "idle.h"
-#include "input/gestures.h"
 #include "input/keyboard.h"
-#include "input/tablet.h"
-#include "input/touch.h"
 #include "labwc.h"
 #include "layers.h"
 #include "menu/menu.h"
@@ -159,19 +156,6 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 	}
 
 	/*
-	 * Omit cursor notifications from a pointer when a tablet
-	 * tool (stylus/pen) is in proximity. We expect to get cursor
-	 * notifications from the tablet tool instead.
-	 * Receiving cursor notifications from pointer and tablet tool at
-	 * the same time is a side effect of also setting pointer focus
-	 * when a tablet tool enters proximity on a tablet-capable surface.
-	 * See also `notify_motion()` in `input/tablet.c`.
-	 */
-	if (tablet_tool_has_focused_surface()) {
-		return;
-	}
-
-	/*
 	 * This event is raised by the seat when a client provides a cursor
 	 * image
 	 */
@@ -223,16 +207,6 @@ handle_request_set_shape(struct wl_listener *listener, void *data)
 	if (event->seat_client != focused_client) {
 		wlr_log(WLR_INFO, "seat client %p != focused client %p",
 			event->seat_client, focused_client);
-		return;
-	}
-
-	/*
-	 * Omit cursor notifications from a pointer when a tablet
-	 * tool (stylus/pen) is in proximity.
-	 */
-	if (tablet_tool_has_focused_surface()
-			&& event->device_type
-				!= WLR_CURSOR_SHAPE_MANAGER_V1_DEVICE_TYPE_TABLET_TOOL) {
 		return;
 	}
 
@@ -1605,10 +1579,6 @@ cursor_init(void)
 	CONNECT_SIGNAL(g_seat.cursor, &g_seat.on_cursor, axis);
 	CONNECT_SIGNAL(g_seat.cursor, &g_seat.on_cursor, frame);
 
-	gestures_init();
-	touch_init();
-	tablet_init();
-
 	CONNECT_SIGNAL(g_seat.wlr_seat, &g_seat, request_set_cursor);
 
 	struct wlr_cursor_shape_manager_v1 *cursor_shape_manager =
@@ -1631,11 +1601,6 @@ void cursor_finish(void)
 	wl_list_remove(&g_seat.on_cursor.button.link);
 	wl_list_remove(&g_seat.on_cursor.axis.link);
 	wl_list_remove(&g_seat.on_cursor.frame.link);
-
-	gestures_finish();
-	touch_finish();
-
-	tablet_finish();
 
 	wl_list_remove(&g_seat.request_set_cursor.link);
 	wl_list_remove(&g_seat.request_set_shape.link);

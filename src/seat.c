@@ -11,18 +11,12 @@
 #include <wlr/types/wlr_pointer.h>
 #include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_touch.h>
-#include <wlr/types/wlr_virtual_keyboard_v1.h>
-#include <wlr/types/wlr_virtual_pointer_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
 #include "common/macros.h"
 #include "common/mem.h"
 #include "config/libinput.h"
 #include "config/rcxml.h"
-#include "config/touch.h"
-#include "input/ime.h"
-#include "input/tablet.h"
-#include "input/tablet-pad.h"
 #include "input/input.h"
 #include "input/keyboard.h"
 #include "input/key-state.h"
@@ -440,60 +434,6 @@ new_keyboard(struct wlr_input_device *device, bool is_virtual)
 }
 
 static void
-map_touch_to_output(struct wlr_input_device *dev)
-{
-	struct wlr_touch *touch = wlr_touch_from_input_device(dev);
-
-	char *touch_config_output_name = NULL;
-	struct touch_config_entry *config_entry =
-		touch_find_config_for_device(touch->base.name);
-	if (config_entry) {
-		touch_config_output_name = config_entry->output_name;
-	}
-
-	char *output_name = touch->output_name ? touch->output_name : touch_config_output_name;
-	wlr_log(WLR_INFO, "map touch to output %s", output_name ? output_name : "unknown");
-	map_input_to_output(dev, output_name);
-}
-
-static struct input *
-new_touch(struct wlr_input_device *dev)
-{
-	struct input *input = znew(*input);
-	input->wlr_input_device = dev;
-	dev->data = input;
-	configure_libinput(dev);
-	wlr_cursor_attach_input_device(g_seat.cursor, dev);
-	/* In support of running with WLR_WL_OUTPUTS set to >=2 */
-	map_touch_to_output(dev);
-
-	return input;
-}
-
-static struct input *
-new_tablet(struct wlr_input_device *dev)
-{
-	struct input *input = znew(*input);
-	input->wlr_input_device = dev;
-	tablet_create(dev);
-	wlr_cursor_attach_input_device(g_seat.cursor, dev);
-	wlr_log(WLR_INFO, "map tablet to output %s", rc.tablet.output_name);
-	map_input_to_output(dev, rc.tablet.output_name);
-
-	return input;
-}
-
-static struct input *
-new_tablet_pad(struct wlr_input_device *dev)
-{
-	struct input *input = znew(*input);
-	input->wlr_input_device = dev;
-	tablet_pad_create(dev);
-
-	return input;
-}
-
-static void
 seat_update_capabilities(void)
 {
 	struct input *input = NULL;
@@ -541,47 +481,11 @@ handle_new_input(struct wl_listener *listener, void *data)
 	case WLR_INPUT_DEVICE_POINTER:
 		input = new_pointer(device);
 		break;
-	case WLR_INPUT_DEVICE_TOUCH:
-		input = new_touch(device);
-		break;
-	case WLR_INPUT_DEVICE_TABLET:
-		input = new_tablet(device);
-		break;
-	case WLR_INPUT_DEVICE_TABLET_PAD:
-		input = new_tablet_pad(device);
-		break;
 	default:
 		wlr_log(WLR_INFO, "unsupported input device");
 		return;
 	}
 
-	seat_add_device(input);
-}
-
-static void
-handle_new_virtual_pointer(struct wl_listener *listener, void *data)
-{
-	struct wlr_virtual_pointer_v1_new_pointer_event *event = data;
-	struct wlr_virtual_pointer_v1 *pointer = event->new_pointer;
-	struct wlr_input_device *device = &pointer->pointer.base;
-
-	struct input *input = new_pointer(device);
-	device->data = input;
-	seat_add_device(input);
-	if (event->suggested_output) {
-		wlr_cursor_map_input_to_output(g_seat.cursor, device,
-			event->suggested_output);
-	}
-}
-
-static void
-handle_new_virtual_keyboard(struct wl_listener *listener, void *data)
-{
-	struct wlr_virtual_keyboard_v1 *virtual_keyboard = data;
-	struct wlr_input_device *device = &virtual_keyboard->keyboard.base;
-
-	struct input *input = new_keyboard(device, true);
-	device->data = input;
 	seat_add_device(input);
 }
 
@@ -614,7 +518,6 @@ handle_focus_change(struct wl_listener *listener, void *data)
 		}
 		if (view) {
 			view_set_activated(view, true);
-			tablet_pad_enter_surface(surface);
 		}
 		g_server.active_view = view;
 	}
@@ -629,22 +532,11 @@ seat_init(void)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&g_seat.touch_points);
 	wl_list_init(&g_seat.constraint_commit.link);
 	wl_list_init(&g_seat.inputs);
 
 	CONNECT_SIGNAL(g_server.backend, &g_seat, new_input);
 	CONNECT_SIGNAL(&g_seat.wlr_seat->keyboard_state, &g_seat, focus_change);
-
-	g_seat.virtual_pointer = wlr_virtual_pointer_manager_v1_create(
-		g_server.wl_display);
-	CONNECT_SIGNAL(g_seat.virtual_pointer, &g_seat, new_virtual_pointer);
-
-	g_seat.virtual_keyboard = wlr_virtual_keyboard_manager_v1_create(
-		g_server.wl_display);
-	CONNECT_SIGNAL(g_seat.virtual_keyboard, &g_seat, new_virtual_keyboard);
-
-	g_seat.input_method_relay = input_method_relay_create();
 
 	g_seat.xcursor_manager = NULL;
 	g_seat.cursor_visible = true;
@@ -655,10 +547,6 @@ seat_init(void)
 	}
 	wlr_cursor_attach_output_layout(g_seat.cursor, g_server.output_layout);
 
-	wl_list_init(&g_seat.tablets);
-	wl_list_init(&g_seat.tablet_tools);
-	wl_list_init(&g_seat.tablet_pads);
-
 	input_handlers_init();
 }
 
@@ -667,8 +555,6 @@ seat_finish(void)
 {
 	wl_list_remove(&g_seat.new_input.link);
 	wl_list_remove(&g_seat.focus_change.link);
-	wl_list_remove(&g_seat.new_virtual_pointer.link);
-	wl_list_remove(&g_seat.new_virtual_keyboard.link);
 
 	struct input *input, *next;
 	wl_list_for_each_safe(input, next, &g_seat.inputs, link) {
@@ -676,9 +562,7 @@ seat_finish(void)
 	}
 
 	overlay_finish();
-
 	input_handlers_finish();
-	input_method_relay_finish(g_seat.input_method_relay);
 }
 
 static void
@@ -731,13 +615,6 @@ seat_reconfigure(void)
 			configure_libinput(input->wlr_input_device);
 			map_pointer_to_output(input->wlr_input_device);
 			break;
-		case WLR_INPUT_DEVICE_TOUCH:
-			configure_libinput(input->wlr_input_device);
-			map_touch_to_output(input->wlr_input_device);
-			break;
-		case WLR_INPUT_DEVICE_TABLET:
-			map_input_to_output(input->wlr_input_device, rc.tablet.output_name);
-			break;
 		default:
 			break;
 		}
@@ -780,7 +657,6 @@ seat_focus(struct wlr_surface *surface,
 
 	if (!surface) {
 		wlr_seat_keyboard_notify_clear_focus(g_seat.wlr_seat);
-		input_method_relay_set_focus(g_seat.input_method_relay, NULL);
 		return;
 	}
 
@@ -806,8 +682,6 @@ seat_focus(struct wlr_surface *surface,
 	struct wlr_keyboard *kb = &g_seat.keyboard_group->keyboard;
 	wlr_seat_keyboard_notify_enter(g_seat.wlr_seat, surface,
 		pressed_sent_keycodes, nr_pressed_sent_keycodes, &kb->modifiers);
-
-	input_method_relay_set_focus(g_seat.input_method_relay, surface);
 
 	struct wlr_pointer_constraint_v1 *constraint =
 		wlr_pointer_constraints_v1_constraint_for_surface(g_server.constraints,
@@ -854,12 +728,6 @@ seat_output_layout_changed(void)
 		switch (input->wlr_input_device->type) {
 		case WLR_INPUT_DEVICE_POINTER:
 			map_pointer_to_output(input->wlr_input_device);
-			break;
-		case WLR_INPUT_DEVICE_TOUCH:
-			map_touch_to_output(input->wlr_input_device);
-			break;
-		case WLR_INPUT_DEVICE_TABLET:
-			map_input_to_output(input->wlr_input_device, rc.tablet.output_name);
 			break;
 		default:
 			break;
