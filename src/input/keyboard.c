@@ -13,7 +13,6 @@
 #include "config/rcxml.h"
 #include "cycle.h"
 #include "idle.h"
-#include "input/ime.h"
 #include "input/key-state.h"
 #include "labwc.h"
 #include "menu/menu.h"
@@ -151,33 +150,31 @@ handle_modifiers(struct wl_listener *listener, void *data)
 		}
 	}
 
-	if (!input_method_keyboard_grab_forward_modifiers(keyboard)) {
-		/* Send modifiers to focused client */
-		wlr_seat_keyboard_notify_modifiers(g_seat.wlr_seat,
-			&wlr_keyboard->modifiers);
+	/* Send modifiers to focused client */
+	wlr_seat_keyboard_notify_modifiers(g_seat.wlr_seat,
+		&wlr_keyboard->modifiers);
 
-		/*
-		 * Also broadcast them to non-keyboard-focused clients.
-		 *
-		 * The Wayland protocol does not specify that modifiers are
-		 * broadcast, so this is not something clients can rely on in
-		 * other compositors.
-		 *
-		 * Sway used to broadcast modifiers but stopped doing so to
-		 * avoid waking up all clients when the modifiers change.
-		 *
-		 * By testing with foot and Ctrl+scroll to change font size, it
-		 * appears that Mutter does not pass modifiers to unfocused
-		 * clients, whereas KWin and Weston pass modifiers to clients
-		 * with pointer-focus.
-		 *
-		 * This could be made configurable if there are unintended
-		 * consequences. If so, modifiers ought to still be passed to
-		 * clients with pointer-focus (see issue #2271)
-		 */
-		broadcast_modifiers_to_unfocused_clients(g_seat.wlr_seat,
-			keyboard, &wlr_keyboard->modifiers);
-	}
+	/*
+	 * Also broadcast them to non-keyboard-focused clients.
+	 *
+	 * The Wayland protocol does not specify that modifiers are
+	 * broadcast, so this is not something clients can rely on in
+	 * other compositors.
+	 *
+	 * Sway used to broadcast modifiers but stopped doing so to
+	 * avoid waking up all clients when the modifiers change.
+	 *
+	 * By testing with foot and Ctrl+scroll to change font size, it
+	 * appears that Mutter does not pass modifiers to unfocused
+	 * clients, whereas KWin and Weston pass modifiers to clients
+	 * with pointer-focus.
+	 *
+	 * This could be made configurable if there are unintended
+	 * consequences. If so, modifiers ought to still be passed to
+	 * clients with pointer-focus (see issue #2271)
+	 */
+	broadcast_modifiers_to_unfocused_clients(g_seat.wlr_seat,
+		keyboard, &wlr_keyboard->modifiers);
 }
 
 static struct keybind *
@@ -630,7 +627,7 @@ handle_key(struct wl_listener *listener, void *data)
 				&& event->state == WL_KEYBOARD_KEY_STATE_PRESSED) {
 			start_keybind_repeat(keyboard, event);
 		}
-	} else if (!input_method_keyboard_grab_forward_key(keyboard, event)) {
+	} else {
 		wlr_seat_set_keyboard(wlr_seat, keyboard->wlr_keyboard);
 		wlr_seat_keyboard_notify_key(wlr_seat, event->time_msec,
 			event->keycode, event->state);

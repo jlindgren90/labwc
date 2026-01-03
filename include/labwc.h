@@ -26,8 +26,6 @@ struct seat {
 	struct wlr_seat *wlr_seat;
 	struct wlr_keyboard_group *keyboard_group;
 
-	struct wl_list touch_points; /* struct touch_point.link */
-
 	/*
 	 * Enum of most recent server-side cursor image.  Set by
 	 * cursor_set().  Cleared when a client surface is entered
@@ -57,8 +55,6 @@ struct seat {
 
 	/* if set, views cannot receive focus */
 	struct wlr_layer_surface_v1 *focused_layer;
-
-	struct input_method_relay *input_method_relay;
 
 	/**
 	 * Cursor context saved when a mouse button is pressed on a view/surface.
@@ -105,42 +101,12 @@ struct seat {
 		struct wl_listener frame;
 	} on_cursor;
 
-	struct wlr_pointer_gestures_v1 *pointer_gestures;
-	struct wl_listener pinch_begin;
-	struct wl_listener pinch_update;
-	struct wl_listener pinch_end;
-	struct wl_listener swipe_begin;
-	struct wl_listener swipe_update;
-	struct wl_listener swipe_end;
-	struct wl_listener hold_begin;
-	struct wl_listener hold_end;
-
 	struct wl_listener request_set_cursor;
 	struct wl_listener request_set_shape;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
 
-	struct wl_listener touch_down;
-	struct wl_listener touch_up;
-	struct wl_listener touch_motion;
-	struct wl_listener touch_frame;
-
-	struct wl_listener tablet_tool_proximity;
-	struct wl_listener tablet_tool_axis;
-	struct wl_listener tablet_tool_tip;
-	struct wl_listener tablet_tool_button;
-
-	struct wl_list tablets;
-	struct wl_list tablet_tools;
-	struct wl_list tablet_pads;
-
 	struct wl_listener constraint_commit;
-
-	struct wlr_virtual_pointer_manager_v1 *virtual_pointer;
-	struct wl_listener new_virtual_pointer;
-
-	struct wlr_virtual_keyboard_manager_v1 *virtual_keyboard;
-	struct wl_listener new_virtual_keyboard;
 };
 
 struct server {
