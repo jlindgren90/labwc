@@ -24,7 +24,6 @@
 #include "view.h"
 #include "view-impl-common.h"
 #include "window-rules.h"
-#include "workspaces.h"
 
 #define LAB_XDG_SHELL_VERSION 6
 #define CONFIGURE_TIMEOUT_MS 100
@@ -1013,8 +1012,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 			view->output->wlr_output->scale);
 	}
 
-	view->workspace = g_server.workspaces.current;
-	view->scene_tree = wlr_scene_tree_create(view->workspace->tree);
+	view->scene_tree = wlr_scene_tree_create(g_server.view_tree);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 
 	struct wlr_scene_tree *tree = wlr_scene_xdg_surface_create(

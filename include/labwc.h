@@ -54,10 +54,6 @@ struct seat {
 
 	struct wlr_pointer_constraint_v1 *current_constraint;
 
-	/* Used to hide the workspace OSD after switching workspaces */
-	struct wl_event_source *workspace_osd_timer;
-	bool workspace_osd_shown_by_modifier;
-
 	/* if set, views cannot receive focus */
 	struct wlr_layer_surface_v1 *focused_layer;
 
@@ -237,20 +233,6 @@ struct server {
 #endif
 	/* Tree for built in menu */
 	struct wlr_scene_tree *menu_tree;
-
-	/* Workspaces */
-	struct {
-		struct wl_list all;  /* struct workspace.link */
-		struct workspace *current;
-		struct workspace *last;
-		struct lab_cosmic_workspace_manager *cosmic_manager;
-		struct lab_cosmic_workspace_group *cosmic_group;
-		struct lab_ext_workspace_manager *ext_manager;
-		struct lab_ext_workspace_group *ext_group;
-		struct {
-			struct wl_listener layout_output_added;
-		} on;
-	} workspaces;
 
 	struct wl_list outputs;
 	struct wl_listener new_output;

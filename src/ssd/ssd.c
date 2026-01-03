@@ -223,8 +223,7 @@ ssd_update_geometry(struct ssd *ssd)
 
 	bool state_changed = ssd->state.was_maximized != maximized
 		|| ssd->state.was_shaded != view->shaded
-		|| ssd->state.was_squared != squared
-		|| ssd->state.was_omnipresent != view->visible_on_all_workspaces;
+		|| ssd->state.was_squared != squared;
 
 	/*
 	 * (Un)maximization updates titlebar visibility with
