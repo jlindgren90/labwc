@@ -7,7 +7,6 @@ labwc_sources = files(
   'idle.c',
   'interactive.c',
   'layers.c',
-  'magnifier.c',
   'main.c',
   'node.c',
   'output.c',

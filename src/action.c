@@ -20,7 +20,6 @@
 #include "debug.h"
 #include "input/keyboard.h"
 #include "labwc.h"
-#include "magnifier.h"
 #include "menu/menu.h"
 #include "output.h"
 #include "output-virtual.h"
@@ -104,9 +103,6 @@ enum action_type {
 	ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION,
-	ACTION_TYPE_TOGGLE_MAGNIFY,
-	ACTION_TYPE_ZOOM_IN,
-	ACTION_TYPE_ZOOM_OUT,
 	ACTION_TYPE_WARP_CURSOR,
 	ACTION_TYPE_HIDE_CURSOR,
 };
@@ -159,9 +155,6 @@ const char *action_names[] = {
 	"EnableScrollWheelEmulation",
 	"DisableScrollWheelEmulation",
 	"ToggleScrollWheelEmulation",
-	"ToggleMagnify",
-	"ZoomIn",
-	"ZoomOut",
 	"WarpCursor",
 	"HideCursor",
 	NULL
@@ -1011,15 +1004,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 	case ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION:
 		server->seat.cursor_scroll_wheel_emulation =
 			!server->seat.cursor_scroll_wheel_emulation;
-		break;
-	case ACTION_TYPE_TOGGLE_MAGNIFY:
-		magnifier_toggle(server);
-		break;
-	case ACTION_TYPE_ZOOM_IN:
-		magnifier_set_scale(server, MAGNIFY_INCREASE);
-		break;
-	case ACTION_TYPE_ZOOM_OUT:
-		magnifier_set_scale(server, MAGNIFY_DECREASE);
 		break;
 	case ACTION_TYPE_WARP_CURSOR: {
 		const char *to = action_get_str(action, "to", "output");

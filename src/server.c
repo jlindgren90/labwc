@@ -54,7 +54,6 @@
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "layers.h"
-#include "magnifier.h"
 #include "menu/menu.h"
 #include "output.h"
 #include "output-virtual.h"
@@ -400,8 +399,6 @@ handle_renderer_lost(struct wl_listener *listener, void *data)
 	}
 
 	reload_config_and_theme(server);
-
-	magnifier_reset();
 
 	wlr_allocator_destroy(old_allocator);
 	wlr_renderer_destroy(old_renderer);
