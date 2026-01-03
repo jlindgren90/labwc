@@ -188,6 +188,7 @@ struct server {
 	struct wl_listener new_output;
 	struct wlr_output_layout *output_layout;
 	uint64_t next_output_id_bit;
+	float max_output_scale;
 
 	struct wl_listener output_layout_change;
 	struct wlr_output_manager_v1 *output_manager;
