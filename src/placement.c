@@ -56,7 +56,7 @@ count_views(struct view *view)
 	int nviews = 0;
 
 	struct view *v;
-	for_each_view(v, &server->views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, &server->views, LAB_VIEW_CRITERIA_NONE) {
 		/* Ignore the target view or anything on a different output */
 		if (v == view || v->output != output) {
 			continue;
@@ -145,7 +145,7 @@ build_grid(struct overlap_bitmap *bmp, struct view *view)
 	int nr_cols = 2;
 
 	struct view *v;
-	for_each_view(v, &server->views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, &server->views, LAB_VIEW_CRITERIA_NONE) {
 		if (v == view || v->output != output) {
 			continue;
 		}
@@ -248,7 +248,7 @@ build_overlap(struct overlap_bitmap *bmp, struct view *view)
 	}
 
 	struct view *v;
-	for_each_view(v, &server->views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, &server->views, LAB_VIEW_CRITERIA_NONE) {
 		if (v == view || v->output != output) {
 			continue;
 		}

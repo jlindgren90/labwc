@@ -65,7 +65,6 @@
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"
-#include "workspaces.h"
 #include "xwayland.h"
 
 #define LAB_EXT_DATA_CONTROL_VERSION 1
@@ -102,7 +101,6 @@ reload_config_and_theme(struct server *server)
 	regions_reconfigure(server);
 	resize_indicator_reconfigure(server);
 	kde_server_decoration_update_default();
-	workspaces_reconfigure(server);
 }
 
 static int
@@ -589,8 +587,6 @@ server_init(struct server *server)
 #endif
 	server->menu_tree = wlr_scene_tree_create(&server->scene->tree);
 
-	workspaces_init(server);
-
 	output_init(server);
 
 	/*
@@ -791,7 +787,6 @@ server_finish(struct server *server)
 	wl_list_remove(&server->renderer_lost.link);
 	wlr_renderer_destroy(server->renderer);
 
-	workspaces_destroy(server);
 	wlr_scene_node_destroy(&server->scene->tree.node);
 
 	wl_display_destroy(server->wl_display);
