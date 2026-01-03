@@ -15,7 +15,6 @@
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "config/session.h"
-#include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
@@ -775,7 +774,7 @@ handle_map(struct wl_listener *listener, void *data)
 	}
 
 	view_set_mapped(view->id, xwayland_view_focus_mode(view));
-	view_impl_map(view);
+	view_update_visibility(view);
 }
 
 static void
@@ -786,7 +785,8 @@ handle_unmap(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	view_impl_unmap(view);
+	view_set_unmapped(view->id);
+	view_update_visibility(view);
 
 	/*
 	 * Destroy the content_tree at unmap. Alternatively, we could
