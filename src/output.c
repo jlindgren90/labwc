@@ -557,6 +557,7 @@ output_init(void)
 
 	wl_list_init(&g_server.outputs);
 	g_server.next_output_id_bit = (1 << 0);
+	g_server.max_output_scale = 1;
 
 	output_manager_init();
 }
@@ -575,6 +576,24 @@ output_update_for_layout_change(void)
 {
 	output_update_all_usable_areas(/*layout_changed*/ true);
 	session_lock_update_for_layout_change();
+
+	float max_scale = 1;
+	struct output *output;
+	wl_list_for_each(output, &g_server.outputs, link) {
+		if (output_is_usable(output)) {
+			max_scale = MAX(max_scale, output->wlr_output->scale);
+		}
+	}
+
+	if (g_server.max_output_scale != max_scale) {
+		g_server.max_output_scale = max_scale;
+		struct view *view;
+		wl_list_for_each(view, &g_server.views, link) {
+			if (view->mapped) {
+				view_reload_ssd(view);
+			}
+		}
+	}
 
 	/*
 	 * "Move" each wlr_output_cursor (in per-output coordinates) to

@@ -6,12 +6,13 @@
 #include "config/rcxml.h"
 #include "desktop-entry.h"
 #include "img/img.h"
+#include "labwc.h"
 #include "view.h"
 
 #if HAVE_LIBSFDO
 
 static struct lab_data_buffer *
-choose_best_icon_buffer(struct view *view, int icon_size, double scale)
+choose_best_icon_buffer(struct view *view, int icon_size, float scale)
 {
 	int best_dist = -INT_MAX;
 	struct lab_data_buffer *best_buffer = NULL;
@@ -36,7 +37,7 @@ choose_best_icon_buffer(struct view *view, int icon_size, double scale)
 }
 
 static struct lab_data_buffer *
-img_to_buffer(struct lab_img *img, int icon_size, double scale)
+img_to_buffer(struct lab_img *img, int icon_size, float scale)
 {
 	struct lab_data_buffer *buffer =
 		lab_img_render(img, icon_size, icon_size, scale);
@@ -49,7 +50,7 @@ img_to_buffer(struct lab_img *img, int icon_size, double scale)
  * X11 apps can provide icon buffers via _NET_WM_ICON property.
  */
 static struct lab_data_buffer *
-load_client_icon(struct view *view, int icon_size, double scale)
+load_client_icon(struct view *view, int icon_size, float scale)
 {
 	struct lab_data_buffer *buffer =
 		choose_best_icon_buffer(view, icon_size, scale);
@@ -67,7 +68,7 @@ load_client_icon(struct view *view, int icon_size, double scale)
  * based on the icon theme specified in rc.xml.
  */
 static struct lab_data_buffer *
-load_server_icon(struct view *view, int icon_size, double scale)
+load_server_icon(struct view *view, int icon_size, float scale)
 {
 	struct lab_img *img =
 		desktop_entry_load_icon_from_app_id(view->app_id,
@@ -86,7 +87,7 @@ struct lab_data_buffer *
 scaled_icon_buffer_load(struct view *view, int icon_size)
 {
 #if HAVE_LIBSFDO
-	double scale = 1.0; /* FIXME */
+	float scale = g_server.max_output_scale;
 	struct lab_img *img = NULL;
 	struct lab_data_buffer *buffer = NULL;
 
