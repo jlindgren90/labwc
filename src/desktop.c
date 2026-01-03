@@ -16,7 +16,6 @@
 #include "output.h"
 #include "ssd.h"
 #include "view.h"
-#include "workspaces.h"
 
 #if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
@@ -92,14 +91,6 @@ desktop_focus_view(struct view *view, bool raise)
 		return;
 	}
 
-	/*
-	 * Switch workspace if necessary to make the view visible
-	 * (unnecessary for "always on {top,bottom}" views).
-	 */
-	if (!view_is_always_on_top(view) && !view_is_always_on_bottom(view)) {
-		workspaces_switch_to(view->workspace, /*update_focus*/ false);
-	}
-
 	if (raise) {
 		view_move_to_front(view);
 	}
@@ -138,7 +129,7 @@ desktop_topmost_focusable_view(struct server *server)
 	struct view *view;
 	struct wl_list *node_list;
 	struct wlr_scene_node *node;
-	node_list = &server->workspaces.current->tree->children;
+	node_list = &server->view_tree->children;
 	wl_list_for_each_reverse(node, node_list, link) {
 		if (!node->data) {
 			/* We found some non-view, most likely the region overlay */
@@ -177,8 +168,7 @@ desktop_focus_output(struct output *output)
 	struct view *view;
 	struct wlr_scene_node *node;
 	struct wlr_output_layout *layout = output->server->output_layout;
-	struct wl_list *list_head =
-		&output->server->workspaces.current->tree->children;
+	struct wl_list *list_head = &output->server->view_tree->children;
 	wl_list_for_each_reverse(node, list_head, link) {
 		if (!node->data) {
 			continue;
@@ -227,7 +217,7 @@ desktop_update_top_layer_visibility(struct server *server)
 	 * any views above it
 	 */
 	uint64_t outputs_covered = 0;
-	for_each_view(view, &server->views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, &server->views, LAB_VIEW_CRITERIA_NONE) {
 		if (view->minimized) {
 			continue;
 		}

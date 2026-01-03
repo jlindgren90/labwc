@@ -12,7 +12,6 @@
 #include "output.h"
 #include "ssd.h"
 #include "view.h"
-#include "workspaces.h"
 
 #define HEADER_CHARS "------------------------------"
 
@@ -106,15 +105,6 @@ get_special(struct server *server, struct wlr_scene_node *node)
 	if (node == &server->view_tree_always_on_top->node) {
 		return "server->always_on_top";
 	}
-	if (node->parent == server->view_tree) {
-		struct workspace *workspace;
-		wl_list_for_each(workspace, &server->workspaces.all, link) {
-			if (&workspace->tree->node == node) {
-				return workspace->name;
-			}
-		}
-		return "unknown workspace";
-	}
 	if (node->parent == &server->scene->tree) {
 		struct output *output;
 		wl_list_for_each(output, &server->outputs, link) {
@@ -160,9 +150,7 @@ get_special(struct server *server, struct wlr_scene_node *node)
 		return "server->unmanaged_tree";
 	}
 #endif
-	struct wlr_scene_tree *grand_parent =
-		node->parent ? node->parent->node.parent : NULL;
-	if (grand_parent == server->view_tree && node->data) {
+	if (node->parent == server->view_tree && node->data) {
 		last_view = node_view_from_node(node);
 	}
 	if (node->parent == server->view_tree_always_on_top && node->data) {
