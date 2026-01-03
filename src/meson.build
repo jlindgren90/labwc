@@ -11,7 +11,6 @@ labwc_sources = files(
   'node.c',
   'output.c',
   'output-state.c',
-  'output-virtual.c',
   'overlay.c',
   'resistance.c',
   'resize-outlines.c',

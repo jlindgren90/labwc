@@ -56,7 +56,6 @@
 #include "layers.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "output-virtual.h"
 #include "resize-indicator.h"
 #include "scaled-buffer/scaled-buffer.h"
 #include "session-lock.h"
@@ -105,7 +104,6 @@ handle_sighup(int signal, void *data)
 	keyboard_cancel_all_keybind_repeats(&server->seat);
 	session_environment_init();
 	reload_config_and_theme(server);
-	output_virtual_update_fallback(server);
 	return 0;
 }
 
@@ -725,9 +723,6 @@ server_start(struct server *server)
 		wlr_log(WLR_ERROR, "unable to start the wlroots backend");
 		exit(EXIT_FAILURE);
 	}
-
-	/* Potentially set up the initial fallback output */
-	output_virtual_update_fallback(server);
 
 	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "unable to set WAYLAND_DISPLAY");

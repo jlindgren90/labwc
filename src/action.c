@@ -22,7 +22,6 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "output-virtual.h"
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"
@@ -94,8 +93,6 @@ enum action_type {
 	ACTION_TYPE_FOCUS_OUTPUT,
 	ACTION_TYPE_MOVE_TO_OUTPUT,
 	ACTION_TYPE_FIT_TO_OUTPUT,
-	ACTION_TYPE_VIRTUAL_OUTPUT_ADD,
-	ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE,
 	ACTION_TYPE_TOGGLE_TEARING,
 	ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION,
 	ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION,
@@ -143,8 +140,6 @@ const char *action_names[] = {
 	"FocusOutput",
 	"MoveToOutput",
 	"FitToOutput",
-	"VirtualOutputAdd",
-	"VirtualOutputRemove",
 	"ToggleTearing",
 	"EnableScrollWheelEmulation",
 	"DisableScrollWheelEmulation",
@@ -368,13 +363,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 		}
 		if (!strcmp(argument, "wrap")) {
 			action_arg_add_bool(action, argument, parse_bool(content, false));
-			goto cleanup;
-		}
-		break;
-	case ACTION_TYPE_VIRTUAL_OUTPUT_ADD:
-	case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE:
-		if (!strcmp(argument, "output_name")) {
-			action_arg_add_str(action, argument, content);
 			goto cleanup;
 		}
 		break;
@@ -936,21 +924,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 		if (target_output) {
 			desktop_focus_output(target_output);
 		}
-		break;
-	}
-	case ACTION_TYPE_VIRTUAL_OUTPUT_ADD: {
-		/* TODO: rename this argument to "outputName" */
-		const char *output_name =
-			action_get_str(action, "output_name", NULL);
-		output_virtual_add(server, output_name,
-				/*store_wlr_output*/ NULL);
-		break;
-	}
-	case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE: {
-		/* TODO: rename this argument to "outputName" */
-		const char *output_name =
-			action_get_str(action, "output_name", NULL);
-		output_virtual_remove(server, output_name);
 		break;
 	}
 	case ACTION_TYPE_TOGGLE_TEARING:
