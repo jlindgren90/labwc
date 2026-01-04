@@ -206,7 +206,23 @@ handle_commit(struct wl_listener *listener, void *data)
 			| WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE;
 		wlr_xdg_toplevel_set_wm_capabilities(toplevel, wm_caps);
 
-		if (view->output) {
+		/*
+		 * We need to set a fallback position very early, before
+		 * the initial maximize/fullscreen. Size is not known yet.
+		 * This fallback position is used in case of a configure
+		 * timeout when un-maximizing an initially maximized view;
+		 * it can also be used to relocate a maximized view to the
+		 * correct output after disconnect + reconnect.
+		 */
+		view->pending.x = VIEW_FALLBACK_X;
+		view->pending.y = VIEW_FALLBACK_Y;
+
+		if (output_is_usable(view->output)) {
+			struct wlr_box box =
+				output_usable_area_in_layout_coords(view->output);
+			view->pending.x += box.x;
+			view->pending.y += box.y;
+
 			wlr_xdg_toplevel_set_bounds(toplevel,
 				view->output->usable_area.width,
 				view->output->usable_area.height);
@@ -353,8 +369,7 @@ handle_configure_timeout(void *data)
 		return 0; /* ignored per wl_event_loop docs */
 	}
 
-	bool empty_pending = wlr_box_empty(&view->pending);
-	if (empty_pending || view->pending.x != view->current.x
+	if (view->pending.x != view->current.x
 			|| view->pending.y != view->current.y) {
 		/*
 		 * This is a pending move + resize and the client is
@@ -366,27 +381,7 @@ handle_configure_timeout(void *data)
 		 * in this case we prefer to always put the top-left
 		 * corner of the view at the desired position rather
 		 * than anchoring some other edge or corner.
-		 *
-		 * Corner case: we may get here with an empty pending
-		 * geometry in the case of an initially-maximized view
-		 * which is taking a long time to un-maximize (seen for
-		 * example with Thunderbird on slow machines). In that
-		 * case we have no great options (we can't center the
-		 * view since we don't know the un-maximized size yet),
-		 * so set a fallback position.
 		 */
-		if (empty_pending) {
-			wlr_log(WLR_INFO, "using fallback position");
-			view->pending.x = VIEW_FALLBACK_X;
-			view->pending.y = VIEW_FALLBACK_Y;
-			/* At least try to keep it on the same output */
-			if (output_is_usable(view->output)) {
-				struct wlr_box box =
-					output_usable_area_in_layout_coords(view->output);
-				view->pending.x += box.x;
-				view->pending.y += box.y;
-			}
-		}
 		view->current.x = view->pending.x;
 		view->current.y = view->pending.y;
 	}
