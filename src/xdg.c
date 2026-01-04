@@ -22,7 +22,6 @@
 #include "output.h"
 #include "view.h"
 #include "view-impl-common.h"
-#include "window-rules.h"
 
 #define LAB_XDG_SHELL_VERSION 6
 #define CONFIGURE_TIMEOUT_MS 100
@@ -65,29 +64,6 @@ xdg_toplevel_view_get_size_hints(struct view *view)
 		.min_width = state->min_width,
 		.min_height = state->min_height,
 	};
-}
-
-static bool
-xdg_toplevel_view_contains_window_type(struct view *view,
-		enum lab_window_type window_type)
-{
-	assert(view);
-
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
-	struct wlr_xdg_toplevel_state *state = &toplevel->current;
-	bool is_dialog = (state->min_width != 0 && state->min_height != 0
-		&& (state->min_width == state->max_width
-		|| state->min_height == state->max_height))
-		|| toplevel->parent;
-
-	switch (window_type) {
-	case LAB_WINDOW_TYPE_NORMAL:
-		return !is_dialog;
-	case LAB_WINDOW_TYPE_DIALOG:
-		return is_dialog;
-	default:
-		return false;
-	}
 }
 
 static void
@@ -868,7 +844,6 @@ static const struct view_impl xdg_toplevel_view_impl = {
 	.append_children = xdg_toplevel_view_append_children,
 	.is_modal_dialog = xdg_toplevel_view_is_modal_dialog,
 	.get_size_hints = xdg_toplevel_view_get_size_hints,
-	.contains_window_type = xdg_toplevel_view_contains_window_type,
 };
 
 struct token_data {
@@ -933,11 +908,6 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 	 *	return;
 	 * }
 	 */
-
-	if (window_rules_get_property(view, "ignoreFocusRequest") == LAB_PROP_TRUE) {
-		wlr_log(WLR_INFO, "Ignoring focus request due to window rule configuration");
-		return;
-	}
 
 	wlr_log(WLR_DEBUG, "Activating surface");
 	desktop_focus_view(view, /*raise*/ true);

@@ -11,10 +11,8 @@
 #include "config/rcxml.h"
 #include "desktop-entry.h"
 #include "img/img.h"
-#include "node.h"
 #include "scaled-buffer/scaled-buffer.h"
 #include "view.h"
-#include "window-rules.h"
 
 #if HAVE_LIBSFDO
 
@@ -117,24 +115,13 @@ _create_buffer(struct scaled_buffer *scaled_buffer, double scale)
 	}
 
 	/* window icon */
-	if (self->view_icon_prefer_client) {
-		buffer = load_client_icon(self, icon_size, scale);
-		if (buffer) {
-			return buffer;
-		}
-		buffer = load_server_icon(self, icon_size, scale);
-		if (buffer) {
-			return buffer;
-		}
-	} else {
-		buffer = load_server_icon(self, icon_size, scale);
-		if (buffer) {
-			return buffer;
-		}
-		buffer = load_client_icon(self, icon_size, scale);
-		if (buffer) {
-			return buffer;
-		}
+	buffer = load_client_icon(self, icon_size, scale);
+	if (buffer) {
+		return buffer;
+	}
+	buffer = load_server_icon(self, icon_size, scale);
+	if (buffer) {
+		return buffer;
 	}
 	/* If both client and server icons are unavailable, use the fallback icon */
 	img = desktop_entry_load_icon(rc.fallback_app_icon_name, icon_size,
@@ -173,7 +160,6 @@ _destroy(struct scaled_buffer *scaled_buffer)
 	struct scaled_icon_buffer *self = scaled_buffer->data;
 	if (self->view) {
 		wl_list_remove(&self->on_view.set_icon.link);
-		wl_list_remove(&self->on_view.new_title.link);
 		wl_list_remove(&self->on_view.new_app_id.link);
 		wl_list_remove(&self->on_view.destroy.link);
 	}
@@ -201,7 +187,6 @@ _equal(struct scaled_buffer *scaled_buffer_a,
 	struct scaled_icon_buffer *b = scaled_buffer_b->data;
 
 	return str_equal(a->view_app_id, b->view_app_id)
-		&& a->view_icon_prefer_client == b->view_icon_prefer_client
 		&& str_equal(a->view_icon_name, b->view_icon_name)
 		&& icon_buffers_equal(&a->view_icon_buffers, &b->view_icon_buffers)
 		&& str_equal(a->icon_name, b->icon_name)
@@ -259,22 +244,6 @@ handle_view_set_icon(struct wl_listener *listener, void *data)
 }
 
 static void
-handle_view_new_title(struct wl_listener *listener, void *data)
-{
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.new_title);
-
-	bool prefer_client = window_rules_get_property(
-		self->view, "iconPreferClient") == LAB_PROP_TRUE;
-	if (prefer_client == self->view_icon_prefer_client) {
-		return;
-	}
-	self->view_icon_prefer_client = prefer_client;
-	scaled_buffer_request_update(self->scaled_buffer,
-		self->width, self->height);
-}
-
-static void
 handle_view_new_app_id(struct wl_listener *listener, void *data)
 {
 	struct scaled_icon_buffer *self =
@@ -286,8 +255,6 @@ handle_view_new_app_id(struct wl_listener *listener, void *data)
 	}
 
 	xstrdup_replace(self->view_app_id, app_id);
-	self->view_icon_prefer_client = window_rules_get_property(
-		self->view, "iconPreferClient") == LAB_PROP_TRUE;
 	scaled_buffer_request_update(self->scaled_buffer,
 		self->width, self->height);
 }
@@ -299,7 +266,6 @@ handle_view_destroy(struct wl_listener *listener, void *data)
 		wl_container_of(listener, self, on_view.destroy);
 	wl_list_remove(&self->on_view.destroy.link);
 	wl_list_remove(&self->on_view.set_icon.link);
-	wl_list_remove(&self->on_view.new_title.link);
 	wl_list_remove(&self->on_view.new_app_id.link);
 	self->view = NULL;
 }
@@ -314,7 +280,6 @@ scaled_icon_buffer_set_view(struct scaled_icon_buffer *self, struct view *view)
 
 	if (self->view) {
 		wl_list_remove(&self->on_view.set_icon.link);
-		wl_list_remove(&self->on_view.new_title.link);
 		wl_list_remove(&self->on_view.new_app_id.link);
 		wl_list_remove(&self->on_view.destroy.link);
 	}
@@ -322,9 +287,6 @@ scaled_icon_buffer_set_view(struct scaled_icon_buffer *self, struct view *view)
 
 	self->on_view.set_icon.notify = handle_view_set_icon;
 	wl_signal_add(&view->events.set_icon, &self->on_view.set_icon);
-
-	self->on_view.new_title.notify = handle_view_new_title;
-	wl_signal_add(&view->events.new_title, &self->on_view.new_title);
 
 	self->on_view.new_app_id.notify = handle_view_new_app_id;
 	wl_signal_add(&view->events.new_app_id, &self->on_view.new_app_id);
@@ -334,7 +296,6 @@ scaled_icon_buffer_set_view(struct scaled_icon_buffer *self, struct view *view)
 
 	handle_view_set_icon(&self->on_view.set_icon, NULL);
 	handle_view_new_app_id(&self->on_view.new_app_id, NULL);
-	handle_view_new_title(&self->on_view.new_title, NULL);
 }
 
 void

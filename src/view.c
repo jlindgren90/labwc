@@ -11,7 +11,6 @@
 #include "action.h"
 #include "buffer.h"
 #include "common/box.h"
-#include "common/match.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "cycle.h"
@@ -24,7 +23,6 @@
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
-#include "window-rules.h"
 #include "wlr/util/log.h"
 
 #if HAVE_XWAYLAND
@@ -54,159 +52,6 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	}
 #endif
 	return NULL;
-}
-
-static const struct wlr_security_context_v1_state *
-security_context_from_view(struct view *view)
-{
-	if (view && view->surface && view->surface->resource) {
-		struct wl_client *client = wl_resource_get_client(view->surface->resource);
-		return wlr_security_context_manager_v1_lookup_client(
-			g_server.security_context_manager_v1, client);
-	}
-	return NULL;
-}
-
-struct view_query *
-view_query_create(void)
-{
-	struct view_query *query = znew(*query);
-	/* Must be synced with view_matches_criteria() in window-rules.c */
-	query->window_type = LAB_WINDOW_TYPE_INVALID;
-	query->maximized = VIEW_AXIS_INVALID;
-	query->decoration = LAB_SSD_MODE_INVALID;
-	return query;
-}
-
-void
-view_query_free(struct view_query *query)
-{
-	wl_list_remove(&query->link);
-	zfree(query->identifier);
-	zfree(query->title);
-	zfree(query->sandbox_engine);
-	zfree(query->sandbox_app_id);
-	zfree(query->monitor);
-	zfree(query);
-}
-
-static bool
-query_tristate_match(enum lab_tristate desired, bool actual)
-{
-	switch (desired) {
-	case LAB_STATE_ENABLED:
-		return actual;
-	case LAB_STATE_DISABLED:
-		return !actual;
-	default:
-		return true;
-	}
-}
-
-static bool
-query_str_match(const char *condition, const char *value)
-{
-	if (!condition) {
-		return true;
-	}
-	return value && match_glob(condition, value);
-}
-
-static bool
-view_contains_window_type(struct view *view, enum lab_window_type window_type)
-{
-	assert(view);
-	if (view->impl->contains_window_type) {
-		return view->impl->contains_window_type(view, window_type);
-	}
-	return false;
-}
-
-bool
-view_matches_query(struct view *view, struct view_query *query)
-{
-	if (!query_str_match(query->identifier, view->app_id)) {
-		return false;
-	}
-
-	if (!query_str_match(query->title, view->title)) {
-		return false;
-	}
-
-	if (query->window_type != LAB_WINDOW_TYPE_INVALID
-			&& !view_contains_window_type(view, query->window_type)) {
-		return false;
-	}
-
-	if (query->sandbox_engine || query->sandbox_app_id) {
-		const struct wlr_security_context_v1_state *ctx =
-			security_context_from_view(view);
-
-		if (!ctx) {
-			return false;
-		}
-
-		if (!query_str_match(query->sandbox_engine, ctx->sandbox_engine)) {
-			return false;
-		}
-
-		if (!query_str_match(query->sandbox_app_id, ctx->app_id)) {
-			return false;
-		}
-	}
-
-	if (query->maximized != VIEW_AXIS_INVALID && view->maximized != query->maximized) {
-		return false;
-	}
-
-	if (!query_tristate_match(query->iconified, view->minimized)) {
-		return false;
-	}
-
-	if (!query_tristate_match(query->focused,
-			g_server.active_view == view)) {
-		return false;
-	}
-
-	if (query->tiled == LAB_EDGE_ANY) {
-		if (!view->tiled) {
-			return false;
-		}
-	} else if (query->tiled != LAB_EDGE_NONE) {
-		if (query->tiled != view->tiled) {
-			return false;
-		}
-	}
-
-	if (query->decoration != LAB_SSD_MODE_INVALID
-			&& query->decoration != view->ssd_mode) {
-		return false;
-	}
-
-	if (query->monitor) {
-		struct output *current = output_nearest_to_cursor();
-		if (!strcasecmp(query->monitor, "current")) {
-			if (current != view->output) {
-				return false;
-			}
-		} else if (!strcasecmp(query->monitor, "left")) {
-			if (output_get_adjacent(current, LAB_EDGE_LEFT, false)
-					!= view->output) {
-				return false;
-			}
-		} else if (!strcasecmp(query->monitor, "right")) {
-			if (output_get_adjacent(current, LAB_EDGE_RIGHT, false)
-					!= view->output) {
-				return false;
-			}
-		} else {
-			if (output_from_name(query->monitor) != view->output) {
-				return false;
-			}
-		}
-	}
-
-	return true;
 }
 
 static struct view *
@@ -242,11 +87,6 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 	}
 	if (criteria & LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP) {
 		if (view_is_always_on_top(view)) {
-			return false;
-		}
-	}
-	if (criteria & LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER) {
-		if (window_rules_get_property(view, "skipWindowSwitcher") == LAB_PROP_TRUE) {
 			return false;
 		}
 	}
@@ -732,8 +572,7 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 	}
 
 	/* Avoid moving panels out of their own reserved area ("strut") */
-	if (window_rules_get_property(view, "fixedPosition") == LAB_PROP_TRUE
-			|| view_has_strut_partial(view)) {
+	if (view_has_strut_partial(view)) {
 		return false;
 	}
 
@@ -1125,16 +964,6 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 bool
 view_wants_decorations(struct view *view)
 {
-	/* Window-rules take priority if they exist for this view */
-	switch (window_rules_get_property(view, "serverDecoration")) {
-	case LAB_PROP_TRUE:
-		return true;
-	case LAB_PROP_FALSE:
-		return false;
-	default:
-		break;
-	}
-
 	/*
 	 * view->ssd_preference may be set by the decoration implementation
 	 * e.g. src/decorations/xdg-deco.c or src/decorations/kde-deco.c.

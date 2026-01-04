@@ -61,35 +61,6 @@ enum lab_view_criteria {
 
 	/* Negative criteria */
 	LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP        = 1 << 6,
-	LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER = 1 << 7,
-};
-
-/*
- * Window types are based on the NET_WM constants from X11. See:
- *   https://specifications.freedesktop.org/wm-spec/1.4/ar01s05.html#id-1.6.7
- *
- * The enum constants are intended to match wlr_xwayland_net_wm_window_type.
- * Redefining the same constants here may seem redundant, but is necessary
- * to make them available even in builds with xwayland support disabled.
- */
-enum lab_window_type {
-	LAB_WINDOW_TYPE_INVALID = -1,
-	LAB_WINDOW_TYPE_DESKTOP = 0,
-	LAB_WINDOW_TYPE_DOCK,
-	LAB_WINDOW_TYPE_TOOLBAR,
-	LAB_WINDOW_TYPE_MENU,
-	LAB_WINDOW_TYPE_UTILITY,
-	LAB_WINDOW_TYPE_SPLASH,
-	LAB_WINDOW_TYPE_DIALOG,
-	LAB_WINDOW_TYPE_DROPDOWN_MENU,
-	LAB_WINDOW_TYPE_POPUP_MENU,
-	LAB_WINDOW_TYPE_TOOLTIP,
-	LAB_WINDOW_TYPE_NOTIFICATION,
-	LAB_WINDOW_TYPE_COMBO,
-	LAB_WINDOW_TYPE_DND,
-	LAB_WINDOW_TYPE_NORMAL,
-
-	LAB_WINDOW_TYPE_LEN
 };
 
 #endif /* LABWC_CONFIG_TYPES_H */
