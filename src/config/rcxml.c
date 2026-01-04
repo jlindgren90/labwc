@@ -28,7 +28,6 @@
 #include "config/mousebind.h"
 #include "cycle.h"
 #include "view.h"
-#include "window-rules.h"
 
 /* for backward compatibility of <mouse><scrollFactor> */
 static double mouse_scroll_factor = -1;
@@ -46,45 +45,6 @@ enum font_place {
 
 static void load_default_key_bindings(void);
 static void load_default_mouse_bindings(void);
-
-static enum lab_window_type
-parse_window_type(const char *type)
-{
-	if (!type) {
-		return LAB_WINDOW_TYPE_INVALID;
-	}
-	if (!strcasecmp(type, "desktop")) {
-		return LAB_WINDOW_TYPE_DESKTOP;
-	} else if (!strcasecmp(type, "dock")) {
-		return LAB_WINDOW_TYPE_DOCK;
-	} else if (!strcasecmp(type, "toolbar")) {
-		return LAB_WINDOW_TYPE_TOOLBAR;
-	} else if (!strcasecmp(type, "menu")) {
-		return LAB_WINDOW_TYPE_MENU;
-	} else if (!strcasecmp(type, "utility")) {
-		return LAB_WINDOW_TYPE_UTILITY;
-	} else if (!strcasecmp(type, "splash")) {
-		return LAB_WINDOW_TYPE_SPLASH;
-	} else if (!strcasecmp(type, "dialog")) {
-		return LAB_WINDOW_TYPE_DIALOG;
-	} else if (!strcasecmp(type, "dropdown_menu")) {
-		return LAB_WINDOW_TYPE_DROPDOWN_MENU;
-	} else if (!strcasecmp(type, "popup_menu")) {
-		return LAB_WINDOW_TYPE_POPUP_MENU;
-	} else if (!strcasecmp(type, "tooltip")) {
-		return LAB_WINDOW_TYPE_TOOLTIP;
-	} else if (!strcasecmp(type, "notification")) {
-		return LAB_WINDOW_TYPE_NOTIFICATION;
-	} else if (!strcasecmp(type, "combo")) {
-		return LAB_WINDOW_TYPE_COMBO;
-	} else if (!strcasecmp(type, "dnd")) {
-		return LAB_WINDOW_TYPE_DND;
-	} else if (!strcasecmp(type, "normal")) {
-		return LAB_WINDOW_TYPE_NORMAL;
-	} else {
-		return LAB_WINDOW_TYPE_INVALID;
-	}
-}
 
 /*
  * Openbox/labwc comparison
@@ -212,98 +172,6 @@ fill_usable_area_override(xmlNode *node)
 		} else {
 			wlr_log(WLR_ERROR, "Unexpected data usable-area-override "
 				"parser: %s=\"%s\"", key, content);
-		}
-	}
-}
-
-/* Does a boolean-parse but also allows 'default' */
-static void
-set_property(const char *str, enum property *variable)
-{
-	if (!str || !strcasecmp(str, "default")) {
-		*variable = LAB_PROP_UNSET;
-		return;
-	}
-	int ret = parse_bool(str, -1);
-	if (ret < 0) {
-		return;
-	}
-	*variable = ret ? LAB_PROP_TRUE : LAB_PROP_FALSE;
-}
-
-static void
-fill_window_rule(xmlNode *node)
-{
-	struct window_rule *window_rule = znew(*window_rule);
-	window_rule->window_type = LAB_WINDOW_TYPE_INVALID;
-	wl_list_append(&rc.window_rules, &window_rule->link);
-	wl_list_init(&window_rule->actions);
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		/* Criteria */
-		if (!strcmp(key, "identifier")) {
-			xstrdup_replace(window_rule->identifier, content);
-		} else if (!strcmp(key, "title")) {
-			xstrdup_replace(window_rule->title, content);
-		} else if (!strcmp(key, "type")) {
-			window_rule->window_type = parse_window_type(content);
-		} else if (!strcasecmp(key, "matchOnce")) {
-			set_bool(content, &window_rule->match_once);
-		} else if (!strcasecmp(key, "sandboxEngine")) {
-			xstrdup_replace(window_rule->sandbox_engine, content);
-		} else if (!strcasecmp(key, "sandboxAppId")) {
-			xstrdup_replace(window_rule->sandbox_app_id, content);
-
-		/* Event */
-		} else if (!strcmp(key, "event")) {
-			/*
-			 * This is just in readiness for adding any other types of
-			 * events in the future. We default to onFirstMap anyway.
-			 */
-			if (!strcasecmp(content, "onFirstMap")) {
-				window_rule->event = LAB_WINDOW_RULE_EVENT_ON_FIRST_MAP;
-			}
-
-		/* Properties */
-		} else if (!strcasecmp(key, "serverDecoration")) {
-			set_property(content, &window_rule->server_decoration);
-		} else if (!strcasecmp(key, "iconPriority")) {
-			if (!strcasecmp(content, "client")) {
-				window_rule->icon_prefer_client = LAB_PROP_TRUE;
-			} else if (!strcasecmp(content, "server")) {
-				window_rule->icon_prefer_client = LAB_PROP_FALSE;
-			} else {
-				wlr_log(WLR_ERROR,
-					"Invalid value for window rule property 'iconPriority'");
-			}
-		} else if (!strcasecmp(key, "skipTaskbar")) {
-			set_property(content, &window_rule->skip_taskbar);
-		} else if (!strcasecmp(key, "skipWindowSwitcher")) {
-			set_property(content, &window_rule->skip_window_switcher);
-		} else if (!strcasecmp(key, "ignoreFocusRequest")) {
-			set_property(content, &window_rule->ignore_focus_request);
-		} else if (!strcasecmp(key, "ignoreConfigureRequest")) {
-			set_property(content, &window_rule->ignore_configure_request);
-		} else if (!strcasecmp(key, "fixedPosition")) {
-			set_property(content, &window_rule->fixed_position);
-		}
-	}
-
-	append_parsed_actions(node, &window_rule->actions);
-}
-
-static void
-fill_window_rules(xmlNode *node)
-{
-	/* TODO: make sure <windowRules> is empty here */
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "windowRule")) {
-			fill_window_rule(child);
 		}
 	}
 }
@@ -817,8 +685,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		fill_mouse_context(node);
 	} else if (!strcasecmp(nodename, "device.libinput")) {
 		fill_libinput_category(node);
-	} else if (!strcasecmp(nodename, "windowRules")) {
-		fill_window_rules(node);
 	} else if (!strcasecmp(nodename, "font.theme")) {
 		fill_font(node);
 
@@ -1015,7 +881,6 @@ rcxml_init(void)
 		wl_list_init(&rc.keybinds);
 		wl_list_init(&rc.mousebinds);
 		wl_list_init(&rc.libinput_categories);
-		wl_list_init(&rc.window_rules);
 	}
 	has_run = true;
 
@@ -1289,18 +1154,6 @@ post_processing(void)
 }
 
 static void
-rule_destroy(struct window_rule *rule)
-{
-	wl_list_remove(&rule->link);
-	zfree(rule->identifier);
-	zfree(rule->title);
-	zfree(rule->sandbox_engine);
-	zfree(rule->sandbox_app_id);
-	action_list_free(&rule->actions);
-	zfree(rule);
-}
-
-static void
 validate_actions(void)
 {
 	struct action *action, *action_tmp;
@@ -1326,32 +1179,11 @@ validate_actions(void)
 			}
 		}
 	}
-
-	struct window_rule *rule;
-	wl_list_for_each(rule, &rc.window_rules, link) {
-		wl_list_for_each_safe(action, action_tmp, &rule->actions, link) {
-			if (!action_is_valid(action)) {
-				wl_list_remove(&action->link);
-				action_free(action);
-				wlr_log(WLR_ERROR, "Removed invalid window rule action");
-			}
-		}
-	}
 }
 
 static void
 validate(void)
 {
-	/* Window-rule criteria */
-	struct window_rule *rule, *rule_tmp;
-	wl_list_for_each_safe(rule, rule_tmp, &rc.window_rules, link) {
-		if (!rule->identifier && !rule->title && rule->window_type < 0
-				&& !rule->sandbox_engine && !rule->sandbox_app_id) {
-			wlr_log(WLR_ERROR, "Deleting rule %p as it has no criteria", rule);
-			rule_destroy(rule);
-		}
-	}
-
 	validate_actions();
 }
 
@@ -1447,11 +1279,6 @@ rcxml_finish(void)
 		wl_list_remove(&l->link);
 		zfree(l->name);
 		zfree(l);
-	}
-
-	struct window_rule *rule, *rule_tmp;
-	wl_list_for_each_safe(rule, rule_tmp, &rc.window_rules, link) {
-		rule_destroy(rule);
 	}
 
 	/* Reset state vars for starting fresh when Reload is triggered */

@@ -122,8 +122,6 @@ struct rcxml {
 	int resize_corner_range;
 	int resize_minimum_area;
 
-	struct wl_list window_rules; /* struct window_rule.link */
-
 	/* Menu */
 	unsigned int menu_ignore_button_release_period;
 	bool menu_show_icons;

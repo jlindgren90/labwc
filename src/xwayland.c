@@ -21,7 +21,6 @@
 #include "output.h"
 #include "view.h"
 #include "view-impl-common.h"
-#include "window-rules.h"
 
 enum atoms {
 	ATOM_NET_WM_ICON = 0,
@@ -54,49 +53,6 @@ xwayland_surface_from_view(struct view *view)
 	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
 	assert(xwayland_view->xwayland_surface);
 	return xwayland_view->xwayland_surface;
-}
-
-static bool
-xwayland_view_contains_window_type(struct view *view,
-		enum lab_window_type window_type)
-{
-	/* Compile-time check that the enum types match */
-	static_assert(LAB_WINDOW_TYPE_DESKTOP ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DESKTOP
-		&& LAB_WINDOW_TYPE_DOCK ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DOCK
-		&& LAB_WINDOW_TYPE_TOOLBAR ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_TOOLBAR
-		&& LAB_WINDOW_TYPE_MENU ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_MENU
-		&& LAB_WINDOW_TYPE_UTILITY ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_UTILITY
-		&& LAB_WINDOW_TYPE_SPLASH ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_SPLASH
-		&& LAB_WINDOW_TYPE_DIALOG ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG
-		&& LAB_WINDOW_TYPE_DROPDOWN_MENU ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DROPDOWN_MENU
-		&& LAB_WINDOW_TYPE_POPUP_MENU ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_POPUP_MENU
-		&& LAB_WINDOW_TYPE_TOOLTIP ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_TOOLTIP
-		&& LAB_WINDOW_TYPE_NOTIFICATION ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NOTIFICATION
-		&& LAB_WINDOW_TYPE_COMBO ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_COMBO
-		&& LAB_WINDOW_TYPE_DND ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DND
-		&& LAB_WINDOW_TYPE_NORMAL ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL
-		&& LAB_WINDOW_TYPE_LEN ==
-			(int)WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL + 1,
-		"lab_window_type does not match wlr_xwayland_net_wm_window_type");
-
-	assert(view);
-	struct wlr_xwayland_surface *surface = xwayland_surface_from_view(view);
-	return wlr_xwayland_surface_has_window_type(surface,
-		(enum wlr_xwayland_net_wm_window_type)window_type);
 }
 
 static struct view_size_hints
@@ -239,18 +195,6 @@ ensure_initial_geometry_and_output(struct view *view)
 static bool
 want_deco(struct wlr_xwayland_surface *xwayland_surface)
 {
-	struct view *view = (struct view *)xwayland_surface->data;
-
-	/* Window-rules take priority if they exist for this view */
-	switch (window_rules_get_property(view, "serverDecoration")) {
-	case LAB_PROP_TRUE:
-		return true;
-	case LAB_PROP_FALSE:
-		return false;
-	default:
-		break;
-	}
-
 	return xwayland_surface->decorations ==
 		WLR_XWAYLAND_SURFACE_DECORATIONS_ALL;
 }
@@ -401,10 +345,8 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		wl_container_of(listener, xwayland_view, request_configure);
 	struct view *view = &xwayland_view->base;
 	struct wlr_xwayland_surface_configure_event *event = data;
-	bool ignore_configure_requests = window_rules_get_property(
-		view, "ignoreConfigureRequest") == LAB_PROP_TRUE;
 
-	if (view_is_floating(view) && !ignore_configure_requests) {
+	if (view_is_floating(view)) {
 		/* Honor client configure requests for floating views */
 		struct wlr_box box = {.x = event->x, .y = event->y,
 			.width = event->width, .height = event->height};
@@ -427,12 +369,6 @@ handle_request_activate(struct wl_listener *listener, void *data)
 	struct xwayland_view *xwayland_view =
 		wl_container_of(listener, xwayland_view, request_activate);
 	struct view *view = &xwayland_view->base;
-
-	if (window_rules_get_property(view, "ignoreFocusRequest") == LAB_PROP_TRUE) {
-		wlr_log(WLR_INFO, "Ignoring focus request due to window rule configuration");
-		return;
-	}
-
 	desktop_focus_view(view, /*raise*/ true);
 }
 
@@ -960,7 +896,6 @@ static const struct view_impl xwayland_view_impl = {
 	.wants_focus = xwayland_view_wants_focus,
 	.offer_focus = xwayland_view_offer_focus,
 	.has_strut_partial = xwayland_view_has_strut_partial,
-	.contains_window_type = xwayland_view_contains_window_type,
 };
 
 void
