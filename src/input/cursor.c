@@ -252,9 +252,6 @@ process_cursor_move(struct server *server, uint32_t time)
 		y = new_geo.y;
 	}
 
-	/* Then apply window & edge resistance */
-	resistance_move_apply(view, &x, &y);
-
 	view_move(view, x, y);
 	overlay_update(&server->seat);
 }
@@ -307,7 +304,6 @@ process_cursor_resize(struct server *server, uint32_t time)
 		new_view_geo.width = server->grab_box.width + dx;
 	}
 
-	resistance_resize_apply(view, &new_view_geo);
 	view_adjust_size(view, &new_view_geo.width, &new_view_geo.height);
 
 	if (server->resize_edges & LAB_EDGE_TOP) {
