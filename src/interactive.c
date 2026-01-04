@@ -7,7 +7,6 @@
 #include "output.h"
 #include "resize-indicator.h"
 #include "view.h"
-#include "window-rules.h"
 
 /*
  *   pos_old  pos_cursor
@@ -90,9 +89,8 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		return;
 	}
 
-	/* Prevent moving/resizing fixed-position and panel-like views */
-	if (window_rules_get_property(view, "fixedPosition") == LAB_PROP_TRUE
-			|| view_has_strut_partial(view)) {
+	/* Prevent moving/resizing panel-like views */
+	if (view_has_strut_partial(view)) {
 		return;
 	}
 
