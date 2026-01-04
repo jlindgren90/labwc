@@ -175,9 +175,7 @@ handle_osd_tree_destroy(struct wl_listener *listener, void *data)
 static bool
 init_cycle(void)
 {
-	enum lab_view_criteria criteria =
-		LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER
-		| LAB_VIEW_CRITERIA_NO_DIALOG;
+	enum lab_view_criteria criteria = LAB_VIEW_CRITERIA_NO_DIALOG;
 
 	struct view *view;
 	for_each_view(view, &g_server.views, criteria) {

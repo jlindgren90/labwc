@@ -126,9 +126,6 @@ struct view_impl {
 	void (*offer_focus)(struct view *self);
 	/* returns true if view reserves space at screen edge */
 	bool (*has_strut_partial)(struct view *self);
-	/* returns true if view declared itself a window type */
-	bool (*contains_window_type)(struct view *view,
-		enum lab_window_type window_type);
 };
 
 struct view {
@@ -273,21 +270,6 @@ struct view {
 	} events;
 };
 
-struct view_query {
-	struct wl_list link;
-	char *identifier;
-	char *title;
-	enum lab_window_type window_type;
-	char *sandbox_engine;
-	char *sandbox_app_id;
-	enum view_axis maximized;
-	enum lab_tristate iconified;
-	enum lab_tristate focused;
-	enum lab_edge tiled;
-	enum lab_ssd_mode decoration;
-	char *monitor;
-};
-
 struct xdg_toplevel_view {
 	struct view base;
 	struct wlr_xdg_surface *xdg_surface;
@@ -306,29 +288,6 @@ struct xdg_toplevel_view {
  * wlr_surface, or NULL if the surface has no associated view.
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
-
-/**
- * view_query_create() - Create a new heap allocated view query with
- * all members initialized to their default values (window_type = -1,
- * NULL for strings)
- */
-struct view_query *view_query_create(void);
-
-/**
- * view_query_free() - Free a given view query
- * @query: Query to be freed.
- */
-void view_query_free(struct view_query *view);
-
-/**
- * view_matches_query() - Check if view matches the given criteria
- * @view: View to checked.
- * @query: Criteria to match against.
- *
- * Returns true if %view matches all of the criteria given in %query, false
- * otherwise.
- */
-bool view_matches_query(struct view *view, struct view_query *query);
 
 /**
  * for_each_view() - iterate over all views which match criteria (front to back)
