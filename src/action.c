@@ -100,7 +100,6 @@ enum action_type {
 	ACTION_TYPE_FIT_TO_OUTPUT,
 	ACTION_TYPE_VIRTUAL_OUTPUT_ADD,
 	ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE,
-	ACTION_TYPE_AUTO_PLACE,
 	ACTION_TYPE_TOGGLE_TEARING,
 	ACTION_TYPE_SHADE,
 	ACTION_TYPE_UNSHADE,
@@ -158,7 +157,6 @@ const char *action_names[] = {
 	"FitToOutput",
 	"VirtualOutputAdd",
 	"VirtualOutputRemove",
-	"AutoPlace",
 	"ToggleTearing",
 	"Shade",
 	"Unshade",
@@ -402,19 +400,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 	case ACTION_TYPE_VIRTUAL_OUTPUT_REMOVE:
 		if (!strcmp(argument, "output_name")) {
 			action_arg_add_str(action, argument, content);
-			goto cleanup;
-		}
-		break;
-	case ACTION_TYPE_AUTO_PLACE:
-		if (!strcmp(argument, "policy")) {
-			enum lab_placement_policy policy =
-				view_placement_parse(content);
-			if (policy == LAB_PLACE_INVALID) {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-						action_names[action->type], argument, content);
-			} else {
-				action_arg_add_int(action, argument, policy);
-			}
 			goto cleanup;
 		}
 		break;
@@ -1025,14 +1010,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 		output_virtual_remove(server, output_name);
 		break;
 	}
-	case ACTION_TYPE_AUTO_PLACE:
-		if (view) {
-			enum lab_placement_policy policy =
-				action_get_int(action, "policy", LAB_PLACE_AUTOMATIC);
-			view_place_by_policy(view,
-				/* allow_cursor */ true, policy);
-		}
-		break;
 	case ACTION_TYPE_TOGGLE_TEARING:
 		if (view) {
 			switch (view->force_tearing) {

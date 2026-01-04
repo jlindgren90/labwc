@@ -453,14 +453,6 @@ int view_effective_height(struct view *view, bool use_pending);
  */
 void view_center(struct view *view, const struct wlr_box *ref);
 
-/**
- * view_place_by_policy - apply placement strategy to view
- * @view: view to be placed
- * @allow_cursor: set to false to ignore center-on-cursor policy
- * @policy: placement policy to apply
- */
-void view_place_by_policy(struct view *view, bool allow_cursor,
-	enum lab_placement_policy policy);
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
 void view_set_maximized(struct view *view, enum view_axis maximized);
