@@ -23,7 +23,6 @@
 #include "placement.h"
 #include "resize-indicator.h"
 #include "session-lock.h"
-#include "snap-constraints.h"
 #include "ssd.h"
 #include "theme.h"
 #include "window-rules.h"
@@ -1916,7 +1915,6 @@ view_destroy(struct view *view)
 	assert(view);
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
-	snap_constraints_invalidate(view);
 
 	if (view->mappable.connected) {
 		mappable_disconnect(&view->mappable);
