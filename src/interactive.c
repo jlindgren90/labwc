@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <wlr/types/wlr_cursor.h>
 #include "config/rcxml.h"
-#include "edges.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "output.h"
@@ -176,9 +175,6 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 
 	if (rc.resize_indicator) {
 		resize_indicator_show(view);
-	}
-	if (rc.window_edge_strength) {
-		edges_calculate_visibility(view);
 	}
 }
 
