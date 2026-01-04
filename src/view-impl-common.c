@@ -4,25 +4,18 @@
 #include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "view.h"
-#include "window-rules.h"
 
 void
 view_impl_map(struct view *view)
 {
 	view_update_visibility(view);
 
-	if (!view->been_mapped) {
-		window_rules_apply(view, LAB_WINDOW_RULE_EVENT_ON_FIRST_MAP);
-	}
-
 	/*
-	 * Create foreign-toplevel handle, respecting skipTaskbar rules.
-	 * Also exclude unfocusable views (popups, floating toolbars,
-	 * etc.) as these should not be shown in taskbars/docks/etc.
+	 * Create foreign-toplevel handle. Exclude unfocusable views
+	 * (popups, floating toolbars, etc.) as these should not be
+	 * shown in taskbars/docks/etc.
 	 */
-	if (!view->foreign_toplevel && view_is_focusable(view)
-			&& window_rules_get_property(view, "skipTaskbar")
-				!= LAB_PROP_TRUE) {
+	if (!view->foreign_toplevel && view_is_focusable(view)) {
 		view->foreign_toplevel = foreign_toplevel_create(view);
 
 		struct view *parent = view->impl->get_parent(view);
