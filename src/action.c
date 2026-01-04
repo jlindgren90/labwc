@@ -65,11 +65,8 @@ enum action_type {
 	ACTION_TYPE_DEBUG,
 	ACTION_TYPE_EXECUTE,
 	ACTION_TYPE_EXIT,
-	ACTION_TYPE_MOVE_TO_EDGE,
 	ACTION_TYPE_TOGGLE_SNAP_TO_EDGE,
 	ACTION_TYPE_SNAP_TO_EDGE,
-	ACTION_TYPE_GROW_TO_EDGE,
-	ACTION_TYPE_SHRINK_TO_EDGE,
 	ACTION_TYPE_NEXT_WINDOW,
 	ACTION_TYPE_PREVIOUS_WINDOW,
 	ACTION_TYPE_RECONFIGURE,
@@ -126,11 +123,8 @@ const char *action_names[] = {
 	"Debug",
 	"Execute",
 	"Exit",
-	"MoveToEdge",
 	"ToggleSnapToEdge",
 	"SnapToEdge",
-	"GrowToEdge",
-	"ShrinkToEdge",
 	"NextWindow",
 	"PreviousWindow",
 	"Reconfigure",
@@ -272,11 +266,8 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 			goto cleanup;
 		}
 		break;
-	case ACTION_TYPE_MOVE_TO_EDGE:
 	case ACTION_TYPE_TOGGLE_SNAP_TO_EDGE:
 	case ACTION_TYPE_SNAP_TO_EDGE:
-	case ACTION_TYPE_GROW_TO_EDGE:
-	case ACTION_TYPE_SHRINK_TO_EDGE:
 		if (!strcmp(argument, "direction")) {
 			bool tiled = (action->type == ACTION_TYPE_TOGGLE_SNAP_TO_EDGE
 					|| action->type == ACTION_TYPE_SNAP_TO_EDGE);
@@ -287,11 +278,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 			} else {
 				action_arg_add_int(action, argument, edge);
 			}
-			goto cleanup;
-		}
-		if (action->type == ACTION_TYPE_MOVE_TO_EDGE
-				&& !strcasecmp(argument, "snapWindows")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
 			goto cleanup;
 		}
 		if ((action->type == ACTION_TYPE_SNAP_TO_EDGE
@@ -501,11 +487,8 @@ action_is_valid(struct action *action)
 	case ACTION_TYPE_EXECUTE:
 		arg_name = "command";
 		break;
-	case ACTION_TYPE_MOVE_TO_EDGE:
 	case ACTION_TYPE_TOGGLE_SNAP_TO_EDGE:
 	case ACTION_TYPE_SNAP_TO_EDGE:
-	case ACTION_TYPE_GROW_TO_EDGE:
-	case ACTION_TYPE_SHRINK_TO_EDGE:
 		arg_name = "direction";
 		arg_type = LAB_ACTION_ARG_INT;
 		break;
@@ -771,14 +754,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 	case ACTION_TYPE_EXIT:
 		wl_display_terminate(server->wl_display);
 		break;
-	case ACTION_TYPE_MOVE_TO_EDGE:
-		if (view) {
-			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
-			bool snap_to_windows = action_get_bool(action, "snapWindows", true);
-			view_move_to_edge(view, edge, snap_to_windows);
-		}
-		break;
 	case ACTION_TYPE_TOGGLE_SNAP_TO_EDGE:
 	case ACTION_TYPE_SNAP_TO_EDGE:
 		if (view) {
@@ -796,20 +771,6 @@ run_action(struct view *view, struct server *server, struct action *action,
 			bool combine = action_get_bool(action, "combine", false);
 			view_snap_to_edge(view, edge, /*across_outputs*/ true,
 				combine);
-		}
-		break;
-	case ACTION_TYPE_GROW_TO_EDGE:
-		if (view) {
-			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
-			view_grow_to_edge(view, edge);
-		}
-		break;
-	case ACTION_TYPE_SHRINK_TO_EDGE:
-		if (view) {
-			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
-			view_shrink_to_edge(view, edge);
 		}
 		break;
 	case ACTION_TYPE_NEXT_WINDOW:

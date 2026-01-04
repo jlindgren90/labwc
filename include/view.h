@@ -529,9 +529,6 @@ void view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_
 void view_toggle_fullscreen(struct view *view);
 void view_invalidate_last_layout_geometry(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
-void view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windows);
-void view_grow_to_edge(struct view *view, enum lab_edge direction);
-void view_shrink_to_edge(struct view *view, enum lab_edge direction);
 void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool combine);
 void view_snap_to_region(struct view *view, struct region *region);

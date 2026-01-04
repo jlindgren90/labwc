@@ -25,8 +25,6 @@
 #include "regions.h"
 #include "resize-indicator.h"
 #include "session-lock.h"
-#include "snap-constraints.h"
-#include "snap.h"
 #include "ssd.h"
 #include "theme.h"
 #include "window-rules.h"
@@ -1799,168 +1797,6 @@ view_on_output_destroy(struct view *view)
 	view->output = NULL;
 }
 
-static int
-shift_view_to_usable_1d(int size,
-		int cur_pos, int cur_lo, int cur_extent,
-		int next_pos, int next_lo, int next_extent,
-		int margin_lo, int margin_hi)
-{
-	int cur_min = cur_lo + rc.gap + margin_lo;
-	int cur_max = cur_lo + cur_extent - rc.gap - margin_hi;
-
-	int next_min = next_lo + rc.gap + margin_lo;
-	int next_max = next_lo + next_extent - rc.gap - margin_hi;
-
-	/*
-	 * If the view is fully within the usable area of its original display,
-	 * ensure that it is also fully within the usable area of the target.
-	 */
-	if (cur_pos >= cur_min && cur_pos + size <= cur_max) {
-		if (next_pos >= next_min && next_pos + size > next_max) {
-			next_pos = next_max - size;
-		}
-
-		return MAX(next_pos, next_min);
-	}
-
-	/*
-	 * If the view was not fully within the usable area of its original
-	 * display, kick it onscreen if its midpoint will be off the target.
-	 */
-	int midpoint = next_pos + size / 2;
-	if (next_pos >= next_min && midpoint > next_lo + next_extent) {
-		next_pos = next_max - size;
-	}
-
-	return MAX(next_pos, next_min);
-}
-
-void
-view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windows)
-{
-	assert(view);
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not moving to edge");
-		return;
-	}
-
-	int dx = 0, dy = 0;
-	snap_move_to_edge(view, direction, snap_to_windows, &dx, &dy);
-
-	if (dx != 0 || dy != 0) {
-		/* Move the window if a change was discovered */
-		view_move(view, view->pending.x + dx, view->pending.y + dy);
-		return;
-	}
-
-	/* If the view is maximized, do not attempt to jump displays */
-	if (view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-
-	/* Otherwise, move to edge of next adjacent display, if possible */
-	struct output *output =
-		output_get_adjacent(view->output, direction, /* wrap */ false);
-	if (!output) {
-		return;
-	}
-
-	/* When jumping to next output, attach to edge nearest the motion */
-	struct wlr_box usable = output_usable_area_in_layout_coords(output);
-	struct border margin = ssd_get_margin(view->ssd);
-
-	/* Bounds of the possible placement zone in this output */
-	int left = usable.x + rc.gap + margin.left;
-	int right = usable.x + usable.width - rc.gap - margin.right;
-	int top = usable.y + rc.gap + margin.top;
-	int bottom = usable.y + usable.height - rc.gap - margin.bottom;
-
-	/* Default target position on new output is current target position */
-	int destination_x = view->pending.x;
-	int destination_y = view->pending.y;
-
-	/* Compute the new position in the direction of motion */
-	direction = lab_edge_invert(direction);
-	switch (direction) {
-	case LAB_EDGE_LEFT:
-		destination_x = left;
-		break;
-	case LAB_EDGE_RIGHT:
-		destination_x = right - view->pending.width;
-		break;
-	case LAB_EDGE_TOP:
-		destination_y = top;
-		break;
-	case LAB_EDGE_BOTTOM:
-		destination_y = bottom
-			- view_effective_height(view, /* use_pending */ true);
-		break;
-	default:
-		return;
-	}
-
-	struct wlr_box original_usable =
-		output_usable_area_in_layout_coords(view->output);
-
-	/* Make sure the window is appropriately in view along the x direction */
-	destination_x = shift_view_to_usable_1d(view->pending.width,
-		view->pending.x, original_usable.x, original_usable.width,
-		destination_x, usable.x, usable.width, margin.left, margin.right);
-
-	/* Make sure the window is appropriately in view along the y direction */
-	int eff_height = view_effective_height(view, /* use_pending */ true);
-	destination_y = shift_view_to_usable_1d(eff_height,
-		view->pending.y, original_usable.y, original_usable.height,
-		destination_y, usable.y, usable.height, margin.top, margin.bottom);
-
-	view_set_untiled(view);
-	view_set_output(view, output);
-	view_move(view, destination_x, destination_y);
-}
-
-void
-view_grow_to_edge(struct view *view, enum lab_edge direction)
-{
-	assert(view);
-	/* TODO: allow grow to edge if maximized along the other axis */
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not growing view");
-		return;
-	}
-
-	view_set_shade(view, false);
-
-	struct wlr_box geo;
-	snap_grow_to_next_edge(view, direction, &geo);
-	view_move_resize(view, geo);
-}
-
-void
-view_shrink_to_edge(struct view *view, enum lab_edge direction)
-{
-	assert(view);
-
-	/* TODO: allow shrink to edge if maximized along the other axis */
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not shrinking view");
-		return;
-	}
-
-	view_set_shade(view, false);
-
-	struct wlr_box geo = view->pending;
-	snap_shrink_to_next_edge(view, direction, &geo);
-	view_move_resize(view, geo);
-}
-
 enum view_axis
 view_axis_parse(const char *direction)
 {
@@ -2469,7 +2305,6 @@ view_destroy(struct view *view)
 	struct server *server = view->server;
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
-	snap_constraints_invalidate(view);
 
 	if (view->mappable.connected) {
 		mappable_disconnect(&view->mappable);
