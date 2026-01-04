@@ -245,9 +245,6 @@ process_cursor_move(uint32_t time)
 		y = new_geo.y;
 	}
 
-	/* Then apply window & edge resistance */
-	resistance_move_apply(view, &x, &y);
-
 	view_move(view, x, y);
 	overlay_update();
 }
@@ -300,7 +297,6 @@ process_cursor_resize(uint32_t time)
 		new_view_geo.width = g_server.grab_box.width + dx;
 	}
 
-	resistance_resize_apply(view, &new_view_geo);
 	view_adjust_size(view, &new_view_geo.width, &new_view_geo.height);
 
 	if (g_server.resize_edges & LAB_EDGE_TOP) {

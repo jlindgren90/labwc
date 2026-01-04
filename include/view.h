@@ -176,7 +176,6 @@ struct view {
 	enum view_axis maximized;
 	bool fullscreen;
 	enum lab_edge tiled;
-	enum lab_edge edges_visible;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 	xkb_layout_index_t keyboard_layout;
 
