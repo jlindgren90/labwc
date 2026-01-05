@@ -214,12 +214,14 @@ struct view {
 	 */
 	struct wlr_box natural_geometry;
 	/*
-	 * Whenever an output layout change triggers a view relocation, the
-	 * last pending position (or natural geometry) will be saved so the
-	 * view may be restored to its original location on a subsequent layout
-	 * change.
+	 * Geometry of the view prior to adjusting for layout changes.
+	 * This is valid only when the most recent move/resize of the
+	 * view was due to a layout change, and is invalidated by any
+	 * user-initiated move/resize.
 	 */
-	struct wlr_box last_layout_geometry;
+	struct wlr_box saved_geometry;
+	bool saved_geometry_valid;
+	bool lost_output_due_to_layout_change;
 
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
@@ -533,7 +535,6 @@ bool view_titlebar_visible(struct view *view);
 void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
 void view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_ssd);
 void view_toggle_fullscreen(struct view *view);
-void view_invalidate_last_layout_geometry(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
 void view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windows);
 void view_grow_to_edge(struct view *view, enum lab_edge direction);
