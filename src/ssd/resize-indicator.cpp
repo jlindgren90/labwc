@@ -74,29 +74,28 @@ wants_indicator(struct view *view)
 void
 resize_indicator_reconfigure(void)
 {
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
-		struct resize_indicator *indicator = &view->resize_indicator;
+	for (auto &view : g_views) {
+		struct resize_indicator *indicator = &view.resize_indicator;
 		if (indicator->tree) {
 			resize_indicator_reconfigure_view(indicator);
 		}
-		if (view != g_server.grabbed_view) {
+		if (&view != g_server.grabbed_view) {
 			continue;
 		}
 
 		/* This view is currently in an interactive move/resize operation */
 		if (indicator->tree && indicator->tree->node.enabled) {
 			/* Indicator was active while reloading the config */
-			if (wants_indicator(view)) {
+			if (wants_indicator(&view)) {
 				/* Apply new font setting */
-				resize_indicator_update(view);
+				resize_indicator_update(&view);
 			} else {
 				/* Indicator was disabled in config */
-				resize_indicator_hide(view);
+				resize_indicator_hide(&view);
 			}
-		} else if (wants_indicator(view)) {
+		} else if (wants_indicator(&view)) {
 			/* Indicator not yet active */
-			resize_indicator_show(view);
+			resize_indicator_show(&view);
 		}
 	}
 }
