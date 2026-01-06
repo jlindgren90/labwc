@@ -12,7 +12,6 @@
 #include "buffer.h"
 #include "common/box.h"
 #include "common/match.h"
-#include "common/mem.h"
 #include "config/rcxml.h"
 #include "cycle.h"
 #include "foreign-toplevel/foreign.h"
@@ -158,8 +157,10 @@ view_matches_query(struct view *view, struct view_query *query)
 		}
 	}
 
-	const char *tiled_region =
-		view->tiled_region ? view->tiled_region->name : NULL;
+	const char *tiled_region = nullptr;
+	if (CHECK_PTR(view->tiled_region, region)) {
+		tiled_region = region->name.c();
+	}
 	if (!query_str_match(query->tiled_region.c(), tiled_region)) {
 		return false;
 	}
@@ -1115,11 +1116,11 @@ view_apply_region_geometry(struct view *view)
 	if (view->tiled_region_evacuate) {
 		/* View was evacuated from a destroying output */
 		/* Get new output local region, may be NULL */
-		view->tiled_region = regions_from_name(
-			view->tiled_region_evacuate, output);
+		view->tiled_region.reset(regions_from_name(
+			view->tiled_region_evacuate.c(), output).get());
 
 		/* Get rid of the evacuate instruction */
-		zfree(view->tiled_region_evacuate);
+		view->tiled_region_evacuate.clear();
 
 		if (!view->tiled_region) {
 			/* Existing region name doesn't exist in rc.xml anymore */
@@ -1129,7 +1130,8 @@ view_apply_region_geometry(struct view *view)
 		}
 	}
 
-	struct wlr_box geo = view_get_region_snap_box(view, view->tiled_region);
+	struct wlr_box geo =
+		view_get_region_snap_box(view, view->tiled_region.get());
 	view_move_resize(view, geo);
 }
 
@@ -1293,8 +1295,8 @@ view_set_untiled(struct view *view)
 {
 	assert(view);
 	view->tiled = LAB_EDGE_NONE;
-	view->tiled_region = NULL;
-	zfree(view->tiled_region_evacuate);
+	view->tiled_region.reset();
+	view->tiled_region_evacuate = lab_str();
 	view_notify_tiled(view);
 }
 
@@ -1690,11 +1692,11 @@ void
 view_evacuate_region(struct view *view)
 {
 	assert(view);
-	assert(view->tiled_region);
+	CHECK_PTR_OR_RET(view->tiled_region, region);
 	if (!view->tiled_region_evacuate) {
-		view->tiled_region_evacuate = xstrdup(view->tiled_region->name);
+		view->tiled_region_evacuate = region->name;
 	}
-	view->tiled_region = NULL;
+	view->tiled_region.reset();
 }
 
 void
@@ -2007,7 +2009,7 @@ view_snap_to_region(struct view *view, struct region *region)
 		view_store_natural_geometry(view);
 	}
 	view_set_untiled(view);
-	view->tiled_region = region;
+	view->tiled_region = weakptr(region);
 	view_notify_tiled(view);
 	view_apply_region_geometry(view);
 }
@@ -2030,9 +2032,9 @@ view_move_to_output(struct view *view, struct output *output)
 		view_apply_maximized_geometry(view);
 	} else if (view->tiled) {
 		view_apply_tiled_geometry(view);
-	} else if (view->tiled_region) {
-		struct region *region = regions_from_name(view->tiled_region->name, output);
-		view_snap_to_region(view, region);
+	} else if (CHECK_PTR(view->tiled_region, old_region)) {
+		auto region = regions_from_name(old_region->name.c(), output);
+		view_snap_to_region(view, region.get());
 	}
 }
 
@@ -2313,10 +2315,6 @@ view::~view()
 
 	if (g_server.session_lock_manager->last_active_view == view) {
 		g_server.session_lock_manager->last_active_view = NULL;
-	}
-
-	if (view->tiled_region_evacuate) {
-		zfree(view->tiled_region_evacuate);
 	}
 
 	/* TODO: call this on map/unmap instead */
