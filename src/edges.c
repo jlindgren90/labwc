@@ -22,13 +22,10 @@ edges_for_target_geometry(struct border *edges, struct view *view,
 {
 	struct border border = ssd_get_margin(view->ssd);
 
-	/* Use the effective height to properly handle shaded views */
-	int eff_height = view->shaded ? 0 : target.height;
-
 	edges->left = target.x - border.left - rc.gap;
 	edges->top = target.y - border.top - rc.gap;
 	edges->right = target.x + target.width + border.right + rc.gap;
-	edges->bottom = target.y + eff_height + border.bottom + rc.gap;
+	edges->bottom = target.y + target.height + border.bottom + rc.gap;
 }
 
 void
@@ -415,8 +412,7 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 		struct border win_edges = {
 			.top = v->current.y - border.top,
 			.right = v->current.x + v->current.width + border.right,
-			.bottom = v->current.y + border.bottom
-				+ view_effective_height(v, /* use_pending */ false),
+			.bottom = v->current.y + v->current.height + border.bottom,
 			.left = v->current.x - border.left,
 		};
 
@@ -515,8 +511,7 @@ edges_adjust_move_coords(struct view *view, struct border edges,
 
 	if (view_geom->y != *y) {
 		int tshift = border.top + rc.gap;
-		int bshift = border.bottom + rc.gap
-			+ view_effective_height(view, use_pending);
+		int bshift = border.bottom + rc.gap + view_geom->height;
 
 		adjust_move_coords_1d(y, edges.top, tshift,
 			edges.bottom, bshift, *y < view_geom->y);

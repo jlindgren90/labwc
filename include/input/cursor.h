@@ -71,8 +71,6 @@ struct cursor_context get_cursor_context(struct server *server);
  */
 void cursor_set(struct seat *seat, enum lab_cursors cursor);
 
-void cursor_set_visible(struct seat *seat, bool visible);
-
 /*
  * Safely store a cursor context to saved_ctx. saved_ctx is cleared when either
  * of its node, surface and view is destroyed.
