@@ -151,14 +151,6 @@ handle_request_set_cursor(struct wl_listener *listener, void *data)
 	}
 
 	/*
-	 * Omit cursor notifications when the current cursor is
-	 * invisible, e.g. on touch input.
-	 */
-	if (!seat->cursor_visible) {
-		return;
-	}
-
-	/*
 	 * This event is raised by the seat when a client provides a cursor
 	 * image
 	 */
@@ -193,14 +185,6 @@ handle_request_set_shape(struct wl_listener *listener, void *data)
 
 	/* Prevent setting a cursor image when moving or resizing */
 	if (seat->server->input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
-		return;
-	}
-
-	/*
-	 * Omit set shape when the current cursor is
-	 * invisible, e.g. on touch input.
-	 */
-	if (!seat->cursor_visible) {
 		return;
 	}
 
@@ -261,8 +245,6 @@ process_cursor_move(struct server *server, uint32_t time)
 			.height = view->natural_geometry.height,
 		};
 		interactive_anchor_to_cursor(server, &new_geo);
-		/* Shaded clients will not process resize events until unshaded */
-		view_set_shade(view, false);
 		view_set_maximized(view, VIEW_AXIS_NONE);
 		view_set_untiled(view);
 		view_move_resize(view, new_geo);
@@ -357,33 +339,15 @@ cursor_set(struct seat *seat, enum lab_cursors cursor)
 		return;
 	}
 
-	if (seat->cursor_visible) {
-		wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager,
-			cursor_names[cursor]);
-	}
+	wlr_cursor_set_xcursor(seat->cursor, seat->xcursor_manager,
+		cursor_names[cursor]);
 	seat->server_cursor = cursor;
-}
-
-void
-cursor_set_visible(struct seat *seat, bool visible)
-{
-	if (seat->cursor_visible == visible) {
-		return;
-	}
-
-	seat->cursor_visible = visible;
-	cursor_update_image(seat);
 }
 
 void
 cursor_update_image(struct seat *seat)
 {
 	enum lab_cursors cursor = seat->server_cursor;
-
-	if (!seat->cursor_visible) {
-		wlr_cursor_unset_image(seat->cursor);
-		return;
-	}
 
 	if (cursor == LAB_CURSOR_CLIENT) {
 		/*
@@ -567,12 +531,7 @@ cursor_update_common(struct server *server, const struct cursor_context *ctx,
 		 */
 		wlr_seat_pointer_notify_clear_focus(wlr_seat);
 		if (!seat->drag.active) {
-			enum lab_cursors cursor = cursor_get_from_ssd(ctx->type);
-			if (ctx->view && ctx->view->shaded && cursor > LAB_CURSOR_GRAB) {
-				/* Prevent resize cursor on borders for shaded SSD */
-				cursor = LAB_CURSOR_DEFAULT;
-			}
-			cursor_set(seat, cursor);
+			cursor_set(seat, cursor_get_from_ssd(ctx->type));
 		}
 	}
 }
@@ -872,19 +831,6 @@ preprocess_cursor_motion(struct seat *seat, struct wlr_pointer *pointer,
 	}
 }
 
-static double get_natural_scroll_factor(struct wlr_input_device *wlr_input_device)
-{
-	if (wlr_input_device_is_libinput(wlr_input_device)) {
-		struct libinput_device *libinput_device =
-			wlr_libinput_get_device_handle(wlr_input_device);
-		if (libinput_device_config_scroll_get_natural_scroll_enabled(libinput_device)) {
-			return -1.0;
-		}
-	}
-
-	return 1.0;
-}
-
 static void
 handle_motion(struct wl_listener *listener, void *data)
 {
@@ -896,44 +842,14 @@ handle_motion(struct wl_listener *listener, void *data)
 	struct server *server = seat->server;
 	struct wlr_pointer_motion_event *event = data;
 	idle_manager_notify_activity(seat->seat);
-	cursor_set_visible(seat, /* visible */ true);
 
-	if (seat->cursor_scroll_wheel_emulation) {
-		enum wl_pointer_axis orientation;
-		double delta;
-		if (fabs(event->delta_x) > fabs(event->delta_y)) {
-			orientation = WL_POINTER_AXIS_HORIZONTAL_SCROLL;
-			delta = event->delta_x;
-		} else {
-			orientation = WL_POINTER_AXIS_VERTICAL_SCROLL;
-			delta = event->delta_y;
-		}
+	wlr_relative_pointer_manager_v1_send_relative_motion(
+		server->relative_pointer_manager, seat->seat,
+		(uint64_t)event->time_msec * 1000, event->delta_x,
+		event->delta_y, event->unaccel_dx, event->unaccel_dy);
 
-		/*
-		 * arbitrary factor that should give reasonable speed
-		 * with the default configured scroll factor of 1.0
-		 */
-		double motion_to_scroll_factor = 0.04;
-		double scroll_factor = motion_to_scroll_factor *
-			get_natural_scroll_factor(&event->pointer->base);
-
-		/* The delta of a single step for mouse wheel emulation */
-		double pointer_axis_step = 15.0;
-
-		cursor_emulate_axis(seat, &event->pointer->base,
-			orientation,
-			pointer_axis_step * scroll_factor * delta, 0,
-			WL_POINTER_AXIS_SOURCE_CONTINUOUS, event->time_msec);
-	} else {
-		wlr_relative_pointer_manager_v1_send_relative_motion(
-			server->relative_pointer_manager,
-			seat->seat, (uint64_t)event->time_msec * 1000,
-			event->delta_x, event->delta_y, event->unaccel_dx,
-			event->unaccel_dy);
-
-		preprocess_cursor_motion(seat, event->pointer,
-			event->time_msec, event->delta_x, event->delta_y);
-	}
+	preprocess_cursor_motion(seat, event->pointer, event->time_msec,
+		event->delta_x, event->delta_y);
 }
 
 static void
@@ -950,7 +866,6 @@ handle_motion_absolute(struct wl_listener *listener, void *data)
 	struct seat *seat = wl_container_of(listener, seat, on_cursor.motion_absolute);
 	struct wlr_pointer_motion_absolute_event *event = data;
 	idle_manager_notify_activity(seat->seat);
-	cursor_set_visible(seat, /* visible */ true);
 
 	double lx, ly;
 	wlr_cursor_absolute_to_layout_coords(seat->cursor,
@@ -1266,7 +1181,6 @@ handle_button(struct wl_listener *listener, void *data)
 	struct seat *seat = wl_container_of(listener, seat, on_cursor.button);
 	struct wlr_pointer_button_event *event = data;
 	idle_manager_notify_activity(seat->seat);
-	cursor_set_visible(seat, /* visible */ true);
 
 	bool notify;
 	switch (event->state) {
@@ -1413,7 +1327,6 @@ handle_axis(struct wl_listener *listener, void *data)
 	struct server *server = seat->server;
 	struct wlr_pointer_axis_event *event = data;
 	idle_manager_notify_activity(seat->seat);
-	cursor_set_visible(seat, /* visible */ true);
 
 	/* input->scroll_factor is set for pointer/touch devices */
 	assert(event->pointer->base.type == WLR_INPUT_DEVICE_POINTER

@@ -586,7 +586,6 @@ seat_init(struct server *server)
 	CONNECT_SIGNAL(seat->virtual_keyboard, seat, new_virtual_keyboard);
 
 	seat->xcursor_manager = NULL;
-	seat->cursor_visible = true;
 	seat->cursor = wlr_cursor_create();
 	if (!seat->cursor) {
 		wlr_log(WLR_ERROR, "unable to create cursor");

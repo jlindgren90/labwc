@@ -32,7 +32,6 @@
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_tablet_v2.h>
-#include <wlr/types/wlr_tearing_control_v1.h>
 #include <wlr/types/wlr_text_input_v3.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xdg_foreign_registry.h>
@@ -54,11 +53,8 @@
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "layers.h"
-#include "magnifier.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "output-virtual.h"
-#include "regions.h"
 #include "resize-indicator.h"
 #include "scaled-buffer/scaled-buffer.h"
 #include "session-lock.h"
@@ -95,7 +91,6 @@ reload_config_and_theme(struct server *server)
 
 	menu_reconfigure(server);
 	seat_reconfigure(server);
-	regions_reconfigure(server);
 	resize_indicator_reconfigure(server);
 	kde_server_decoration_update_default();
 }
@@ -108,7 +103,6 @@ handle_sighup(int signal, void *data)
 	keyboard_cancel_all_keybind_repeats(&server->seat);
 	session_environment_init();
 	reload_config_and_theme(server);
-	output_virtual_update_fallback(server);
 	return 0;
 }
 
@@ -403,8 +397,6 @@ handle_renderer_lost(struct wl_listener *listener, void *data)
 
 	reload_config_and_theme(server);
 
-	magnifier_reset();
-
 	wlr_allocator_destroy(old_allocator);
 	wlr_renderer_destroy(old_renderer);
 }
@@ -563,12 +555,10 @@ server_init(struct server *server)
 	 * | xdg-popups          | xdg-popups       | No         |
 	 * | toplevels windows   | always-on-top    | No         |
 	 * | toplevels windows   | normal           | No         | firefox
-	 * | toplevels windows   | always-on-bottom | No         | pcmanfm-qt --desktop
 	 * | layer-shell         | bottom-layer     | Yes        | waybar
 	 * | layer-shell         | background-layer | Yes        | swaybg
 	 */
 
-	server->view_tree_always_on_bottom = wlr_scene_tree_create(&server->scene->tree);
 	server->view_tree = wlr_scene_tree_create(&server->scene->tree);
 	server->view_tree_always_on_top = wlr_scene_tree_create(&server->scene->tree);
 	server->xdg_popup_tree = wlr_scene_tree_create(&server->scene->tree);
@@ -689,10 +679,6 @@ server_init(struct server *server)
 	wl_signal_add(&server->output_power_manager_v1->events.set_mode,
 		&server->output_power_manager_set_mode);
 
-	server->tearing_control = wlr_tearing_control_manager_v1_create(server->wl_display, 1);
-	server->tearing_new_object.notify = handle_tearing_new_object;
-	wl_signal_add(&server->tearing_control->events.new_object, &server->tearing_new_object);
-
 	server->tablet_manager = wlr_tablet_v2_create(server->wl_display);
 
 	layers_init(server);
@@ -731,9 +717,6 @@ server_start(struct server *server)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Potentially set up the initial fallback output */
-	output_virtual_update_fallback(server);
-
 	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "unable to set WAYLAND_DISPLAY");
 	} else {
@@ -765,7 +748,6 @@ server_finish(struct server *server)
 	xdg_server_decoration_finish(server);
 	wl_list_remove(&server->new_constraint.link);
 	wl_list_remove(&server->output_power_manager_set_mode.link);
-	wl_list_remove(&server->tearing_new_object.link);
 	if (server->drm_lease_request.notify) {
 		wl_list_remove(&server->drm_lease_request.link);
 		server->drm_lease_request.notify = NULL;
