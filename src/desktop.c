@@ -152,34 +152,6 @@ desktop_focus_topmost_view(void)
 }
 
 void
-desktop_focus_output(struct output *output)
-{
-	if (!output_is_usable(output) || g_server.input_mode
-			!= LAB_INPUT_STATE_PASSTHROUGH) {
-		return;
-	}
-	struct view *view;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
-		if (view->outputs & output->id_bit) {
-			desktop_focus_view(view, /*raise*/ false);
-			wlr_cursor_warp(g_seat.cursor, NULL,
-				view->current.x + view->current.width / 2,
-				view->current.y + view->current.height / 2);
-			cursor_update_focus();
-			return;
-		}
-	}
-	/* No view found on desired output */
-	struct wlr_box layout_box;
-	wlr_output_layout_get_box(g_server.output_layout,
-		output->wlr_output, &layout_box);
-	wlr_cursor_warp(g_seat.cursor, NULL,
-		layout_box.x + output->usable_area.x + output->usable_area.width / 2,
-		layout_box.y + output->usable_area.y + output->usable_area.height / 2);
-	cursor_update_focus();
-}
-
-void
 desktop_update_top_layer_visibility(void)
 {
 	struct view *view;

@@ -206,12 +206,8 @@ struct theme {
 	int osd_window_switcher_preview_border_width;
 	float osd_window_switcher_preview_border_color[3][4];
 
-	struct theme_snapping_overlay
-		snapping_overlay_region, snapping_overlay_edge;
-
-	/* magnifier */
-	float mag_border_color[4];
-	int mag_border_width;
+	struct theme_snapping_overlay snapping_overlay_region,
+		snapping_overlay_edge;
 };
 
 /* Globals */

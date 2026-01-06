@@ -32,14 +32,12 @@ struct seat {
 	 * (in that case the client is expected to set its own cursor image).
 	 */
 	enum lab_cursors server_cursor;
-	bool cursor_visible;
 	struct wlr_cursor *cursor;
 	struct wlr_xcursor_manager *xcursor_manager;
 	struct accumulated_scroll {
 		double delta;
 		double delta_discrete;
 	} accumulated_scrolls[2]; /* indexed by wl_pointer_axis */
-	bool cursor_scroll_wheel_emulation;
 
 	/*
 	 * The surface whose keyboard focus is temporarily cleared with
@@ -86,8 +84,6 @@ struct seat {
 	} drag;
 
 	struct overlay overlay;
-	/* Used to prevent region snapping when starting a move with A-Left */
-	bool region_prevent_snap;
 
 	struct wl_list inputs;
 	struct wl_listener new_input;
@@ -237,9 +233,6 @@ struct server {
 	struct wlr_pointer_constraints_v1 *constraints;
 	struct wl_listener new_constraint;
 
-	struct wlr_tearing_control_manager_v1 *tearing_control;
-	struct wl_listener tearing_new_object;
-
 	struct wlr_input_method_manager_v2 *input_method_manager;
 	struct wlr_text_input_manager_v3 *text_input_manager;
 
@@ -306,7 +299,6 @@ void desktop_focus_view_or_surface(struct view *view,
 	struct wlr_surface *surface, bool raise);
 
 void desktop_arrange_all_views(void);
-void desktop_focus_output(struct output *output);
 
 /**
  * Toggles the (output local) visibility of the layershell top layer
@@ -381,8 +373,6 @@ void interactive_cancel(struct view *view);
  */
 bool edge_from_cursor(struct output **dest_output,
 	enum lab_edge *edge1, enum lab_edge *edge2);
-
-void handle_tearing_new_object(struct wl_listener *listener, void *data);
 
 void server_init(void);
 void server_start(void);
