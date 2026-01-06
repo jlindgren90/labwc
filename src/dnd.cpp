@@ -13,7 +13,7 @@
 static void
 handle_drag_request(struct wl_listener *listener, void *data)
 {
-	struct wlr_seat_request_start_drag_event *event = data;
+	auto event = (wlr_seat_request_start_drag_event *)data;
 
 	if (wlr_seat_validate_pointer_grab_serial(g_seat.seat, event->origin,
 			event->serial)) {
@@ -29,7 +29,7 @@ static void
 handle_drag_start(struct wl_listener *listener, void *data)
 {
 	assert(!g_seat.drag.active);
-	struct wlr_drag *drag = data;
+	auto drag = (wlr_drag *)data;
 
 	g_seat.drag.active = true;
 	cursor_context_save(&g_seat.pressed, NULL);

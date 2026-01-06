@@ -977,7 +977,7 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 		if (view) {
 			auto axis = (view_axis)action.get_int("direction",
 				VIEW_AXIS_BOTH);
-			view_maximize(view, view->maximized & ~axis);
+			view_maximize(view, view_axis(view->maximized & ~axis));
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_FULLSCREEN:
@@ -1049,7 +1049,7 @@ run_action(struct view *view, action &action, struct cursor_context *ctx)
 			 * Otherwise, fall back to determining the resize edges from
 			 * the current cursor position (existing behaviour).
 			 */
-			enum lab_edge resize_edges =
+			auto resize_edges = (lab_edge)
 				action.get_int("direction", LAB_EDGE_NONE);
 			if (resize_edges == LAB_EDGE_NONE) {
 				resize_edges = cursor_get_resize_edges(

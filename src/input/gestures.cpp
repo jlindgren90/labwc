@@ -9,7 +9,7 @@
 static void
 handle_pinch_begin(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_pinch_begin_event *event = data;
+	auto event = (wlr_pointer_pinch_begin_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -21,7 +21,7 @@ handle_pinch_begin(struct wl_listener *listener, void *data)
 static void
 handle_pinch_update(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_pinch_update_event *event = data;
+	auto event = (wlr_pointer_pinch_update_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -34,7 +34,7 @@ handle_pinch_update(struct wl_listener *listener, void *data)
 static void
 handle_pinch_end(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_pinch_end_event *event = data;
+	auto event = (wlr_pointer_pinch_end_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -46,7 +46,7 @@ handle_pinch_end(struct wl_listener *listener, void *data)
 static void
 handle_swipe_begin(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_swipe_begin_event *event = data;
+	auto event = (wlr_pointer_swipe_begin_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -58,7 +58,7 @@ handle_swipe_begin(struct wl_listener *listener, void *data)
 static void
 handle_swipe_update(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_swipe_update_event *event = data;
+	auto event = (wlr_pointer_swipe_update_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -70,7 +70,7 @@ handle_swipe_update(struct wl_listener *listener, void *data)
 static void
 handle_swipe_end(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_swipe_end_event *event = data;
+	auto event = (wlr_pointer_swipe_end_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -82,7 +82,7 @@ handle_swipe_end(struct wl_listener *listener, void *data)
 static void
 handle_hold_begin(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_hold_begin_event *event = data;
+	auto event = (wlr_pointer_hold_begin_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
@@ -94,7 +94,7 @@ handle_hold_begin(struct wl_listener *listener, void *data)
 static void
 handle_hold_end(struct wl_listener *listener, void *data)
 {
-	struct wlr_pointer_hold_end_event *event = data;
+	auto event = (wlr_pointer_hold_end_event *)data;
 
 	idle_manager_notify_activity(g_seat.seat);
 	cursor_set_visible(/* visible */ true);
