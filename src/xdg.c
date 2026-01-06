@@ -782,8 +782,7 @@ set_initial_position(struct view *view)
 		return;
 	}
 
-	/* All other views are placed according to a configured strategy */
-	view_place_by_policy(view, /* allow_cursor */ true, rc.placement_policy);
+	view_center(view, NULL);
 }
 
 static void

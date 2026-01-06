@@ -450,7 +450,6 @@ void view_close(struct view *view);
  */
 void view_move_resize(struct view *view, struct wlr_box geo);
 void view_move(struct view *view, int x, int y);
-void view_move_to_cursor(struct view *view);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
 bool view_compute_centered_position(struct view *view,
@@ -472,14 +471,6 @@ void view_apply_natural_geometry(struct view *view);
  */
 void view_center(struct view *view, const struct wlr_box *ref);
 
-/**
- * view_place_by_policy - apply placement strategy to view
- * @view: view to be placed
- * @allow_cursor: set to false to ignore center-on-cursor policy
- * @policy: placement policy to apply
- */
-void view_place_by_policy(struct view *view, bool allow_cursor,
-	enum lab_placement_policy policy);
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
 void view_set_maximized(struct view *view, enum view_axis maximized);
@@ -538,7 +529,6 @@ void view_init(struct view *view);
 void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
-enum lab_placement_policy view_placement_parse(const char *policy);
 
 /* xdg.c */
 struct wlr_xdg_surface *xdg_surface_from_view(struct view *view);
