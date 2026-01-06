@@ -72,31 +72,6 @@ security_context_from_view(struct view *view)
 	return NULL;
 }
 
-struct view_query *
-view_query_create(void)
-{
-	struct view_query *query = znew(*query);
-	/* Must be synced with view_matches_criteria() in window-rules.c */
-	query->window_type = LAB_WINDOW_TYPE_INVALID;
-	query->maximized = VIEW_AXIS_INVALID;
-	query->decoration = LAB_SSD_MODE_INVALID;
-	return query;
-}
-
-void
-view_query_free(struct view_query *query)
-{
-	wl_list_remove(&query->link);
-	zfree(query->identifier);
-	zfree(query->title);
-	zfree(query->sandbox_engine);
-	zfree(query->sandbox_app_id);
-	zfree(query->tiled_region);
-	zfree(query->desktop);
-	zfree(query->monitor);
-	zfree(query);
-}
-
 static bool
 query_tristate_match(enum lab_tristate desired, bool actual)
 {
@@ -122,11 +97,11 @@ query_str_match(const char *condition, const char *value)
 bool
 view_matches_query(struct view *view, struct view_query *query)
 {
-	if (!query_str_match(query->identifier, view->app_id.c())) {
+	if (!query_str_match(query->identifier.c(), view->app_id.c())) {
 		return false;
 	}
 
-	if (!query_str_match(query->title, view->title.c())) {
+	if (!query_str_match(query->title.c(), view->title.c())) {
 		return false;
 	}
 
@@ -143,11 +118,11 @@ view_matches_query(struct view *view, struct view_query *query)
 			return false;
 		}
 
-		if (!query_str_match(query->sandbox_engine, ctx->sandbox_engine)) {
+		if (!query_str_match(query->sandbox_engine.c(), ctx->sandbox_engine)) {
 			return false;
 		}
 
-		if (!query_str_match(query->sandbox_app_id, ctx->app_id)) {
+		if (!query_str_match(query->sandbox_app_id.c(), ctx->app_id)) {
 			return false;
 		}
 	}
@@ -185,7 +160,7 @@ view_matches_query(struct view *view, struct view_query *query)
 
 	const char *tiled_region =
 		view->tiled_region ? view->tiled_region->name : NULL;
-	if (!query_str_match(query->tiled_region, tiled_region)) {
+	if (!query_str_match(query->tiled_region.c(), tiled_region)) {
 		return false;
 	}
 
@@ -193,15 +168,15 @@ view_matches_query(struct view *view, struct view_query *query)
 		const char *view_workspace = view->workspace->name;
 		struct workspace *current = g_server.workspaces.current;
 
-		if (!strcasecmp(query->desktop, "other")) {
+		if (!strcasecmp(query->desktop.c(), "other")) {
 			/* "other" means the view is NOT on the current desktop */
 			if (!strcasecmp(view_workspace, current->name)) {
 				return false;
 			}
 		} else {
 			// TODO: perhaps wrap "left" and "right" workspaces
-			struct workspace *target =
-				workspaces_find(current, query->desktop, /* wrap */ false);
+			struct workspace *target = workspaces_find(current,
+				query->desktop.c(), /* wrap */ false);
 			if (!target || strcasecmp(view_workspace, target->name)) {
 				return false;
 			}
@@ -215,22 +190,23 @@ view_matches_query(struct view *view, struct view_query *query)
 
 	if (query->monitor) {
 		struct output *current = output_nearest_to_cursor();
-		if (!strcasecmp(query->monitor, "current")) {
+		if (!strcasecmp(query->monitor.c(), "current")) {
 			if (current != view->output) {
 				return false;
 			}
-		} else if (!strcasecmp(query->monitor, "left")) {
+		} else if (!strcasecmp(query->monitor.c(), "left")) {
 			if (output_get_adjacent(current, LAB_EDGE_LEFT, false)
 					!= view->output) {
 				return false;
 			}
-		} else if (!strcasecmp(query->monitor, "right")) {
+		} else if (!strcasecmp(query->monitor.c(), "right")) {
 			if (output_get_adjacent(current, LAB_EDGE_RIGHT, false)
 					!= view->output) {
 				return false;
 			}
 		} else {
-			if (output_from_name(query->monitor) != view->output) {
+			if (output_from_name(query->monitor.c())
+					!= view->output) {
 				return false;
 			}
 		}
@@ -2218,7 +2194,7 @@ view_toggle_keybinds(struct view *view)
 }
 
 bool
-view_inhibits_actions(struct view *view, struct wl_list *actions)
+view_inhibits_actions(struct view *view, std::vector<action> &actions)
 {
 	return view && view->inhibits_keybinds && !actions_contain_toggle_keybinds(actions);
 }

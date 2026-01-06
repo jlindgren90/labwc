@@ -3,6 +3,7 @@
 #define LABWC_RCXML_H
 
 #include <stdbool.h>
+#include <vector>
 #include <wayland-server-core.h>
 #include <wlr/util/box.h>
 #include <libxml/tree.h>
@@ -44,6 +45,7 @@ enum tiling_events_mode {
 		(LAB_TILING_EVENTS_REGION | LAB_TILING_EVENTS_EDGE),
 };
 
+struct action;
 struct buf;
 
 struct button_map_entry {
@@ -209,6 +211,6 @@ void rcxml_finish(void);
  * Parse the child <action> nodes and append them to the list.
  * FIXME: move this function to somewhere else.
  */
-void append_parsed_actions(xmlNode *node, struct wl_list *list);
+void append_parsed_actions(xmlNode *node, std::vector<action> &actions);
 
 #endif /* LABWC_RCXML_H */

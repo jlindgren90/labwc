@@ -2,8 +2,8 @@
 #ifndef LABWC_WINDOW_RULES_H
 #define LABWC_WINDOW_RULES_H
 
-#include <stdbool.h>
 #include <wayland-util.h>
+#include "action.h"
 #include "config/types.h"
 
 enum window_rule_event {
@@ -23,15 +23,15 @@ enum property {
  *   - 'WM_CLASS' for XWayland clients
  */
 struct window_rule {
-	char *identifier;
-	char *title;
+	lab_str identifier;
+	lab_str title;
 	enum lab_window_type window_type;
-	char *sandbox_engine;
-	char *sandbox_app_id;
+	lab_str sandbox_engine;
+	lab_str sandbox_app_id;
 	bool match_once;
 
 	enum window_rule_event event;
-	struct wl_list actions;
+	std::vector<action> actions;
 
 	enum property server_decoration;
 	enum property skip_taskbar;
