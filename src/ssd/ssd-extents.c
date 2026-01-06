@@ -99,7 +99,7 @@ ssd_extents_update(struct ssd *ssd)
 	}
 
 	int width = view->current.width;
-	int height = view_effective_height(view, /* use_pending */ false);
+	int height = view->current.height;
 	int full_height = height + g_theme.border_width * 2 + ssd->titlebar.height;
 	int full_width = width + 2 * g_theme.border_width;
 	int border_width = MAX(rc.resize_minimum_area, g_theme.border_width);

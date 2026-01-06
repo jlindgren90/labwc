@@ -85,7 +85,6 @@ enum view_wants_focus {
 enum view_layer {
 	VIEW_LAYER_NORMAL = 0,
 	VIEW_LAYER_ALWAYS_ON_TOP,
-	VIEW_LAYER_ALWAYS_ON_BOTTOM,
 };
 
 struct view;
@@ -130,8 +129,6 @@ struct view_impl {
 	/* returns true if view declared itself a window type */
 	bool (*contains_window_type)(struct view *view,
 		enum lab_window_type window_type);
-	/* returns the client pid that this view belongs to */
-	pid_t (*get_pid)(struct view *view);
 };
 
 struct view {
@@ -181,22 +178,14 @@ struct view {
 	uint64_t creation_id;
 	enum lab_ssd_mode ssd_mode;
 	enum ssd_preference ssd_preference;
-	bool shaded;
 	bool minimized;
 	enum view_axis maximized;
 	bool fullscreen;
-	bool tearing_hint;
-	enum lab_tristate force_tearing;
 	enum view_layer layer;
 	enum lab_edge tiled;
 	enum lab_edge edges_visible;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 	xkb_layout_index_t keyboard_layout;
-
-	/* Pointer to an output owned struct region, may be NULL */
-	struct region *tiled_region;
-	/* Set to region->name when tiled_region is free'd by a destroying output */
-	char *tiled_region_evacuate;
 
 	/*
 	 * Geometry of the wlr_surface contained within the view, as
@@ -293,12 +282,10 @@ struct view_query {
 	enum lab_window_type window_type;
 	char *sandbox_engine;
 	char *sandbox_app_id;
-	enum lab_tristate shaded;
 	enum view_axis maximized;
 	enum lab_tristate iconified;
 	enum lab_tristate focused;
 	enum lab_edge tiled;
-	char *tiled_region;
 	enum lab_ssd_mode decoration;
 	char *monitor;
 };
@@ -432,7 +419,6 @@ enum view_wants_focus view_wants_focus(struct view *view);
 /* If view is NULL, the size of SSD is not considered */
 struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
 	enum lab_edge edge);
-struct wlr_box view_get_region_snap_box(struct view *view, struct region *region);
 
 /**
  * view_is_focusable() - Check whether or not a view can be focused
@@ -477,9 +463,6 @@ void view_close(struct view *view);
  * For move only, use view_move()
  */
 void view_move_resize(struct view *view, struct wlr_box geo);
-void view_resize_relative(struct view *view,
-	int left, int right, int top, int bottom);
-void view_move_relative(struct view *view, int x, int y);
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
@@ -493,13 +476,6 @@ void view_store_natural_geometry(struct view *view);
  * intersect with view->output and then apply it
  */
 void view_apply_natural_geometry(struct view *view);
-
-/**
- * view_effective_height - effective height of view, with respect to shaded state
- * @view: view for which effective height is desired
- * @use_pending: if false, report current height; otherwise, report pending height
- */
-int view_effective_height(struct view *view, bool use_pending);
 
 /**
  * view_center - center view within some region
@@ -544,30 +520,20 @@ void view_maximize(struct view *view, enum view_axis axis);
 void view_set_fullscreen(struct view *view, bool fullscreen);
 void view_toggle_maximize(struct view *view, enum view_axis axis);
 bool view_wants_decorations(struct view *view);
-void view_toggle_decorations(struct view *view);
 
 void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
-void view_toggle_always_on_bottom(struct view *view);
 
 bool view_is_tiled(struct view *view);
-bool view_is_tiled_and_notify_tiled(struct view *view);
 bool view_is_floating(struct view *view);
 bool view_titlebar_visible(struct view *view);
 void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
-void view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_ssd);
 void view_toggle_fullscreen(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
-void view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windows);
-void view_grow_to_edge(struct view *view, enum lab_edge direction);
-void view_shrink_to_edge(struct view *view, enum lab_edge direction);
 void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool combine);
-void view_snap_to_region(struct view *view, struct region *region);
-void view_move_to_output(struct view *view, struct output *output);
 
 void view_move_to_front(struct view *view);
-void view_move_to_back(struct view *view);
 
 bool view_is_modal_dialog(struct view *view);
 
@@ -592,8 +558,6 @@ void view_set_title(struct view *view, const char *title);
 void view_set_app_id(struct view *view, const char *app_id);
 void view_reload_ssd(struct view *view);
 
-void view_set_shade(struct view *view, bool shaded);
-
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, const char *icon_name,
 	struct wl_array *buffers);
@@ -601,7 +565,6 @@ void view_set_icon(struct view *view, const char *icon_name,
 struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);
 
-void view_evacuate_region(struct view *view);
 void view_on_output_destroy(struct view *view);
 void view_update_visibility(struct view *view);
 

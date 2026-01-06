@@ -805,10 +805,6 @@ init_windowmenu(void)
 		item_add_action(item, "ToggleMaximize");
 		item = item_create(menu, _("Fullscreen"), NULL, false);
 		item_add_action(item, "ToggleFullscreen");
-		item = item_create(menu, _("Roll Up/Down"), NULL, false);
-		item_add_action(item, "ToggleShade");
-		item = item_create(menu, _("Decorations"), NULL, false);
-		item_add_action(item, "ToggleDecorations");
 		item = item_create(menu, _("Always on Top"), NULL, false);
 		item_add_action(item, "ToggleAlwaysOnTop");
 

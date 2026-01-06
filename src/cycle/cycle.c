@@ -141,14 +141,9 @@ restore_preview_node(void)
 		if (!g_server.cycle.preview_was_enabled) {
 			wlr_scene_node_set_enabled(g_server.cycle.preview_node, false);
 		}
-		if (g_server.cycle.preview_was_shaded) {
-			struct view *view = node_view_from_node(g_server.cycle.preview_node);
-			view_set_shade(view, true);
-		}
 		g_server.cycle.preview_node = NULL;
 		g_server.cycle.preview_dummy = NULL;
 		g_server.cycle.preview_was_enabled = false;
-		g_server.cycle.preview_was_shaded = false;
 	}
 }
 
@@ -207,9 +202,6 @@ cycle_finish(bool switch_focus)
 	cursor_update_focus();
 
 	if (switch_focus && selected_view) {
-		if (rc.window_switcher.unshade) {
-			view_set_shade(selected_view, false);
-		}
 		desktop_focus_view(selected_view, /*raise*/ true);
 	}
 }
@@ -236,10 +228,6 @@ preview_selected_view(struct view *view)
 	/* Store node enabled / minimized state and force-enable if disabled */
 	cycle->preview_was_enabled = cycle->preview_node->enabled;
 	wlr_scene_node_set_enabled(cycle->preview_node, true);
-	if (rc.window_switcher.unshade && view->shaded) {
-		view_set_shade(view, false);
-		cycle->preview_was_shaded = true;
-	}
 
 	wlr_scene_node_reparent(cycle->preview_node,
 		g_server.cycle_preview_tree);

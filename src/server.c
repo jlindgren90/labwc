@@ -32,7 +32,6 @@
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_tablet_v2.h>
-#include <wlr/types/wlr_tearing_control_v1.h>
 #include <wlr/types/wlr_text_input_v3.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xdg_foreign_registry.h>
@@ -55,11 +54,8 @@
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "layers.h"
-#include "magnifier.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "output-virtual.h"
-#include "regions.h"
 #include "resize-indicator.h"
 #include "scaled-buffer/scaled-buffer.h"
 #include "session-lock.h"
@@ -97,7 +93,6 @@ reload_config_and_theme(void)
 	cycle_finish(/*switch_focus*/ false);
 	menu_reconfigure();
 	seat_reconfigure();
-	regions_reconfigure();
 	resize_indicator_reconfigure();
 	kde_server_decoration_update_default();
 }
@@ -108,7 +103,6 @@ handle_sighup(int signal, void *data)
 	keyboard_cancel_all_keybind_repeats();
 	session_environment_init();
 	reload_config_and_theme();
-	output_virtual_update_fallback();
 	return 0;
 }
 
@@ -399,8 +393,6 @@ handle_renderer_lost(struct wl_listener *listener, void *data)
 
 	reload_config_and_theme();
 
-	magnifier_reset();
-
 	wlr_allocator_destroy(old_allocator);
 	wlr_renderer_destroy(old_renderer);
 }
@@ -567,8 +559,6 @@ server_init(void)
 	 * | output->layer_tree[0]              | background layer surfaces (e.g. swaybg)
 	 */
 
-	g_server.view_trees[VIEW_LAYER_ALWAYS_ON_BOTTOM] =
-		wlr_scene_tree_create(&g_server.scene->tree);
 	g_server.view_trees[VIEW_LAYER_NORMAL] =
 		wlr_scene_tree_create(&g_server.scene->tree);
 	g_server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
@@ -693,10 +683,6 @@ server_init(void)
 	wl_signal_add(&g_server.output_power_manager_v1->events.set_mode,
 		&g_server.output_power_manager_set_mode);
 
-	g_server.tearing_control = wlr_tearing_control_manager_v1_create(g_server.wl_display, 1);
-	g_server.tearing_new_object.notify = handle_tearing_new_object;
-	wl_signal_add(&g_server.tearing_control->events.new_object, &g_server.tearing_new_object);
-
 	g_server.tablet_manager = wlr_tablet_v2_create(g_server.wl_display);
 
 	layers_init();
@@ -735,9 +721,6 @@ server_start(void)
 		exit(EXIT_FAILURE);
 	}
 
-	/* Potentially set up the initial fallback output */
-	output_virtual_update_fallback();
-
 	if (setenv("WAYLAND_DISPLAY", socket, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "unable to set WAYLAND_DISPLAY");
 	} else {
@@ -769,7 +752,6 @@ server_finish(void)
 	xdg_server_decoration_finish();
 	wl_list_remove(&g_server.new_constraint.link);
 	wl_list_remove(&g_server.output_power_manager_set_mode.link);
-	wl_list_remove(&g_server.tearing_new_object.link);
 	if (g_server.drm_lease_request.notify) {
 		wl_list_remove(&g_server.drm_lease_request.link);
 		g_server.drm_lease_request.notify = NULL;

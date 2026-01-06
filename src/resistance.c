@@ -159,7 +159,6 @@ void
 resistance_resize_apply(struct view *view, struct wlr_box *new_geom)
 {
 	assert(view);
-	assert(!view->shaded);
 
 	struct border next_edges;
 	edges_initialize(&next_edges);

@@ -11,7 +11,6 @@
 #include "action.h"
 #include "buffer.h"
 #include "common/box.h"
-#include "common/list.h"
 #include "common/match.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
@@ -23,11 +22,9 @@
 #include "menu/menu.h"
 #include "output.h"
 #include "placement.h"
-#include "regions.h"
 #include "resize-indicator.h"
 #include "session-lock.h"
 #include "snap-constraints.h"
-#include "snap.h"
 #include "ssd.h"
 #include "theme.h"
 #include "window-rules.h"
@@ -92,7 +89,6 @@ view_query_free(struct view_query *query)
 	zfree(query->title);
 	zfree(query->sandbox_engine);
 	zfree(query->sandbox_app_id);
-	zfree(query->tiled_region);
 	zfree(query->monitor);
 	zfree(query);
 }
@@ -162,10 +158,6 @@ view_matches_query(struct view *view, struct view_query *query)
 		}
 	}
 
-	if (!query_tristate_match(query->shaded, view->shaded)) {
-		return false;
-	}
-
 	if (query->maximized != VIEW_AXIS_INVALID && view->maximized != query->maximized) {
 		return false;
 	}
@@ -186,12 +178,6 @@ view_matches_query(struct view *view, struct view_query *query)
 		if (query->tiled != view->tiled) {
 			return false;
 		}
-	}
-
-	const char *tiled_region =
-		view->tiled_region ? view->tiled_region->name : NULL;
-	if (!query_str_match(query->tiled_region, tiled_region)) {
-		return false;
 	}
 
 	if (query->decoration != LAB_SSD_MODE_INVALID
@@ -557,38 +543,6 @@ view_move_resize(struct view *view, struct wlr_box geo)
 	}
 }
 
-void
-view_resize_relative(struct view *view, int left, int right, int top, int bottom)
-{
-	assert(view);
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-	view_set_shade(view, false);
-	struct wlr_box newgeo = view->pending;
-	newgeo.x -= left;
-	newgeo.width += left + right;
-	newgeo.y -= top;
-	newgeo.height += top + bottom;
-	view_move_resize(view, newgeo);
-	view_set_untiled(view);
-}
-
-void
-view_move_relative(struct view *view, int x, int y)
-{
-	assert(view);
-	if (view->fullscreen) {
-		return;
-	}
-	view_maximize(view, VIEW_AXIS_NONE);
-	if (view_is_tiled(view)) {
-		view_set_untiled(view);
-		view_move_resize(view, view->natural_geometry);
-	}
-	view_move(view, view->pending.x + x, view->pending.y + y);
-}
-
 static bool
 view_compute_near_cursor_position(struct view *view, struct wlr_box *geom)
 {
@@ -909,18 +863,6 @@ view_store_natural_geometry(struct view *view)
 	}
 }
 
-int
-view_effective_height(struct view *view, bool use_pending)
-{
-	assert(view);
-
-	if (view->shaded) {
-		return 0;
-	}
-
-	return use_pending ? view->pending.height : view->current.height;
-}
-
 void
 view_center(struct view *view, const struct wlr_box *ref)
 {
@@ -1117,83 +1059,6 @@ view_apply_natural_geometry(struct view *view)
 	view_move_resize(view, geometry);
 }
 
-struct wlr_box
-view_get_region_snap_box(struct view *view, struct region *region)
-{
-	struct wlr_box geo = region->geo;
-
-	/* Adjust for rc.gap */
-	if (rc.gap) {
-		double half_gap = rc.gap / 2.0;
-		struct wlr_fbox offset = {
-			.x = half_gap,
-			.y = half_gap,
-			.width = -rc.gap,
-			.height = -rc.gap
-		};
-		struct wlr_box usable =
-			output_usable_area_in_layout_coords(region->output);
-		if (geo.x == usable.x) {
-			offset.x += half_gap;
-			offset.width -= half_gap;
-		}
-		if (geo.y == usable.y) {
-			offset.y += half_gap;
-			offset.height -= half_gap;
-		}
-		if (geo.x + geo.width == usable.x + usable.width) {
-			offset.width -= half_gap;
-		}
-		if (geo.y + geo.height == usable.y + usable.height) {
-			offset.height -= half_gap;
-		}
-		geo.x += offset.x;
-		geo.y += offset.y;
-		geo.width += offset.width;
-		geo.height += offset.height;
-	}
-
-	/* And adjust for current view */
-	if (view) {
-		struct border margin = ssd_get_margin(view->ssd);
-		geo.x += margin.left;
-		geo.y += margin.top;
-		geo.width -= margin.left + margin.right;
-		geo.height -= margin.top + margin.bottom;
-	}
-
-	return geo;
-}
-
-static void
-view_apply_region_geometry(struct view *view)
-{
-	assert(view);
-	assert(view->tiled_region || view->tiled_region_evacuate);
-	struct output *output = view->output;
-	assert(output_is_usable(output));
-
-	if (view->tiled_region_evacuate) {
-		/* View was evacuated from a destroying output */
-		/* Get new output local region, may be NULL */
-		view->tiled_region = regions_from_name(
-			view->tiled_region_evacuate, output);
-
-		/* Get rid of the evacuate instruction */
-		zfree(view->tiled_region_evacuate);
-
-		if (!view->tiled_region) {
-			/* Existing region name doesn't exist in rc.xml anymore */
-			view_set_untiled(view);
-			view_apply_natural_geometry(view);
-			return;
-		}
-	}
-
-	struct wlr_box geo = view_get_region_snap_box(view, view->tiled_region);
-	view_move_resize(view, geo);
-}
-
 static void
 view_apply_tiled_geometry(struct view *view)
 {
@@ -1277,8 +1142,6 @@ view_apply_special_geometry(struct view *view)
 		view_apply_maximized_geometry(view);
 	} else if (view->tiled) {
 		view_apply_tiled_geometry(view);
-	} else if (view->tiled_region || view->tiled_region_evacuate) {
-		view_apply_region_geometry(view);
 	} else {
 		assert(false); // not reached
 	}
@@ -1315,25 +1178,7 @@ bool
 view_is_tiled(struct view *view)
 {
 	assert(view);
-	return (view->tiled || view->tiled_region
-		|| view->tiled_region_evacuate);
-}
-
-bool
-view_is_tiled_and_notify_tiled(struct view *view)
-{
-	switch (rc.snap_tiling_events_mode) {
-	case LAB_TILING_EVENTS_NEVER:
-		return false;
-	case LAB_TILING_EVENTS_REGION:
-		return view->tiled_region || view->tiled_region_evacuate;
-	case LAB_TILING_EVENTS_EDGE:
-		return view->tiled;
-	case LAB_TILING_EVENTS_ALWAYS:
-		return view_is_tiled(view);
-	}
-
-	return false;
+	return view->tiled != LAB_EDGE_NONE;
 }
 
 bool
@@ -1359,8 +1204,6 @@ view_set_untiled(struct view *view)
 {
 	assert(view);
 	view->tiled = LAB_EDGE_NONE;
-	view->tiled_region = NULL;
-	zfree(view->tiled_region_evacuate);
 	view_notify_tiled(view);
 }
 
@@ -1385,7 +1228,6 @@ view_maximize(struct view *view, enum view_axis axis)
 	}
 
 	bool store_natural_geometry = !in_interactive_move(view);
-	view_set_shade(view, false);
 
 	/*
 	 * Maximize/unmaximize via keybind or client request cancels
@@ -1477,31 +1319,6 @@ view_wants_decorations(struct view *view)
 }
 
 void
-view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_ssd)
-{
-	assert(view);
-
-	if (force_ssd || view_wants_decorations(view)
-			|| mode < view->ssd_mode) {
-		view_set_ssd_mode(view, mode);
-	}
-}
-
-void
-view_toggle_decorations(struct view *view)
-{
-	assert(view);
-
-	if (rc.ssd_keep_border && view->ssd_mode == LAB_SSD_MODE_FULL) {
-		view_set_ssd_mode(view, LAB_SSD_MODE_BORDER);
-	} else if (view->ssd_mode != LAB_SSD_MODE_NONE) {
-		view_set_ssd_mode(view, LAB_SSD_MODE_NONE);
-	} else {
-		view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
-	}
-}
-
-void
 view_set_layer(struct view *view, enum view_layer layer)
 {
 	assert(view);
@@ -1518,17 +1335,6 @@ view_toggle_always_on_top(struct view *view)
 		view_set_layer(view, VIEW_LAYER_NORMAL);
 	} else {
 		view_set_layer(view, VIEW_LAYER_ALWAYS_ON_TOP);
-	}
-}
-
-void
-view_toggle_always_on_bottom(struct view *view)
-{
-	assert(view);
-	if (view->layer == VIEW_LAYER_ALWAYS_ON_BOTTOM) {
-		view_set_layer(view, VIEW_LAYER_NORMAL);
-	} else {
-		view_set_layer(view, VIEW_LAYER_ALWAYS_ON_BOTTOM);
 	}
 }
 
@@ -1563,8 +1369,7 @@ view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode)
 {
 	assert(view);
 
-	if (view->shaded || view->fullscreen
-			|| mode == view->ssd_mode) {
+	if (view->fullscreen || mode == view->ssd_mode) {
 		return;
 	}
 
@@ -1598,11 +1403,6 @@ view_toggle_fullscreen(struct view *view)
 static void
 set_fullscreen(struct view *view, bool fullscreen)
 {
-	/* When going fullscreen, unshade the window */
-	if (fullscreen) {
-		view_set_shade(view, false);
-	}
-
 	/* Hide decorations when going fullscreen */
 	if (fullscreen && view->ssd_mode) {
 		undecorate(view);
@@ -1738,183 +1538,10 @@ view_adjust_for_layout_change(struct view *view)
 }
 
 void
-view_evacuate_region(struct view *view)
-{
-	assert(view);
-	assert(view->tiled_region);
-	if (!view->tiled_region_evacuate) {
-		view->tiled_region_evacuate = xstrdup(view->tiled_region->name);
-	}
-	view->tiled_region = NULL;
-}
-
-void
 view_on_output_destroy(struct view *view)
 {
 	assert(view);
 	view->output = NULL;
-}
-
-static int
-shift_view_to_usable_1d(int size,
-		int cur_pos, int cur_lo, int cur_extent,
-		int next_pos, int next_lo, int next_extent,
-		int margin_lo, int margin_hi)
-{
-	int cur_min = cur_lo + rc.gap + margin_lo;
-	int cur_max = cur_lo + cur_extent - rc.gap - margin_hi;
-
-	int next_min = next_lo + rc.gap + margin_lo;
-	int next_max = next_lo + next_extent - rc.gap - margin_hi;
-
-	/*
-	 * If the view is fully within the usable area of its original display,
-	 * ensure that it is also fully within the usable area of the target.
-	 */
-	if (cur_pos >= cur_min && cur_pos + size <= cur_max) {
-		if (next_pos >= next_min && next_pos + size > next_max) {
-			next_pos = next_max - size;
-		}
-
-		return MAX(next_pos, next_min);
-	}
-
-	/*
-	 * If the view was not fully within the usable area of its original
-	 * display, kick it onscreen if its midpoint will be off the target.
-	 */
-	int midpoint = next_pos + size / 2;
-	if (next_pos >= next_min && midpoint > next_lo + next_extent) {
-		next_pos = next_max - size;
-	}
-
-	return MAX(next_pos, next_min);
-}
-
-void
-view_move_to_edge(struct view *view, enum lab_edge direction, bool snap_to_windows)
-{
-	assert(view);
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not moving to edge");
-		return;
-	}
-
-	int dx = 0, dy = 0;
-	snap_move_to_edge(view, direction, snap_to_windows, &dx, &dy);
-
-	if (dx != 0 || dy != 0) {
-		/* Move the window if a change was discovered */
-		view_move(view, view->pending.x + dx, view->pending.y + dy);
-		return;
-	}
-
-	/* If the view is maximized, do not attempt to jump displays */
-	if (view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-
-	/* Otherwise, move to edge of next adjacent display, if possible */
-	struct output *output =
-		output_get_adjacent(view->output, direction, /* wrap */ false);
-	if (!output_is_usable(output)) {
-		return;
-	}
-
-	/* When jumping to next output, attach to edge nearest the motion */
-	struct wlr_box usable = output_usable_area_in_layout_coords(output);
-	struct border margin = ssd_get_margin(view->ssd);
-
-	/* Bounds of the possible placement zone in this output */
-	int left = usable.x + rc.gap + margin.left;
-	int right = usable.x + usable.width - rc.gap - margin.right;
-	int top = usable.y + rc.gap + margin.top;
-	int bottom = usable.y + usable.height - rc.gap - margin.bottom;
-
-	/* Default target position on new output is current target position */
-	int destination_x = view->pending.x;
-	int destination_y = view->pending.y;
-
-	/* Compute the new position in the direction of motion */
-	direction = lab_edge_invert(direction);
-	switch (direction) {
-	case LAB_EDGE_LEFT:
-		destination_x = left;
-		break;
-	case LAB_EDGE_RIGHT:
-		destination_x = right - view->pending.width;
-		break;
-	case LAB_EDGE_TOP:
-		destination_y = top;
-		break;
-	case LAB_EDGE_BOTTOM:
-		destination_y = bottom
-			- view_effective_height(view, /* use_pending */ true);
-		break;
-	default:
-		return;
-	}
-
-	struct wlr_box original_usable =
-		output_usable_area_in_layout_coords(view->output);
-
-	/* Make sure the window is appropriately in view along the x direction */
-	destination_x = shift_view_to_usable_1d(view->pending.width,
-		view->pending.x, original_usable.x, original_usable.width,
-		destination_x, usable.x, usable.width, margin.left, margin.right);
-
-	/* Make sure the window is appropriately in view along the y direction */
-	int eff_height = view_effective_height(view, /* use_pending */ true);
-	destination_y = shift_view_to_usable_1d(eff_height,
-		view->pending.y, original_usable.y, original_usable.height,
-		destination_y, usable.y, usable.height, margin.top, margin.bottom);
-
-	view_set_untiled(view);
-	view_set_output(view, output);
-	view_move(view, destination_x, destination_y);
-}
-
-void
-view_grow_to_edge(struct view *view, enum lab_edge direction)
-{
-	assert(view);
-	/* TODO: allow grow to edge if maximized along the other axis */
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not growing view");
-		return;
-	}
-
-	view_set_shade(view, false);
-
-	struct wlr_box geo;
-	snap_grow_to_next_edge(view, direction, &geo);
-	view_move_resize(view, geo);
-}
-
-void
-view_shrink_to_edge(struct view *view, enum lab_edge direction)
-{
-	assert(view);
-
-	/* TODO: allow shrink to edge if maximized along the other axis */
-	if (view->fullscreen || view->maximized != VIEW_AXIS_NONE) {
-		return;
-	}
-
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not shrinking view");
-		return;
-	}
-
-	view_set_shade(view, false);
-
-	struct wlr_box geo = view->pending;
-	snap_shrink_to_next_edge(view, direction, &geo);
-	view_move_resize(view, geo);
 }
 
 enum view_axis
@@ -1973,7 +1600,6 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	}
 
 	bool store_natural_geometry = !in_interactive_move(view);
-	view_set_shade(view, false);
 
 	if (lab_edge_is_cardinal(edge) && view->maximized == VIEW_AXIS_NONE
 			&& view->tiled != LAB_EDGE_CENTER) {
@@ -2031,62 +1657,6 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	view_apply_tiled_geometry(view);
 }
 
-void
-view_snap_to_region(struct view *view, struct region *region)
-{
-	assert(view);
-	assert(region);
-
-	if (view->fullscreen) {
-		return;
-	}
-
-	/* view_apply_region_geometry() needs a usable output */
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not snapping to region");
-		return;
-	}
-
-	bool store_natural_geometry = !in_interactive_move(view);
-	view_set_shade(view, false);
-
-	if (view->maximized != VIEW_AXIS_NONE) {
-		/* Unmaximize + keep using existing natural_geometry */
-		view_maximize(view, VIEW_AXIS_NONE);
-	} else if (store_natural_geometry) {
-		/* store current geometry as new natural_geometry */
-		view_store_natural_geometry(view);
-	}
-	view_set_untiled(view);
-	view->tiled_region = region;
-	view_notify_tiled(view);
-	view_apply_region_geometry(view);
-}
-
-void
-view_move_to_output(struct view *view, struct output *output)
-{
-	assert(view);
-
-	view_set_output(view, output);
-	if (view_is_floating(view)) {
-		struct wlr_box output_area = output_usable_area_in_layout_coords(output);
-		view->pending.x = output_area.x;
-		view->pending.y = output_area.y;
-		view_place_by_policy(view,
-				/* allow_cursor */ false, rc.placement_policy);
-	} else if (view->fullscreen) {
-		view_apply_fullscreen_geometry(view);
-	} else if (view->maximized != VIEW_AXIS_NONE) {
-		view_apply_maximized_geometry(view);
-	} else if (view->tiled) {
-		view_apply_tiled_geometry(view);
-	} else if (view->tiled_region) {
-		struct region *region = regions_from_name(view->tiled_region->name, output);
-		view_snap_to_region(view, region);
-	}
-}
-
 static void
 for_each_subview(struct view *view, void (*action)(struct view *))
 {
@@ -2107,14 +1677,6 @@ move_to_front(struct view *view)
 	wl_list_remove(&view->link);
 	wl_list_insert(&g_server.views, &view->link);
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
-}
-
-static void
-move_to_back(struct view *view)
-{
-	wl_list_remove(&view->link);
-	wl_list_append(&g_server.views, &view->link);
-	wlr_scene_node_lower_to_bottom(&view->scene_tree->node);
 }
 
 /*
@@ -2148,20 +1710,6 @@ view_move_to_front(struct view *view)
 	if (view != root) {
 		move_to_front(view);
 	}
-
-	cursor_update_focus();
-	desktop_update_top_layer_visibility();
-}
-
-void
-view_move_to_back(struct view *view)
-{
-	assert(view);
-	struct view *root = view_get_root(view);
-	assert(root);
-
-	for_each_subview(root, move_to_back);
-	move_to_back(root);
 
 	cursor_update_focus();
 	desktop_update_top_layer_visibility();
@@ -2334,38 +1882,6 @@ view_update_visibility(struct view *view)
 }
 
 void
-view_set_shade(struct view *view, bool shaded)
-{
-	assert(view);
-
-	if (view->shaded == shaded) {
-		return;
-	}
-
-	/* Views without a title-bar or SSD cannot be shaded */
-	if (shaded && (!view->ssd || !view_titlebar_visible(view))) {
-		return;
-	}
-
-	/* If this window is being resized, cancel the resize when shading */
-	if (shaded && g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
-		interactive_cancel(view);
-	}
-
-	view->shaded = shaded;
-	ssd_enable_shade(view->ssd, view->shaded);
-	/*
-	 * An unmapped view may not have a content tree. When the view
-	 * is mapped again, the new content tree will be hidden by the
-	 * map handler, if the view is still shaded at that point.
-	 */
-	if (view->content_tree) {
-		wlr_scene_node_set_enabled(&view->content_tree->node,
-			!view->shaded);
-	}
-}
-
-void
 view_set_icon(struct view *view, const char *icon_name, struct wl_array *buffers)
 {
 	/* Update icon name */
@@ -2449,10 +1965,6 @@ view_destroy(struct view *view)
 
 	if (g_server.session_lock_manager->last_active_view == view) {
 		g_server.session_lock_manager->last_active_view = NULL;
-	}
-
-	if (view->tiled_region_evacuate) {
-		zfree(view->tiled_region_evacuate);
 	}
 
 	/* TODO: call this on map/unmap instead */

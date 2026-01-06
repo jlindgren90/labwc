@@ -61,9 +61,6 @@ struct ssd {
 	 * don't update things we don't have to.
 	 */
 	struct {
-		/* Button icons need to be swapped on shade or omnipresent toggles */
-		bool was_shaded;
-
 		/*
 		 * Corners need to be (un)rounded and borders need be shown/hidden
 		 * when toggling maximization, and the button needs to be swapped on
