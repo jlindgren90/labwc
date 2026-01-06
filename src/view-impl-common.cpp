@@ -28,12 +28,11 @@ view_impl_map(struct view *view)
 	if (!view->foreign_toplevel && view_is_focusable(view)
 			&& window_rules_get_property(view, "skipTaskbar")
 				!= LAB_PROP_TRUE) {
-		view->foreign_toplevel = foreign_toplevel_create(view);
-
-		struct view *parent = view->get_parent();
-		if (parent && parent->foreign_toplevel) {
-			foreign_toplevel_set_parent(view->foreign_toplevel,
-				parent->foreign_toplevel);
+		auto ft = view->foreign_toplevel.set_new(view);
+		if (auto parent = view->get_parent()) {
+			if (CHECK_PTR(parent->foreign_toplevel, pft)) {
+				ft->set_parent(*pft);
+			}
 		}
 	}
 
@@ -62,10 +61,7 @@ view_impl_unmap(struct view *view)
 	 * Destroy the foreign toplevel handle so the unmapped view
 	 * doesn't show up in panels and the like.
 	 */
-	if (view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
-	}
+	view->foreign_toplevel.reset();
 }
 
 static bool

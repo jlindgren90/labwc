@@ -85,8 +85,9 @@ enum view_wants_focus {
 	VIEW_WANTS_FOCUS_UNLIKELY,
 };
 
+class foreign_toplevel;
+
 struct action;
-struct foreign_toplevel;
 struct lab_data_buffer;
 struct region;
 struct view;
@@ -219,7 +220,7 @@ struct view_data {
 	struct resize_indicator resize_indicator;
 	struct resize_outlines resize_outlines;
 
-	struct foreign_toplevel *foreign_toplevel;
+	ownptr<::foreign_toplevel> foreign_toplevel;
 
 	/* used by scaled_icon_buffer */
 	struct {
