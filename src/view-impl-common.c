@@ -54,9 +54,8 @@ view_impl_unmap(struct view *view)
 	 * remains NULL). To avoid being left with no active view at
 	 * all, check for that case also.
 	 */
-	struct server *server = view->server;
-	if (view == server->active_view || !server->active_view) {
-		desktop_focus_topmost_view(server);
+	if (view == g_server.active_view || !g_server.active_view) {
+		desktop_focus_topmost_view();
 	}
 
 	/*
@@ -72,10 +71,9 @@ view_impl_unmap(struct view *view)
 static bool
 resizing_edge(struct view *view, enum lab_edge edge)
 {
-	struct server *server = view->server;
-	return server->input_mode == LAB_INPUT_STATE_RESIZE
-		&& server->grabbed_view == view
-		&& (server->resize_edges & edge);
+	return g_server.input_mode == LAB_INPUT_STATE_RESIZE
+		&& g_server.grabbed_view == view
+		&& (g_server.resize_edges & edge);
 }
 
 void
