@@ -202,7 +202,7 @@ update_popup_position(struct input_method_popup *popup)
 		 * - for layer surfaces: lab_layer_surface->scene_layer_surface->tree
 		 * - for layer popups: lab_layer_popup->scene_tree
 		 */
-		struct wlr_scene_tree *tree = relay->focused_surface->data;
+		auto tree = (wlr_scene_tree *)relay->focused_surface->data;
 		int lx, ly;
 		wlr_scene_node_coords(&tree->node, &lx, &ly);
 		cursor_rect.x += lx;
@@ -232,9 +232,9 @@ update_popup_position(struct input_method_popup *popup)
 		.anchor_rect = cursor_rect,
 		.anchor = XDG_POSITIONER_ANCHOR_BOTTOM_LEFT,
 		.gravity = XDG_POSITIONER_GRAVITY_BOTTOM_RIGHT,
-		.constraint_adjustment =
+		.constraint_adjustment = xdg_positioner_constraint_adjustment(
 			XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_FLIP_Y
-			| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X,
+			| XDG_POSITIONER_CONSTRAINT_ADJUSTMENT_SLIDE_X),
 		.size = {
 			.width = popup->popup_surface->surface->current.width,
 			.height = popup->popup_surface->surface->current.height,
@@ -308,7 +308,7 @@ handle_keyboard_grab_destroy(struct wl_listener *listener, void *data)
 {
 	struct input_method_relay *relay =
 		wl_container_of(listener, relay, keyboard_grab_destroy);
-	struct wlr_input_method_keyboard_grab_v2 *keyboard_grab = data;
+	auto keyboard_grab = (wlr_input_method_keyboard_grab_v2 *)data;
 	assert(keyboard_grab);
 
 	wl_list_remove(&relay->keyboard_grab_destroy.link);
@@ -326,7 +326,7 @@ handle_input_method_grab_keyboard(struct wl_listener *listener, void *data)
 {
 	struct input_method_relay *relay = wl_container_of(listener, relay,
 		input_method_grab_keyboard);
-	struct wlr_input_method_keyboard_grab_v2 *keyboard_grab = data;
+	auto keyboard_grab = (wlr_input_method_keyboard_grab_v2 *)data;
 
 	struct wlr_keyboard *active_keyboard =
 		wlr_seat_get_keyboard(g_seat.seat);
@@ -412,7 +412,7 @@ handle_new_input_method(struct wl_listener *listener, void *data)
 {
 	struct input_method_relay *relay =
 		wl_container_of(listener, relay, new_input_method);
-	struct wlr_input_method_v2 *input_method = data;
+	auto input_method = (wlr_input_method_v2 *)data;
 	if (g_seat.seat != input_method->seat) {
 		return;
 	}
