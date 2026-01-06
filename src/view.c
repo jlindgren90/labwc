@@ -20,7 +20,6 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "placement.h"
 #include "resize-indicator.h"
 #include "session-lock.h"
 #include "ssd.h"
@@ -543,51 +542,6 @@ view_move_resize(struct view *view, struct wlr_box geo)
 	}
 }
 
-void
-view_move_to_cursor(struct view *view)
-{
-	assert(view);
-
-	struct output *pending_output = output_nearest_to_cursor();
-	if (!output_is_usable(pending_output)) {
-		return;
-	}
-	view_set_fullscreen(view, false);
-	view_maximize(view, VIEW_AXIS_NONE);
-	if (view_is_tiled(view)) {
-		view_set_untiled(view);
-		view_move_resize(view, view->natural_geometry);
-	}
-
-	struct border margin = ssd_thickness(view);
-	struct wlr_box geo = view->pending;
-	geo.width += margin.left + margin.right;
-	geo.height += margin.top + margin.bottom;
-
-	int x = g_seat.cursor->x - (geo.width / 2);
-	int y = g_seat.cursor->y - (geo.height / 2);
-
-	struct wlr_box usable = output_usable_area_in_layout_coords(pending_output);
-
-	/* Limit usable region to account for gap */
-	usable.x += rc.gap;
-	usable.y += rc.gap;
-	usable.width -= 2 * rc.gap;
-	usable.height -= 2 * rc.gap;
-
-	if (x + geo.width > usable.x + usable.width) {
-		x = usable.x + usable.width - geo.width;
-	}
-	x = MAX(x, usable.x) + margin.left;
-
-	if (y + geo.height > usable.y + usable.height) {
-		y = usable.y + usable.height - geo.height;
-	}
-	y = MAX(y, usable.y) + margin.top;
-
-	view_move(view, x, y);
-}
-
 struct view_size_hints
 view_get_size_hints(struct view *view)
 {
@@ -822,14 +776,6 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 		return adjusted;
 	}
 
-	/* Reposition offscreen automatically if configured to do so */
-	if (rc.placement_policy == LAB_PLACE_AUTOMATIC) {
-		if (placement_find_best(view, geometry)) {
-			return true;
-		}
-	}
-
-	/* If automatic placement failed or was not enabled, just center */
 	return view_compute_centered_position(view, NULL,
 		geometry->width, geometry->height,
 		&geometry->x, &geometry->y);
@@ -885,114 +831,6 @@ view_center(struct view *view, const struct wlr_box *ref)
 			view->pending.height, &x, &y)) {
 		view_move(view, x, y);
 	}
-}
-
-/*
- * Algorithm based on KWin's implementation:
- * https://github.com/KDE/kwin/blob/df9f8f8346b5b7645578e37365dabb1a7b02ca5a/src/placement.cpp#L589
- */
-static void
-view_cascade(struct view *view)
-{
-	/* "cascade" policy places a new view at center by default */
-	struct wlr_box center = view->pending;
-	view_compute_centered_position(view, NULL,
-		center.width, center.height, &center.x, &center.y);
-	struct border margin = ssd_get_margin(view->ssd);
-	center.x -= margin.left;
-	center.y -= margin.top;
-	center.width += margin.left + margin.right;
-	center.height += margin.top + margin.bottom;
-
-	/* Candidate geometry to which the view is moved */
-	struct wlr_box candidate = center;
-
-	struct wlr_box usable = output_usable_area_in_layout_coords(view->output);
-
-	/* TODO: move this logic to rcxml.c */
-	int offset_x = rc.placement_cascade_offset_x;
-	int offset_y = rc.placement_cascade_offset_y;
-	int default_offset = g_theme.titlebar_height + g_theme.border_width + 5;
-	if (offset_x <= 0) {
-		offset_x = default_offset;
-	}
-	if (offset_y <= 0) {
-		offset_y = default_offset;
-	}
-
-	/*
-	 * Keep updating the candidate until it doesn't cover any existing views
-	 * or doesn't fit within the usable area.
-	 */
-	bool candidate_updated = true;
-	while (candidate_updated) {
-		candidate_updated = false;
-		struct wlr_box covered = {0};
-
-		/* Iterate over views from top to bottom */
-		struct view *other_view;
-		for_each_view(other_view, &g_server.views,
-				LAB_VIEW_CRITERIA_NONE) {
-			struct wlr_box other = ssd_max_extents(other_view);
-			if (other_view == view
-					|| view->minimized
-					|| !box_intersects(&candidate, &other)) {
-				continue;
-			}
-			/*
-			 * If the candidate covers an existing view whose
-			 * top-left corner is not covered by other views,
-			 * shift the candidate to bottom-right.
-			 */
-			if (wlr_box_contains_box(&candidate, &other)
-					&& !wlr_box_contains_point(
-						&covered, other.x, other.y)) {
-				candidate.x = other.x + offset_x;
-				candidate.y = other.y + offset_y;
-				if (!wlr_box_contains_box(&usable, &candidate)) {
-					/*
-					 * If the candidate doesn't fit within
-					 * the usable area, fall back to center
-					 * and finish updating the candidate.
-					 */
-					candidate = center;
-					break;
-				} else {
-					/* Repeat with the new candidate */
-					candidate_updated = true;
-					break;
-				}
-			}
-			/*
-			 * We use just a bounding box to represent the covered
-			 * area, which would be fine for our use-case.
-			 */
-			box_union(&covered, &covered, &other);
-		}
-	}
-
-	view_move(view, candidate.x + margin.left, candidate.y + margin.top);
-}
-
-void
-view_place_by_policy(struct view *view, bool allow_cursor,
-		enum lab_placement_policy policy)
-{
-	if (allow_cursor && policy == LAB_PLACE_CURSOR) {
-		view_move_to_cursor(view);
-		return;
-	} else if (policy == LAB_PLACE_AUTOMATIC) {
-		struct wlr_box geometry = view->pending;
-		if (placement_find_best(view, &geometry)) {
-			view_move(view, geometry.x, geometry.y);
-			return;
-		}
-	} else if (policy == LAB_PLACE_CASCADE) {
-		view_cascade(view);
-		return;
-	}
-
-	view_center(view, NULL);
 }
 
 void
@@ -1541,26 +1379,6 @@ view_axis_parse(const char *direction)
 	} else {
 		return VIEW_AXIS_INVALID;
 	}
-}
-
-enum lab_placement_policy
-view_placement_parse(const char *policy)
-{
-	if (!policy) {
-		return LAB_PLACE_CENTER;
-	}
-
-	if (!strcasecmp(policy, "automatic")) {
-		return LAB_PLACE_AUTOMATIC;
-	} else if (!strcasecmp(policy, "cursor")) {
-		return LAB_PLACE_CURSOR;
-	} else if (!strcasecmp(policy, "center")) {
-		return LAB_PLACE_CENTER;
-	} else if (!strcasecmp(policy, "cascade")) {
-		return LAB_PLACE_CASCADE;
-	}
-
-	return LAB_PLACE_INVALID;
 }
 
 void
