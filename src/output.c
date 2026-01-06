@@ -32,8 +32,6 @@
 #include "layers.h"
 #include "node.h"
 #include "output-state.h"
-#include "output-virtual.h"
-#include "regions.h"
 #include "session-lock.h"
 #include "view.h"
 #include "xwayland.h"
@@ -41,45 +39,6 @@
 #if WLR_HAS_X11_BACKEND
 #include <wlr/backend/x11.h>
 #endif
-
-bool
-output_get_tearing_allowance(struct output *output)
-{
-	/* never allow tearing when disabled */
-	if (!rc.allow_tearing) {
-		return false;
-	}
-
-	struct view *view = server.active_view;
-
-	/* tearing is only allowed for the output with the active view */
-	if (!view || view->output != output) {
-		return false;
-	}
-
-	/* allow tearing for any window when requested or forced */
-	if (rc.allow_tearing == LAB_TEARING_ENABLED) {
-		if (view->force_tearing == LAB_STATE_UNSPECIFIED) {
-			return view->tearing_hint;
-		} else {
-			return view->force_tearing == LAB_STATE_ENABLED;
-		}
-	}
-
-	/* remaining tearing options apply only to full-screen windows */
-	if (!view->fullscreen) {
-		return false;
-	}
-
-	if (view->force_tearing == LAB_STATE_UNSPECIFIED) {
-		/* honor the tearing hint or the fullscreen-force preference */
-		return view->tearing_hint ||
-			rc.allow_tearing == LAB_TEARING_FULLSCREEN_FORCED;
-	}
-
-	/* honor tearing as requested by action */
-	return view->force_tearing == LAB_STATE_ENABLED;
-}
 
 static void
 handle_output_frame(struct wl_listener *listener, void *data)
@@ -100,12 +59,8 @@ handle_output_frame(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct wlr_scene_output *scene_output = output->scene_output;
-	struct wlr_output_state *pending = &output->pending;
-
-	pending->tearing_page_flip = output_get_tearing_allowance(output);
-
-	lab_wlr_scene_output_commit(scene_output, pending);
+	lab_wlr_scene_output_commit(output->scene_output,
+		&output->pending);
 
 	struct timespec now = { 0 };
 	clock_gettime(CLOCK_MONOTONIC, &now);
@@ -116,8 +71,6 @@ static void
 handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct output *output = wl_container_of(listener, output, destroy);
-	regions_evacuate_output(output);
-	regions_destroy(&output->regions, /* check_active */ true);
 	if (g_seat.overlay.active.output == output) {
 		overlay_finish();
 	}
@@ -238,9 +191,6 @@ add_output_to_layout(struct output *output)
 		wlr_scene_output_layout_add_output(server.scene_layout,
 			layout_output, output->scene_output);
 	}
-
-	/* (Re-)create regions from config */
-	regions_reconfigure_output(output);
 
 	/* Create lock surface if needed */
 	if (server.session_lock_manager->locked) {
@@ -492,8 +442,6 @@ handle_new_output(struct wl_listener *listener, void *data)
 	output->request_state.notify = handle_output_request_state;
 	wl_signal_add(&wlr_output->events.request_state, &output->request_state);
 
-	wl_list_init(&output->regions);
-
 	/*
 	 * Create layer-trees (background, bottom, top and overlay) and
 	 * a layer-popup-tree.
@@ -678,8 +626,6 @@ output_config_apply(struct wlr_output_configuration_v1 *config)
 					head->state.x, head->state.y);
 			}
 		} else if (was_in_layout) {
-			regions_evacuate_output(output);
-
 			/*
 			 * At time of writing, wlr_output_layout_remove()
 			 * indirectly destroys the wlr_scene_output, but
@@ -850,11 +796,6 @@ do_output_layout_change(void)
 static void
 handle_output_layout_change(struct wl_listener *listener, void *data)
 {
-	/* Prevents unnecessary layout recalculations */
-	server.pending_output_layout_change++;
-	output_virtual_update_fallback();
-	server.pending_output_layout_change--;
-
 	do_output_layout_change();
 }
 
@@ -1019,7 +960,6 @@ void
 output_update_usable_area(struct output *output)
 {
 	if (update_usable_area(output)) {
-		regions_update_geometry(output);
 #if HAVE_XWAYLAND
 		xwayland_update_workarea();
 #endif
@@ -1036,9 +976,6 @@ output_update_all_usable_areas(bool layout_changed)
 	wl_list_for_each(output, &server.outputs, link) {
 		if (update_usable_area(output)) {
 			usable_area_changed = true;
-			regions_update_geometry(output);
-		} else if (layout_changed) {
-			regions_update_geometry(output);
 		}
 	}
 	if (usable_area_changed || layout_changed) {
