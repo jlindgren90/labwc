@@ -8,7 +8,6 @@
 #include "config/rcxml.h"
 #include "labwc.h"
 #include "output.h"
-#include "regions.h"
 #include "theme.h"
 #include "view.h"
 
@@ -46,19 +45,6 @@ show_overlay(struct theme_snapping_overlay *overlay_theme,
 	struct wlr_scene_node *node = &g_seat.overlay.rect->tree->node;
 	wlr_scene_node_place_below(node, &view->scene_tree->node);
 	wlr_scene_node_set_position(node, box->x, box->y);
-}
-
-static void
-show_region_overlay(struct region *region)
-{
-	if (region == g_seat.overlay.active.region) {
-		return;
-	}
-	overlay_finish();
-	g_seat.overlay.active.region = region;
-
-	struct wlr_box geo = view_get_region_snap_box(NULL, region);
-	show_overlay(&g_theme.snapping_overlay_region, &geo);
 }
 
 static struct wlr_box
@@ -136,15 +122,6 @@ show_edge_overlay(enum lab_edge edge1, enum lab_edge edge2,
 void
 overlay_update(void)
 {
-	/* Region-snapping overlay */
-	if (regions_should_snap()) {
-		struct region *region = regions_from_cursor();
-		if (region) {
-			show_region_overlay(region);
-			return;
-		}
-	}
-
 	/* Edge-snapping overlay */
 	struct output *output;
 	enum lab_edge edge1, edge2;
