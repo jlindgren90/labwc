@@ -29,21 +29,6 @@ enum resize_indicator_mode {
 	LAB_RESIZE_INDICATOR_NON_PIXEL
 };
 
-enum tearing_mode {
-	LAB_TEARING_DISABLED = 0,
-	LAB_TEARING_ENABLED,
-	LAB_TEARING_FULLSCREEN,
-	LAB_TEARING_FULLSCREEN_FORCED,
-};
-
-enum tiling_events_mode {
-	LAB_TILING_EVENTS_NEVER = 0,
-	LAB_TILING_EVENTS_REGION = 1 << 0,
-	LAB_TILING_EVENTS_EDGE = 1 << 1,
-	LAB_TILING_EVENTS_ALWAYS =
-		(LAB_TILING_EVENTS_REGION | LAB_TILING_EVENTS_EDGE),
-};
-
 struct buf;
 
 struct button_map_entry {
@@ -68,7 +53,6 @@ struct rcxml {
 	bool hide_maximized_window_titlebar;
 	int gap;
 	enum adaptive_sync_mode adaptive_sync;
-	enum tearing_mode allow_tearing;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;
 	bool xwayland_persistence;
@@ -137,22 +121,17 @@ struct rcxml {
 	int snap_overlay_delay_inner;
 	int snap_overlay_delay_outer;
 	bool snap_top_maximize;
-	enum tiling_events_mode snap_tiling_events_mode;
 
 	enum resize_indicator_mode resize_indicator;
 	bool resize_draw_contents;
 	int resize_corner_range;
 	int resize_minimum_area;
 
-	/* Regions */
-	struct wl_list regions;  /* struct region.link */
-
 	/* Window Switcher */
 	struct {
 		bool show;
 		bool preview;
 		bool outlines;
-		bool unshade;
 		enum lab_view_criteria criteria;
 		struct wl_list fields;  /* struct window_switcher_field.link */
 		enum cycle_osd_style style;
@@ -166,13 +145,6 @@ struct rcxml {
 	/* Menu */
 	unsigned int menu_ignore_button_release_period;
 	bool menu_show_icons;
-
-	/* Magnifier */
-	int mag_width;
-	int mag_height;
-	float mag_scale;
-	float mag_increment;
-	bool mag_filter;
 };
 
 extern struct rcxml rc;

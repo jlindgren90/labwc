@@ -126,10 +126,6 @@ ssd_titlebar_create(struct ssd *ssd)
 		ssd->state.was_squared = true;
 	}
 	set_squared_corners(ssd, maximized || squared);
-
-	if (view->shaded) {
-		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, true);
-	}
 }
 
 static void
@@ -283,11 +279,6 @@ ssd_titlebar_update(struct ssd *ssd)
 		}
 		ssd->state.was_maximized = maximized;
 		ssd->state.was_squared = squared;
-	}
-
-	if (ssd->state.was_shaded != view->shaded) {
-		set_alt_button_icon(ssd, LAB_NODE_BUTTON_SHADE, view->shaded);
-		ssd->state.was_shaded = view->shaded;
 	}
 
 	if (width == ssd->state.geometry.width) {
@@ -509,7 +500,6 @@ ssd_should_be_squared(struct ssd *ssd)
 	struct view *view = ssd->view;
 	int corner_width = ssd_get_corner_width();
 
-	return (view_is_tiled_and_notify_tiled(view)
-			|| view->current.width < corner_width * 2)
+	return (view_is_tiled(view) || view->current.width < corner_width * 2)
 		&& view->maximized != VIEW_AXIS_BOTH;
 }

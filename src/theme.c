@@ -298,16 +298,6 @@ load_buttons(void)
 		.type = LAB_NODE_BUTTON_MAXIMIZE,
 		.state_set = LAB_BS_TOGGLED,
 	}, {
-		.name = "shade",
-		.fallback_button = (const char[]){ 0x3f, 0x3f, 0x00, 0x0c, 0x1e, 0x3f },
-		.type = LAB_NODE_BUTTON_SHADE,
-		.state_set = 0,
-	}, {
-		.name = "shade_toggled",
-		.fallback_button = (const char[]){ 0x3f, 0x3f, 0x00, 0x3f, 0x1e, 0x0c },
-		.type = LAB_NODE_BUTTON_SHADE,
-		.state_set = LAB_BS_TOGGLED,
-	}, {
 		.name = "close",
 		.fallback_button = (const char[]){ 0x33, 0x3f, 0x1e, 0x1e, 0x3f, 0x33 },
 		.type = LAB_NODE_BUTTON_CLOSE,
@@ -331,17 +321,6 @@ load_buttons(void)
 		.name = "max_toggled_hover",
 		.alt_name = "max_hover_toggled",
 		.type = LAB_NODE_BUTTON_MAXIMIZE,
-		.state_set = LAB_BS_TOGGLED | LAB_BS_HOVERED,
-		/* no fallback (non-hover variant is used instead) */
-	}, {
-		.name = "shade_hover",
-		.type = LAB_NODE_BUTTON_SHADE,
-		.state_set = LAB_BS_HOVERED,
-		/* no fallback (non-hover variant is used instead) */
-	}, {
-		.name = "shade_toggled_hover",
-		.alt_name = "shade_hover_toggled",
-		.type = LAB_NODE_BUTTON_SHADE,
 		.state_set = LAB_BS_TOGGLED | LAB_BS_HOVERED,
 		/* no fallback (non-hover variant is used instead) */
 	}, {
@@ -805,10 +784,6 @@ entry(const char *key, const char *value)
 		parse_color(value, g_theme.window[SSD_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_MAXIMIZE]);
 	}
-	if (match_glob(key, "window.active.button.shade.unpressed.image.color")) {
-		parse_color(value, g_theme.window[SSD_ACTIVE]
-			.button_colors[LAB_NODE_BUTTON_SHADE]);
-	}
 	if (match_glob(key, "window.active.button.close.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_CLOSE]);
@@ -826,10 +801,6 @@ entry(const char *key, const char *value)
 	if (match_glob(key, "window.inactive.button.max.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_MAXIMIZE]);
-	}
-	if (match_glob(key, "window.inactive.button.shade.unpressed.image.color")) {
-		parse_color(value, g_theme.window[SSD_INACTIVE]
-			.button_colors[LAB_NODE_BUTTON_SHADE]);
 	}
 	if (match_glob(key, "window.inactive.button.close.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_INACTIVE]

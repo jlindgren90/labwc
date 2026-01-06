@@ -168,7 +168,6 @@ resize_indicator_update(struct view *view)
 		view_box = view->resize_outlines.view_geo;
 	} else {
 		view_box = view->current;
-		view_box.height = view_effective_height(view, /* use_pending */ false);
 	}
 
 	if (g_server.input_mode == LAB_INPUT_STATE_RESIZE) {

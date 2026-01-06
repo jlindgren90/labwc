@@ -17,7 +17,7 @@ ssd_border_create(struct ssd *ssd)
 
 	struct view *view = ssd->view;
 	int width = view->current.width;
-	int height = view_effective_height(view, /* use_pending */ false);
+	int height = view->current.height;
 	int full_width = width + 2 * g_theme.border_width;
 	int corner_width = ssd_get_corner_width();
 
@@ -90,7 +90,7 @@ ssd_border_update(struct ssd *ssd)
 	}
 
 	int width = view->current.width;
-	int height = view_effective_height(view, /* use_pending */ false);
+	int height = view->current.height;
 	int full_width = width + 2 * g_theme.border_width;
 	int corner_width = ssd_get_corner_width();
 
