@@ -6,7 +6,6 @@
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "output.h"
-#include "regions.h"
 #include "resize-indicator.h"
 #include "view.h"
 #include "window-rules.h"
@@ -118,11 +117,10 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
 	case LAB_INPUT_STATE_RESIZE: {
-		if (view->shaded || view->fullscreen ||
-				view->maximized == VIEW_AXIS_BOTH) {
+		if (view->fullscreen || view->maximized == VIEW_AXIS_BOTH) {
 			/*
-			 * We don't allow resizing while shaded,
-			 * fullscreen or maximized in both directions.
+			 * We don't allow resizing while fullscreen or
+			 * maximized in both directions.
 			 */
 			return;
 		}
@@ -170,8 +168,6 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 			&& rc.unsnap_threshold <= 0) {
 		struct wlr_box natural_geo = view->natural_geometry;
 		interactive_anchor_to_cursor(&natural_geo);
-		/* Shaded clients will not process resize events until unshaded */
-		view_set_shade(view, false);
 		view_set_maximized(view, VIEW_AXIS_NONE);
 		view_set_untiled(view);
 		view_move_resize(view, natural_geo);
@@ -299,21 +295,6 @@ snap_to_edge(struct view *view)
 	return true;
 }
 
-static bool
-snap_to_region(struct view *view)
-{
-	if (!regions_should_snap()) {
-		return false;
-	}
-
-	struct region *region = regions_from_cursor();
-	if (region) {
-		view_snap_to_region(view, region);
-		return true;
-	}
-	return false;
-}
-
 void
 interactive_finish(struct view *view)
 {
@@ -324,9 +305,7 @@ interactive_finish(struct view *view)
 	}
 
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
-		if (!snap_to_region(view)) {
-			snap_to_edge(view);
-		}
+		snap_to_edge(view);
 	}
 
 	interactive_cancel(view);

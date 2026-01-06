@@ -810,8 +810,6 @@ handle_map(struct wl_listener *listener, void *data)
 		die_if_null(view->content_tree);
 	}
 
-	wlr_scene_node_set_enabled(&view->content_tree->node, !view->shaded);
-
 	if (!view->been_mapped) {
 		check_natural_geometry(view);
 		set_initial_position(view, xwayland_surface);
@@ -948,19 +946,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 		fullscreen);
 }
 
-static pid_t
-xwayland_view_get_pid(struct view *view)
-{
-	assert(view);
-
-	struct wlr_xwayland_surface *xwayland_surface =
-		xwayland_surface_from_view(view);
-	if (!xwayland_surface) {
-		return -1;
-	}
-	return xwayland_surface->pid;
-}
-
 static const struct view_impl xwayland_view_impl = {
 	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
@@ -977,7 +962,6 @@ static const struct view_impl xwayland_view_impl = {
 	.offer_focus = xwayland_view_offer_focus,
 	.has_strut_partial = xwayland_view_has_strut_partial,
 	.contains_window_type = xwayland_view_contains_window_type,
-	.get_pid = xwayland_view_get_pid,
 };
 
 void

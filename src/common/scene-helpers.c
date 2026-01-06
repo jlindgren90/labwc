@@ -5,7 +5,6 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
-#include "magnifier.h"
 #include "output.h"
 
 struct wlr_surface *
@@ -37,32 +36,6 @@ lab_wlr_scene_get_prev_node(struct wlr_scene_node *node)
 }
 
 /*
- * This is a slightly modified copy of scene_output_damage(),
- * required to properly add the magnifier damage to scene_output
- * ->damage_ring and scene_output->pending_commit_damage.
- *
- * The only difference is code style and removal of wlr_output_schedule_frame().
- */
-static void
-scene_output_damage(struct wlr_scene_output *scene_output,
-		const pixman_region32_t *damage)
-{
-	struct wlr_output *output = scene_output->output;
-
-	pixman_region32_t clipped;
-	pixman_region32_init(&clipped);
-	pixman_region32_intersect_rect(&clipped, damage, 0, 0, output->width, output->height);
-
-	if (pixman_region32_not_empty(&clipped)) {
-		wlr_damage_ring_add(&scene_output->damage_ring, &clipped);
-		pixman_region32_union(&scene_output->WLR_PRIVATE.pending_commit_damage,
-			&scene_output->WLR_PRIVATE.pending_commit_damage, &clipped);
-	}
-
-	pixman_region32_fini(&clipped);
-}
-
-/*
  * This is a copy of wlr_scene_output_commit()
  * as it doesn't use the pending state at all.
  */
@@ -74,15 +47,8 @@ lab_wlr_scene_output_commit(struct wlr_scene_output *scene_output,
 	assert(state);
 	struct wlr_output *wlr_output = scene_output->output;
 	struct output *output = wlr_output->data;
-	bool wants_magnification = output_wants_magnification(output);
 
-	/*
-	 * FIXME: Regardless of wants_magnification, we are currently adding
-	 * damages to next frame when magnifier is shown, which forces
-	 * rendering on every output commit and overloads CPU.
-	 * We also need to verify the necessity of wants_magnification.
-	 */
-	if (!wlr_scene_output_needs_frame(scene_output) && !wants_magnification) {
+	if (!wlr_scene_output_needs_frame(scene_output)) {
 		return true;
 	}
 
@@ -96,11 +62,6 @@ lab_wlr_scene_output_commit(struct wlr_scene_output *scene_output,
 		if (!wlr_output_test_state(wlr_output, state)) {
 			state->tearing_page_flip = false;
 		}
-	}
-
-	struct wlr_box additional_damage = {0};
-	if (state->buffer && magnifier_is_enabled()) {
-		magnifier_draw(output, state->buffer, &additional_damage);
 	}
 
 	bool committed = wlr_output_commit_state(wlr_output, state);
@@ -121,15 +82,6 @@ lab_wlr_scene_output_commit(struct wlr_scene_output *scene_output,
 		wlr_log(WLR_INFO, "Failed to commit output %s",
 			wlr_output->name);
 		return false;
-	}
-
-	if (!wlr_box_empty(&additional_damage)) {
-		pixman_region32_t region;
-		pixman_region32_init_rect(&region,
-			additional_damage.x, additional_damage.y,
-			additional_damage.width, additional_damage.height);
-		scene_output_damage(scene_output, &region);
-		pixman_region32_fini(&region);
 	}
 
 	return true;

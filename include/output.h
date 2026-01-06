@@ -26,8 +26,6 @@ struct output {
 	/* In output-relative scene coordinates */
 	struct wlr_box usable_area;
 
-	struct wl_list regions;  /* struct region.link */
-
 	struct wl_listener destroy;
 	struct wl_listener frame;
 	struct wl_listener request_state;
@@ -73,7 +71,6 @@ struct output *output_get_adjacent(struct output *output,
 bool output_is_usable(struct output *output);
 void output_update_usable_area(struct output *output);
 void output_update_all_usable_areas(bool layout_changed);
-bool output_get_tearing_allowance(struct output *output);
 struct wlr_box output_usable_area_in_layout_coords(struct output *output);
 void handle_output_power_manager_set_mode(struct wl_listener *listener,
 	void *data);
