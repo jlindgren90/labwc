@@ -276,9 +276,7 @@ get_next(struct workspace *current, struct wl_list *workspaces, bool wrap)
 static bool
 workspace_has_views(struct workspace *workspace)
 {
-	struct view *view;
-
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NO_OMNIPRESENT) {
+	for_each_view(view, g_views.begin(), LAB_VIEW_CRITERIA_NO_OMNIPRESENT) {
 		if (view->workspace == workspace) {
 			return true;
 		}
@@ -429,12 +427,11 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 		false);
 
 	/* Move Omnipresent views to new workspace */
-	struct view *view;
 	enum lab_view_criteria criteria =
 		LAB_VIEW_CRITERIA_CURRENT_WORKSPACE;
-	for_each_view_reverse(view, &g_server.views, criteria) {
+	for_each_view(view, g_views.rbegin(), criteria) {
 		if (view->visible_on_all_workspaces) {
-			view_move_to_workspace(view, target);
+			view_move_to_workspace(view.get(), target);
 		}
 	}
 
@@ -614,10 +611,9 @@ workspaces_reconfigure(void)
 		wlr_log(WLR_DEBUG, "Destroying workspace \"%s\"",
 			actual_workspace->name);
 
-		struct view *view;
-		wl_list_for_each(view, &g_server.views, link) {
-			if (view->workspace == actual_workspace) {
-				view_move_to_workspace(view, first_workspace);
+		for (auto &view : g_views) {
+			if (view.workspace == actual_workspace) {
+				view_move_to_workspace(&view, first_workspace);
 			}
 		}
 

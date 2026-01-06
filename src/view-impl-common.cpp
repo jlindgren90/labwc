@@ -30,7 +30,7 @@ view_impl_map(struct view *view)
 				!= LAB_PROP_TRUE) {
 		view->foreign_toplevel = foreign_toplevel_create(view);
 
-		struct view *parent = view->impl->get_parent(view);
+		struct view *parent = view->get_parent();
 		if (parent && parent->foreign_toplevel) {
 			foreign_toplevel_set_parent(view->foreign_toplevel,
 				parent->foreign_toplevel);

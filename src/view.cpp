@@ -11,7 +11,6 @@
 #include "action.h"
 #include "buffer.h"
 #include "common/box.h"
-#include "common/list.h"
 #include "common/match.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
@@ -50,13 +49,13 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	struct wlr_xdg_surface *xdg_surface =
 		wlr_xdg_surface_try_from_wlr_surface(surface);
 	if (xdg_surface) {
-		return xdg_surface->data;
+		return (view *)xdg_surface->data;
 	}
 #if HAVE_XWAYLAND
 	struct wlr_xwayland_surface *xsurface =
 		wlr_xwayland_surface_try_from_wlr_surface(surface);
 	if (xsurface) {
-		return xsurface->data;
+		return (view *)xsurface->data;
 	}
 #endif
 	return NULL;
@@ -120,16 +119,6 @@ query_str_match(const char *condition, const char *value)
 	return value && match_glob(condition, value);
 }
 
-static bool
-view_contains_window_type(struct view *view, enum lab_window_type window_type)
-{
-	assert(view);
-	if (view->impl->contains_window_type) {
-		return view->impl->contains_window_type(view, window_type);
-	}
-	return false;
-}
-
 bool
 view_matches_query(struct view *view, struct view_query *query)
 {
@@ -142,7 +131,7 @@ view_matches_query(struct view *view, struct view_query *query)
 	}
 
 	if (query->window_type != LAB_WINDOW_TYPE_INVALID
-			&& !view_contains_window_type(view, query->window_type)) {
+			&& !view->contains_window_type(query->window_type)) {
 		return false;
 	}
 
@@ -250,16 +239,6 @@ view_matches_query(struct view *view, struct view_query *query)
 	return true;
 }
 
-static struct view *
-view_get_root(struct view *view)
-{
-	assert(view);
-	if (view->impl->get_root) {
-		return view->impl->get_root(view);
-	}
-	return view;
-}
-
 static bool
 matches_criteria(struct view *view, enum lab_view_criteria criteria)
 {
@@ -288,7 +267,7 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 		}
 	}
 	if (criteria & LAB_VIEW_CRITERIA_ROOT_TOPLEVEL) {
-		if (view != view_get_root(view)) {
+		if (view != view->get_root()) {
 			return false;
 		}
 	}
@@ -314,60 +293,32 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 	return true;
 }
 
-struct view *
-view_next(struct wl_list *head, struct view *view, enum lab_view_criteria criteria)
+view_iter
+view_find_matching(view_iter start, lab_view_criteria criteria)
 {
-	assert(head);
-
-	struct wl_list *elm = view ? &view->link : head;
-
-	for (elm = elm->next; elm != head; elm = elm->next) {
-		view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
+	for (; start; ++start) {
+		if (matches_criteria(start.get(), criteria)) {
+			break;
 		}
 	}
-	return NULL;
+	return start;
 }
 
-struct view *
-view_prev(struct wl_list *head, struct view *view, enum lab_view_criteria criteria)
+view_list
+view_list_matching(lab_view_criteria criteria)
 {
-	assert(head);
-
-	struct wl_list *elm = view ? &view->link : head;
-
-	for (elm = elm->prev; elm != head; elm = elm->prev) {
-		view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
-		}
+	view_list matching;
+	for_each_view(view, g_views.begin(), criteria) {
+		matching.append(view.get());
 	}
-	return NULL;
-}
-
-void
-view_array_append(struct wl_array *views, enum lab_view_criteria criteria)
-{
-	struct view *view;
-	for_each_view(view, &g_server.views, criteria) {
-		struct view **entry = wl_array_add(views, sizeof(*entry));
-		if (!entry) {
-			wlr_log(WLR_ERROR, "wl_array_add(): out of memory");
-			continue;
-		}
-		*entry = view;
-	}
+	return matching;
 }
 
 enum view_wants_focus
 view_wants_focus(struct view *view)
 {
 	assert(view);
-	if (view->impl->wants_focus) {
-		return view->impl->wants_focus(view);
-	}
-	return VIEW_WANTS_FOCUS_ALWAYS;
+	return view->wants_focus();
 }
 
 bool
@@ -391,9 +342,7 @@ void
 view_offer_focus(struct view *view)
 {
 	assert(view);
-	if (view->impl->offer_focus) {
-		view->impl->offer_focus(view);
-	}
+	view->offer_focus();
 }
 
 /**
@@ -474,9 +423,7 @@ view_set_activated(struct view *view, bool activated)
 {
 	assert(view);
 	ssd_set_active(view->ssd, activated);
-	if (view->impl->set_activated) {
-		view->impl->set_activated(view, activated);
-	}
+	view->set_activated(activated);
 
 	wl_signal_emit_mutable(&view->events.activated, &activated);
 
@@ -512,9 +459,7 @@ void
 view_close(struct view *view)
 {
 	assert(view);
-	if (view->impl->close) {
-		view->impl->close(view);
-	}
+	view->close();
 }
 
 static void
@@ -583,9 +528,7 @@ void
 view_move_resize(struct view *view, struct wlr_box geo)
 {
 	assert(view);
-	if (view->impl->configure) {
-		view->impl->configure(view, geo);
-	}
+	view->configure(geo);
 
 	/*
 	 * If the move/resize was user-initiated (rather than due to
@@ -684,10 +627,7 @@ struct view_size_hints
 view_get_size_hints(struct view *view)
 {
 	assert(view);
-	if (view->impl->get_size_hints) {
-		return view->impl->get_size_hints(view);
-	}
-	return (struct view_size_hints){0};
+	return view->get_size_hints();
 }
 
 static void
@@ -750,10 +690,7 @@ _minimize(struct view *view, bool minimized, bool *need_refocus)
 		return;
 	}
 
-	if (view->impl->minimize) {
-		view->impl->minimize(view, minimized);
-	}
-
+	view->minimize(minimized);
 	view->minimized = minimized;
 	wl_signal_emit_mutable(&view->events.minimized, NULL);
 	view_update_visibility(view);
@@ -768,27 +705,12 @@ _minimize(struct view *view, bool minimized, bool *need_refocus)
 }
 
 static void
-view_append_children(struct view *view, struct wl_array *children)
-{
-	assert(view);
-	if (view->impl->append_children) {
-		view->impl->append_children(view, children);
-	}
-}
-
-static void
 minimize_sub_views(struct view *view, bool minimized, bool *need_refocus)
 {
-	struct view **child;
-	struct wl_array children;
-
-	wl_array_init(&children);
-	view_append_children(view, &children);
-	wl_array_for_each(child, &children) {
-		_minimize(*child, minimized, need_refocus);
-		minimize_sub_views(*child, minimized, need_refocus);
+	for (auto &child : view->get_children()) {
+		_minimize(&child, minimized, need_refocus);
+		minimize_sub_views(&child, minimized, need_refocus);
 	}
-	wl_array_release(&children);
 }
 
 /*
@@ -813,7 +735,7 @@ view_minimize(struct view *view, bool minimized)
 	 * request-unmap to sub-windows at this point (for example gimp and its
 	 * 'open file' dialog), so it saves trying to unmap them twice
 	 */
-	struct view *root = view_get_root(view);
+	struct view *root = view->get_root();
 	_minimize(root, minimized, &need_refocus);
 	minimize_sub_views(root, minimized, &need_refocus);
 
@@ -1034,12 +956,10 @@ view_cascade(struct view *view)
 		struct wlr_box covered = {0};
 
 		/* Iterate over views from top to bottom */
-		struct view *other_view;
-		for_each_view(other_view, &g_server.views,
+		for_each_view(other_view, g_views.begin(),
 				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
-			struct wlr_box other = ssd_max_extents(other_view);
-			if (other_view == view
-					|| view->minimized
+			auto other = ssd_max_extents(other_view.get());
+			if (other_view.get() == view || view->minimized
 					|| !box_intersects(&candidate, &other)) {
 				continue;
 			}
@@ -1339,10 +1259,7 @@ view_set_maximized(struct view *view, enum view_axis maximized)
 		return;
 	}
 
-	if (view->impl->maximize) {
-		view->impl->maximize(view, maximized);
-	}
-
+	view->maximize(maximized);
 	view->maximized = maximized;
 	wl_signal_emit_mutable(&view->events.maximized, NULL);
 
@@ -1391,9 +1308,7 @@ static void
 view_notify_tiled(struct view *view)
 {
 	assert(view);
-	if (view->impl->notify_tiled) {
-		view->impl->notify_tiled(view);
-	}
+	view->notify_tiled();
 }
 
 /* Reset tiled state of view without changing geometry */
@@ -1686,10 +1601,7 @@ set_fullscreen(struct view *view, bool fullscreen)
 		undecorate(view);
 	}
 
-	if (view->impl->set_fullscreen) {
-		view->impl->set_fullscreen(view, fullscreen);
-	}
-
+	view->set_fullscreen(fullscreen);
 	view->fullscreen = fullscreen;
 	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
 
@@ -2149,32 +2061,20 @@ view_move_to_output(struct view *view, struct output *output)
 }
 
 static void
-for_each_subview(struct view *view, void (*action)(struct view *))
-{
-	struct wl_array subviews;
-	struct view **subview;
-
-	wl_array_init(&subviews);
-	view_append_children(view, &subviews);
-	wl_array_for_each(subview, &subviews) {
-		action(*subview);
-	}
-	wl_array_release(&subviews);
-}
-
-static void
 move_to_front(struct view *view)
 {
-	wl_list_remove(&view->link);
-	wl_list_insert(&g_server.views, &view->link);
+	auto iter = lab::find_ptr(g_views.begin(), view);
+	assert(iter);
+	g_views.prepend(iter.remove());
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 }
 
 static void
 move_to_back(struct view *view)
 {
-	wl_list_remove(&view->link);
-	wl_list_append(&g_server.views, &view->link);
+	auto iter = lab::find_ptr(g_views.begin(), view);
+	assert(iter);
+	g_views.append(iter.remove());
 	wlr_scene_node_lower_to_bottom(&view->scene_tree->node);
 }
 
@@ -2188,23 +2088,25 @@ void
 view_move_to_front(struct view *view)
 {
 	assert(view);
-	assert(!wl_list_empty(&g_server.views));
+	assert(!g_views.empty());
 
 	/*
 	 * Check whether the view is already in front, or is the root
 	 * parent of the view in front (in which case we don't want to
 	 * raise it in front of its sub-view).
 	 */
-	struct view *front = wl_container_of(g_server.views.next, front, link);
-	if (view == front || view == view_get_root(front)) {
+	struct view *front = g_views.begin().get();
+	if (view == front || view == front->get_root()) {
 		return;
 	}
 
-	struct view *root = view_get_root(view);
+	struct view *root = view->get_root();
 	assert(root);
 
 	move_to_front(root);
-	for_each_subview(root, move_to_front);
+	for (auto &child : root->get_children()) {
+		move_to_front(&child);
+	}
 	/* make sure view is in front of other sub-views */
 	if (view != root) {
 		move_to_front(view);
@@ -2229,10 +2131,12 @@ void
 view_move_to_back(struct view *view)
 {
 	assert(view);
-	struct view *root = view_get_root(view);
+	struct view *root = view->get_root();
 	assert(root);
 
-	for_each_subview(root, move_to_back);
+	for (auto &child : root->get_children()) {
+		move_to_back(&child);
+	}
 	move_to_back(root);
 
 	cursor_update_focus();
@@ -2243,38 +2147,27 @@ struct view *
 view_get_modal_dialog(struct view *view)
 {
 	assert(view);
-	if (!view->impl->is_modal_dialog) {
-		return NULL;
-	}
 	/* check view itself first */
-	if (view->impl->is_modal_dialog(view)) {
+	if (view->is_modal_dialog()) {
 		return view;
 	}
 
 	/* check sibling views */
-	struct view *dialog = NULL;
-	struct view *root = view_get_root(view);
-	struct wl_array children;
-	struct view **child;
+	struct view *root = view->get_root();
 
-	wl_array_init(&children);
-	view_append_children(root, &children);
-	wl_array_for_each(child, &children) {
-		if (view->impl->is_modal_dialog(*child)) {
-			dialog = *child;
-			break;
+	for (auto &child : root->get_children()) {
+		if (child.is_modal_dialog()) {
+			return &child;
 		}
 	}
-	wl_array_release(&children);
-	return dialog;
+	return nullptr;
 }
 
 bool
 view_has_strut_partial(struct view *view)
 {
 	assert(view);
-	return view->impl->has_strut_partial &&
-		view->impl->has_strut_partial(view);
+	return view->has_strut_partial();
 }
 
 void
@@ -2336,29 +2229,6 @@ bool
 view_inhibits_actions(struct view *view, struct wl_list *actions)
 {
 	return view && view->inhibits_keybinds && !actions_contain_toggle_keybinds(actions);
-}
-
-void
-mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
-		wl_notify_func_t notify_map, wl_notify_func_t notify_unmap)
-{
-	assert(mappable);
-	assert(!mappable->connected);
-	mappable->map.notify = notify_map;
-	wl_signal_add(&surface->events.map, &mappable->map);
-	mappable->unmap.notify = notify_unmap;
-	wl_signal_add(&surface->events.unmap, &mappable->unmap);
-	mappable->connected = true;
-}
-
-void
-mappable_disconnect(struct mappable *mappable)
-{
-	assert(mappable);
-	assert(mappable->connected);
-	wl_list_remove(&mappable->map.link);
-	wl_list_remove(&mappable->unmap.link);
-	mappable->connected = false;
 }
 
 /* Used in both (un)map and (un)minimize */
@@ -2450,10 +2320,9 @@ view_set_icon(struct view *view, const char *icon_name, struct wl_array *buffers
 	wl_signal_emit_mutable(&view->events.set_icon, NULL);
 }
 
-void
-view_init(struct view *view)
+view::view(view_type type) : view_data(), type(type)
 {
-	assert(view);
+	auto view = this;
 
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
@@ -2469,25 +2338,12 @@ view_init(struct view *view)
 	view->app_id = xstrdup("");
 }
 
-void
-view_destroy(struct view *view)
+view::~view()
 {
-	assert(view);
+	auto view = this;
 
 	wl_signal_emit_mutable(&view->events.destroy, NULL);
 	snap_constraints_invalidate(view);
-
-	if (view->mappable.connected) {
-		mappable_disconnect(&view->mappable);
-	}
-
-	wl_list_remove(&view->request_move.link);
-	wl_list_remove(&view->request_resize.link);
-	wl_list_remove(&view->request_minimize.link);
-	wl_list_remove(&view->request_maximize.link);
-	wl_list_remove(&view->request_fullscreen.link);
-	wl_list_remove(&view->set_title.link);
-	wl_list_remove(&view->destroy.link);
 
 	zfree(view->title);
 	zfree(view->app_id);
@@ -2542,9 +2398,7 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
 
-	/* Remove view from g_server.views */
-	wl_list_remove(&view->link);
-	free(view);
+	g_views.remove(view);
 
 	cursor_update_focus();
 }

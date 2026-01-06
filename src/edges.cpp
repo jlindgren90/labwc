@@ -388,9 +388,9 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 	edges_for_target_geometry(&view_edges, view, origin);
 	edges_for_target_geometry(&target_edges, view, target);
 
-	struct view *v;
-	for_each_view(v, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
-		if (v == view || v->minimized || !output_is_usable(v->output)) {
+	for_each_view(v, g_views.begin(), LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+		if (v.get() == view || v->minimized
+				|| !output_is_usable(v->output)) {
 			continue;
 		}
 
@@ -401,7 +401,8 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 			continue;
 		}
 
-		if (output && output != v->output && !view_on_output(v, output)) {
+		if (output && output != v->output
+				&& !view_on_output(v.get(), output)) {
 			continue;
 		}
 
@@ -416,7 +417,8 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 			.top = v->current.y - border.top,
 			.right = v->current.x + v->current.width + border.right,
 			.bottom = v->current.y + border.bottom
-				+ view_effective_height(v, /* use_pending */ false),
+				+ view_effective_height(v.get(),
+					/* use_pending */ false),
 			.left = v->current.x - border.left,
 		};
 

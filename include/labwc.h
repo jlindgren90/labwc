@@ -198,9 +198,7 @@ struct server {
 	struct wlr_xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager;
 	struct wl_listener xdg_toplevel_icon_set_icon;
 
-	struct wl_list views;
 	uint64_t next_view_creation_id;
-	struct wl_list unmanaged_surfaces;
 
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
