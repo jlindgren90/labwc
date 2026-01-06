@@ -49,7 +49,6 @@ void ssd_destroy(struct ssd *ssd);
 void ssd_set_titlebar(struct ssd *ssd, bool enabled);
 
 void ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable);
-void ssd_enable_shade(struct ssd *ssd, bool enable);
 
 void ssd_update_hovered_button(struct wlr_scene_node *node);
 
@@ -63,7 +62,6 @@ void ssd_button_free(struct ssd_button *button);
  */
 enum lab_node_type ssd_get_resizing_type(const struct ssd *ssd,
 	struct wlr_cursor *cursor);
-enum lab_ssd_mode ssd_mode_parse(const char *mode);
 
 /* TODO: clean up / update */
 struct border ssd_thickness(struct view *view);

@@ -539,7 +539,6 @@ seat_init(void)
 	CONNECT_SIGNAL(&g_seat.wlr_seat->keyboard_state, &g_seat, focus_change);
 
 	g_seat.xcursor_manager = NULL;
-	g_seat.cursor_visible = true;
 	g_seat.cursor = wlr_cursor_create();
 	if (!g_seat.cursor) {
 		wlr_log(WLR_ERROR, "unable to create cursor");
