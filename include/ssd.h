@@ -37,6 +37,7 @@ int ssd_get_corner_width(void);
 void ssd_update_margin(struct ssd *ssd);
 void ssd_set_active(struct ssd *ssd, bool active);
 void ssd_update_title(struct ssd *ssd);
+void ssd_update_icon(struct ssd *ssd);
 void ssd_update_geometry(struct ssd *ssd);
 void ssd_destroy(struct ssd *ssd);
 void ssd_set_titlebar(struct ssd *ssd, bool enabled);

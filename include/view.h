@@ -229,6 +229,8 @@ struct view {
 		struct wl_array buffers; /* struct lab_data_buffer * */
 	} icon;
 
+	struct lab_data_buffer *icon_buffer;
+
 	struct {
 		struct wl_signal new_app_id;
 		struct wl_signal new_title;
@@ -237,11 +239,6 @@ struct view {
 		struct wl_signal minimized;
 		struct wl_signal fullscreened;
 		struct wl_signal activated;     /* bool *activated */
-		/*
-		 * This is emitted when app_id, or icon set via xdg_toplevel_icon
-		 * is updated. This is listened by scaled_icon_buffer.
-		 */
-		struct wl_signal set_icon;
 		struct wl_signal destroy;
 	} events;
 };
@@ -459,6 +456,8 @@ bool view_has_strut_partial(struct view *view);
 void view_set_title(struct view *view, const char *title);
 void view_set_app_id(struct view *view, const char *app_id);
 void view_reload_ssd(struct view *view);
+
+struct lab_data_buffer *view_get_icon_buffer(struct view *view);
 
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, struct wl_array *buffers);
