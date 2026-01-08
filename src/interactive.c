@@ -5,7 +5,6 @@
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "output.h"
-#include "resize-indicator.h"
 #include "view.h"
 
 /*
@@ -149,10 +148,6 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		view_set_untiled(view);
 		view_move_resize(view, natural_geo);
 	}
-
-	if (rc.resize_indicator) {
-		resize_indicator_show(view);
-	}
 }
 
 bool
@@ -292,8 +287,6 @@ interactive_cancel(struct view *view)
 	}
 
 	overlay_finish(&view->server->seat);
-
-	resize_indicator_hide(view);
 
 	view->server->grabbed_view = NULL;
 
