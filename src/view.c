@@ -19,6 +19,7 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "output.h"
+#include "scaled-buffer/scaled-icon-buffer.h"
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
@@ -1394,6 +1395,15 @@ view_set_title(struct view *view, const char *title)
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
 }
 
+static void
+drop_icon_buffer(struct view *view)
+{
+	if (view->icon_buffer) {
+		wlr_buffer_drop(&view->icon_buffer->base);
+		view->icon_buffer = NULL;
+	}
+}
+
 void
 view_set_app_id(struct view *view, const char *app_id)
 {
@@ -1408,12 +1418,17 @@ view_set_app_id(struct view *view, const char *app_id)
 	xstrdup_replace(view->app_id, app_id);
 
 	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
+
+	drop_icon_buffer(view);
+	ssd_update_icon(view->ssd);
 }
 
 void
 view_reload_ssd(struct view *view)
 {
 	assert(view);
+	drop_icon_buffer(view);
+
 	if (view->ssd_mode && !view->fullscreen) {
 		undecorate(view);
 		decorate(view);
@@ -1484,6 +1499,16 @@ view_update_visibility(struct view *view)
 	}
 }
 
+struct lab_data_buffer *
+view_get_icon_buffer(struct view *view)
+{
+	if (!view->icon_buffer) {
+		view->icon_buffer = scaled_icon_buffer_load(view,
+			g_theme.window_icon_size);
+	}
+	return view->icon_buffer;
+}
+
 void
 view_set_icon(struct view *view, struct wl_array *buffers)
 {
@@ -1498,7 +1523,8 @@ view_set_icon(struct view *view, struct wl_array *buffers)
 		wl_array_copy(&view->icon.buffers, buffers);
 	}
 
-	wl_signal_emit_mutable(&view->events.set_icon, NULL);
+	drop_icon_buffer(view);
+	ssd_update_icon(view->ssd);
 }
 
 void
@@ -1513,7 +1539,6 @@ view_init(struct view *view)
 	wl_signal_init(&view->events.minimized);
 	wl_signal_init(&view->events.fullscreened);
 	wl_signal_init(&view->events.activated);
-	wl_signal_init(&view->events.set_icon);
 	wl_signal_init(&view->events.destroy);
 
 	view->title = xstrdup("");
@@ -1585,7 +1610,6 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.minimized.listener_list));
 	assert(wl_list_empty(&view->events.fullscreened.listener_list));
 	assert(wl_list_empty(&view->events.activated.listener_list));
-	assert(wl_list_empty(&view->events.set_icon.listener_list));
 	assert(wl_list_empty(&view->events.destroy.listener_list));
 
 	/* Remove view from g_server.views */

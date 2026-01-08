@@ -559,7 +559,6 @@ theme_builtin(void)
 	g_theme.osd_window_switcher_classic.item_active_border_width = 2;
 	g_theme.osd_window_switcher_classic.item_active_border_color[0] = FLT_MIN;
 	g_theme.osd_window_switcher_classic.item_active_bg_color[0] = FLT_MIN;
-	g_theme.osd_window_switcher_classic.item_icon_size = -1;
 
 	/* inherit settings in post_processing() if not set elsewhere */
 	g_theme.osd_bg_color[0] = FLT_MIN;
@@ -896,12 +895,6 @@ entry(const char *key, const char *value)
 	}
 	if (match_glob(key, "osd.window-switcher.style-classic.item.active.bg.color")) {
 		parse_color(value, switcher_classic_theme->item_active_bg_color);
-	}
-	if (match_glob(key, "osd.window-switcher.style-classic.item.icon.size")
-			|| match_glob(key, "osd.window-switcher.item.icon.size")) {
-		switcher_classic_theme->item_icon_size =
-			get_int_if_positive(value,
-				"osd.window-switcher.style-classic.item.icon.size");
 	}
 
 	if (match_glob(key, "osd.label.text.color")) {
@@ -1349,6 +1342,19 @@ post_processing(void)
 
 	g_theme.titlebar_height = get_titlebar_height();
 
+	/*
+	 * Ensure a small amount of horizontal padding within the button
+	 * area (2px on each side with the default 26px button width).
+	 * A new theme setting could be added to configure this. Using
+	 * an existing setting (padding.width or window.button.spacing)
+	 * was considered, but these settings have distinct purposes
+	 * already and are zero by default.
+	 */
+	int icon_padding = g_theme.window_button_width / 10;
+	g_theme.window_icon_size =
+		MIN(g_theme.window_button_width - 2 * icon_padding,
+			g_theme.window_button_height);
+
 	fill_background_colors(&g_theme.window[SSD_INACTIVE].title_bg);
 	fill_background_colors(&g_theme.window[SSD_ACTIVE].title_bg);
 
@@ -1359,11 +1365,7 @@ post_processing(void)
 		+ 2 * g_theme.menu_items_padding_y;
 
 	int osd_font_height = font_height(&rc.font_osd);
-	if (switcher_classic_theme->item_icon_size <= 0) {
-		switcher_classic_theme->item_icon_size = osd_font_height;
-	}
-	int osd_field_height =
-		MAX(osd_font_height, switcher_classic_theme->item_icon_size);
+	int osd_field_height = MAX(osd_font_height, g_theme.window_icon_size);
 	switcher_classic_theme->item_height = osd_field_height
 		+ 2 * switcher_classic_theme->item_padding_y
 		+ 2 * switcher_classic_theme->item_active_border_width;
