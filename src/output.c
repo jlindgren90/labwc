@@ -331,10 +331,6 @@ configure_new_output(struct output *output)
 		 */
 	}
 
-	if (rc.adaptive_sync == LAB_ADAPTIVE_SYNC_ENABLED) {
-		output_enable_adaptive_sync(output, true);
-	}
-
 	output_state_commit(output);
 
 	wlr_output_effective_resolution(wlr_output,
@@ -621,8 +617,6 @@ output_config_apply(struct wlr_output_configuration_v1 *config)
 				/* is_client_request */ true);
 			wlr_output_state_set_scale(os, head->state.scale);
 			wlr_output_state_set_transform(os, head->state.transform);
-			output_enable_adaptive_sync(output,
-				head->state.adaptive_sync_enabled);
 		}
 		if (!output_state_commit(output)) {
 			/*
@@ -1082,31 +1076,4 @@ handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
 		cursor_update_image();
 		break;
 	}
-}
-
-void
-output_enable_adaptive_sync(struct output *output, bool enabled)
-{
-	wlr_output_state_set_adaptive_sync_enabled(&output->pending, enabled);
-	if (!wlr_output_test_state(output->wlr_output, &output->pending)) {
-		wlr_output_state_set_adaptive_sync_enabled(&output->pending, false);
-		wlr_log(WLR_DEBUG,
-			"failed to enable adaptive sync for output %s",
-			output->wlr_output->name);
-	} else {
-		wlr_log(WLR_INFO, "adaptive sync %sabled for output %s",
-			enabled ? "en" : "dis", output->wlr_output->name);
-	}
-}
-
-void
-output_set_has_fullscreen_view(struct output *output, bool has_fullscreen_view)
-{
-	if (rc.adaptive_sync != LAB_ADAPTIVE_SYNC_FULLSCREEN
-			|| !output_is_usable(output)) {
-		return;
-	}
-	/* Enable adaptive sync if view is fullscreen */
-	output_enable_adaptive_sync(output, has_fullscreen_view);
-	output_state_commit(output);
 }

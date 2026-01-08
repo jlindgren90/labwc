@@ -268,7 +268,6 @@ view_set_activated(struct view *view, bool activated)
 			keyboard_update_layout(view->keyboard_layout);
 		}
 	}
-	output_set_has_fullscreen_view(view->output, view->fullscreen);
 }
 
 void
@@ -1113,7 +1112,6 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	} else {
 		view_apply_special_geometry(view);
 	}
-	output_set_has_fullscreen_view(view->output, view->fullscreen);
 	/*
 	 * Entering/leaving fullscreen might result in a different
 	 * scene node ending up under the cursor even if view_moved()
@@ -1487,17 +1485,6 @@ view_update_visibility(struct view *view)
 	 * Hide it if a fullscreen view is shown (or uncovered).
 	 */
 	desktop_update_top_layer_visibility();
-
-	/*
-	 * We may need to disable adaptive sync if view was fullscreen.
-	 *
-	 * FIXME: this logic doesn't account for multiple fullscreen
-	 * views. It should probably be combined with the existing
-	 * logic in desktop_update_top_layer_visibility().
-	 */
-	if (view->fullscreen && !visible) {
-		output_set_has_fullscreen_view(view->output, false);
-	}
 
 	/* Update usable area to account for XWayland "struts" (panels) */
 	if (view_has_strut_partial(view)) {

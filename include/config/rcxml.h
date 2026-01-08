@@ -17,12 +17,6 @@
 /* max of one button of each type (no repeats) */
 #define TITLE_BUTTONS_MAX ((LAB_NODE_BUTTON_LAST + 1) - LAB_NODE_BUTTON_FIRST)
 
-enum adaptive_sync_mode {
-	LAB_ADAPTIVE_SYNC_DISABLED,
-	LAB_ADAPTIVE_SYNC_ENABLED,
-	LAB_ADAPTIVE_SYNC_FULLSCREEN,
-};
-
 struct buf;
 
 struct button_map_entry {
@@ -45,7 +39,6 @@ struct rcxml {
 	/* core */
 	bool xdg_shell_server_side_deco;
 	bool hide_maximized_window_titlebar;
-	enum adaptive_sync_mode adaptive_sync;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;
 	bool xwayland_persistence;
