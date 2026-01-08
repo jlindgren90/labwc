@@ -40,6 +40,8 @@ desktop_arrange_all_views(void)
 			view_adjust_for_layout_change(view);
 		}
 	}
+	/* Update top layer visibility after any/all views have moved */
+	desktop_update_top_layer_visibility();
 }
 
 static void
@@ -178,11 +180,11 @@ desktop_update_top_layer_visibility(void)
 		if (!output_is_usable(view->output)) {
 			continue;
 		}
-		if (view->fullscreen && !(view->outputs & outputs_covered)) {
+		if (view->fullscreen && !(view->output->id_bit & outputs_covered)) {
 			wlr_scene_node_set_enabled(
 				&view->output->layer_tree[top]->node, false);
 		}
-		outputs_covered |= view->outputs;
+		outputs_covered |= view->output->id_bit;
 	}
 }
 
