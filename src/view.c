@@ -209,35 +209,6 @@ view_close(struct view *view)
 	}
 }
 
-static void
-view_update_outputs(struct view *view)
-{
-	struct output *output;
-	struct wlr_output_layout *layout = g_server.output_layout;
-
-	uint64_t new_outputs = 0;
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (output_is_usable(output) && wlr_output_layout_intersects(
-				layout, output->wlr_output, &view->current)) {
-			new_outputs |= output->id_bit;
-		}
-	}
-
-	if (new_outputs != view->outputs) {
-		view->outputs = new_outputs;
-		wl_signal_emit_mutable(&view->events.new_outputs, NULL);
-		desktop_update_top_layer_visibility();
-	}
-}
-
-bool
-view_on_output(struct view *view, struct output *output)
-{
-	assert(view);
-	assert(output);
-	return (view->outputs & output->id_bit) != 0;
-}
-
 void
 view_move(struct view *view, int x, int y)
 {
@@ -263,7 +234,6 @@ view_moved(struct view *view)
 	if (view_is_floating(view)) {
 		view_discover_output(view, NULL);
 	}
-	view_update_outputs(view);
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus();
 }
@@ -1050,7 +1020,6 @@ view_adjust_for_layout_change(struct view *view)
 		view_move_resize(view, geometry);
 	}
 
-	view_update_outputs(view);
 	view->adjusting_for_layout_change = false;
 }
 
@@ -1379,7 +1348,6 @@ view_init(struct view *view)
 
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
-	wl_signal_init(&view->events.new_outputs);
 	wl_signal_init(&view->events.maximized);
 	wl_signal_init(&view->events.minimized);
 	wl_signal_init(&view->events.fullscreened);
@@ -1453,7 +1421,6 @@ view_destroy(struct view *view)
 
 	assert(wl_list_empty(&view->events.new_app_id.listener_list));
 	assert(wl_list_empty(&view->events.new_title.listener_list));
-	assert(wl_list_empty(&view->events.new_outputs.listener_list));
 	assert(wl_list_empty(&view->events.maximized.listener_list));
 	assert(wl_list_empty(&view->events.minimized.listener_list));
 	assert(wl_list_empty(&view->events.fullscreened.listener_list));

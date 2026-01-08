@@ -142,15 +142,6 @@ struct view {
 	 */
 	struct output *output;
 
-	/*
-	 * The outputs that the view is displayed on.
-	 * This is used to notify the foreign toplevel
-	 * implementation and to update the SSD invisible
-	 * resize area.
-	 * It is a bitset of output->id_bit.
-	 */
-	uint64_t outputs;
-
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
@@ -227,7 +218,6 @@ struct view {
 	struct {
 		struct wl_signal new_app_id;
 		struct wl_signal new_title;
-		struct wl_signal new_outputs;
 		struct wl_signal maximized;
 		struct wl_signal minimized;
 		struct wl_signal fullscreened;
@@ -354,8 +344,6 @@ void view_move_to_front(struct view *view);
  * only to xwayland views and always returns NULL for xdg-shell views.
  */
 struct view *view_get_modal_dialog(struct view *view);
-
-bool view_on_output(struct view *view, struct output *output);
 
 /**
  * view_has_strut_partial() - returns true for views that reserve space

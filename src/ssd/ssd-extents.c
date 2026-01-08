@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 
 #include <pixman.h>
+#include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
 #include "config/rcxml.h"
 #include "labwc.h"
@@ -118,9 +119,13 @@ ssd_extents_update(struct ssd *ssd)
 	 */
 	pixman_region32_t usable;
 	pixman_region32_init(&usable);
+	struct wlr_output_layout *layout = g_server.output_layout;
 	struct output *output;
 	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!view_on_output(view, output)) {
+		bool view_on_output = output_is_usable(output)
+			&& wlr_output_layout_intersects(layout,
+				output->wlr_output, &view->current);
+		if (!view_on_output) {
 			continue;
 		}
 		struct wlr_box usable_area =
