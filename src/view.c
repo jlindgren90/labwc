@@ -1356,7 +1356,6 @@ view_init(struct view *view)
 	wl_signal_init(&view->events.minimized);
 	wl_signal_init(&view->events.fullscreened);
 	wl_signal_init(&view->events.activated);
-	wl_signal_init(&view->events.destroy);
 
 	view->title = xstrdup("");
 	view->app_id = xstrdup("");
@@ -1366,8 +1365,6 @@ void
 view_destroy(struct view *view)
 {
 	assert(view);
-
-	wl_signal_emit_mutable(&view->events.destroy, NULL);
 
 	if (view->mappable.connected) {
 		mappable_disconnect(&view->mappable);
@@ -1388,6 +1385,8 @@ view_destroy(struct view *view)
 		foreign_toplevel_destroy(view->foreign_toplevel);
 		view->foreign_toplevel = NULL;
 	}
+
+	cursor_on_view_destroy(view);
 
 	/*
 	 * This check is (in theory) redundant since interactive_cancel()
@@ -1430,7 +1429,6 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.minimized.listener_list));
 	assert(wl_list_empty(&view->events.fullscreened.listener_list));
 	assert(wl_list_empty(&view->events.activated.listener_list));
-	assert(wl_list_empty(&view->events.destroy.listener_list));
 
 	/* Remove view from g_server.views */
 	wl_list_remove(&view->link);
