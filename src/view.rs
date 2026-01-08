@@ -15,6 +15,26 @@ pub enum ViewAxis {
     Both = (1 << 0) | (1 << 1),
 }
 
+// Whether a view wants focus. "Likely" and "Unlikely" apply only to
+// XWayland views using the Globally Active input model per the ICCCM.
+// These views are offered focus and will voluntarily accept or decline.
+//
+// In some cases, labwc needs to decide in advance whether to focus a
+// view. For this purpose, these views are classified (by a heuristic)
+// as likely or unlikely to want focus. However, it is still ultimately
+// up to the client whether the view gets focus or not.
+//
+#[repr(C)]
+#[derive(Clone, Copy, Default, PartialEq)]
+#[allow(dead_code)]
+pub enum ViewFocusMode {
+    #[default]
+    Never = 0,
+    Always,
+    Likely,
+    Unlikely,
+}
+
 pub type ViewId = u64;
 
 #[repr(C)]
@@ -24,6 +44,8 @@ pub struct ViewState {
     title: *const c_char,
     mapped: bool,
     ever_mapped: bool,
+    focus_mode: ViewFocusMode,
+    focusable: bool, // implies mapped
     activated: bool,
     fullscreen: bool,
     maximized: ViewAxis,
@@ -98,10 +120,13 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 }
 
 #[no_mangle]
-pub extern "C" fn view_set_mapped(id: ViewId) {
+pub extern "C" fn view_set_mapped(id: ViewId, focus_mode: ViewFocusMode) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.state.mapped = true;
         view.state.ever_mapped = true;
+        view.state.focus_mode = focus_mode;
+        view.state.focusable =
+            focus_mode == ViewFocusMode::Always || focus_mode == ViewFocusMode::Likely;
     }
 }
 
@@ -109,6 +134,19 @@ pub extern "C" fn view_set_mapped(id: ViewId) {
 pub extern "C" fn view_set_unmapped(id: ViewId) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.state.mapped = false;
+        view.state.focusable = false;
+    }
+}
+
+// For use by desktop_focus_view() only - please do not call directly.
+// See comments on ViewFocusMode for more information.
+//
+#[no_mangle]
+pub extern "C" fn view_offer_focus(id: ViewId) {
+    if let Some(view) = views().by_id.get(&id) {
+        if view.is_xwayland {
+            unsafe { xwayland_view_offer_focus(view.c_ptr) };
+        }
     }
 }
 

@@ -67,7 +67,7 @@ view_get_root(struct view *view)
 static bool
 matches_criteria(struct view *view, enum lab_view_criteria criteria)
 {
-	if (!view_is_focusable(view)) {
+	if (!view->st->focusable) {
 		return false;
 	}
 	if (criteria & LAB_VIEW_CRITERIA_FULLSCREEN) {
@@ -137,42 +137,6 @@ view_array_append(struct server *server, struct wl_array *views,
 			continue;
 		}
 		*entry = view;
-	}
-}
-
-enum view_wants_focus
-view_wants_focus(struct view *view)
-{
-	assert(view);
-	if (view->impl->wants_focus) {
-		return view->impl->wants_focus(view);
-	}
-	return VIEW_WANTS_FOCUS_ALWAYS;
-}
-
-bool
-view_is_focusable(struct view *view)
-{
-	assert(view);
-	if (!view->surface) {
-		return false;
-	}
-
-	switch (view_wants_focus(view)) {
-	case VIEW_WANTS_FOCUS_ALWAYS:
-	case VIEW_WANTS_FOCUS_LIKELY:
-		return view->st->mapped;
-	default:
-		return false;
-	}
-}
-
-void
-view_offer_focus(struct view *view)
-{
-	assert(view);
-	if (view->impl->offer_focus) {
-		view->impl->offer_focus(view);
 	}
 }
 
