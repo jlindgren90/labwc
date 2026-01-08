@@ -12,7 +12,6 @@ labwc_sources = files(
   'output-state.c',
   'overlay.c',
   'resistance.c',
-  'resize-outlines.c',
   'seat.c',
   'server.c',
   'session-lock.c',

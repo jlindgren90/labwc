@@ -30,7 +30,6 @@
 #include "menu/menu.h"
 #include "output.h"
 #include "resistance.h"
-#include "resize-outlines.h"
 #include "ssd.h"
 #include "view.h"
 #include "xwayland.h"
@@ -314,11 +313,7 @@ process_cursor_resize(uint32_t time)
 			server.grab_box.width - new_view_geo.width;
 	}
 
-	if (rc.resize_draw_contents) {
-		view_move_resize(view, new_view_geo);
-	} else {
-		resize_outlines_update(view, new_view_geo);
-	}
+	view_move_resize(view, new_view_geo);
 }
 
 void
@@ -1136,9 +1131,6 @@ cursor_finish_button_release(uint32_t button)
 
 	if (server.input_mode == LAB_INPUT_STATE_MOVE
 			|| server.input_mode == LAB_INPUT_STATE_RESIZE) {
-		if (resize_outlines_enabled(server.grabbed_view)) {
-			resize_outlines_finish(server.grabbed_view);
-		}
 		/* Exit interactive move/resize mode */
 		interactive_finish(server.grabbed_view);
 		return true;
