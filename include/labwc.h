@@ -179,7 +179,6 @@ struct server {
 	struct wl_listener xdg_toplevel_icon_set_icon;
 
 	struct wl_list views;
-	uint64_t next_view_creation_id;
 	struct wl_list unmanaged_surfaces;
 
 	struct wlr_scene *scene;
@@ -277,10 +276,6 @@ struct server {
 	struct cycle_state {
 		struct view *selected_view;
 		struct wl_list views;
-		bool preview_was_enabled;
-		struct wlr_scene_node *preview_node;
-		struct wlr_scene_node *preview_dummy;
-		struct lab_scene_rect *preview_outline;
 	} cycle;
 
 	struct menu *menu_current;
