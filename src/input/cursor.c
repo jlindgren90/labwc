@@ -374,9 +374,6 @@ clear_cursor_context(struct cursor_context_saved *saved_ctx)
 	if (saved_ctx->surface_destroy.notify) {
 		wl_list_remove(&saved_ctx->surface_destroy.link);
 	}
-	if (saved_ctx->view_destroy.notify) {
-		wl_list_remove(&saved_ctx->view_destroy.link);
-	}
 	*saved_ctx = (struct cursor_context_saved) {0};
 }
 
@@ -393,14 +390,6 @@ handle_ctx_surface_destroy(struct wl_listener *listener, void *data)
 {
 	struct cursor_context_saved *saved_ctx =
 		wl_container_of(listener, saved_ctx, surface_destroy);
-	clear_cursor_context(saved_ctx);
-}
-
-static void
-handle_ctx_view_destroy(struct wl_listener *listener, void *data)
-{
-	struct cursor_context_saved *saved_ctx =
-		wl_container_of(listener, saved_ctx, view_destroy);
 	clear_cursor_context(saved_ctx);
 }
 
@@ -423,9 +412,18 @@ cursor_context_save(struct cursor_context_saved *saved_ctx,
 		saved_ctx->surface_destroy.notify = handle_ctx_surface_destroy;
 		wl_signal_add(&ctx->surface->events.destroy, &saved_ctx->surface_destroy);
 	}
-	if (ctx->view) {
-		saved_ctx->view_destroy.notify = handle_ctx_view_destroy;
-		wl_signal_add(&ctx->view->events.destroy, &saved_ctx->view_destroy);
+}
+
+void
+cursor_on_view_destroy(struct view *view)
+{
+	struct seat *seat = &view->server->seat;
+
+	if (seat->pressed.ctx.view == view) {
+		clear_cursor_context(&seat->pressed);
+	}
+	if (seat->last_cursor_ctx.ctx.view == view) {
+		clear_cursor_context(&seat->last_cursor_ctx);
 	}
 }
 
