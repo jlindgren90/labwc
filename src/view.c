@@ -20,7 +20,6 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "resize-indicator.h"
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
@@ -351,9 +350,6 @@ view_moved(struct view *view)
 	view_update_outputs(view);
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus();
-	if (rc.resize_indicator && g_server.grabbed_view == view) {
-		resize_indicator_update(view);
-	}
 }
 
 static void save_last_placement(struct view *view);
