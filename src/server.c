@@ -55,7 +55,6 @@
 #include "layers.h"
 #include "menu/menu.h"
 #include "output.h"
-#include "resize-indicator.h"
 #include "scaled-buffer/scaled-buffer.h"
 #include "session-lock.h"
 #include "ssd.h"
@@ -91,7 +90,6 @@ reload_config_and_theme(struct server *server)
 
 	menu_reconfigure(server);
 	seat_reconfigure(server);
-	resize_indicator_reconfigure(server);
 	kde_server_decoration_update_default();
 }
 
