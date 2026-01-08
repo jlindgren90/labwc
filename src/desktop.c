@@ -185,11 +185,11 @@ desktop_update_top_layer_visibility(struct server *server)
 		if (!output_is_usable(view->output)) {
 			continue;
 		}
-		if (view->fullscreen && !(view->outputs & outputs_covered)) {
+		if (view->fullscreen && !(view->output->id_bit & outputs_covered)) {
 			wlr_scene_node_set_enabled(
 				&view->output->layer_tree[top]->node, false);
 		}
-		outputs_covered |= view->outputs;
+		outputs_covered |= view->output->id_bit;
 	}
 }
 
