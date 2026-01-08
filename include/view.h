@@ -11,6 +11,9 @@
 #include "config.h"
 #include "config/types.h"
 
+#include "view-c.h"
+#include "view-rs.h"
+
 /*
  * Default minimal window size. Clients can explicitly set smaller values via
  * e.g. xdg_toplevel::set_min_size.
@@ -132,6 +135,10 @@ struct view {
 	/* This is cleared when the view is not in the cycle list */
 	struct wl_list cycle_link;
 
+	/* rust interop */
+	ViewId id;
+	const ViewState *st;
+
 	/*
 	 * The primary output that the view is displayed on. Specifically:
 	 *
@@ -152,10 +159,6 @@ struct view {
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
-
-	/* These are never NULL and an empty string is set instead. */
-	char *title;
-	char *app_id; /* WM_CLASS for xwayland windows */
 
 	bool mapped;
 	bool been_mapped;
@@ -442,8 +445,6 @@ struct view *view_get_modal_dialog(struct view *view);
  */
 bool view_has_strut_partial(struct view *view);
 
-void view_set_title(struct view *view, const char *title);
-void view_set_app_id(struct view *view, const char *app_id);
 void view_reload_ssd(struct view *view);
 
 struct lab_data_buffer *view_get_icon_buffer(struct view *view);
