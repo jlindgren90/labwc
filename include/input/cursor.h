@@ -41,7 +41,6 @@ struct cursor_context {
 /* Used to persistently store cursor context (e.g. in seat->pressed) */
 struct cursor_context_saved {
 	struct cursor_context ctx;
-	struct wl_listener view_destroy;
 	struct wl_listener node_destroy;
 	struct wl_listener surface_destroy;
 };
@@ -77,6 +76,8 @@ void cursor_set(enum lab_cursors cursor);
  */
 void cursor_context_save(struct cursor_context_saved *saved_ctx,
 	const struct cursor_context *ctx);
+
+void cursor_on_view_destroy(struct view *view);
 
 /**
  * cursor_get_resize_edges - calculate resize edge based on cursor position
