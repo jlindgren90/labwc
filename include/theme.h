@@ -77,6 +77,7 @@ struct theme {
 	int window_button_width;
 	int window_button_height;
 	int window_button_spacing;
+	int window_icon_size; /* derived */
 
 	/* the corner radius of the hover effect */
 	int window_button_hover_bg_corner_radius;
@@ -164,7 +165,6 @@ struct theme {
 		int item_active_border_width;
 		float item_active_border_color[4];
 		float item_active_bg_color[4];
-		int item_icon_size;
 		bool width_is_percent;
 
 		/*
