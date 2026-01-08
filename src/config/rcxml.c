@@ -800,19 +800,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.snap_overlay_delay_outer = atoi(content);
 	} else if (!strcasecmp(nodename, "topMaximize.snapping")) {
 		set_bool(content, &rc.snap_top_maximize);
-
-	} else if (!strcasecmp(nodename, "popupShow.resize")) {
-		if (!strcasecmp(content, "Always")) {
-			rc.resize_indicator = LAB_RESIZE_INDICATOR_ALWAYS;
-		} else if (!strcasecmp(content, "Never")) {
-			rc.resize_indicator = LAB_RESIZE_INDICATOR_NEVER;
-		} else if (!strcasecmp(content, "Nonpixel")) {
-			rc.resize_indicator = LAB_RESIZE_INDICATOR_NON_PIXEL;
-		} else {
-			wlr_log(WLR_ERROR, "Invalid value for <resize popupShow />");
-		}
-	} else if (!strcasecmp(nodename, "drawContents.resize")) {
-		set_bool(content, &rc.resize_draw_contents);
 	} else if (!strcasecmp(nodename, "cornerRange.resize")) {
 		rc.resize_corner_range = atoi(content);
 	} else if (!strcasecmp(nodename, "minimumArea.resize")) {
@@ -923,8 +910,6 @@ rcxml_init(void)
 	rc.snap_overlay_delay_outer = 500;
 	rc.snap_top_maximize = true;
 
-	rc.resize_indicator = LAB_RESIZE_INDICATOR_NEVER;
-	rc.resize_draw_contents = true;
 	rc.resize_corner_range = -1;
 	rc.resize_minimum_area = 8;
 
