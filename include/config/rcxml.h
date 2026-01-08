@@ -19,12 +19,6 @@ enum adaptive_sync_mode {
 	LAB_ADAPTIVE_SYNC_FULLSCREEN,
 };
 
-enum resize_indicator_mode {
-	LAB_RESIZE_INDICATOR_NEVER = 0,
-	LAB_RESIZE_INDICATOR_ALWAYS,
-	LAB_RESIZE_INDICATOR_NON_PIXEL
-};
-
 struct buf;
 
 struct button_map_entry {
@@ -102,8 +96,6 @@ struct rcxml {
 	int snap_overlay_delay_outer;
 	bool snap_top_maximize;
 
-	enum resize_indicator_mode resize_indicator;
-	bool resize_draw_contents;
 	int resize_corner_range;
 	int resize_minimum_area;
 
