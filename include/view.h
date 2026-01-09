@@ -124,23 +124,6 @@ struct view {
 	enum ssd_preference ssd_preference;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 
-	/*
-	 * Saved geometry which will be restored when the view returns
-	 * to normal/floating state after being maximized/fullscreen/
-	 * tiled. Values are undefined/out-of-date when the view is not
-	 * maximized/fullscreen/tiled.
-	 */
-	struct wlr_box natural_geometry;
-	/*
-	 * Geometry of the view prior to adjusting for layout changes.
-	 * This is valid only when the most recent move/resize of the
-	 * view was due to a layout change, and is invalidated by any
-	 * user-initiated move/resize.
-	 */
-	struct wlr_box saved_geometry;
-	bool saved_geometry_valid;
-	bool lost_output_due_to_layout_change;
-
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
@@ -300,10 +283,9 @@ void view_minimize(struct view *view, bool minimized);
 bool view_compute_centered_position(struct view *view,
 	const struct wlr_box *ref, int w, int h, int *x, int *y);
 struct wlr_box view_get_fallback_natural_geometry(struct view *view);
-void view_store_natural_geometry(struct view *view);
 
 /**
- * view_apply_natural_geometry - adjust view->natural_geometry if it doesn't
+ * view_apply_natural_geometry - adjust view->st->natural_geom if it doesn't
  * intersect with view->output and then apply it
  */
 void view_apply_natural_geometry(struct view *view);

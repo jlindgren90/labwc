@@ -295,8 +295,7 @@ view_move_resize(struct view *view, struct wlr_box geo)
 	 * view_adjust_for_layout_change(), which uses view->st->pending.
 	 * Not sure if it might have other side-effects though.
 	 */
-	view->saved_geometry_valid = false;
-	view->lost_output_due_to_layout_change = false;
+	view_set_saved_geom_valid(view->id, false, /* lost_output */ false);
 }
 
 struct view_size_hints
@@ -524,35 +523,6 @@ view_get_fallback_natural_geometry(struct view *view)
 }
 
 void
-view_store_natural_geometry(struct view *view)
-{
-	assert(view);
-	/*
-	 * Do not overwrite the stored geometry if fullscreen or tiled.
-	 * Maximized views are handled on a per-axis basis (see below).
-	 */
-	if (view->st->fullscreen || view_is_tiled(view)) {
-		return;
-	}
-
-	/*
-	 * Note that for xdg-shell views that start fullscreen or maximized,
-	 * we end up storing a natural geometry of 0x0. This is intentional.
-	 * When leaving fullscreen or unmaximizing, we pass 0x0 to the
-	 * xdg-toplevel configure event, which means the application should
-	 * choose its own size.
-	 */
-	if (!(view->st->maximized & VIEW_AXIS_HORIZONTAL)) {
-		view->natural_geometry.x = view->st->pending.x;
-		view->natural_geometry.width = view->st->pending.width;
-	}
-	if (!(view->st->maximized & VIEW_AXIS_VERTICAL)) {
-		view->natural_geometry.y = view->st->pending.y;
-		view->natural_geometry.height = view->st->pending.height;
-	}
-}
-
-void
 view_center(struct view *view, const struct wlr_box *ref)
 {
 	assert(view);
@@ -613,7 +583,7 @@ view_apply_natural_geometry(struct view *view)
 	assert(view);
 	assert(view_is_floating(view));
 
-	struct wlr_box geometry = view->natural_geometry;
+	struct wlr_box geometry = view->st->natural_geom;
 	/* Only adjust natural geometry if known (not 0x0) */
 	if (!wlr_box_empty(&geometry)) {
 		adjust_floating_geometry(view, &geometry,
@@ -662,7 +632,7 @@ view_apply_maximized_geometry(struct view *view)
 	 * on-screen on the output where the view is maximized, then
 	 * center the unmaximized axis.
 	 */
-	struct wlr_box natural = view->natural_geometry;
+	struct wlr_box natural = view->st->natural_geom;
 	if (view->st->maximized != VIEW_AXIS_BOTH
 			&& !box_intersects(&box, &natural)) {
 		view_compute_centered_position(view, NULL,
@@ -763,7 +733,7 @@ view_maximize(struct view *view, enum view_axis axis)
 	 * while one axis was maximized.
 	 */
 	if (store_natural_geometry) {
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 	}
 
 	/*
@@ -773,8 +743,9 @@ view_maximize(struct view *view, enum view_axis axis)
 	 * one axis. So in that corner case, set a fallback geometry.
 	 */
 	if ((axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
-			&& wlr_box_empty(&view->natural_geometry)) {
-		view->natural_geometry = view_get_fallback_natural_geometry(view);
+			&& wlr_box_empty(&view->st->natural_geom)) {
+		view_set_natural_geom(view->id,
+			view_get_fallback_natural_geometry(view));
 	}
 
 	view_set_maximized(view->id, axis);
@@ -918,7 +889,7 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 		 * a fullscreen view.
 		 */
 		interactive_cancel(view);
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 	}
 
 	view_set_fullscreen_internal(view->id, fullscreen);
@@ -955,9 +926,9 @@ view_adjust_for_layout_change(struct view *view)
 	assert(view);
 
 	bool is_floating = view_is_floating(view);
-	bool saved = view->saved_geometry_valid;
-	bool lost_output = view->lost_output_due_to_layout_change
-		|| !output_is_usable(view->output);
+	bool saved = view->st->saved_geom_valid;
+	bool lost_output =
+		view->st->lost_output || !output_is_usable(view->output);
 
 	/*
 	 * Save the view's geometry if this is the first layout change
@@ -973,7 +944,7 @@ view_adjust_for_layout_change(struct view *view)
 	 * can be moved first and only later lose its own output.
 	 */
 	if (!saved) {
-		view->saved_geometry = view->st->pending;
+		view_set_saved_geom(view->id, view->st->pending);
 		saved = true;
 	}
 
@@ -990,14 +961,14 @@ view_adjust_for_layout_change(struct view *view)
 	 * output the view was on previously -- but this is simplest.
 	 */
 	if (is_floating || lost_output) {
-		view_discover_output(view, &view->saved_geometry);
+		view_discover_output(view, &view->st->saved_geom);
 	}
 
 	if (!is_floating) {
 		view_apply_special_geometry(view);
 	} else {
 		/* Restore saved geometry, ensuring view is on-screen */
-		struct wlr_box geometry = view->saved_geometry;
+		struct wlr_box geometry = view->st->saved_geom;
 		adjust_floating_geometry(view, &geometry,
 			/* midpoint_visibility */ true);
 		view_move_resize(view, geometry);
@@ -1007,8 +978,7 @@ view_adjust_for_layout_change(struct view *view)
 	 * view_move_resize() always clears these two flags.
 	 * Set them back to correct values now that we're done.
 	 */
-	view->saved_geometry_valid = saved;
-	view->lost_output_due_to_layout_change = lost_output;
+	view_set_saved_geom_valid(view->id, saved, lost_output);
 }
 
 void
@@ -1100,7 +1070,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 		view_maximize(view, VIEW_AXIS_NONE);
 	} else if (store_natural_geometry) {
 		/* store current geometry as new natural_geometry */
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 	}
 	view_set_output(view, output);
 	view_set_tiled(view->id, edge);

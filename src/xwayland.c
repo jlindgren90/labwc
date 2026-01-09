@@ -647,9 +647,10 @@ check_natural_geometry(struct view *view)
 	 * and set a fallback size.
 	 */
 	if (!view_is_floating(view)
-			&& (view->natural_geometry.width < LAB_MIN_VIEW_WIDTH
-			|| view->natural_geometry.height < LAB_MIN_VIEW_HEIGHT)) {
-		view->natural_geometry = view_get_fallback_natural_geometry(view);
+			&& (view->st->natural_geom.width < LAB_MIN_VIEW_WIDTH
+			|| view->st->natural_geom.height < LAB_MIN_VIEW_HEIGHT)) {
+		view_set_natural_geom(view->id,
+			view_get_fallback_natural_geometry(view));
 	}
 }
 
@@ -674,11 +675,10 @@ set_initial_position(struct view *view,
 			 * stored natural geometry without actually
 			 * moving the view.
 			 */
+			struct wlr_box geom = view->st->natural_geom;
 			view_compute_centered_position(view, NULL,
-				view->natural_geometry.width,
-				view->natural_geometry.height,
-				&view->natural_geometry.x,
-				&view->natural_geometry.y);
+				geom.width, geom.height, &geom.x, &geom.y);
+			view_set_natural_geom(view->id, geom);
 		}
 	}
 

@@ -50,6 +50,17 @@ pub struct ViewState {
     // been processed. Should match current geometry when no move/resize
     // requests are pending.
     pending: WlrBox,
+    // Saved geometry which will be restored when the view returns to
+    // normal/floating state after being maximized/fullscreen/tiled.
+    // Values are undefined/out-of-date for floating views.
+    natural_geom: WlrBox,
+    // Geometry of the view prior to adjusting for layout changes. This
+    // is valid only when the most recent move/resize of the view was
+    // due to a layout change, and is invalidated by any user-initiated
+    // move/resize.
+    saved_geom: WlrBox,
+    saved_geom_valid: bool,
+    lost_output: bool, // also reset by user move/resize
     mapped: bool,
     ever_mapped: bool,
     focus_mode: ViewFocusMode,
@@ -229,6 +240,52 @@ pub extern "C" fn view_set_pending_size(id: ViewId, width: i32, height: i32) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.state.pending.width = width;
         view.state.pending.height = height;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_natural_geom(id: ViewId, geom: WlrBox) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.natural_geom = geom;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_store_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        // Do not overwrite the stored geometry if fullscreen or tiled.
+        // Maximized views are handled on a per-axis basis (see below).
+        if view.state.fullscreen || view.state.tiled != 0 {
+            return;
+        }
+        // Note that for xdg-shell views that start fullscreen or maximized,
+        // we end up storing a natural geometry of 0x0. This is intentional.
+        // When leaving fullscreen or unmaximizing, we pass 0x0 to the
+        // xdg-toplevel configure event, which means the application should
+        // choose its own size.
+        if view.state.maximized == ViewAxis::None || view.state.maximized == ViewAxis::Vertical {
+            view.state.natural_geom.x = view.state.pending.x;
+            view.state.natural_geom.width = view.state.pending.width;
+        }
+        if view.state.maximized == ViewAxis::None || view.state.maximized == ViewAxis::Horizontal {
+            view.state.natural_geom.y = view.state.pending.y;
+            view.state.natural_geom.height = view.state.pending.height;
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_saved_geom(id: ViewId, geom: WlrBox) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.saved_geom = geom;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_saved_geom_valid(id: ViewId, valid: bool, lost_output: bool) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.saved_geom_valid = valid;
+        view.state.lost_output = lost_output;
     }
 }
 

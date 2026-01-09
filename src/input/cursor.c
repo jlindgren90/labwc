@@ -240,8 +240,8 @@ process_cursor_move(struct server *server, uint32_t time)
 		 * later. See do_late_positioning() in xdg.c.
 		 */
 		struct wlr_box new_geo = {
-			.width = view->natural_geometry.width,
-			.height = view->natural_geometry.height,
+			.width = view->st->natural_geom.width,
+			.height = view->st->natural_geom.height,
 		};
 		if (!wlr_box_empty(&new_geo)) {
 			interactive_anchor_to_cursor(server, new_geo.width,

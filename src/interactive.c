@@ -85,7 +85,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		}
 
 		/* Store natural geometry at start of move */
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 
 		/* Prevent region snapping when just moving via A-Left mousebind */
 		seat->region_prevent_snap = keyboard_get_all_modifiers(seat);
@@ -141,7 +141,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	 */
 	if (mode == LAB_INPUT_STATE_MOVE && !view_is_floating(view)
 			&& rc.unsnap_threshold <= 0) {
-		struct wlr_box geo = view->natural_geometry;
+		struct wlr_box geo = view->st->natural_geom;
 		if (!wlr_box_empty(&geo)) {
 			interactive_anchor_to_cursor(server,
 				geo.width, geo.height, &geo.x, &geo.y);
