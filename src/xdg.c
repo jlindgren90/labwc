@@ -10,7 +10,6 @@
 #include <wlr/types/wlr_xdg_toplevel_icon_v1.h>
 #include "buffer.h"
 #include "common/array.h"
-#include "common/box.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "decorations.h"
@@ -18,6 +17,7 @@
 #include "menu/menu.h"
 #include "node.h"
 #include "output.h"
+#include "util.h"
 #include "view.h"
 #include "view-c.h"
 #include "view-impl-common.h"
@@ -132,7 +132,7 @@ center_fullscreen_if_needed(struct view *view)
 
 	int x, y;
 	box_center(view->st->current.width, view->st->current.height,
-		&output_box, &output_box, &x, &y);
+		output_box, output_box, &x, &y);
 	view_set_current_pos(view->id, x, y);
 	view_set_pending_pos(view->id, x, y);
 
