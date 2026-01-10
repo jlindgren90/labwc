@@ -38,7 +38,6 @@ struct rcxml {
 
 	/* core */
 	bool xdg_shell_server_side_deco;
-	bool hide_maximized_window_titlebar;
 	int gap;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;

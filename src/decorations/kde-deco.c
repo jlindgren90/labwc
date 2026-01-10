@@ -54,11 +54,8 @@ handle_mode(struct wl_listener *listener, void *data)
 			"requested: %u", client_mode);
 	}
 
-	if (kde_deco->view->ssd_preference == LAB_SSD_PREF_SERVER) {
-		view_set_ssd_mode(kde_deco->view, LAB_SSD_MODE_FULL);
-	} else {
-		view_set_ssd_mode(kde_deco->view, LAB_SSD_MODE_NONE);
-	}
+	view_set_ssd_enabled(kde_deco->view,
+		kde_deco->view->ssd_preference == LAB_SSD_PREF_SERVER);
 }
 
 static void
