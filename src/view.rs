@@ -290,6 +290,44 @@ pub extern "C" fn view_set_saved_geom_valid(id: ViewId, valid: bool, lost_output
 }
 
 #[no_mangle]
+pub extern "C" fn view_move_resize(id: ViewId, geom: WlrBox) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        if view.is_xwayland {
+            unsafe {
+                xwayland_view_configure(
+                    view.c_ptr,
+                    geom,
+                    &mut view.state.pending,
+                    &mut view.state.current,
+                )
+            };
+        } else {
+            unsafe {
+                xdg_toplevel_view_configure(
+                    view.c_ptr,
+                    geom,
+                    &mut view.state.pending,
+                    &mut view.state.current,
+                )
+            };
+        }
+        // Assume by default that the move/resize was user-initiated
+        // (rather than due to output layout change) and invalidate the
+        // saved geometry. For the few cases where the move/resize is
+        // due to layout change, these flags are set again afterward by
+        // view_adjust_for_layout_change().
+        //
+        // TODO: consider also updating view->output here for floating
+        // views (based on view->pending) rather than waiting until
+        // view_moved(). This might eliminate some race conditions with
+        // view_adjust_for_layout_change(), which uses view->pending.
+        // Not sure if it might have other side-effects though.
+        view.state.saved_geom_valid = false;
+        view.state.lost_output = false;
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_mapped(id: ViewId, focus_mode: ViewFocusMode) {
     let Views {
         by_id,

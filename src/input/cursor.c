@@ -249,7 +249,7 @@ process_cursor_move(struct server *server, uint32_t time)
 		}
 		view_set_maximized(view->id, VIEW_AXIS_NONE);
 		view_set_tiled(view->id, LAB_EDGE_NONE);
-		view_move_resize(view, new_geo);
+		view_move_resize(view->id, new_geo);
 		x = new_geo.x;
 		y = new_geo.y;
 	}
@@ -320,7 +320,7 @@ process_cursor_resize(struct server *server, uint32_t time)
 			server->grab_box.width - new_view_geo.width;
 	}
 
-	view_move_resize(view, new_view_geo);
+	view_move_resize(view->id, new_view_geo);
 }
 
 void

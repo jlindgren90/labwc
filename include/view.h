@@ -75,7 +75,6 @@ struct view_size_hints {
 };
 
 struct view_impl {
-	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);
@@ -268,15 +267,6 @@ void view_set_activated(struct view *view, bool activated);
 void view_set_output(struct view *view, struct output *output);
 void view_close(struct view *view);
 
-/**
- * view_move_resize - resize and move view
- * @view: view to be resized and moved
- * @geo: the new geometry
- * NOTE: Only use this when the view actually changes width and/or height
- * otherwise the serials might cause a delay in moving xdg-shell clients.
- * For move only, use view_move()
- */
-void view_move_resize(struct view *view, struct wlr_box geo);
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);

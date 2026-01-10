@@ -148,7 +148,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		}
 		view_set_maximized(view->id, VIEW_AXIS_NONE);
 		view_set_tiled(view->id, LAB_EDGE_NONE);
-		view_move_resize(view, geo);
+		view_move_resize(view->id, geo);
 	}
 }
 

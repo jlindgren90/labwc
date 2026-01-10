@@ -545,8 +545,9 @@ handle_set_app_id(struct wl_listener *listener, void *data)
 	view_set_app_id(view->id, toplevel->app_id);
 }
 
-static void
-xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
+void
+xdg_toplevel_view_configure(struct view *view, struct wlr_box geo,
+		struct wlr_box *pending, struct wlr_box *current)
 {
 	uint32_t serial = 0;
 
@@ -558,8 +559,7 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
 	 * size is the same (and there is no pending configure request)
 	 * then we can just move the view directly.
 	 */
-	if (geo.width != view->st->pending.width
-			|| geo.height != view->st->pending.height) {
+	if (geo.width != pending->width || geo.height != pending->height) {
 		if (toplevel->base->initialized) {
 			serial = wlr_xdg_toplevel_set_size(toplevel, geo.width, geo.height);
 		} else {
@@ -576,13 +576,13 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
 		}
 	}
 
-	view_set_pending_pos(view->id, geo.x, geo.y);
-	view_set_pending_size(view->id, geo.width, geo.height);
+	*pending = geo;
 
 	if (serial > 0) {
 		set_pending_configure_serial(view, serial);
 	} else if (view->pending_configure_serial == 0) {
-		view_set_current_pos(view->id, geo.x, geo.y);
+		current->x = geo.x;
+		current->y = geo.y;
 		/*
 		 * It's a bit difficult to think of a corner case where
 		 * center_fullscreen_if_needed() would actually be needed
@@ -833,7 +833,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 }
 
 static const struct view_impl xdg_toplevel_view_impl = {
-	.configure = xdg_toplevel_view_configure,
 	.close = xdg_toplevel_view_close,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,

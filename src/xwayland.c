@@ -314,11 +314,11 @@ handle_destroy(struct wl_listener *listener, void *data)
 	view_destroy(view);
 }
 
-static void
-xwayland_view_configure(struct view *view, struct wlr_box geo)
+void
+xwayland_view_configure(struct view *view, struct wlr_box geo,
+		struct wlr_box *pending, struct wlr_box *current)
 {
-	view_set_pending_pos(view->id, geo.x, geo.y);
-	view_set_pending_size(view->id, geo.width, geo.height);
+	*pending = geo;
 	wlr_xwayland_surface_configure(xwayland_surface_from_view(view),
 		geo.x, geo.y, geo.width, geo.height);
 
@@ -336,7 +336,8 @@ xwayland_view_configure(struct view *view, struct wlr_box geo)
 	/* If not resizing, process the move immediately */
 	if (is_offscreen || (view->st->current.width == geo.width
 			&& view->st->current.height == geo.height)) {
-		view_set_current_pos(view->id, geo.x, geo.y);
+		current->x = geo.x;
+		current->y = geo.y;
 		view_moved(view);
 	}
 }
@@ -354,7 +355,7 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		struct wlr_box box = {.x = event->x, .y = event->y,
 			.width = event->width, .height = event->height};
 		view_adjust_size(view, &box.width, &box.height);
-		xwayland_view_configure(view, box);
+		view_move_resize(view->id, box);
 	} else {
 		/*
 		 * Do not allow clients to request geometry other than
@@ -362,7 +363,9 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		 * views. Ignore the client request and send back a
 		 * ConfigureNotify event with the computed geometry.
 		 */
-		xwayland_view_configure(view, view->st->pending);
+		const struct wlr_box *pending = &view->st->pending;
+		wlr_xwayland_surface_configure(xwayland_surface_from_view(view),
+			pending->x, pending->y, pending->width, pending->height);
 	}
 }
 
@@ -881,7 +884,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 }
 
 static const struct view_impl xwayland_view_impl = {
-	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,

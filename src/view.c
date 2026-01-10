@@ -249,7 +249,7 @@ void
 view_move(struct view *view, int x, int y)
 {
 	assert(view);
-	view_move_resize(view, (struct wlr_box){
+	view_move_resize(view->id, (struct wlr_box){
 		.x = x, .y = y,
 		.width = view->st->pending.width,
 		.height = view->st->pending.height
@@ -272,30 +272,6 @@ view_moved(struct view *view)
 	}
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus(view->server);
-}
-
-void
-view_move_resize(struct view *view, struct wlr_box geo)
-{
-	assert(view);
-	if (view->impl->configure) {
-		view->impl->configure(view, geo);
-	}
-
-	/*
-	 * Assume by default that the move/resize was user-initiated
-	 * (rather than due to output layout change) and invalidate the
-	 * saved geometry. For the few cases where the move/resize is
-	 * due to layout change, these flags are set again afterward by
-	 * view_adjust_for_layout_change().
-	 *
-	 * TODO: consider also updating view->output here for floating
-	 * views (based on view->st->pending) rather than waiting until
-	 * view_moved(). This might eliminate some race conditions with
-	 * view_adjust_for_layout_change(), which uses view->st->pending.
-	 * Not sure if it might have other side-effects though.
-	 */
-	view_set_saved_geom_valid(view->id, false, /* lost_output */ false);
 }
 
 struct view_size_hints
@@ -574,7 +550,7 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 		.width = width,
 		.height = height,
 	};
-	view_move_resize(view, box);
+	view_move_resize(view->id, box);
 }
 
 void
@@ -589,7 +565,7 @@ view_apply_natural_geometry(struct view *view)
 		adjust_floating_geometry(view, &geometry,
 			/* midpoint_visibility */ false);
 	}
-	view_move_resize(view, geometry);
+	view_move_resize(view->id, geometry);
 }
 
 static void
@@ -599,7 +575,7 @@ view_apply_tiled_geometry(struct view *view)
 	assert(view->st->tiled);
 	assert(output_is_usable(view->output));
 
-	view_move_resize(view, view_get_edge_snap_box(view,
+	view_move_resize(view->id, view_get_edge_snap_box(view,
 		view->output, view->st->tiled));
 }
 
@@ -613,7 +589,7 @@ view_apply_fullscreen_geometry(struct view *view)
 	struct wlr_box box = { 0 };
 	wlr_output_layout_get_box(view->server->output_layout,
 		view->output->wlr_output, &box);
-	view_move_resize(view, box);
+	view_move_resize(view->id, box);
 }
 
 static void
@@ -656,7 +632,7 @@ view_apply_maximized_geometry(struct view *view)
 		box.height = natural.height;
 	}
 
-	view_move_resize(view, box);
+	view_move_resize(view->id, box);
 }
 
 static void
@@ -971,7 +947,7 @@ view_adjust_for_layout_change(struct view *view)
 		struct wlr_box geometry = view->st->saved_geom;
 		adjust_floating_geometry(view, &geometry,
 			/* midpoint_visibility */ true);
-		view_move_resize(view, geometry);
+		view_move_resize(view->id, geometry);
 	}
 
 	/*

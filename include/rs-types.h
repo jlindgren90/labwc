@@ -4,10 +4,10 @@
 
 /* proxy types */
 #ifndef WlrBox
-struct WlrBox {
+typedef struct {
 	int x, y;
 	int width, height;
-};
+} WlrBox;
 #endif
 
 /* opaque types */
