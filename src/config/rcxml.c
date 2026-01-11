@@ -741,10 +741,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		} else if (!strcasecmp(content, "none")) {
 			rc.hide_maximized_window_titlebar = true;
 		}
-	} else if (!strcasecmp(nodename, "dropShadows.theme")) {
-		set_bool(content, &rc.shadows_enabled);
-	} else if (!strcasecmp(nodename, "dropShadowsOnTiled.theme")) {
-		set_bool(content, &rc.shadows_on_tiled);
 	} else if (!strcasecmp(nodename, "followMouse.focus")) {
 		set_bool(content, &rc.focus_follow_mouse);
 	} else if (!strcasecmp(nodename, "followMouseRequiresMovement.focus")) {
@@ -890,8 +886,6 @@ rcxml_init(void)
 	rc.title_layout_loaded = false;
 	rc.ssd_keep_border = true;
 	rc.corner_radius = 8;
-	rc.shadows_enabled = false;
-	rc.shadows_on_tiled = false;
 
 	rc.gap = 0;
 	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;

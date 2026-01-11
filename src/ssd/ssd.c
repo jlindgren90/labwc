@@ -152,7 +152,6 @@ ssd_create(struct view *view, bool active)
 
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
 	ssd->titlebar.height = view->server->theme->titlebar_height;
-	ssd_shadow_create(ssd);
 	ssd_extents_create(ssd);
 	/*
 	 * We need to create the borders after the titlebar because it sets
@@ -233,7 +232,6 @@ ssd_update_geometry(struct ssd *ssd)
 	if (update_area || state_changed) {
 		ssd_titlebar_update(ssd);
 		ssd_border_update(ssd);
-		ssd_shadow_update(ssd);
 	}
 
 	if (update_extents) {
@@ -251,7 +249,6 @@ ssd_set_titlebar(struct ssd *ssd, bool enabled)
 	ssd->titlebar.height = enabled ? ssd->view->server->theme->titlebar_height : 0;
 	ssd_border_update(ssd);
 	ssd_extents_update(ssd);
-	ssd_shadow_update(ssd);
 	ssd->margin = ssd_thickness(ssd->view);
 }
 
@@ -274,7 +271,6 @@ ssd_destroy(struct ssd *ssd)
 	ssd_titlebar_destroy(ssd);
 	ssd_border_destroy(ssd);
 	ssd_extents_destroy(ssd);
-	ssd_shadow_destroy(ssd);
 	wlr_scene_node_destroy(&ssd->tree->node);
 
 	free(ssd);
@@ -294,11 +290,6 @@ ssd_set_active(struct ssd *ssd, bool active)
 		wlr_scene_node_set_enabled(
 			&ssd->titlebar.subtrees[active_state].tree->node,
 			active == active_state);
-		if (ssd->shadow.subtrees[active_state].tree) {
-			wlr_scene_node_set_enabled(
-				&ssd->shadow.subtrees[active_state].tree->node,
-				active == active_state);
-		}
 	}
 }
 

@@ -96,10 +96,6 @@ struct theme {
 		float toggled_keybinds_color[4];
 		float label_text_color[4];
 
-		/* window drop-shadows */
-		int shadow_size;
-		float shadow_color[4];
-
 		/*
 		 * The texture of a window buttons for each hover/toggled/rounded
 		 * state. This can be accessed like:
@@ -125,10 +121,6 @@ struct theme {
 
 		struct lab_data_buffer *corner_top_left_normal;
 		struct lab_data_buffer *corner_top_right_normal;
-
-		struct lab_data_buffer *shadow_corner_top;
-		struct lab_data_buffer *shadow_corner_bottom;
-		struct lab_data_buffer *shadow_edge;
 	} window[2];
 
 	/* Derived from font sizes */
