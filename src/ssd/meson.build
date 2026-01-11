@@ -4,6 +4,4 @@ labwc_sources += files(
   'ssd-button.c',
   'ssd-titlebar.c',
   'ssd-border.c',
-  'ssd-extents.c',
-  'ssd-shadow.c',
 )

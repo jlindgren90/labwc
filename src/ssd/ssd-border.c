@@ -18,19 +18,8 @@ ssd_border_create(struct ssd *ssd)
 	assert(!ssd->border.tree);
 
 	struct view *view = ssd->view;
-#if 0
-	/* XXX: not using with textured borders */
-	int width = view->current.width;
-	int height = view->current.height;
-	int full_width = width + 2 * g_theme.border_width;
-	int corner_width = ssd_get_corner_width();
-#endif
 
 	ssd->border.tree = wlr_scene_tree_create(ssd->tree);
-#if 0
-	/* XXX: eliminated this offset */
-	wlr_scene_node_set_position(&ssd->border.tree->node, -g_theme.border_width, 0);
-#endif
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -39,29 +28,6 @@ ssd_border_create(struct ssd *ssd)
 		struct wlr_scene_tree *parent = subtree->tree;
 		wlr_scene_node_set_enabled(&parent->node, active);
 		float *color = g_theme.window[active].title_bg.color;
-
-#if 0
-		/* XXX: old solid color borders */
-		subtree->left = wlr_scene_rect_create(parent,
-			g_theme.border_width, height, color);
-		wlr_scene_node_set_position(&subtree->left->node, 0, 0);
-
-		subtree->right = wlr_scene_rect_create(parent,
-			g_theme.border_width, height, color);
-		wlr_scene_node_set_position(&subtree->right->node,
-			g_theme.border_width + width, 0);
-
-		subtree->bottom = wlr_scene_rect_create(parent,
-			full_width, g_theme.border_width, color);
-		wlr_scene_node_set_position(&subtree->bottom->node,
-			0, height);
-
-		subtree->top = wlr_scene_rect_create(parent,
-			MAX(width - 2 * corner_width, 0), g_theme.border_width, color);
-		wlr_scene_node_set_position(&subtree->top->node,
-			g_theme.border_width + corner_width,
-			-(ssd->titlebar.height + g_theme.border_width));
-#endif
 
 		uint8_t r = color[0] * 255;
 		uint8_t g = color[1] * 255;
@@ -171,43 +137,6 @@ ssd_border_update(struct ssd *ssd)
 
 	int width = view->current.width;
 	int height = view->current.height;
-#if 0
-	/* XXX: ignoring lots of possible cases */
-	int full_width = width + 2 * g_theme.border_width;
-	int corner_width = ssd_get_corner_width();
-
-	/*
-	 * From here on we have to cover the following border scenarios:
-	 * Non-tiled (partial border, rounded corners):
-	 *    _____________
-	 *   o           oox
-	 *  |---------------|
-	 *  |_______________|
-	 *
-	 * Tiled (full border, squared corners):
-	 *   _______________
-	 *  |o           oox|
-	 *  |---------------|
-	 *  |_______________|
-	 *
-	 * Tiled or non-tiled with zero title height (full boarder, no title):
-	 *   _______________
-	 *  |_______________|
-	 */
-
-	int side_height = ssd->state.was_squared
-		? height + ssd->titlebar.height
-		: height;
-	int side_y = ssd->state.was_squared
-		? -ssd->titlebar.height
-		: 0;
-	int top_width = ssd->titlebar.height <= 0 || ssd->state.was_squared
-		? full_width
-		: MAX(width - 2 * corner_width, 0);
-	int top_x = ssd->titlebar.height <= 0 || ssd->state.was_squared
-		? 0
-		: g_theme.border_width + corner_width;
-#endif
 	int title_h = ssd->titlebar.height;
 	int side_y = -title_h - (BORDER_PX_TOP - 1);
 	int side_height = title_h + height + (BORDER_PX_TOP - 1) + (BORDER_PX_SIDE - 1);
@@ -217,29 +146,6 @@ ssd_border_update(struct ssd *ssd)
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
 		struct ssd_border_subtree *subtree = &ssd->border.subtrees[active];
-
-#if 0
-		/* XXX: old solid color borders */
-		wlr_scene_rect_set_size(subtree->left,
-			g_theme.border_width, side_height);
-		wlr_scene_node_set_position(&subtree->left->node,
-			0, side_y);
-
-		wlr_scene_rect_set_size(subtree->right,
-			g_theme.border_width, side_height);
-		wlr_scene_node_set_position(&subtree->right->node,
-			g_theme.border_width + width, side_y);
-
-		wlr_scene_rect_set_size(subtree->bottom,
-			full_width, g_theme.border_width);
-		wlr_scene_node_set_position(&subtree->bottom->node,
-			0, height);
-
-		wlr_scene_rect_set_size(subtree->top,
-			top_width, g_theme.border_width);
-		wlr_scene_node_set_position(&subtree->top->node,
-			top_x, -(ssd->titlebar.height + g_theme.border_width));
-#endif
 
 		wlr_scene_node_set_position(&subtree->left->node,
 			-BORDER_PX_SIDE, side_y);
