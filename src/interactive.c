@@ -74,7 +74,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 
 	switch (mode) {
 	case LAB_INPUT_STATE_MOVE:
-		if (view->fullscreen) {
+		if (view->st->fullscreen) {
 			/**
 			 * We don't allow moving fullscreen windows.
 			 *
@@ -94,7 +94,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
 	case LAB_INPUT_STATE_RESIZE: {
-		if (view->fullscreen || view->maximized == VIEW_AXIS_BOTH) {
+		if (view->st->fullscreen || view->st->maximized == VIEW_AXIS_BOTH) {
 			/*
 			 * We don't allow resizing while fullscreen or
 			 * maximized in both directions.
@@ -107,15 +107,15 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		 * tiled state and un-maximize the relevant axes, but
 		 * keep the same geometry as the starting point.
 		 */
-		enum view_axis maximized = view->maximized;
+		enum view_axis maximized = view->st->maximized;
 		if (edges & LAB_EDGES_LEFT_RIGHT) {
 			maximized &= ~VIEW_AXIS_HORIZONTAL;
 		}
 		if (edges & LAB_EDGES_TOP_BOTTOM) {
 			maximized &= ~VIEW_AXIS_VERTICAL;
 		}
-		view_set_maximized(view, maximized);
-		view_set_untiled(view);
+		view_set_maximized(view->id, maximized);
+		view_set_tiled(view->id, LAB_EDGE_NONE);
 		cursor_shape = cursor_get_from_edge(edges);
 		break;
 	}
@@ -144,8 +144,8 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 			&& rc.unsnap_threshold <= 0) {
 		struct wlr_box natural_geo = view->natural_geometry;
 		interactive_anchor_to_cursor(server, &natural_geo);
-		view_set_maximized(view, VIEW_AXIS_NONE);
-		view_set_untiled(view);
+		view_set_maximized(view->id, VIEW_AXIS_NONE);
+		view_set_tiled(view->id, LAB_EDGE_NONE);
 		view_move_resize(view, natural_geo);
 	}
 }

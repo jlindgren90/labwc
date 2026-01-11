@@ -594,7 +594,7 @@ output_update_for_layout_change(struct server *server)
 		server->max_output_scale = max_scale;
 		struct view *view;
 		wl_list_for_each(view, &server->views, link) {
-			if (view->mapped) {
+			if (view->st->mapped) {
 				view_reload_ssd(view);
 			}
 		}
@@ -1023,7 +1023,7 @@ update_usable_area(struct output *output)
 #if HAVE_XWAYLAND
 	struct view *view;
 	wl_list_for_each(view, &output->server->views, link) {
-		if (view->mapped && view->type == LAB_XWAYLAND_VIEW) {
+		if (view->st->mapped && view->type == LAB_XWAYLAND_VIEW) {
 			xwayland_adjust_usable_area(view,
 				output->server->output_layout,
 				output->wlr_output, &output->usable_area);
