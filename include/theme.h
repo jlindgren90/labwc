@@ -48,9 +48,8 @@ enum lab_button_state {
 
 	LAB_BS_HOVERED = 1 << 0,
 	LAB_BS_TOGGLED = 1 << 1,
-	LAB_BS_ROUNDED = 1 << 2,
 
-	LAB_BS_ALL = LAB_BS_HOVERED | LAB_BS_TOGGLED | LAB_BS_ROUNDED,
+	LAB_BS_ALL = LAB_BS_HOVERED | LAB_BS_TOGGLED,
 };
 
 struct theme_background {
@@ -102,10 +101,6 @@ struct theme {
 		float toggled_keybinds_color[4];
 		float label_text_color[4];
 
-		/* window drop-shadows */
-		int shadow_size;
-		float shadow_color[4];
-
 		/*
 		 * The texture of a window buttons for each hover/toggled/rounded
 		 * state. This can be accessed like:
@@ -128,13 +123,6 @@ struct theme {
 		 */
 		cairo_pattern_t *titlebar_pattern;
 		struct lab_data_buffer *titlebar_fill;
-
-		struct lab_data_buffer *corner_top_left_normal;
-		struct lab_data_buffer *corner_top_right_normal;
-
-		struct lab_data_buffer *shadow_corner_top;
-		struct lab_data_buffer *shadow_corner_bottom;
-		struct lab_data_buffer *shadow_edge;
 	} window[2];
 
 	/* Derived from font sizes */
