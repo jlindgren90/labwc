@@ -53,6 +53,23 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	return NULL;
 }
 
+struct wlr_box
+view_get_output_area(struct view *view)
+{
+	struct wlr_box box = {0};
+	if (output_is_usable(view->output)) {
+		wlr_output_layout_get_box(view->server->output_layout,
+			view->output->wlr_output, &box);
+	}
+	return box;
+}
+
+struct wlr_box
+view_get_output_usable_area(struct view *view)
+{
+	return output_usable_area_in_layout_coords(view->output);
+}
+
 static struct view *
 view_get_root(struct view *view)
 {
@@ -398,34 +415,6 @@ view_minimize(struct view *view, bool minimized)
 	minimize_sub_views(root, minimized);
 }
 
-bool
-view_compute_centered_position(struct view *view, const struct wlr_box *ref,
-		int w, int h, int *x, int *y)
-{
-	assert(view);
-	if (w <= 0 || h <= 0) {
-		wlr_log(WLR_ERROR, "view has empty geometry, not centering");
-		return false;
-	}
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not centering");
-		return false;
-	}
-
-	struct border margin = ssd_get_margin(view);
-	struct wlr_box usable = output_usable_area_in_layout_coords(view->output);
-	int width = w + margin.left + margin.right;
-	int height = h + margin.top + margin.bottom;
-
-	/* If reference box is NULL then center to usable area */
-	box_center(width, height, ref ? *ref : usable, usable, x, y);
-
-	*x += margin.left;
-	*y += margin.top;
-
-	return true;
-}
-
 static bool
 adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 		bool midpoint_visibility)
@@ -481,7 +470,7 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 		return adjusted;
 	}
 
-	return view_compute_centered_position(view, NULL,
+	return view_compute_centered_position(view->id, NULL,
 		geometry->width, geometry->height,
 		&geometry->x, &geometry->y);
 }
@@ -493,7 +482,7 @@ view_get_fallback_natural_geometry(struct view *view)
 		.width = VIEW_FALLBACK_WIDTH,
 		.height = VIEW_FALLBACK_HEIGHT,
 	};
-	view_compute_centered_position(view, NULL,
+	view_compute_centered_position(view->id, NULL,
 		box.width, box.height, &box.x, &box.y);
 	return box;
 }
@@ -503,7 +492,7 @@ view_center(struct view *view, const struct wlr_box *ref)
 {
 	assert(view);
 	int x, y;
-	if (view_compute_centered_position(view, ref, view->st->pending.width,
+	if (view_compute_centered_position(view->id, ref, view->st->pending.width,
 			view->st->pending.height, &x, &y)) {
 		view_move(view, x, y);
 	}
@@ -611,7 +600,7 @@ view_apply_maximized_geometry(struct view *view)
 	struct wlr_box natural = view->st->natural_geom;
 	if (view->st->maximized != VIEW_AXIS_BOTH
 			&& !box_intersects(box, natural)) {
-		view_compute_centered_position(view, NULL,
+		view_compute_centered_position(view->id, NULL,
 			natural.width, natural.height,
 			&natural.x, &natural.y);
 	}

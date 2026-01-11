@@ -679,7 +679,7 @@ set_initial_position(struct view *view,
 			 * moving the view.
 			 */
 			struct wlr_box geom = view->st->natural_geom;
-			view_compute_centered_position(view, NULL,
+			view_compute_centered_position(view->id, NULL,
 				geom.width, geom.height, &geom.x, &geom.y);
 			view_set_natural_geom(view->id, geom);
 		}

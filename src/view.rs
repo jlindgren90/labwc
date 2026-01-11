@@ -3,7 +3,7 @@ use foreign_toplevel::ForeignToplevel;
 use lazy_static;
 use std::collections::BTreeMap;
 use std::ffi::{c_char, CString};
-use util::cstring;
+use util::*;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -208,6 +208,36 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
                 toplevel.send_done();
             }
         }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_compute_centered_position(
+    id: ViewId,
+    rel_to: Option<&WlrBox>,
+    w: i32,
+    h: i32,
+    x: &mut i32,
+    y: &mut i32,
+) -> bool {
+    if w <= 0 || h <= 0 {
+        return false;
+    }
+    if let Some(view) = views().by_id.get(&id) {
+        let usable = unsafe { view_get_output_usable_area(view.c_ptr) };
+        if box_empty(usable) {
+            return false;
+        }
+        let margin = unsafe { ssd_get_margin(view.c_ptr) };
+        let width = w + margin.left + margin.right;
+        let height = h + margin.top + margin.bottom;
+        // If reference box is not given then center to usable area
+        box_center(width, height, *(rel_to.unwrap_or(&usable)), usable, x, y);
+        *x += margin.left;
+        *y += margin.top;
+        return true;
+    } else {
+        return false;
     }
 }
 

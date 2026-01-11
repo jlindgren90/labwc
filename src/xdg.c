@@ -99,7 +99,7 @@ do_late_positioning(struct view *view)
 			geo.width, geo.height, &geo.x, &geo.y);
 	} else {
 		/* TODO: smart placement? */
-		view_compute_centered_position(view, NULL,
+		view_compute_centered_position(view->id, NULL,
 			geo.width, geo.height, &geo.x, &geo.y);
 	}
 	view_set_pending_pos(view->id, geo.x, geo.y);

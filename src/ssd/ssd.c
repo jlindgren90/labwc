@@ -18,6 +18,7 @@
 #include "ssd-internal.h"
 #include "theme.h"
 #include "view.h"
+#include "view-c.h"
 
 /*
  * Space between the extremities of the view's wlr_surface
