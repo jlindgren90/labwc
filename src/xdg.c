@@ -15,7 +15,6 @@
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "decorations.h"
-#include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "node.h"
@@ -810,7 +809,7 @@ handle_map(struct wl_listener *listener, void *data)
 	}
 
 	view_set_mapped(view->id, VIEW_FOCUS_MODE_ALWAYS);
-	view_impl_map(view);
+	view_update_visibility(view);
 }
 
 static void
@@ -819,7 +818,7 @@ handle_unmap(struct wl_listener *listener, void *data)
 	struct view *view = wl_container_of(listener, view, mappable.unmap);
 	if (view->st->mapped) {
 		view_set_unmapped(view->id);
-		view_impl_unmap(view);
+		view_update_visibility(view);
 	}
 }
 

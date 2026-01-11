@@ -6,6 +6,7 @@
  * Note: when adding headers here, add them also as inputs for
  * bindings.rs in meson.build.
  */
+#include "foreign-toplevel.h"
 #include "view-c.h"
 
 #endif /* LABWC_RS_BINDINGS_H */
