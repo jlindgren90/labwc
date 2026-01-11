@@ -9,13 +9,9 @@
 
 #include "common/border.h"
 #include "common/font.h"
-#include "common/node-type.h"
 #include "config/types.h"
 
 #define BUTTON_MAP_MAX 16
-
-/* max of one button of each type (no repeats) */
-#define TITLE_BUTTONS_MAX ((LAB_NODE_BUTTON_LAST + 1) - LAB_NODE_BUTTON_FIRST)
 
 enum adaptive_sync_mode {
 	LAB_ADAPTIVE_SYNC_DISABLED,
@@ -73,17 +69,6 @@ struct rcxml {
 	char *icon_theme_name;
 	char *fallback_app_icon_name;
 
-	enum lab_node_type title_buttons_left[TITLE_BUTTONS_MAX];
-	int nr_title_buttons_left;
-	enum lab_node_type title_buttons_right[TITLE_BUTTONS_MAX];
-	int nr_title_buttons_right;
-
-	int corner_radius;
-	bool show_title;
-	bool title_layout_loaded;
-	bool ssd_keep_border;
-	bool shadows_enabled;
-	bool shadows_on_tiled;
 	struct font font_activewindow;
 	struct font font_inactivewindow;
 	struct font font_menuheader;

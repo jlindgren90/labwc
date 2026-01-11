@@ -42,23 +42,7 @@ struct button {
 	uint8_t state_set;
 };
 
-enum rounded_corner {
-	ROUNDED_CORNER_TOP_LEFT,
-	ROUNDED_CORNER_TOP_RIGHT
-};
-
-struct rounded_corner_ctx {
-	struct wlr_box *box;
-	double radius;
-	double line_width;
-	cairo_pattern_t *fill_pattern;
-	float *border_color;
-	enum rounded_corner corner;
-};
-
 #define zero_array(arr) memset(arr, 0, sizeof(arr))
-
-static struct lab_data_buffer *rounded_rect(struct rounded_corner_ctx *ctx);
 
 /* 1 degree in radians (=2π/360) */
 static const double deg = 0.017453292519943295;
@@ -89,44 +73,6 @@ draw_hover_overlay_on_button(cairo_t *cairo, int w, int h)
 	cairo_arc(cairo, r, h - r, r, 90 * deg, 180 * deg);
 	cairo_close_path(cairo);
 	cairo_fill(cairo);
-}
-
-/* Round the buffer for the leftmost button in the titlebar */
-static void
-round_left_corner_button(cairo_t *cairo, int w, int h)
-{
-	/*
-	 * Position of the topleft corner of the titlebar relative to the
-	 * leftmost button
-	 */
-	double x = -g_theme.window_titlebar_padding_width;
-	double y = -(g_theme.titlebar_height - g_theme.window_button_height) / 2;
-
-	double r = rc.corner_radius - (double)g_theme.border_width / 2.0;
-
-	cairo_new_sub_path(cairo);
-	cairo_arc(cairo, x + r, y + r, r, deg * 180, deg * 270);
-	cairo_line_to(cairo, w, y);
-	cairo_line_to(cairo, w, h);
-	cairo_line_to(cairo, x, h);
-	cairo_close_path(cairo);
-
-	cairo_set_source_rgba(cairo, 1, 1, 1, 1);
-	cairo_set_operator(cairo, CAIRO_OPERATOR_DEST_IN);
-	cairo_fill(cairo);
-}
-
-/* Round the buffer for the rightmost button in the titlebar */
-static void
-round_right_corner_button(cairo_t *cairo, int w, int h)
-{
-	/*
-	 * Horizontally flip the cairo context so we can reuse
-	 * round_left_corner_button() for rounding the rightmost button.
-	 */
-	cairo_scale(cairo, -1, 1);
-	cairo_translate(cairo, -w, 0);
-	round_left_corner_button(cairo, w, h);
 }
 
 /*
@@ -220,25 +166,6 @@ load_button(struct button *b, enum ssd_active_state active)
 		*img = lab_img_copy(non_hover_img);
 		lab_img_add_modifier(*img,
 			draw_hover_overlay_on_button);
-	}
-
-	/*
-	 * If the loaded button is at the corner of the titlebar, also create
-	 * rounded variants.
-	 */
-	struct lab_img **rounded_img =
-		&button_imgs[b->type][b->state_set | LAB_BS_ROUNDED];
-
-	if (rc.nr_title_buttons_left > 0
-			&& b->type == rc.title_buttons_left[0]) {
-		*rounded_img = lab_img_copy(*img);
-		lab_img_add_modifier(*rounded_img, round_left_corner_button);
-	}
-	if (rc.nr_title_buttons_right > 0
-			&& b->type == rc.title_buttons_right
-				[rc.nr_title_buttons_right - 1]) {
-		*rounded_img = lab_img_copy(*img);
-		lab_img_add_modifier(*rounded_img, round_right_corner_button);
 	}
 }
 
@@ -528,11 +455,6 @@ theme_builtin(void)
 			g_theme.window[SSD_ACTIVE].button_colors[type]);
 	}
 
-	g_theme.window[SSD_ACTIVE].shadow_size = 60;
-	g_theme.window[SSD_INACTIVE].shadow_size = 40;
-	parse_hexstr("#00000060", g_theme.window[SSD_ACTIVE].shadow_color);
-	parse_hexstr("#00000040", g_theme.window[SSD_INACTIVE].shadow_color);
-
 	g_theme.menu_overlap_x = 0;
 	g_theme.menu_overlap_y = 0;
 	g_theme.menu_min_width = 20;
@@ -799,22 +721,6 @@ entry(const char *key, const char *value)
 	if (match_glob(key, "window.inactive.button.close.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_CLOSE]);
-	}
-
-	/* window drop-shadows */
-	if (match_glob(key, "window.active.shadow.size")) {
-		g_theme.window[SSD_ACTIVE].shadow_size = get_int_if_positive(
-			value, "window.active.shadow.size");
-	}
-	if (match_glob(key, "window.inactive.shadow.size")) {
-		g_theme.window[SSD_INACTIVE].shadow_size = get_int_if_positive(
-			value, "window.inactive.shadow.size");
-	}
-	if (match_glob(key, "window.active.shadow.color")) {
-		parse_color(value, g_theme.window[SSD_ACTIVE].shadow_color);
-	}
-	if (match_glob(key, "window.inactive.shadow.color")) {
-		parse_color(value, g_theme.window[SSD_INACTIVE].shadow_color);
 	}
 
 	if (match_glob(key, "menu.overlap.x")) {
@@ -1084,173 +990,6 @@ theme_read(struct wl_list *paths)
 	}
 }
 
-static struct lab_data_buffer *
-rounded_rect(struct rounded_corner_ctx *ctx)
-{
-	double w = ctx->box->width;
-	double h = ctx->box->height;
-	double r = ctx->radius;
-
-	struct lab_data_buffer *buffer;
-	/* TODO: scale */
-	buffer = buffer_create_cairo(w, h, 1);
-
-	cairo_surface_t *surf = buffer->surface;
-	cairo_t *cairo = cairo_create(surf);
-
-	/* set transparent background */
-	cairo_set_operator(cairo, CAIRO_OPERATOR_CLEAR);
-	cairo_paint(cairo);
-
-	/*
-	 * Create outline path and fill. Illustration of top-left corner buffer:
-	 *
-	 *          _,,ooO"""""""""+
-	 *        ,oO"'   ^        |
-	 *      ,o"       |        |
-	 *     o"         |r       |
-	 *    o'          |        |
-	 *    O     r     v        |
-	 *    O<--------->+        |
-	 *    O                    |
-	 *    O                    |
-	 *    O                    |
-	 *    +--------------------+
-	 */
-	cairo_set_line_width(cairo, 0.0);
-	cairo_new_sub_path(cairo);
-	switch (ctx->corner) {
-	case ROUNDED_CORNER_TOP_LEFT:
-		cairo_arc(cairo, r, r, r, 180 * deg, 270 * deg);
-		cairo_line_to(cairo, w, 0);
-		cairo_line_to(cairo, w, h);
-		cairo_line_to(cairo, 0, h);
-		break;
-	case ROUNDED_CORNER_TOP_RIGHT:
-		cairo_arc(cairo, w - r, r, r, -90 * deg, 0 * deg);
-		cairo_line_to(cairo, w, h);
-		cairo_line_to(cairo, 0, h);
-		cairo_line_to(cairo, 0, 0);
-		break;
-	}
-	cairo_close_path(cairo);
-	cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
-	/*
-	 * We need to offset the fill pattern vertically by the border
-	 * width to line up with the rest of the titlebar. This is done
-	 * by applying a transformation matrix to the pattern temporarily.
-	 * It would be better to copy the pattern, but cairo does not
-	 * provide a simple way to this.
-	 */
-	cairo_matrix_t matrix;
-	cairo_matrix_init_translate(&matrix, 0, -ctx->line_width);
-	cairo_pattern_set_matrix(ctx->fill_pattern, &matrix);
-	cairo_set_source(cairo, ctx->fill_pattern);
-	cairo_fill_preserve(cairo);
-	cairo_stroke(cairo);
-
-	/* Reset the fill pattern transformation matrix afterward */
-	cairo_matrix_init_identity(&matrix);
-	cairo_pattern_set_matrix(ctx->fill_pattern, &matrix);
-
-	/*
-	 * Stroke horizontal and vertical borders, shown by Xs and Ys
-	 * respectively in the figure below:
-	 *
-	 *          _,,ooO"XXXXXXXXX
-	 *        ,oO"'            |
-	 *      ,o"                |
-	 *     o"                  |
-	 *    o'                   |
-	 *    O                    |
-	 *    Y                    |
-	 *    Y                    |
-	 *    Y                    |
-	 *    Y                    |
-	 *    Y--------------------+
-	 */
-	cairo_set_line_cap(cairo, CAIRO_LINE_CAP_BUTT);
-	set_cairo_color(cairo, ctx->border_color);
-	cairo_set_line_width(cairo, ctx->line_width);
-	double half_line_width = ctx->line_width / 2.0;
-	switch (ctx->corner) {
-	case ROUNDED_CORNER_TOP_LEFT:
-		cairo_move_to(cairo, half_line_width, h);
-		cairo_line_to(cairo, half_line_width, r);
-		cairo_move_to(cairo, r, half_line_width);
-		cairo_line_to(cairo, w, half_line_width);
-		break;
-	case ROUNDED_CORNER_TOP_RIGHT:
-		cairo_move_to(cairo, 0, half_line_width);
-		cairo_line_to(cairo, w - r, half_line_width);
-		cairo_move_to(cairo, w - half_line_width, r);
-		cairo_line_to(cairo, w - half_line_width, h);
-		break;
-	}
-	cairo_stroke(cairo);
-
-	/*
-	 * If radius==0 the borders stroked above go right up to (and including)
-	 * the corners, so there is not need to do any more.
-	 */
-	if (!r) {
-		goto out;
-	}
-
-	/*
-	 * Stroke the arc section of the border of the corner piece.
-	 *
-	 * Note: This figure is drawn at a more zoomed in scale compared with
-	 * those above.
-	 *
-	 *                 ,,ooooO""  ^
-	 *            ,ooo""'      |  |
-	 *         ,oOO"           |  | line-thickness
-	 *       ,OO"              |  |
-	 *     ,OO"         _,,ooO""  v
-	 *    ,O"         ,oO"'
-	 *   ,O'        ,o"
-	 *  ,O'        o"
-	 *  o'        o'
-	 *  O         O
-	 *  O---------O            +
-	 *       <----------------->
-	 *          radius
-	 *
-	 * We handle the edge-case where line-thickness > radius by merely
-	 * setting line-thickness = radius and in effect drawing a quadrant of a
-	 * circle. In this case the X and Y borders butt up against the arc and
-	 * overlap each other (as their line-thicknesses are greater than the
-	 * line-thickness of the arc). As a result, there is no inner rounded
-	 * corners.
-	 *
-	 * So, in order to have inner rounded corners cornerRadius should be
-	 * greater than border.width.
-	 *
-	 * Also, see diagrams in https://github.com/labwc/labwc/pull/990
-	 */
-	double line_width = MIN(ctx->line_width, r);
-	cairo_set_line_width(cairo, line_width);
-	half_line_width = line_width / 2.0;
-	switch (ctx->corner) {
-	case ROUNDED_CORNER_TOP_LEFT:
-		cairo_move_to(cairo, half_line_width, r);
-		cairo_arc(cairo, r, r, r - half_line_width, 180 * deg, 270 * deg);
-		break;
-	case ROUNDED_CORNER_TOP_RIGHT:
-		cairo_move_to(cairo, w - r, half_line_width);
-		cairo_arc(cairo, w - r, r, r - half_line_width, -90 * deg, 0 * deg);
-		break;
-	}
-	cairo_stroke(cairo);
-
-out:
-	cairo_surface_flush(surf);
-	cairo_destroy(cairo);
-
-	return buffer;
-}
-
 static void
 add_color_stop_rgba_premult(cairo_pattern_t *pattern, float offset,
 		const float c[4])
@@ -1321,195 +1060,6 @@ create_backgrounds(void)
 			g_theme.window[active].titlebar_pattern,
 			g_theme.titlebar_height);
 	}
-}
-
-static void
-create_corners(void)
-{
-	int corner_width = ssd_get_corner_width();
-
-	struct wlr_box box = {
-		.x = 0,
-		.y = 0,
-		.width = corner_width + g_theme.border_width,
-		.height = g_theme.titlebar_height + g_theme.border_width,
-	};
-
-	enum ssd_active_state active;
-	FOR_EACH_ACTIVE_STATE(active) {
-		struct rounded_corner_ctx ctx = {
-			.box = &box,
-			.radius = rc.corner_radius,
-			.line_width = g_theme.border_width,
-			.fill_pattern = g_theme.window[active].titlebar_pattern,
-			.border_color = g_theme.window[active].border_color,
-			.corner = ROUNDED_CORNER_TOP_LEFT,
-		};
-		g_theme.window[active].corner_top_left_normal = rounded_rect(&ctx);
-		ctx.corner = ROUNDED_CORNER_TOP_RIGHT;
-		g_theme.window[active].corner_top_right_normal = rounded_rect(&ctx);
-	}
-}
-
-/*
- * Draw the buffer used to render the edges of window drop-shadows. The buffer
- * is 1 pixel tall and `visible_size` pixels wide and can be rotated and scaled for the
- * different edges.  The buffer is drawn as would be found at the right-hand
- * edge of a window. The gradient has a color of `start_color` at its left edge
- * fading to clear at its right edge.
- */
-static void
-shadow_edge_gradient(struct lab_data_buffer *buffer,
-		int visible_size, int total_size, float start_color[4])
-{
-	if (!buffer) {
-		/* This type of shadow is disabled, do nothing */
-		return;
-	}
-
-	assert(buffer->format == DRM_FORMAT_ARGB8888);
-	uint8_t *pixels = buffer->data;
-
-	/* Inset portion which is obscured */
-	int inset = total_size - visible_size;
-
-	/* Standard deviation normalised against the shadow width, squared */
-	double variance = 0.3 * 0.3;
-
-	for (int x = 0; x < visible_size; x++) {
-		/*
-		 * x normalised against total shadow width. We add on inset here
-		 * because we don't bother drawing inset for the edge shadow
-		 * buffers but still need the pattern to line up with the corner
-		 * shadow buffers which do have inset drawn.
-		 */
-		double xn = (double)(x + inset) / (double)total_size;
-
-		/* Gaussian dropoff */
-		double alpha = exp(-(xn * xn) / variance);
-
-		/* RGBA values are all pre-multiplied */
-		pixels[4 * x] = start_color[2] * alpha * 255;
-		pixels[4 * x + 1] = start_color[1] * alpha * 255;
-		pixels[4 * x + 2] = start_color[0] * alpha * 255;
-		pixels[4 * x + 3] = start_color[3] * alpha * 255;
-	}
-}
-
-/*
- * Draw the buffer used to render the corners of window drop-shadows.  The
- * shadow looks better if the buffer is inset behind the window, so the buffer
- * is square with a size of radius+inset.  The buffer is drawn for the
- * bottom-right corner but can be rotated for other corners.  The gradient fades
- * from `start_color` at the top-left to clear at the opposite edge.
- *
- * If the window is translucent we don't want the shadow to be visible through
- * it.  For the bottom corners of the window this is easy, we just erase the
- * square of the buffer which will be behind the window.  For the top it's a
- * little more complicated because the titlebar can have rounded corners.
- * However, the titlebar itself is always opaque so we only have to erase the
- * L-shaped area of the buffer which can appear behind the non-titlebar part of
- * the window.
- */
-static void
-shadow_corner_gradient(struct lab_data_buffer *buffer, int visible_size,
-	int total_size, int titlebar_height, float start_color[4])
-{
-	if (!buffer) {
-		/* This type of shadow is disabled, do nothing */
-		return;
-	}
-
-	assert(buffer->format == DRM_FORMAT_ARGB8888);
-	uint8_t *pixels = buffer->data;
-
-	/* Standard deviation normalised against the shadow width, squared */
-	double variance = 0.3 * 0.3;
-
-	int inset = total_size - visible_size;
-
-	for (int y = 0; y < total_size; y++) {
-		uint8_t *pixel_row = &pixels[y * buffer->stride];
-		for (int x = 0; x < total_size; x++) {
-			/* x and y normalised against total shadow width */
-			double x_norm = (double)(x) / (double)total_size;
-			double y_norm = (double)(y) / (double)total_size;
-			/*
-			 * For Gaussian drop-off in 2d you can just calculate
-			 * the outer product of the horizontal and vertical
-			 * profiles.
-			 */
-			double gauss_x = exp(-(x_norm * x_norm) / variance);
-			double gauss_y = exp(-(y_norm * y_norm) / variance);
-			double alpha = gauss_x * gauss_y;
-
-			/*
-			 * Erase the L-shaped region which could be visible
-			 * through a transparent window but not obscured by the
-			 * titlebar. If inset is smaller than the titlebar
-			 * height then there's nothing to do, this is handled by
-			 * (inset - titlebar_height) being negative.
-			 */
-			bool in1 = x < inset && y < inset - titlebar_height;
-			bool in2 = x < inset - titlebar_height && y < inset;
-			if (in1 || in2) {
-				alpha = 0.0;
-			}
-
-			/* RGBA values are all pre-multiplied */
-			pixel_row[4 * x] = start_color[2] * alpha * 255;
-			pixel_row[4 * x + 1] = start_color[1] * alpha * 255;
-			pixel_row[4 * x + 2] = start_color[0] * alpha * 255;
-			pixel_row[4 * x + 3] = start_color[3] * alpha * 255;
-		}
-	}
-}
-
-static void
-create_shadow(enum ssd_active_state active)
-{
-	/* Size of shadow visible extending beyond the window */
-	int visible_size = g_theme.window[active].shadow_size;
-	/* How far inside the window the shadow inset begins */
-	int inset = (double)visible_size * SSD_SHADOW_INSET;
-	/* Total width including visible and obscured portion */
-	int total_size = visible_size + inset;
-
-	/*
-	 * Edge shadows don't need to be inset so the buffers are sized just for
-	 * the visible width.  Corners are inset so the buffers are larger for
-	 * this.
-	 */
-	if (visible_size > 0) {
-		g_theme.window[active].shadow_edge = buffer_create_cairo(
-			visible_size, 1, 1.0);
-		g_theme.window[active].shadow_corner_top = buffer_create_cairo(
-			total_size, total_size, 1.0);
-		g_theme.window[active].shadow_corner_bottom = buffer_create_cairo(
-			total_size, total_size, 1.0);
-		if (!g_theme.window[active].shadow_corner_top
-				|| !g_theme.window[active].shadow_corner_bottom
-				|| !g_theme.window[active].shadow_edge) {
-			wlr_log(WLR_ERROR, "Failed to allocate shadow buffer");
-			return;
-		}
-	}
-
-	shadow_edge_gradient(g_theme.window[active].shadow_edge, visible_size,
-		total_size, g_theme.window[active].shadow_color);
-	shadow_corner_gradient(g_theme.window[active].shadow_corner_top,
-		visible_size, total_size,
-		g_theme.titlebar_height, g_theme.window[active].shadow_color);
-	shadow_corner_gradient(g_theme.window[active].shadow_corner_bottom,
-		visible_size, total_size, 0,
-		g_theme.window[active].shadow_color);
-}
-
-static void
-create_shadows(void)
-{
-	create_shadow(SSD_INACTIVE);
-	create_shadow(SSD_ACTIVE);
 }
 
 static void
@@ -1613,10 +1163,6 @@ post_processing(void)
 	switcher_classic_theme->item_height = osd_field_height
 		+ 2 * switcher_classic_theme->item_padding_y
 		+ 2 * switcher_classic_theme->item_active_border_width;
-
-	if (rc.corner_radius >= g_theme.titlebar_height) {
-		rc.corner_radius = g_theme.titlebar_height - 1;
-	}
 
 	if (rc.resize_corner_range < 0) {
 		rc.resize_corner_range = g_theme.titlebar_height / 2;
@@ -1745,9 +1291,7 @@ theme_init(const char *theme_name)
 
 	post_processing();
 	create_backgrounds();
-	create_corners();
 	load_buttons();
-	create_shadows();
 }
 
 static void destroy_img(struct lab_img **img)
@@ -1774,10 +1318,5 @@ theme_finish(void)
 	FOR_EACH_ACTIVE_STATE(active) {
 		zfree_pattern(g_theme.window[active].titlebar_pattern);
 		zdrop(&g_theme.window[active].titlebar_fill);
-		zdrop(&g_theme.window[active].corner_top_left_normal);
-		zdrop(&g_theme.window[active].corner_top_right_normal);
-		zdrop(&g_theme.window[active].shadow_corner_top);
-		zdrop(&g_theme.window[active].shadow_corner_bottom);
-		zdrop(&g_theme.window[active].shadow_edge);
 	}
 }
