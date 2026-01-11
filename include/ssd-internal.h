@@ -7,6 +7,8 @@
 #include "theme.h"
 #include "view.h"
 
+#define NR_TITLE_BUTTONS_RIGHT 3
+
 struct ssd_state_title_width {
 	int width;
 	bool truncated;
@@ -68,14 +70,6 @@ struct ssd {
 		 */
 		bool was_maximized;
 
-		/*
-		 * Corners need to be (un)rounded but borders should be kept shown when
-		 * the window is (un)tiled and notified about it or when the window may
-		 * become so small that only a squared scene-rect can be used to render
-		 * such a small titlebar.
-		 */
-		bool was_squared;
-
 		struct wlr_box geometry;
 		struct ssd_state_title {
 			char *text;
@@ -84,24 +78,16 @@ struct ssd {
 		} title;
 	} state;
 
-	/* An invisible area around the view which allows resizing */
-	struct ssd_extents_scene {
-		struct wlr_scene_tree *tree;
-		struct wlr_scene_rect *top, *bottom, *left, *right;
-	} extents;
-
 	/* The top of the view, containing buttons, title, .. */
 	struct ssd_titlebar_scene {
 		int height;
 		struct wlr_scene_tree *tree;
 		struct ssd_titlebar_subtree {
 			struct wlr_scene_tree *tree;
-			struct wlr_scene_buffer *corner_left;
-			struct wlr_scene_buffer *corner_right;
 			struct wlr_scene_buffer *bar;
 			struct scaled_font_buffer *title;
-			struct wl_list buttons_left; /* ssd_button.link */
-			struct wl_list buttons_right; /* ssd_button.link */
+			struct ssd_button *button_left;
+			struct ssd_button *buttons_right[NR_TITLE_BUTTONS_RIGHT];
 		} subtrees[2]; /* indexed by enum ssd_active_state */
 	} titlebar;
 
@@ -113,15 +99,6 @@ struct ssd {
 			struct wlr_scene_buffer *top, *bottom, *left, *right;
 		} subtrees[2]; /* indexed by enum ssd_active_state */
 	} border;
-
-	struct ssd_shadow_scene {
-		struct wlr_scene_tree *tree;
-		struct ssd_shadow_subtree {
-			struct wlr_scene_tree *tree;
-			struct wlr_scene_buffer *top, *bottom, *left, *right,
-				*top_left, *top_right, *bottom_left, *bottom_right;
-		} subtrees[2]; /* indexed by enum ssd_active_state */
-	} shadow;
 
 	/*
 	 * Space between the extremities of the view's wlr_surface
@@ -151,35 +128,23 @@ struct ssd_button {
 	struct scaled_img_buffer *img_buffers[LAB_BS_ALL + 1];
 
 	struct scaled_icon_buffer *window_icon;
-
-	struct wl_list link; /* ssd_titlebar_subtree.buttons_{left,right} */
 };
 
 struct wlr_buffer;
 struct wlr_scene_tree;
 
 /* SSD internal helpers to create various SSD elements */
-struct ssd_button *attach_ssd_button(struct wl_list *button_parts,
-	enum lab_node_type type, struct wlr_scene_tree *parent,
-	struct lab_img *imgs[LAB_BS_ALL + 1], int x, int y,
-	struct view *view);
+struct ssd_button *attach_ssd_button(enum lab_node_type type,
+	struct wlr_scene_tree *parent, struct lab_img *imgs[LAB_BS_ALL + 1],
+	int x, int y, struct view *view);
 
 /* SSD internal */
 void ssd_titlebar_create(struct ssd *ssd);
 void ssd_titlebar_update(struct ssd *ssd);
 void ssd_titlebar_destroy(struct ssd *ssd);
-bool ssd_should_be_squared(struct ssd *ssd);
 
 void ssd_border_create(struct ssd *ssd);
 void ssd_border_update(struct ssd *ssd);
 void ssd_border_destroy(struct ssd *ssd);
-
-void ssd_extents_create(struct ssd *ssd);
-void ssd_extents_update(struct ssd *ssd);
-void ssd_extents_destroy(struct ssd *ssd);
-
-void ssd_shadow_create(struct ssd *ssd);
-void ssd_shadow_update(struct ssd *ssd);
-void ssd_shadow_destroy(struct ssd *ssd);
 
 #endif /* LABWC_SSD_INTERNAL_H */
