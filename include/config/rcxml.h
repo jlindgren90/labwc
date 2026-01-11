@@ -77,8 +77,6 @@ struct rcxml {
 	bool show_title;
 	bool title_layout_loaded;
 	bool ssd_keep_border;
-	bool shadows_enabled;
-	bool shadows_on_tiled;
 	struct font font_activewindow;
 	struct font font_inactivewindow;
 	struct font font_menuheader;
