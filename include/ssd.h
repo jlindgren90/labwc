@@ -14,13 +14,6 @@ enum ssd_active_state {
 
 struct wlr_cursor;
 
-/*
- * Shadows should start at a point inset from the actual window border, see
- * discussion on https://github.com/labwc/labwc/pull/1648.  This constant
- * specifies inset as a multiple of visible shadow size.
- */
-#define SSD_SHADOW_INSET 0.3
-
 /* Forward declare arguments */
 struct server;
 struct ssd;
