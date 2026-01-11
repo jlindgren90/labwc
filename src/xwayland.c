@@ -19,6 +19,7 @@
 #include "node.h"
 #include "output.h"
 #include "view.h"
+#include "view-c.h"
 #include "view-impl-common.h"
 
 enum atoms {
@@ -167,19 +168,22 @@ top_parent_of(struct view *view)
 static void
 ensure_initial_geometry_and_output(struct view *view)
 {
-	if (wlr_box_empty(&view->current)) {
+	if (wlr_box_empty(&view->st->current)) {
 		struct wlr_xwayland_surface *xwayland_surface =
 			xwayland_surface_from_view(view);
-		view->current.x = xwayland_surface->x;
-		view->current.y = xwayland_surface->y;
-		view->current.width = xwayland_surface->width;
-		view->current.height = xwayland_surface->height;
+		view_set_current_pos(view->id, xwayland_surface->x,
+			xwayland_surface->y);
+		view_set_current_size(view->id, xwayland_surface->width,
+			xwayland_surface->height);
 		/*
 		 * If there is no pending move/resize yet, then set
 		 * current values (used in map()).
 		 */
-		if (wlr_box_empty(&view->pending)) {
-			view->pending = view->current;
+		if (wlr_box_empty(&view->st->pending)) {
+			view_set_pending_pos(view->id, view->st->current.x,
+				view->st->current.y);
+			view_set_pending_size(view->id, view->st->current.width,
+				view->st->current.height);
 		}
 	}
 	if (!view->output) {
@@ -206,7 +210,6 @@ handle_commit(struct wl_listener *listener, void *data)
 
 	/* Must receive commit signal before accessing surface->current* */
 	struct wlr_surface_state *state = &view->surface->current;
-	struct wlr_box *current = &view->current;
 
 	/*
 	 * If there is a pending move/resize, wait until the surface
@@ -214,7 +217,8 @@ handle_commit(struct wl_listener *listener, void *data)
 	 * the position and the size of the view at the same time,
 	 * reducing visual glitches.
 	 */
-	if (current->width != state->width || current->height != state->height) {
+	if (view->st->current.width != state->width
+			|| view->st->current.height != state->height) {
 		view_impl_apply_geometry(view, state->width, state->height);
 		view_moved(view);
 	}
@@ -313,7 +317,8 @@ handle_destroy(struct wl_listener *listener, void *data)
 static void
 xwayland_view_configure(struct view *view, struct wlr_box geo)
 {
-	view->pending = geo;
+	view_set_pending_pos(view->id, geo.x, geo.y);
+	view_set_pending_size(view->id, geo.width, geo.height);
 	wlr_xwayland_surface_configure(xwayland_surface_from_view(view),
 		geo.x, geo.y, geo.width, geo.height);
 
@@ -324,15 +329,14 @@ xwayland_view_configure(struct view *view, struct wlr_box geo)
 	 * (since we wait for a commit event that never occurs). As a
 	 * workaround, move offscreen surfaces immediately.
 	 */
-	bool is_offscreen = !wlr_box_empty(&view->current) &&
-		!wlr_output_layout_intersects(view->server->output_layout, NULL,
-			&view->current);
+	bool is_offscreen = !wlr_box_empty(&view->st->current)
+		&& !wlr_output_layout_intersects(view->server->output_layout,
+			NULL, &view->st->current);
 
 	/* If not resizing, process the move immediately */
-	if (is_offscreen || (view->current.width == geo.width
-			&& view->current.height == geo.height)) {
-		view->current.x = geo.x;
-		view->current.y = geo.y;
+	if (is_offscreen || (view->st->current.width == geo.width
+			&& view->st->current.height == geo.height)) {
+		view_set_current_pos(view->id, geo.x, geo.y);
 		view_moved(view);
 	}
 }
@@ -358,7 +362,7 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		 * views. Ignore the client request and send back a
 		 * ConfigureNotify event with the computed geometry.
 		 */
-		xwayland_view_configure(view, view->pending);
+		xwayland_view_configure(view, view->st->pending);
 	}
 }
 
@@ -745,7 +749,10 @@ handle_map(struct wl_listener *listener, void *data)
 		 * the final intended position/size rather than waiting
 		 * for handle_commit().
 		 */
-		view->current = view->pending;
+		view_set_current_pos(view->id, view->st->pending.x,
+			view->st->pending.y);
+		view_set_current_size(view->id, view->st->pending.width,
+			view->st->pending.height);
 		view_moved(view);
 	}
 

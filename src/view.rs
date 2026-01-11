@@ -43,6 +43,13 @@ pub type ViewId = u64;
 pub struct ViewState {
     app_id: *const c_char,
     title: *const c_char,
+    // Geometry of the wlr_surface contained within the view, as currently
+    // displayed. Should be kept in sync with the scene-graph at all times.
+    current: WlrBox,
+    // Expected geometry after any pending move/resize requests have
+    // been processed. Should match current geometry when no move/resize
+    // requests are pending.
+    pending: WlrBox,
     mapped: bool,
     ever_mapped: bool,
     focus_mode: ViewFocusMode,
@@ -190,6 +197,38 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
                 toplevel.send_done();
             }
         }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_current_pos(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.current.x = x;
+        view.state.current.y = y;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_current_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.current.width = width;
+        view.state.current.height = height;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_pending_pos(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.pending.x = x;
+        view.state.pending.y = y;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_pending_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.pending.width = width;
+        view.state.pending.height = height;
     }
 }
 

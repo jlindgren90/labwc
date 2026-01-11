@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include "view.h"
+#include "view-c.h"
 #include <assert.h>
 #include <strings.h>
 #include <wlr/types/wlr_cursor.h>
@@ -187,12 +188,12 @@ view_get_edge_snap_box(struct view *view, struct output *output,
 }
 
 static bool
-view_discover_output(struct view *view, struct wlr_box *geometry)
+view_discover_output(struct view *view, const struct wlr_box *geometry)
 {
 	assert(view);
 
 	if (!geometry) {
-		geometry = &view->current;
+		geometry = &view->st->current;
 	}
 
 	struct output *output =
@@ -250,8 +251,8 @@ view_move(struct view *view, int x, int y)
 	assert(view);
 	view_move_resize(view, (struct wlr_box){
 		.x = x, .y = y,
-		.width = view->pending.width,
-		.height = view->pending.height
+		.width = view->st->pending.width,
+		.height = view->st->pending.height
 	});
 }
 
@@ -260,7 +261,7 @@ view_moved(struct view *view)
 {
 	assert(view);
 	wlr_scene_node_set_position(&view->scene_tree->node,
-		view->current.x, view->current.y);
+		view->st->current.x, view->st->current.y);
 	/*
 	 * Only floating views change output when moved. Non-floating
 	 * views (maximized/tiled/fullscreen) are tied to a particular
@@ -289,9 +290,9 @@ view_move_resize(struct view *view, struct wlr_box geo)
 	 * view_adjust_for_layout_change().
 	 *
 	 * TODO: consider also updating view->output here for floating
-	 * views (based on view->pending) rather than waiting until
+	 * views (based on view->st->pending) rather than waiting until
 	 * view_moved(). This might eliminate some race conditions with
-	 * view_adjust_for_layout_change(), which uses view->pending.
+	 * view_adjust_for_layout_change(), which uses view->st->pending.
 	 * Not sure if it might have other side-effects though.
 	 */
 	view->saved_geometry_valid = false;
@@ -542,12 +543,12 @@ view_store_natural_geometry(struct view *view)
 	 * choose its own size.
 	 */
 	if (!(view->st->maximized & VIEW_AXIS_HORIZONTAL)) {
-		view->natural_geometry.x = view->pending.x;
-		view->natural_geometry.width = view->pending.width;
+		view->natural_geometry.x = view->st->pending.x;
+		view->natural_geometry.width = view->st->pending.width;
 	}
 	if (!(view->st->maximized & VIEW_AXIS_VERTICAL)) {
-		view->natural_geometry.y = view->pending.y;
-		view->natural_geometry.height = view->pending.height;
+		view->natural_geometry.y = view->st->pending.y;
+		view->natural_geometry.height = view->st->pending.height;
 	}
 }
 
@@ -556,8 +557,8 @@ view_center(struct view *view, const struct wlr_box *ref)
 {
 	assert(view);
 	int x, y;
-	if (view_compute_centered_position(view, ref, view->pending.width,
-			view->pending.height, &x, &y)) {
+	if (view_compute_centered_position(view, ref, view->st->pending.width,
+			view->st->pending.height, &x, &y)) {
 		view_move(view, x, y);
 	}
 }
@@ -580,24 +581,22 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 		return;
 	}
 
-	if (available_height >= view->pending.height &&
-			available_width >= view->pending.width) {
+	if (available_height >= view->st->pending.height
+			&& available_width >= view->st->pending.width) {
 		return;
 	}
 
-	int width = MIN(view->pending.width, available_width);
-	int height = MIN(view->pending.height, available_height);
+	int width = MIN(view->st->pending.width, available_width);
+	int height = MIN(view->st->pending.height, available_height);
 
 	int right_edge = usable_area.x + usable_area.width;
 	int bottom_edge = usable_area.y + usable_area.height;
 
-	int x =
-		MAX(usable_area.x + margin.left,
-			MIN(view->pending.x, right_edge - width - margin.right));
+	int x = MAX(usable_area.x + margin.left,
+		MIN(view->st->pending.x, right_edge - width - margin.right));
 
-	int y =
-		MAX(usable_area.y + margin.top,
-			MIN(view->pending.y, bottom_edge - height - margin.bottom));
+	int y = MAX(usable_area.y + margin.top,
+		MIN(view->st->pending.y, bottom_edge - height - margin.bottom));
 
 	struct wlr_box box = {
 		.x = x,
@@ -974,7 +973,7 @@ view_adjust_for_layout_change(struct view *view)
 	 * can be moved first and only later lose its own output.
 	 */
 	if (!saved) {
-		view->saved_geometry = view->pending;
+		view->saved_geometry = view->st->pending;
 		saved = true;
 	}
 

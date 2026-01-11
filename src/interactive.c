@@ -32,22 +32,21 @@ max_move_scale(double pos_cursor, double pos_old, double size_old,
 }
 
 void
-interactive_anchor_to_cursor(struct server *server, struct wlr_box *geo)
+interactive_anchor_to_cursor(struct server *server, int width, int height,
+		int *x, int *y)
 {
 	assert(server->input_mode == LAB_INPUT_STATE_MOVE);
-	if (wlr_box_empty(geo)) {
-		return;
-	}
+
 	/* Resize grab_box while anchoring it to grab_{x,y} */
 	server->grab_box.x = max_move_scale(server->grab_x, server->grab_box.x,
-		server->grab_box.width, geo->width);
+		server->grab_box.width, width);
 	server->grab_box.y = max_move_scale(server->grab_y, server->grab_box.y,
-		server->grab_box.height, geo->height);
-	server->grab_box.width = geo->width;
-	server->grab_box.height = geo->height;
+		server->grab_box.height, height);
+	server->grab_box.width = width;
+	server->grab_box.height = height;
 
-	geo->x = server->grab_box.x + (server->seat.cursor->x - server->grab_x);
-	geo->y = server->grab_box.y + (server->seat.cursor->y - server->grab_y);
+	*x = server->grab_box.x + (server->seat.cursor->x - server->grab_x);
+	*y = server->grab_box.y + (server->seat.cursor->y - server->grab_y);
 }
 
 void
@@ -128,7 +127,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	/* Remember view and cursor positions at start of move/resize */
 	server->grab_x = seat->cursor->x;
 	server->grab_y = seat->cursor->y;
-	server->grab_box = view->current;
+	server->grab_box = view->st->current;
 	server->resize_edges = edges;
 
 	seat_focus_override_begin(seat, mode, cursor_shape);
@@ -142,11 +141,14 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	 */
 	if (mode == LAB_INPUT_STATE_MOVE && !view_is_floating(view)
 			&& rc.unsnap_threshold <= 0) {
-		struct wlr_box natural_geo = view->natural_geometry;
-		interactive_anchor_to_cursor(server, &natural_geo);
+		struct wlr_box geo = view->natural_geometry;
+		if (!wlr_box_empty(&geo)) {
+			interactive_anchor_to_cursor(server,
+				geo.width, geo.height, &geo.x, &geo.y);
+		}
 		view_set_maximized(view->id, VIEW_AXIS_NONE);
 		view_set_tiled(view->id, LAB_EDGE_NONE);
-		view_move_resize(view, natural_geo);
+		view_move_resize(view, geo);
 	}
 }
 

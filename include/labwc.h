@@ -381,11 +381,9 @@ void seat_focus_override_end(struct seat *seat);
  * underneath the cursor when its size changes during interactive move.
  * This function also resizes server->grab_box and repositions it to remain
  * underneath server->grab_{x,y}.
- *
- * geo->{width,height} are provided by the caller.
- * geo->{x,y} are computed by this function.
  */
-void interactive_anchor_to_cursor(struct server *server, struct wlr_box *geo);
+void interactive_anchor_to_cursor(struct server *server, int width, int height,
+	int *x, int *y);
 
 void interactive_begin(struct view *view, enum input_mode mode,
 	enum lab_edge edges);

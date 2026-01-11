@@ -11,10 +11,11 @@
 #include "config.h"
 #include "config/types.h"
 
-#include "view-c.h"
+/* Rust -> C proxy types */
+#define WlrBox struct wlr_box
+#include "rs-types.h"
 #include "view-rs.h"
-
-/* C -> rust compat */
+/* C -> Rust proxy types */
 #define view_axis ViewAxis
 #define view_focus_mode ViewFocusMode
 
@@ -123,18 +124,6 @@ struct view {
 	enum ssd_preference ssd_preference;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 
-	/*
-	 * Geometry of the wlr_surface contained within the view, as
-	 * currently displayed. Should be kept in sync with the
-	 * scene-graph at all times.
-	 */
-	struct wlr_box current;
-	/*
-	 * Expected geometry after any pending move/resize requests
-	 * have been processed. Should match current geometry when no
-	 * move/resize requests are pending.
-	 */
-	struct wlr_box pending;
 	/*
 	 * Saved geometry which will be restored when the view returns
 	 * to normal/floating state after being maximized/fullscreen/

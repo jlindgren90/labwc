@@ -24,11 +24,13 @@ bindings = [
     input: [
       'foreign-toplevel.h',
       'rs-bindings.h',
+      'rs-types.h',
       'view-c.h',
     ],
     output: 'bindings.rs',
     command: [
       'bindgen',
+      '--with-derive-default',
       '../include/rs-bindings.h',
       '-o', '@OUTPUT@'
     ],
