@@ -45,12 +45,17 @@ pub struct ViewState {
     mapped: bool,
     ever_mapped: bool,
     focus_mode: ViewFocusMode,
-    focusable: bool, // implies mapped
     activated: bool,
     fullscreen: bool,
     maximized: ViewAxis,
     minimized: bool,
     tiled: i32, // enum lab_edge
+}
+
+#[no_mangle]
+pub extern "C" fn view_is_focusable(state: &ViewState) -> bool {
+    state.mapped
+        && (state.focus_mode == ViewFocusMode::Always || state.focus_mode == ViewFocusMode::Likely)
 }
 
 #[derive(Default)]
@@ -125,8 +130,6 @@ pub extern "C" fn view_set_mapped(id: ViewId, focus_mode: ViewFocusMode) {
         view.state.mapped = true;
         view.state.ever_mapped = true;
         view.state.focus_mode = focus_mode;
-        view.state.focusable =
-            focus_mode == ViewFocusMode::Always || focus_mode == ViewFocusMode::Likely;
     }
 }
 
@@ -134,7 +137,6 @@ pub extern "C" fn view_set_mapped(id: ViewId, focus_mode: ViewFocusMode) {
 pub extern "C" fn view_set_unmapped(id: ViewId) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.state.mapped = false;
-        view.state.focusable = false;
     }
 }
 

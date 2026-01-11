@@ -67,7 +67,7 @@ view_get_root(struct view *view)
 static bool
 matches_criteria(struct view *view, enum lab_view_criteria criteria)
 {
-	if (!view->st->focusable) {
+	if (!view_is_focusable(view->st)) {
 		return false;
 	}
 	if (criteria & LAB_VIEW_CRITERIA_FULLSCREEN) {
