@@ -86,109 +86,6 @@ parse_window_type(const char *type)
 	}
 }
 
-/*
- * Openbox/labwc comparison
- *
- * Instead of openbox's <titleLayout>WLIMC</title> we use
- *
- *     <titlebar>
- *       <layout>menu:iconfiy,max,close</layout>
- *       <showTitle>yes|no</showTitle>
- *     </titlebar>
- *
- * ...using the icon names (like iconify.xbm) without the file extension for the
- * identifier.
- *
- * labwc        openbox     description
- * -----        -------     -----------
- * menu         W           Open window menu (client-menu)
- * iconfiy      I           Iconify (aka minimize)
- * max          M           Maximize toggle
- * close        C           Close
- * shade        S           Shade toggle
- * desk         D           All-desktops toggle (aka omnipresent)
- */
-static void
-fill_section(const char *content, enum lab_node_type *buttons, int *count,
-		uint32_t *found_buttons /* bitmask */)
-{
-	gchar **identifiers = g_strsplit(content, ",", -1);
-	for (size_t i = 0; identifiers[i]; ++i) {
-		char *identifier = identifiers[i];
-		if (string_null_or_empty(identifier)) {
-			continue;
-		}
-		enum lab_node_type type = LAB_NODE_NONE;
-		if (!strcmp(identifier, "icon")) {
-#if HAVE_LIBSFDO
-			type = LAB_NODE_BUTTON_WINDOW_ICON;
-#else
-			wlr_log(WLR_ERROR, "libsfdo is not linked. "
-				"Replacing 'icon' in titlebar layout with 'menu'.");
-			type = LAB_NODE_BUTTON_WINDOW_MENU;
-#endif
-		} else if (!strcmp(identifier, "menu")) {
-			type = LAB_NODE_BUTTON_WINDOW_MENU;
-		} else if (!strcmp(identifier, "iconify")) {
-			type = LAB_NODE_BUTTON_ICONIFY;
-		} else if (!strcmp(identifier, "max")) {
-			type = LAB_NODE_BUTTON_MAXIMIZE;
-		} else if (!strcmp(identifier, "close")) {
-			type = LAB_NODE_BUTTON_CLOSE;
-		} else {
-			wlr_log(WLR_ERROR, "invalid titleLayout identifier '%s'",
-				identifier);
-			continue;
-		}
-
-		assert(type != LAB_NODE_NONE);
-
-		/* We no longer need this check, but let's keep it just in case */
-		if (*found_buttons & (1 << type)) {
-			wlr_log(WLR_ERROR, "ignoring duplicated button type '%s'",
-				identifier);
-			continue;
-		}
-
-		*found_buttons |= (1 << type);
-
-		assert(*count < TITLE_BUTTONS_MAX);
-		buttons[(*count)++] = type;
-	}
-	g_strfreev(identifiers);
-}
-
-static void
-clear_title_layout(void)
-{
-	rc.nr_title_buttons_left = 0;
-	rc.nr_title_buttons_right = 0;
-	rc.title_layout_loaded = false;
-}
-
-static void
-fill_title_layout(const char *content)
-{
-	clear_title_layout();
-
-	gchar **parts = g_strsplit(content, ":", -1);
-
-	if (g_strv_length(parts) != 2) {
-		wlr_log(WLR_ERROR, "<titlebar><layout> must contain one colon");
-		goto err;
-	}
-
-	uint32_t found_buttons = 0;
-	fill_section(parts[0], rc.title_buttons_left,
-		&rc.nr_title_buttons_left, &found_buttons);
-	fill_section(parts[1], rc.title_buttons_right,
-		&rc.nr_title_buttons_right, &found_buttons);
-
-	rc.title_layout_loaded = true;
-err:
-	g_strfreev(parts);
-}
-
 static void
 fill_usable_area_override(xmlNode *node)
 {
@@ -912,24 +809,12 @@ entry(xmlNode *node, char *nodename, char *content)
 		xstrdup_replace(rc.icon_theme_name, content);
 	} else if (!strcasecmp(nodename, "fallbackAppIcon.theme")) {
 		xstrdup_replace(rc.fallback_app_icon_name, content);
-	} else if (!strcasecmp(nodename, "layout.titlebar.theme")) {
-		fill_title_layout(content);
-	} else if (!strcasecmp(nodename, "showTitle.titlebar.theme")) {
-		rc.show_title = parse_bool(content, true);
-	} else if (!strcmp(nodename, "cornerradius.theme")) {
-		rc.corner_radius = atoi(content);
-	} else if (!strcasecmp(nodename, "keepBorder.theme")) {
-		set_bool(content, &rc.ssd_keep_border);
 	} else if (!strcasecmp(nodename, "maximizedDecoration.theme")) {
 		if (!strcasecmp(content, "titlebar")) {
 			rc.hide_maximized_window_titlebar = false;
 		} else if (!strcasecmp(content, "none")) {
 			rc.hide_maximized_window_titlebar = true;
 		}
-	} else if (!strcasecmp(nodename, "dropShadows.theme")) {
-		set_bool(content, &rc.shadows_enabled);
-	} else if (!strcasecmp(nodename, "dropShadowsOnTiled.theme")) {
-		set_bool(content, &rc.shadows_on_tiled);
 	} else if (!strcasecmp(nodename, "followMouse.focus")) {
 		set_bool(content, &rc.focus_follow_mouse);
 	} else if (!strcasecmp(nodename, "followMouseRequiresMovement.focus")) {
@@ -1161,12 +1046,6 @@ rcxml_init(void)
 
 	rc.xdg_shell_server_side_deco = true;
 	rc.hide_maximized_window_titlebar = false;
-	rc.show_title = true;
-	rc.title_layout_loaded = false;
-	rc.ssd_keep_border = true;
-	rc.corner_radius = 8;
-	rc.shadows_enabled = false;
-	rc.shadows_on_tiled = false;
 
 	rc.gap = 0;
 	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;
@@ -1405,19 +1284,6 @@ post_processing(void)
 		rc.icon_theme_name = xstrdup(rc.theme_name);
 	}
 
-	if (!rc.title_layout_loaded) {
-#if HAVE_LIBSFDO
-		fill_title_layout("icon:iconify,max,close");
-#else
-		/*
-		 * 'icon' is replaced with 'menu' in fill_title_layout() when
-		 * libsfdo is not linked, but we also replace it here not to
-		 * show error message with default settings.
-		 */
-		fill_title_layout("menu:iconify,max,close");
-#endif
-	}
-
 	/*
 	 * Replace all earlier bindings by later ones
 	 * and clear the ones with an empty action list.
@@ -1609,8 +1475,6 @@ rcxml_finish(void)
 	zfree(rc.icon_theme_name);
 	zfree(rc.fallback_app_icon_name);
 	zfree(rc.window_switcher.osd.thumbnail_label_format);
-
-	clear_title_layout();
 
 	struct usable_area_override *area, *area_tmp;
 	wl_list_for_each_safe(area, area_tmp, &rc.usable_area_overrides, link) {

@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <wlr/types/wlr_scene.h>
 #include "common/mem.h"
-#include "ssd.h"
 
 static void
 handle_node_destroy(struct wl_listener *listener, void *data)
@@ -13,7 +12,7 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 		wl_container_of(listener, node_descriptor, destroy);
 
 	if (node_type_contains(LAB_NODE_BUTTON, node_descriptor->type)) {
-		ssd_button_free(node_descriptor->data);
+		free(node_descriptor->data); /* ssd_button */
 	}
 
 	wl_list_remove(&node_descriptor->destroy.link);
