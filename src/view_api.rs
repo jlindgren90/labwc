@@ -50,24 +50,18 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
-    let view_ptr;
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view_ptr = view.set_mapped(focus_mode);
-    } else {
-        return;
+    let view_ptr = views_mut().map_common(id, focus_mode);
+    if !view_ptr.is_null() {
+        unsafe { view_notify_map(view_ptr) };
     }
-    unsafe { view_notify_map(view_ptr) };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_unmap_common(id: ViewId) {
-    let view_ptr;
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view_ptr = view.set_unmapped();
-    } else {
-        return;
+    let view_ptr = views_mut().unmap_common(id);
+    if !view_ptr.is_null() {
+        unsafe { view_notify_unmap(view_ptr) };
     }
-    unsafe { view_notify_unmap(view_ptr) };
 }
 
 #[unsafe(no_mangle)]
@@ -116,5 +110,22 @@ pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
 pub extern "C" fn view_offer_focus(id: ViewId) {
     if let Some(view) = views().get_view(id) {
         view.offer_focus();
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
+    views_mut().add_foreign_toplevel_client(client);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn views_remove_foreign_toplevel_client(client: *mut WlResource) {
+    views_mut().remove_foreign_toplevel_client(client);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlResource) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.remove_foreign_toplevel(resource);
     }
 }

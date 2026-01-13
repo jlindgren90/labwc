@@ -10,7 +10,6 @@
 #include "common/box.h"
 #include "common/macros.h"
 #include "common/mem.h"
-#include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "node.h"
