@@ -23,6 +23,7 @@
 #include "common/parse-double.h"
 #include "common/string-helpers.h"
 #include "common/xml.h"
+#include "config.h"
 #include "config/default-bindings.h"
 #include "config/keybind.h"
 #include "config/libinput.h"

@@ -99,13 +99,6 @@ struct ssd {
 			struct wlr_scene_buffer *top, *bottom, *left, *right;
 		} subtrees[2]; /* indexed by enum ssd_active_state */
 	} border;
-
-	/*
-	 * Space between the extremities of the view's wlr_surface
-	 * and the max extents of the server-side decorations.
-	 * For xdg-shell views with CSD, this margin is zero.
-	 */
-	struct border margin;
 };
 
 struct ssd_button {
