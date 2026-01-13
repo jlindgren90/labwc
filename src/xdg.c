@@ -782,11 +782,7 @@ handle_map(struct wl_listener *listener, void *data)
 	view->mapped = true;
 
 	if (!view->been_mapped) {
-		if (view_wants_decorations(view)) {
-			view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
-		} else {
-			view_set_ssd_mode(view, LAB_SSD_MODE_NONE);
-		}
+		view_set_ssd_enabled(view, view_wants_decorations(view));
 
 		/*
 		 * Set initial "pending" dimensions. "Current"
