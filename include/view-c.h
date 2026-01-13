@@ -7,6 +7,11 @@
 
 #include "rs-types.h"
 
+Border ssd_get_margin(CView *view);
+
+Rect view_get_output_area(CView *view);
+Rect view_get_output_usable_area(CView *view);
+
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);

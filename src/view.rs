@@ -3,9 +3,12 @@
 use bindings::*;
 use foreign_toplevel::ForeignToplevel;
 use lazy_static;
+use std::cmp::min;
 use std::collections::BTreeMap;
 use std::ffi::{c_char, CString};
-use util::cstring;
+use util::*;
+
+const MIN_VISIBLE_PX: i32 = 16;
 
 #[repr(C)]
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -165,6 +168,41 @@ impl View {
             if !self.is_xwayland {
                 unsafe { xdg_toplevel_view_notify_tiled(self.c_ptr) };
             }
+        }
+    }
+
+    fn center_geom(&self, geom: &mut Rect, rel_to: Option<&Rect>) -> bool {
+        let usable = unsafe { view_get_output_usable_area(self.c_ptr) };
+        if rect_empty(*geom) || rect_empty(usable) {
+            return false;
+        }
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        let width = geom.width + margin.left + margin.right;
+        let height = geom.height + margin.top + margin.bottom;
+        // If reference box is not given then center to usable area
+        let centered = rect_center(width, height, *(rel_to.unwrap_or(&usable)), usable);
+        geom.x = centered.x + margin.left;
+        geom.y = centered.y + margin.top;
+        return true;
+    }
+
+    fn ensure_geom_onscreen(&self, geom: &mut Rect) {
+        let usable = unsafe { view_get_output_usable_area(self.c_ptr) };
+        if rect_empty(*geom) || rect_empty(usable) {
+            return;
+        }
+        // Require a minimum number of pixels to be visible on each edge.
+        // If the geometry minus this margin is offscreen, then center it.
+        let hmargin = min(MIN_VISIBLE_PX, (geom.width - 1) / 2);
+        let vmargin = min(MIN_VISIBLE_PX, (geom.height - 1) / 2);
+        let reduced = Rect {
+            x: geom.x + hmargin,
+            y: geom.y + vmargin,
+            width: geom.width - 2 * hmargin,
+            height: geom.height - 2 * vmargin,
+        };
+        if !rect_intersects(reduced, usable) {
+            self.center_geom(geom, Some(&usable));
         }
     }
 
@@ -342,6 +380,22 @@ pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
 pub extern "C" fn view_set_tiled(id: ViewId, tiled: i32) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_tiled(tiled);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_center_geom(id: ViewId, geom: &mut Rect, rel_to: Option<&Rect>) -> bool {
+    if let Some(view) = views().by_id.get(&id) {
+        view.center_geom(geom, rel_to)
+    } else {
+        false
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_ensure_geom_onscreen(id: ViewId, geom: &mut Rect) {
+    if let Some(view) = views().by_id.get(&id) {
+        view.ensure_geom_onscreen(geom);
     }
 }
 
