@@ -32,15 +32,13 @@ struct wlr_scene_node;
  * NULL scene/view arguments are not allowed.
  */
 struct ssd *ssd_create(struct view *view, bool active);
-struct border ssd_get_margin(const struct ssd *ssd);
+struct border ssd_get_margin(struct view *view);
 int ssd_get_corner_width(void);
-void ssd_update_margin(struct ssd *ssd);
 void ssd_set_active(struct ssd *ssd, bool active);
 void ssd_update_title(struct ssd *ssd);
 void ssd_update_icon(struct ssd *ssd);
 void ssd_update_geometry(struct ssd *ssd);
 void ssd_destroy(struct ssd *ssd);
-void ssd_set_titlebar(struct ssd *ssd, bool enabled);
 
 void ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable);
 
@@ -57,13 +55,6 @@ void ssd_button_free(struct ssd_button *button);
 enum lab_node_type ssd_get_resizing_type(const struct ssd *ssd,
 	struct wlr_cursor *cursor);
 
-/* TODO: clean up / update */
-struct border ssd_thickness(struct view *view);
 struct wlr_box ssd_max_extents(struct view *view);
-
-/* SSD debug helpers */
-bool ssd_debug_is_root_node(const struct ssd *ssd, struct wlr_scene_node *node);
-const char *ssd_debug_get_node_name(const struct ssd *ssd,
-	struct wlr_scene_node *node);
 
 #endif /* LABWC_SSD_H */

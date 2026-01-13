@@ -22,12 +22,12 @@
 #include "common/parse-double.h"
 #include "common/string-helpers.h"
 #include "common/xml.h"
+#include "config.h"
 #include "config/default-bindings.h"
 #include "config/keybind.h"
 #include "config/libinput.h"
 #include "config/mousebind.h"
 #include "cycle.h"
-#include "view.h"
 
 /* for backward compatibility of <mouse><scrollFactor> */
 static double mouse_scroll_factor = -1;
@@ -688,12 +688,6 @@ entry(xmlNode *node, char *nodename, char *content)
 			"Ignoring.", nodename);
 
 	/* handle non-empty leaf nodes */
-	} else if (!strcmp(nodename, "decoration.core")) {
-		if (!strcmp(content, "client")) {
-			rc.xdg_shell_server_side_deco = false;
-		} else {
-			rc.xdg_shell_server_side_deco = true;
-		}
 	} else if (!strcasecmp(nodename, "autoEnableOutputs.core")) {
 		set_bool(content, &rc.auto_enable_outputs);
 	} else if (!strcasecmp(nodename, "reuseOutputMode.core")) {
@@ -716,12 +710,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.corner_radius = atoi(content);
 	} else if (!strcasecmp(nodename, "keepBorder.theme")) {
 		set_bool(content, &rc.ssd_keep_border);
-	} else if (!strcasecmp(nodename, "maximizedDecoration.theme")) {
-		if (!strcasecmp(content, "titlebar")) {
-			rc.hide_maximized_window_titlebar = false;
-		} else if (!strcasecmp(content, "none")) {
-			rc.hide_maximized_window_titlebar = true;
-		}
 	} else if (!strcasecmp(nodename, "followMouse.focus")) {
 		set_bool(content, &rc.focus_follow_mouse);
 	} else if (!strcasecmp(nodename, "followMouseRequiresMovement.focus")) {
@@ -813,8 +801,6 @@ rcxml_init(void)
 	}
 	has_run = true;
 
-	rc.xdg_shell_server_side_deco = true;
-	rc.hide_maximized_window_titlebar = false;
 	rc.show_title = true;
 	rc.title_layout_loaded = false;
 	rc.ssd_keep_border = true;

@@ -39,12 +39,6 @@ enum view_type {
 #endif
 };
 
-enum ssd_preference {
-	LAB_SSD_PREF_UNSPEC = 0,
-	LAB_SSD_PREF_CLIENT,
-	LAB_SSD_PREF_SERVER,
-};
-
 /**
  * Directions in which a view can be maximized. "None" is used
  * internally to mean "not maximized" but is not valid in rc.xml.
@@ -167,8 +161,7 @@ struct view {
 
 	bool mapped;
 	bool been_mapped;
-	enum lab_ssd_mode ssd_mode;
-	enum ssd_preference ssd_preference;
+	bool ssd_enabled;
 	bool minimized;
 	enum view_axis maximized;
 	bool fullscreen;
@@ -421,15 +414,13 @@ void view_set_untiled(struct view *view);
 void view_maximize(struct view *view, enum view_axis axis);
 void view_set_fullscreen(struct view *view, bool fullscreen);
 void view_toggle_maximize(struct view *view, enum view_axis axis);
-bool view_wants_decorations(struct view *view);
 
 bool view_is_always_on_top(struct view *view);
 void view_toggle_always_on_top(struct view *view);
 
 bool view_is_tiled(struct view *view);
 bool view_is_floating(struct view *view);
-bool view_titlebar_visible(struct view *view);
-void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
+void view_set_ssd_enabled(struct view *view, bool enabled);
 void view_toggle_fullscreen(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
 void view_snap_to_edge(struct view *view, enum lab_edge direction);

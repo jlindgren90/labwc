@@ -779,12 +779,6 @@ handle_map(struct wl_listener *listener, void *data)
 	view->mapped = true;
 
 	if (!view->been_mapped) {
-		if (view_wants_decorations(view)) {
-			view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
-		} else {
-			view_set_ssd_mode(view, LAB_SSD_MODE_NONE);
-		}
-
 		/*
 		 * Set initial "pending" dimensions. "Current"
 		 * dimensions remain zero until handle_commit().
@@ -957,16 +951,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	view->content_tree = tree;
 	node_descriptor_create(&view->scene_tree->node,
 		LAB_NODE_VIEW, view, /*data*/ NULL);
-
-	/*
-	 * The xdg_toplevel_decoration and kde_server_decoration protocols
-	 * expects clients to use client side decorations unless server side
-	 * decorations are negotiated. So we default to client side ones here.
-	 *
-	 * TODO: We may want to assign the default based on a new rc.xml
-	 *       config option like "enforce-server" in the future.
-	 */
-	view->ssd_preference = LAB_SSD_PREF_CLIENT;
 
 	/*
 	 * xdg_toplevel_decoration and kde_server_decoration use this

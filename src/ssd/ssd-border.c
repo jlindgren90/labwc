@@ -78,7 +78,6 @@ ssd_border_update(struct ssd *ssd)
 			&& ssd->border.tree->node.enabled) {
 		/* Disable borders on maximize */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
-		ssd->margin = ssd_thickness(ssd->view);
 	}
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
@@ -86,7 +85,6 @@ ssd_border_update(struct ssd *ssd)
 	} else if (!ssd->border.tree->node.enabled) {
 		/* And re-enabled them when unmaximized */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, true);
-		ssd->margin = ssd_thickness(ssd->view);
 	}
 
 	int width = view->current.width;

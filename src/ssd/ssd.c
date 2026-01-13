@@ -19,8 +19,13 @@
 #include "theme.h"
 #include "view.h"
 
+/*
+ * Space between the extremities of the view's wlr_surface
+ * and the max extents of the server-side decorations.
+ * For xdg-shell views with CSD, this margin is zero.
+ */
 struct border
-ssd_thickness(struct view *view)
+ssd_get_margin(struct view *view)
 {
 	assert(view);
 	/*
@@ -34,36 +39,29 @@ ssd_thickness(struct view *view)
 	 * in border-only deco mode as view->ssd would only be set
 	 * after ssd_create() returns.
 	 */
-	if (!view->ssd_mode || view->fullscreen) {
+	if (!view->ssd_enabled || view->fullscreen) {
 		return (struct border){ 0 };
 	}
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
-		struct border thickness = { 0 };
-		if (view_titlebar_visible(view)) {
-			thickness.top += g_theme.titlebar_height;
-		}
-		return thickness;
+		return (struct border){
+			.top = g_theme.titlebar_height,
+		};
 	}
 
-	struct border thickness = {
+	return (struct border){
 		.top = g_theme.titlebar_height + g_theme.border_width,
 		.right = g_theme.border_width,
 		.bottom = g_theme.border_width,
 		.left = g_theme.border_width,
 	};
-
-	if (!view_titlebar_visible(view)) {
-		thickness.top -= g_theme.titlebar_height;
-	}
-	return thickness;
 }
 
 struct wlr_box
 ssd_max_extents(struct view *view)
 {
 	assert(view);
-	struct border border = ssd_thickness(view);
+	struct border border = ssd_get_margin(view);
 
 	return (struct wlr_box){
 		.x = view->current.x - border.left,
@@ -86,18 +84,16 @@ enum lab_node_type
 ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 {
 	struct view *view = ssd ? ssd->view : NULL;
-	if (!view || !cursor || !view->ssd_mode || view->fullscreen) {
+	if (!view || !cursor || !view->ssd_enabled || view->fullscreen) {
 		return LAB_NODE_NONE;
 	}
 
 	struct wlr_box view_box = view->current;
 
-	if (view_titlebar_visible(view)) {
-		/* If the titlebar is visible, consider it part of the view */
-		int titlebar_height = g_theme.titlebar_height;
-		view_box.y -= titlebar_height;
-		view_box.height += titlebar_height;
-	}
+	/* Consider the titlebar part of the view */
+	int titlebar_height = g_theme.titlebar_height;
+	view_box.y -= titlebar_height;
+	view_box.height += titlebar_height;
 
 	if (wlr_box_contains_point(&view_box, cursor->x, cursor->y)) {
 		/* A cursor in bounds of the view is never in an SSD context */
@@ -159,11 +155,6 @@ ssd_create(struct view *view, bool active)
 	 */
 	ssd_titlebar_create(ssd);
 	ssd_border_create(ssd);
-	if (!view_titlebar_visible(view)) {
-		/* Ensure we keep the old state on Reconfigure or when exiting fullscreen */
-		ssd_set_titlebar(ssd, false);
-	}
-	ssd->margin = ssd_thickness(view);
 	ssd_set_active(ssd, active);
 	ssd_enable_keybind_inhibit_indicator(ssd, view->inhibits_keybinds);
 	ssd->state.geometry = view->current;
@@ -171,26 +162,11 @@ ssd_create(struct view *view, bool active)
 	return ssd;
 }
 
-struct border
-ssd_get_margin(const struct ssd *ssd)
-{
-	return ssd ? ssd->margin : (struct border){ 0 };
-}
-
 int
 ssd_get_corner_width(void)
 {
 	/* ensure a minimum corner width */
 	return MAX(rc.corner_radius, 5);
-}
-
-void
-ssd_update_margin(struct ssd *ssd)
-{
-	if (!ssd) {
-		return;
-	}
-	ssd->margin = ssd_thickness(ssd->view);
 }
 
 void
@@ -217,12 +193,6 @@ ssd_update_geometry(struct ssd *ssd)
 	bool state_changed = ssd->state.was_maximized != maximized
 		|| ssd->state.was_squared != squared;
 
-	/*
-	 * (Un)maximization updates titlebar visibility with
-	 * maximizedDecoration=none
-	 */
-	ssd_set_titlebar(ssd, view_titlebar_visible(view));
-
 	if (update_extents) {
 		ssd_extents_update(ssd);
 	}
@@ -235,19 +205,6 @@ ssd_update_geometry(struct ssd *ssd)
 	if (update_extents) {
 		ssd->state.geometry = current;
 	}
-}
-
-void
-ssd_set_titlebar(struct ssd *ssd, bool enabled)
-{
-	if (!ssd || ssd->titlebar.tree->node.enabled == enabled) {
-		return;
-	}
-	wlr_scene_node_set_enabled(&ssd->titlebar.tree->node, enabled);
-	ssd->titlebar.height = enabled ? g_theme.titlebar_height : 0;
-	ssd_border_update(ssd);
-	ssd_extents_update(ssd);
-	ssd->margin = ssd_thickness(ssd->view);
 }
 
 void
@@ -301,40 +258,4 @@ ssd_enable_keybind_inhibit_indicator(struct ssd *ssd, bool enable)
 		? g_theme.window_toggled_keybinds_color
 		: g_theme.window[SSD_ACTIVE].border_color;
 	wlr_scene_rect_set_color(ssd->border.subtrees[SSD_ACTIVE].top, color);
-}
-
-bool
-ssd_debug_is_root_node(const struct ssd *ssd, struct wlr_scene_node *node)
-{
-	if (!ssd || !node) {
-		return false;
-	}
-	return node == &ssd->tree->node;
-}
-
-const char *
-ssd_debug_get_node_name(const struct ssd *ssd, struct wlr_scene_node *node)
-{
-	if (!ssd || !node) {
-		return NULL;
-	}
-	if (node == &ssd->tree->node) {
-		return "view->ssd";
-	}
-	if (node == &ssd->titlebar.subtrees[SSD_ACTIVE].tree->node) {
-		return "titlebar.active";
-	}
-	if (node == &ssd->titlebar.subtrees[SSD_INACTIVE].tree->node) {
-		return "titlebar.inactive";
-	}
-	if (node == &ssd->border.subtrees[SSD_ACTIVE].tree->node) {
-		return "border.active";
-	}
-	if (node == &ssd->border.subtrees[SSD_INACTIVE].tree->node) {
-		return "border.inactive";
-	}
-	if (node == &ssd->extents.tree->node) {
-		return "extents";
-	}
-	return NULL;
 }

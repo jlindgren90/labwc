@@ -213,7 +213,7 @@ view_get_edge_snap_box(struct view *view, struct output *output,
 	};
 
 	if (view) {
-		struct border margin = ssd_get_margin(view->ssd);
+		struct border margin = ssd_get_margin(view);
 		dst.x += margin.left;
 		dst.y += margin.top;
 		dst.width -= margin.left + margin.right;
@@ -531,7 +531,7 @@ view_compute_centered_position(struct view *view, const struct wlr_box *ref,
 		return false;
 	}
 
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = ssd_get_margin(view);
 	struct wlr_box usable = output_usable_area_in_layout_coords(view->output);
 	int width = w + margin.left + margin.right;
 	int height = h + margin.top + margin.bottom;
@@ -566,7 +566,7 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 	if (wlr_output_layout_intersects(g_server.output_layout,
 			view->output->wlr_output, geometry)) {
 		/* Always make sure the titlebar starts within the usable area */
-		struct border margin = ssd_get_margin(view->ssd);
+		struct border margin = ssd_get_margin(view);
 		struct wlr_box usable =
 			output_usable_area_in_layout_coords(view->output);
 
@@ -666,7 +666,7 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 
 	struct wlr_box usable_area =
 			output_usable_area_in_layout_coords(view->output);
-	struct border margin = ssd_get_margin(view->ssd);
+	struct border margin = ssd_get_margin(view);
 
 	int available_width = usable_area.width - margin.left - margin.right;
 	int available_height = usable_area.height - margin.top - margin.bottom;
@@ -766,8 +766,8 @@ view_apply_maximized_geometry(struct view *view)
 			&natural.x, &natural.y);
 	}
 
-	if (view->ssd_mode) {
-		struct border border = ssd_thickness(view);
+	if (view->ssd_enabled) {
+		struct border border = ssd_get_margin(view);
 		box.x += border.left;
 		box.y += border.top;
 		box.width -= border.right + border.left;
@@ -824,13 +824,6 @@ view_set_maximized(struct view *view, enum view_axis maximized)
 
 	view->maximized = maximized;
 	wl_signal_emit_mutable(&view->events.maximized, NULL);
-
-	/*
-	 * Ensure that follow-up actions like SnapToEdge / SnapToRegion
-	 * use up-to-date SSD margin information. Otherwise we will end
-	 * up using an outdated ssd->margin to calculate offsets.
-	 */
-	ssd_update_margin(view->ssd);
 }
 
 bool
@@ -947,27 +940,6 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 }
 
 bool
-view_wants_decorations(struct view *view)
-{
-	/*
-	 * view->ssd_preference may be set by the decoration implementation
-	 * e.g. src/decorations/xdg-deco.c or src/decorations/kde-deco.c.
-	 */
-	switch (view->ssd_preference) {
-	case LAB_SSD_PREF_SERVER:
-		return true;
-	case LAB_SSD_PREF_CLIENT:
-		return false;
-	default:
-		/*
-		 * We don't know anything about the client preference
-		 * so fall back to core.decoration settings in rc.xml
-		 */
-		return rc.xdg_shell_server_side_deco;
-	}
-}
-
-bool
 view_is_always_on_top(struct view *view)
 {
 	assert(view);
@@ -1003,34 +975,23 @@ undecorate(struct view *view)
 	view->ssd = NULL;
 }
 
-bool
-view_titlebar_visible(struct view *view)
-{
-	if (view->maximized == VIEW_AXIS_BOTH
-			&& rc.hide_maximized_window_titlebar) {
-		return false;
-	}
-	return view->ssd_mode == LAB_SSD_MODE_FULL;
-}
-
 void
-view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode)
+view_set_ssd_enabled(struct view *view, bool enabled)
 {
 	assert(view);
 
-	if (view->fullscreen || mode == view->ssd_mode) {
+	if (view->fullscreen || enabled == view->ssd_enabled) {
 		return;
 	}
 
 	/*
 	 * Set these first since they are referenced
-	 * within the call tree of ssd_create() and ssd_thickness()
+	 * within the call tree of ssd_create() and ssd_get_margin()
 	 */
-	view->ssd_mode = mode;
+	view->ssd_enabled = enabled;
 
-	if (mode) {
+	if (enabled) {
 		decorate(view);
-		ssd_set_titlebar(view->ssd, view_titlebar_visible(view));
 	} else {
 		undecorate(view);
 	}
@@ -1053,7 +1014,7 @@ static void
 set_fullscreen(struct view *view, bool fullscreen)
 {
 	/* Hide decorations when going fullscreen */
-	if (fullscreen && view->ssd_mode) {
+	if (fullscreen && view->ssd_enabled) {
 		undecorate(view);
 	}
 
@@ -1065,7 +1026,7 @@ set_fullscreen(struct view *view, bool fullscreen)
 	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
 
 	/* Re-show decorations when no longer fullscreen */
-	if (!fullscreen && view->ssd_mode) {
+	if (!fullscreen && view->ssd_enabled) {
 		decorate(view);
 	}
 
@@ -1383,7 +1344,7 @@ view_reload_ssd(struct view *view)
 	assert(view);
 	drop_icon_buffer(view);
 
-	if (view->ssd_mode && !view->fullscreen) {
+	if (view->ssd_enabled && !view->fullscreen) {
 		undecorate(view);
 		decorate(view);
 	}
@@ -1395,7 +1356,7 @@ view_toggle_keybinds(struct view *view)
 	assert(view);
 	view->inhibits_keybinds = !view->inhibits_keybinds;
 
-	if (view->ssd_mode) {
+	if (view->ssd_enabled) {
 		ssd_enable_keybind_inhibit_indicator(view->ssd,
 			view->inhibits_keybinds);
 	}
