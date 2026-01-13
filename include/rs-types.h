@@ -7,5 +7,7 @@ typedef unsigned long ViewId;
 
 // Other Rust-friendly typedefs
 typedef struct view CView;
+typedef struct wl_display WlDisplay;
+typedef struct wl_resource WlResource;
 
 #endif // LABWC_RS_TYPES_H
