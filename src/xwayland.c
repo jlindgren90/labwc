@@ -15,7 +15,6 @@
 #include "common/mem.h"
 #include "common/scene-helpers.h"
 #include "config/session.h"
-#include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "node.h"
 #include "output.h"

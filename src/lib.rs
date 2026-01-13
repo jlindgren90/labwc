@@ -6,6 +6,7 @@
 mod bindings {
     include!("../build/include/bindings.rs");
 }
+mod foreign_toplevel;
 mod util;
 mod view;
 mod view_api;
