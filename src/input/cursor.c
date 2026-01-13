@@ -252,7 +252,6 @@ process_cursor_move(struct server *server, uint32_t time)
 	}
 
 	view_move(view, x, y);
-	overlay_update(&server->seat);
 }
 
 static void

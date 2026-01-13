@@ -118,9 +118,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct output *output = wl_container_of(listener, output, destroy);
 	struct seat *seat = &output->server->seat;
-	if (seat->overlay.active.output == output) {
-		overlay_finish(seat);
-	}
+
 	wl_list_remove(&output->link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->destroy.link);

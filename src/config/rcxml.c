@@ -694,8 +694,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		} else {
 			rc.xdg_shell_server_side_deco = true;
 		}
-	} else if (!strcmp(nodename, "gap.core")) {
-		rc.gap = atoi(content);
 	} else if (!strcasecmp(nodename, "autoEnableOutputs.core")) {
 		set_bool(content, &rc.auto_enable_outputs);
 	} else if (!strcasecmp(nodename, "reuseOutputMode.core")) {
@@ -849,7 +847,6 @@ rcxml_init(void)
 	rc.ssd_keep_border = true;
 	rc.corner_radius = 8;
 
-	rc.gap = 0;
 	rc.auto_enable_outputs = true;
 	rc.reuse_output_mode = false;
 	rc.xwayland_persistence = false;
