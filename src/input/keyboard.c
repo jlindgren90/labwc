@@ -132,13 +132,6 @@ handle_modifiers(struct wl_listener *listener, void *data)
 		wl_container_of(listener, keyboard, modifiers);
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 
-	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
-		/* Any change to the modifier state re-enable region snap */
-		g_seat.region_prevent_snap = false;
-		/* Pressing/releasing modifier key may show/hide region overlay */
-		overlay_update();
-	}
-
 	bool cycling = g_server.input_mode == LAB_INPUT_STATE_CYCLE;
 
 	if (cycling && !keyboard_get_all_modifiers()) {
