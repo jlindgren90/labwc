@@ -7,11 +7,11 @@
 #include "common/set.h"
 #include "cycle.h"
 #include "input/cursor.h"
-#include "overlay.h"
 
 #define XCURSOR_DEFAULT "left_ptr"
 #define XCURSOR_SIZE 24
 
+struct output;
 struct wlr_xdg_popup;
 
 enum input_mode {
@@ -82,8 +82,6 @@ struct seat {
 		} events;
 		struct wlr_scene_tree *icons;
 	} drag;
-
-	struct overlay overlay;
 
 	struct wl_list inputs;
 	struct wl_listener new_input;
