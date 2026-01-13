@@ -321,6 +321,79 @@ impl View {
         }
     }
 
+    pub fn apply_natural_geom(&mut self) {
+        let mut natural = self.state.natural_geom;
+        self.ensure_geom_onscreen(&mut natural);
+        self.move_resize(natural);
+    }
+
+    fn apply_fullscreen_geom(&mut self) {
+        let geom = unsafe { output_layout_coords(self.state.output) };
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
+    fn apply_maximized_geom(&mut self) {
+        let usable = unsafe { output_usable_area_in_layout_coords(self.state.output) };
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        let mut geom = rect_minus_margin(usable, margin);
+        // If one axis (horizontal or vertical) is unmaximized, it should
+        // use the natural geometry (first ensuring it is on-screen)
+        if self.state.maximized != VIEW_AXIS_BOTH {
+            let mut natural = self.state.natural_geom;
+            self.ensure_geom_onscreen(&mut natural);
+            if self.state.maximized == VIEW_AXIS_VERTICAL {
+                geom.x = natural.x;
+                geom.width = natural.width;
+            } else if self.state.maximized == VIEW_AXIS_HORIZONTAL {
+                geom.y = natural.y;
+                geom.height = natural.height;
+            }
+        }
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
+    fn apply_tiled_geom(&mut self) {
+        let usable = unsafe { output_usable_area_in_layout_coords(self.state.output) };
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        let (mut x1, mut x2) = (0, usable.width);
+        let (mut y1, mut y2) = (0, usable.height);
+        if (self.state.tiled & LAB_EDGE_RIGHT) != 0 {
+            x1 = usable.width / 2;
+        }
+        if (self.state.tiled & LAB_EDGE_LEFT) != 0 {
+            x2 = usable.width / 2;
+        }
+        if (self.state.tiled & LAB_EDGE_BOTTOM) != 0 {
+            y1 = usable.height / 2;
+        }
+        if (self.state.tiled & LAB_EDGE_TOP) != 0 {
+            y2 = usable.height / 2;
+        }
+        let geom = Rect {
+            x: usable.x + x1 + margin.left,
+            y: usable.y + y1 + margin.top,
+            width: x2 - x1 - (margin.left + margin.right),
+            height: y2 - y1 - (margin.top + margin.bottom),
+        };
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
+    pub fn apply_special_geom(&mut self) {
+        if self.state.fullscreen {
+            self.apply_fullscreen_geom();
+        } else if self.state.maximized != VIEW_AXIS_NONE {
+            self.apply_maximized_geom();
+        } else if self.state.tiled != 0 {
+            self.apply_tiled_geom();
+        }
+    }
+
     pub fn set_output(&mut self, output: *mut Output) {
         self.state.output = output;
     }
