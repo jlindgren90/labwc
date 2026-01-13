@@ -188,6 +188,20 @@ pub extern "C" fn view_store_natural_geom(id: ViewId) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_apply_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.apply_natural_geom();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_apply_special_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.apply_special_geom();
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_output(output);
