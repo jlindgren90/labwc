@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
 use crate::bindings::*;
+use crate::foreign_toplevel::*;
 use crate::view_impl::*;
 use std::ffi::CString;
 
@@ -16,10 +17,22 @@ impl ViewState {
     }
 }
 
+impl From<&ViewState> for ForeignToplevelState {
+    fn from(state: &ViewState) -> Self {
+        ForeignToplevelState {
+            maximized: state.maximized == VIEW_AXIS_BOTH,
+            minimized: state.minimized,
+            activated: state.active,
+            fullscreen: state.fullscreen,
+        }
+    }
+}
+
 #[derive(Default)]
 struct ViewData {
     app_id: CString,
     title: CString,
+    foreign_toplevels: Vec<ForeignToplevel>,
 }
 
 pub struct View {
@@ -55,6 +68,10 @@ impl View {
             self.d.app_id = app_id;
             self.state.app_id = self.d.app_id.as_ptr(); // for C interop
             unsafe { view_notify_app_id_change(self.c_ptr) };
+            for toplevel in &self.d.foreign_toplevels {
+                toplevel.send_app_id(&self.d.app_id);
+                toplevel.send_done();
+            }
         }
     }
 
@@ -63,6 +80,10 @@ impl View {
             self.d.title = title;
             self.state.title = self.d.title.as_ptr(); // for C interop
             unsafe { view_notify_title_change(self.c_ptr) };
+            for toplevel in &self.d.foreign_toplevels {
+                toplevel.send_title(&self.d.title);
+                toplevel.send_done();
+            }
         }
     }
 
@@ -77,6 +98,9 @@ impl View {
     // Returns CView pointer to pass to view_notify_unmap()
     pub fn set_unmapped(&mut self) -> *mut CView {
         self.state.mapped = false;
+        for resource in self.d.foreign_toplevels.drain(..) {
+            resource.close();
+        }
         return self.c_ptr;
     }
 
@@ -85,6 +109,7 @@ impl View {
             self.state.active = active;
             self.v.set_active(active);
             unsafe { view_notify_active(self.c_ptr) };
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -99,6 +124,7 @@ impl View {
         if self.state.fullscreen != fullscreen {
             self.state.fullscreen = fullscreen;
             self.v.set_fullscreen(fullscreen);
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -106,7 +132,7 @@ impl View {
         if self.state.maximized != maximized {
             self.state.maximized = maximized;
             self.v.set_maximized(maximized);
-            unsafe { view_notify_maximized(self.c_ptr) };
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -121,10 +147,31 @@ impl View {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
             self.v.set_minimized(minimized);
+            self.send_foreign_toplevel_state();
         }
     }
 
     pub fn offer_focus(&self) {
         self.v.offer_focus();
+    }
+
+    pub fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
+        let toplevel = ForeignToplevel::new(client, self.c_ptr);
+        toplevel.send_app_id(&self.d.app_id);
+        toplevel.send_title(&self.d.title);
+        toplevel.send_state((&*self.state).into());
+        toplevel.send_done();
+        self.d.foreign_toplevels.push(toplevel);
+    }
+
+    pub fn remove_foreign_toplevel(&mut self, resource: *mut WlResource) {
+        self.d.foreign_toplevels.retain(|t| t.res != resource);
+    }
+
+    fn send_foreign_toplevel_state(&self) {
+        for toplevel in &self.d.foreign_toplevels {
+            toplevel.send_state((&*self.state).into());
+            toplevel.send_done();
+        }
     }
 }
