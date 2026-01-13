@@ -167,7 +167,7 @@ struct view {
 
 	bool mapped;
 	bool been_mapped;
-	enum lab_ssd_mode ssd_mode;
+	bool ssd_enabled;
 	enum ssd_preference ssd_preference;
 	bool minimized;
 	enum view_axis maximized;
@@ -428,8 +428,7 @@ void view_toggle_always_on_top(struct view *view);
 
 bool view_is_tiled(struct view *view);
 bool view_is_floating(struct view *view);
-bool view_titlebar_visible(struct view *view);
-void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
+void view_set_ssd_enabled(struct view *view, bool enabled);
 void view_toggle_fullscreen(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
 void view_snap_to_edge(struct view *view, enum lab_edge direction,
