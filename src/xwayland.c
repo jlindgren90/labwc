@@ -213,12 +213,7 @@ ensure_initial_geometry_and_output(struct view *view)
 		view_set_output(view, output_nearest_to_cursor());
 	}
 
-	if (want_deco(xsurface)) {
-		view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
-	} else {
-		view_set_ssd_mode(view, LAB_SSD_MODE_NONE);
-	}
-
+	view_set_ssd_enabled(view, want_deco(xsurface));
 	view_constrain_size_to_that_of_usable_area(view);
 
 	if (!has_position) {
@@ -316,11 +311,7 @@ handle_associate(struct wl_listener *listener, void *data)
 	 */
 	view_set_fullscreen(view, xsurface->fullscreen);
 	if (!view->been_mapped) {
-		if (want_deco(xsurface)) {
-			view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
-		} else {
-			view_set_ssd_mode(view, LAB_SSD_MODE_NONE);
-		}
+		view_set_ssd_enabled(view, want_deco(xsurface));
 	}
 	enum view_axis axis = VIEW_AXIS_NONE;
 	if (xsurface->maximized_horz) {
@@ -538,11 +529,7 @@ handle_set_decorations(struct wl_listener *listener, void *data)
 		wl_container_of(listener, xwayland_view, set_decorations);
 	struct view *view = &xwayland_view->base;
 
-	if (want_deco(xwayland_view->xwayland_surface)) {
-		view_set_ssd_mode(view, LAB_SSD_MODE_FULL);
-	} else {
-		view_set_ssd_mode(view, LAB_SSD_MODE_NONE);
-	}
+	view_set_ssd_enabled(view, want_deco(xwayland_view->xwayland_surface));
 }
 
 static void
