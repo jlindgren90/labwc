@@ -560,7 +560,6 @@ seat_finish(void)
 		input_device_destroy(&input->destroy, NULL);
 	}
 
-	overlay_finish();
 	input_handlers_finish();
 }
 
@@ -602,7 +601,6 @@ seat_reconfigure(void)
 {
 	struct input *input;
 	cursor_reload();
-	overlay_finish();
 	keyboard_reset_current_keybind();
 	wl_list_for_each(input, &g_seat.inputs, link) {
 		switch (input->wlr_input_device->type) {

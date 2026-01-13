@@ -322,8 +322,6 @@ interactive_cancel(struct view *view)
 		return;
 	}
 
-	overlay_finish();
-
 	/* Restore keyboard/pointer focus */
 	seat_focus_override_end(/*restore_focus*/ true);
 }
