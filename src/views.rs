@@ -11,6 +11,7 @@ use std::ffi::c_char;
 struct Views {
     by_id: BTreeMap<ViewId, View>, // in creation order
     max_used_id: ViewId,
+    foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
 lazy_static!(VIEWS, Views, Views::default(), views, views_mut);
@@ -53,8 +54,19 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 #[no_mangle]
 pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
     let mut views = views_mut();
-    if let Some(view) = views.by_id.get_mut(&id) {
+    let Views {
+        by_id,
+        foreign_toplevel_clients,
+        ..
+    } = &mut *views;
+    if let Some(view) = by_id.get_mut(&id) {
         let view_ptr = view.set_mapped(focus_mode);
+        // Only focusable views should be shown in taskbars etc.
+        if view_is_focusable(view.get_state()) {
+            for &mut client in foreign_toplevel_clients {
+                view.add_foreign_toplevel(client);
+            }
+        }
         drop(views); // FIXME: to allow reentrant borrow
         unsafe { view_notify_map(view_ptr) };
     }
@@ -109,5 +121,33 @@ pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
 pub extern "C" fn view_offer_focus(id: ViewId) {
     if let Some(view) = views().by_id.get(&id) {
         view.offer_focus();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
+    let Views {
+        by_id,
+        foreign_toplevel_clients,
+        ..
+    } = &mut *views_mut();
+    foreign_toplevel_clients.push(client);
+    for view in by_id.values_mut() {
+        if view_is_focusable(view.get_state()) {
+            view.add_foreign_toplevel(client);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn views_remove_foreign_toplevel_client(client: *mut WlResource) {
+    let mut views = views_mut();
+    views.foreign_toplevel_clients.retain(|&c| c != client);
+}
+
+#[no_mangle]
+pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlResource) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.remove_foreign_toplevel(resource);
     }
 }

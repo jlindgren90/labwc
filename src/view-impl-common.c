@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /* view-impl-common.c: common code for shell view->impl functions */
 #include "view-impl-common.h"
-#include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "view.h"
 
@@ -13,21 +12,6 @@ view_notify_map(struct view *view)
 	/* Leave minimized, if minimized before map */
 	if (!view->st->minimized) {
 		desktop_focus_view(view, /* raise */ true);
-	}
-
-	/*
-	 * Create foreign-toplevel handle. Exclude unfocusable views
-	 * (popups, floating toolbars, etc.) as these should not be
-	 * shown in taskbars/docks/etc.
-	 */
-	if (!view->foreign_toplevel && view_is_focusable(view->st)) {
-		view->foreign_toplevel = foreign_toplevel_create(view);
-
-		struct view *parent = view->impl->get_parent(view);
-		if (parent && parent->foreign_toplevel) {
-			foreign_toplevel_set_parent(view->foreign_toplevel,
-				parent->foreign_toplevel);
-		}
 	}
 
 	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s", view->st->app_id,
@@ -49,15 +33,6 @@ view_notify_unmap(struct view *view)
 	 */
 	if (view == g_server.active_view || !g_server.active_view) {
 		desktop_focus_topmost_view();
-	}
-
-	/*
-	 * Destroy the foreign toplevel handle so the unmapped view
-	 * doesn't show up in panels and the like.
-	 */
-	if (view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
 	}
 }
 
