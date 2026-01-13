@@ -8,6 +8,12 @@ use std::collections::BTreeMap;
 use std::ffi::{c_char, CString};
 use util::*;
 
+// from enum lab_edge
+const EDGE_TOP: i32 = 1 << 0;
+const EDGE_BOTTOM: i32 = 1 << 1;
+const EDGE_LEFT: i32 = 1 << 2;
+const EDGE_RIGHT: i32 = 1 << 3;
+
 const MIN_VISIBLE_PX: i32 = 16;
 
 #[repr(C)]
@@ -245,6 +251,84 @@ impl View {
         }
     }
 
+    fn apply_natural_geom(&mut self) {
+        let mut natural = self.state.natural_geom;
+        self.ensure_geom_onscreen(&mut natural);
+        self.move_resize(natural);
+    }
+
+    fn apply_fullscreen_geom(&mut self) {
+        let geom = unsafe { view_get_output_area(self.c_ptr) };
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
+    fn apply_maximized_geom(&mut self) {
+        let usable = unsafe { view_get_output_usable_area(self.c_ptr) };
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        let mut geom = Rect {
+            x: usable.x + margin.left,
+            y: usable.y + margin.top,
+            width: usable.width - (margin.left + margin.right),
+            height: usable.height - (margin.top + margin.bottom),
+        };
+        // If one axis (horizontal or vertical) is unmaximized, it should
+        // use the natural geometry (first ensuring it is on-screen)
+        if self.state.maximized != ViewAxis::Both {
+            let mut natural = self.state.natural_geom;
+            self.ensure_geom_onscreen(&mut natural);
+            if self.state.maximized == ViewAxis::Vertical {
+                geom.x = natural.x;
+                geom.width = natural.width;
+            } else if self.state.maximized == ViewAxis::Horizontal {
+                geom.y = natural.y;
+                geom.height = natural.height;
+            }
+        }
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
+    fn apply_tiled_geom(&mut self) {
+        let usable = unsafe { view_get_output_usable_area(self.c_ptr) };
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        let (mut x1, mut x2) = (0, usable.width);
+        let (mut y1, mut y2) = (0, usable.height);
+        if (self.state.tiled & EDGE_RIGHT) != 0 {
+            x1 = usable.width / 2;
+        }
+        if (self.state.tiled & EDGE_LEFT) != 0 {
+            x2 = usable.width / 2;
+        }
+        if (self.state.tiled & EDGE_BOTTOM) != 0 {
+            y1 = usable.height / 2;
+        }
+        if (self.state.tiled & EDGE_TOP) != 0 {
+            y2 = usable.height / 2;
+        }
+        let geom = Rect {
+            x: usable.x + x1 + margin.left,
+            y: usable.y + y1 + margin.top,
+            width: x2 - x1 - (margin.left + margin.right),
+            height: y2 - y1 - (margin.top + margin.bottom),
+        };
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
+    fn apply_special_geom(&mut self) {
+        if self.state.fullscreen {
+            self.apply_fullscreen_geom();
+        } else if self.state.maximized != ViewAxis::None {
+            self.apply_maximized_geom();
+        } else if self.state.tiled != 0 {
+            self.apply_tiled_geom();
+        }
+    }
+
     fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
         let toplevel = ForeignToplevel::new(client, self.c_ptr);
         toplevel.send_app_id(&self.app_id);
@@ -449,6 +533,20 @@ pub extern "C" fn view_set_natural_geom(id: ViewId, geom: Rect) {
 pub extern "C" fn view_store_natural_geom(id: ViewId) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.store_natural_geom();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_apply_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.apply_natural_geom();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_apply_special_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.apply_special_geom();
     }
 }
 

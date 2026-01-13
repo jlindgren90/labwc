@@ -20,7 +20,6 @@
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
-#include "util.h"
 #include "wlr/util/log.h"
 
 #if HAVE_XWAYLAND
@@ -77,54 +76,6 @@ view_get_root(struct view *view)
 		return view->impl->get_root(view);
 	}
 	return view;
-}
-
-/**
- * All view_apply_xxx_geometry() functions must *not* modify
- * any state besides repositioning or resizing the view.
- *
- * They may be called repeatably during output layout changes.
- */
-
-struct wlr_box
-view_get_edge_snap_box(struct view *view, struct output *output,
-		enum lab_edge edge)
-{
-	struct wlr_box usable = output_usable_area_in_layout_coords(output);
-	int x1 = 0;
-	int y1 = 0;
-	int x2 = usable.width;
-	int y2 = usable.height;
-
-	if (edge & LAB_EDGE_RIGHT) {
-		x1 = (usable.width) / 2;
-	}
-	if (edge & LAB_EDGE_LEFT) {
-		x2 = (usable.width) / 2;
-	}
-	if (edge & LAB_EDGE_BOTTOM) {
-		y1 = (usable.height) / 2;
-	}
-	if (edge & LAB_EDGE_TOP) {
-		y2 = (usable.height) / 2;
-	}
-
-	struct wlr_box dst = {
-		.x = x1 + usable.x,
-		.y = y1 + usable.y,
-		.width = x2 - x1,
-		.height = y2 - y1,
-	};
-
-	if (view) {
-		struct border margin = ssd_get_margin(view);
-		dst.x += margin.left;
-		dst.y += margin.top;
-		dst.width -= margin.left + margin.right;
-		dst.height -= margin.top + margin.bottom;
-	}
-
-	return dst;
 }
 
 static bool
@@ -444,103 +395,6 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 	view_move_resize(view->id, box);
 }
 
-void
-view_apply_natural_geometry(struct view *view)
-{
-	assert(view);
-	assert(view_is_floating(view->st));
-
-	struct wlr_box geometry = view->st->natural_geom;
-	view_ensure_geom_onscreen(view->id, &geometry);
-	view_move_resize(view->id, geometry);
-}
-
-static void
-view_apply_tiled_geometry(struct view *view)
-{
-	assert(view);
-	assert(view->st->tiled);
-	assert(output_is_usable(view->output));
-
-	view_move_resize(view->id, view_get_edge_snap_box(view,
-		view->output, view->st->tiled));
-}
-
-static void
-view_apply_fullscreen_geometry(struct view *view)
-{
-	assert(view);
-	assert(view->st->fullscreen);
-	assert(output_is_usable(view->output));
-
-	struct wlr_box box = { 0 };
-	wlr_output_layout_get_box(view->server->output_layout,
-		view->output->wlr_output, &box);
-	view_move_resize(view->id, box);
-}
-
-static void
-view_apply_maximized_geometry(struct view *view)
-{
-	assert(view);
-	assert(view->st->maximized != VIEW_AXIS_NONE);
-	struct output *output = view->output;
-	assert(output_is_usable(output));
-
-	struct wlr_box box = output_usable_area_in_layout_coords(output);
-
-	/*
-	 * If one axis (horizontal or vertical) is unmaximized, it
-	 * should use the natural geometry. But if that geometry is not
-	 * on-screen on the output where the view is maximized, then
-	 * center the unmaximized axis.
-	 */
-	struct wlr_box natural = view->st->natural_geom;
-	if (view->st->maximized != VIEW_AXIS_BOTH
-			&& !rect_intersects(box, natural)) {
-		view_center_geom(view->id, NULL, &natural);
-	}
-
-	if (view->ssd_enabled) {
-		struct border border = ssd_get_margin(view);
-		box.x += border.left;
-		box.y += border.top;
-		box.width -= border.right + border.left;
-		box.height -= border.top + border.bottom;
-	}
-
-	if (view->st->maximized == VIEW_AXIS_VERTICAL) {
-		box.x = natural.x;
-		box.width = natural.width;
-	} else if (view->st->maximized == VIEW_AXIS_HORIZONTAL) {
-		box.y = natural.y;
-		box.height = natural.height;
-	}
-
-	view_move_resize(view->id, box);
-}
-
-static void
-view_apply_special_geometry(struct view *view)
-{
-	assert(view);
-	assert(!view_is_floating(view->st));
-	if (!output_is_usable(view->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not updating geometry");
-		return;
-	}
-
-	if (view->st->fullscreen) {
-		view_apply_fullscreen_geometry(view);
-	} else if (view->st->maximized != VIEW_AXIS_NONE) {
-		view_apply_maximized_geometry(view);
-	} else if (view->st->tiled != LAB_EDGE_NONE) {
-		view_apply_tiled_geometry(view);
-	} else {
-		assert(false); // not reached
-	}
-}
-
 static bool
 in_interactive_move(struct view *view)
 {
@@ -596,9 +450,9 @@ view_maximize(struct view *view, enum view_axis axis)
 
 	view_set_maximized(view->id, axis);
 	if (view_is_floating(view->st)) {
-		view_apply_natural_geometry(view);
+		view_apply_natural_geom(view->id);
 	} else {
-		view_apply_special_geometry(view);
+		view_apply_special_geom(view->id);
 	}
 }
 
@@ -705,7 +559,7 @@ view_set_ssd_enabled(struct view *view, bool enabled)
 	}
 
 	if (!view_is_floating(view->st)) {
-		view_apply_special_geometry(view);
+		view_apply_special_geom(view->id);
 	}
 }
 
@@ -751,9 +605,9 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	}
 
 	if (view_is_floating(view->st)) {
-		view_apply_natural_geometry(view);
+		view_apply_natural_geom(view->id);
 	} else {
-		view_apply_special_geometry(view);
+		view_apply_special_geom(view->id);
 	}
 
 	/* Show fullscreen views above top-layer */
@@ -811,7 +665,7 @@ view_adjust_for_layout_change(struct view *view)
 	}
 
 	if (!is_floating) {
-		view_apply_special_geometry(view);
+		view_apply_special_geom(view->id);
 	} else {
 		/* Restore saved geometry, ensuring view is on-screen */
 		struct wlr_box geometry = view->last_layout_geometry;
@@ -915,7 +769,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	}
 	view_set_output(view, output);
 	view_set_tiled(view->id, edge);
-	view_apply_tiled_geometry(view);
+	view_apply_special_geom(view->id);
 }
 
 static void

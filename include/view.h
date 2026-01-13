@@ -180,9 +180,6 @@ struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
 struct view *view_get_root(struct view *view);
 
-struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
-	enum lab_edge edge);
-
 void mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
 	wl_notify_func_t notify_map, wl_notify_func_t notify_unmap);
 void mappable_disconnect(struct mappable *mappable);
@@ -198,12 +195,6 @@ void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
 struct wlr_box view_get_fallback_natural_geometry(struct view *view);
-
-/**
- * view_apply_natural_geometry - adjust view->natural_geometry if it doesn't
- * intersect with view->output and then apply it
- */
-void view_apply_natural_geometry(struct view *view);
 
 /**
  * view_center - center view within some region
