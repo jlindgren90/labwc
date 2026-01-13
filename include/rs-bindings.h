@@ -7,6 +7,7 @@
 #ifndef LABWC_RS_BINDINGS_H
 #define LABWC_RS_BINDINGS_H
 
+#include "foreign-toplevel.h"
 #include "view-c.h"
 
 #endif // LABWC_RS_BINDINGS_H
