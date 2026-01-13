@@ -85,9 +85,6 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		/* Store natural geometry at start of move */
 		view_store_natural_geometry(view);
 
-		/* Prevent region snapping when just moving via A-Left mousebind */
-		g_seat.region_prevent_snap = keyboard_get_all_modifiers();
-
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
 	case LAB_INPUT_STATE_RESIZE: {
@@ -286,8 +283,6 @@ interactive_cancel(struct view *view)
 	if (g_server.grabbed_view != view) {
 		return;
 	}
-
-	overlay_finish();
 
 	g_server.grabbed_view = NULL;
 

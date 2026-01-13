@@ -6,11 +6,11 @@
 #include <wlr/util/log.h>
 #include "common/set.h"
 #include "input/cursor.h"
-#include "overlay.h"
 
 #define XCURSOR_DEFAULT "left_ptr"
 #define XCURSOR_SIZE 24
 
+struct output;
 struct wlr_xdg_popup;
 
 enum input_mode {
@@ -83,10 +83,6 @@ struct seat {
 		} events;
 		struct wlr_scene_tree *icons;
 	} drag;
-
-	struct overlay overlay;
-	/* Used to prevent region snapping when starting a move with A-Left */
-	bool region_prevent_snap;
 
 	struct wl_list inputs;
 	struct wl_listener new_input;

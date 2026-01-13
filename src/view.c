@@ -186,22 +186,22 @@ view_get_edge_snap_box(struct view *view, struct output *output,
 		enum lab_edge edge)
 {
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
-	int x1 = rc.gap;
-	int y1 = rc.gap;
-	int x2 = usable.width - rc.gap;
-	int y2 = usable.height - rc.gap;
+	int x1 = 0;
+	int y1 = 0;
+	int x2 = usable.width;
+	int y2 = usable.height;
 
 	if (edge & LAB_EDGE_RIGHT) {
-		x1 = (usable.width + rc.gap) / 2;
+		x1 = (usable.width) / 2;
 	}
 	if (edge & LAB_EDGE_LEFT) {
-		x2 = (usable.width - rc.gap) / 2;
+		x2 = (usable.width) / 2;
 	}
 	if (edge & LAB_EDGE_BOTTOM) {
-		y1 = (usable.height + rc.gap) / 2;
+		y1 = (usable.height) / 2;
 	}
 	if (edge & LAB_EDGE_TOP) {
-		y2 = (usable.height - rc.gap) / 2;
+		y2 = (usable.height) / 2;
 	}
 
 	struct wlr_box dst = {
