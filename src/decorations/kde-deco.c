@@ -4,7 +4,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include "common/list.h"
 #include "common/mem.h"
-#include "config/rcxml.h"
 #include "decorations.h"
 #include "labwc.h"
 #include "view.h"
@@ -38,27 +37,9 @@ handle_mode(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	enum wlr_server_decoration_manager_mode client_mode =
-		kde_deco->wlr_kde_decoration->mode;
-
-	switch (client_mode) {
-	case WLR_SERVER_DECORATION_MANAGER_MODE_SERVER:
-		kde_deco->view->ssd_preference = LAB_SSD_PREF_SERVER;
-		break;
-	case WLR_SERVER_DECORATION_MANAGER_MODE_NONE:
-	case WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT:
-		kde_deco->view->ssd_preference = LAB_SSD_PREF_CLIENT;
-		break;
-	default:
-		wlr_log(WLR_ERROR, "Unspecified kde decoration variant "
-			"requested: %u", client_mode);
-	}
-
-	if (kde_deco->view->ssd_preference == LAB_SSD_PREF_SERVER) {
-		view_set_ssd_mode(kde_deco->view, LAB_SSD_MODE_FULL);
-	} else {
-		view_set_ssd_mode(kde_deco->view, LAB_SSD_MODE_NONE);
-	}
+	view_set_ssd_enabled(kde_deco->view,
+		kde_deco->wlr_kde_decoration->mode
+			== WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 }
 
 static void
@@ -112,6 +93,7 @@ void
 kde_server_decoration_update_default(void)
 {
 	assert(kde_deco_mgr);
+	/* Default to server-side decorations */
 	wlr_server_decoration_manager_set_default_mode(kde_deco_mgr,
 		WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 }
