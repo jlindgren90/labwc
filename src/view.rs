@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
 use bindings::*;
+use foreign_toplevel::ForeignToplevel;
 use lazy_static;
 use std::collections::BTreeMap;
 use std::ffi::{c_char, CString};
@@ -63,6 +64,17 @@ pub extern "C" fn view_is_floating(state: &ViewState) -> bool {
     !state.fullscreen && state.maximized == ViewAxis::None && state.tiled == 0
 }
 
+impl From<&ViewState> for ForeignToplevelState {
+    fn from(state: &ViewState) -> Self {
+        ForeignToplevelState {
+            maximized: state.maximized == ViewAxis::Both,
+            minimized: state.minimized,
+            activated: state.activated,
+            fullscreen: state.fullscreen,
+        }
+    }
+}
+
 #[derive(Default)]
 struct View {
     c_ptr: *mut CView,
@@ -70,6 +82,7 @@ struct View {
     app_id: CString,
     title: CString,
     state: Box<ViewState>,
+    foreign_toplevels: Vec<ForeignToplevel>,
 }
 
 impl View {
@@ -78,6 +91,10 @@ impl View {
             self.app_id = app_id;
             self.state.app_id = self.app_id.as_ptr(); // for C interop
             unsafe { view_notify_app_id_change(self.c_ptr) };
+            for toplevel in &self.foreign_toplevels {
+                toplevel.send_app_id(&self.app_id);
+                toplevel.send_done();
+            }
         }
     }
 
@@ -86,6 +103,10 @@ impl View {
             self.title = title;
             self.state.title = self.title.as_ptr(); // for C interop
             unsafe { view_notify_title_change(self.c_ptr) };
+            for toplevel in &self.foreign_toplevels {
+                toplevel.send_title(&self.title);
+                toplevel.send_done();
+            }
         }
     }
 
@@ -97,6 +118,7 @@ impl View {
             } else {
                 unsafe { xdg_toplevel_view_set_activated(self.c_ptr, activated) };
             }
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -108,6 +130,7 @@ impl View {
             } else {
                 unsafe { xdg_toplevel_view_set_fullscreen(self.c_ptr, fullscreen) };
             }
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -119,7 +142,7 @@ impl View {
             } else {
                 unsafe { xdg_toplevel_view_maximize(self.c_ptr, maximized as i32) };
             }
-            unsafe { view_notify_maximized(self.c_ptr) };
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -129,6 +152,7 @@ impl View {
             if self.is_xwayland {
                 unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
             }
+            self.send_foreign_toplevel_state();
         }
     }
 
@@ -140,12 +164,29 @@ impl View {
             }
         }
     }
+
+    fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
+        let toplevel = ForeignToplevel::new(client, self.c_ptr);
+        toplevel.send_app_id(&self.app_id);
+        toplevel.send_title(&self.title);
+        toplevel.send_state((&*self.state).into());
+        toplevel.send_done();
+        self.foreign_toplevels.push(toplevel);
+    }
+
+    fn send_foreign_toplevel_state(&self) {
+        for toplevel in &self.foreign_toplevels {
+            toplevel.send_state((&*self.state).into());
+            toplevel.send_done();
+        }
+    }
 }
 
 #[derive(Default)]
 struct Views {
     by_id: BTreeMap<ViewId, View>, // can be iterated in creation-order
     max_used_id: ViewId,
+    foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
 lazy_static!(VIEWS, Views, Views::default(), views, views_mut);
@@ -192,10 +233,21 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 #[no_mangle]
 pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
     let mut views = views_mut();
-    if let Some(view) = views.by_id.get_mut(&id) {
+    let Views {
+        by_id,
+        foreign_toplevel_clients,
+        ..
+    } = &mut *views;
+    if let Some(view) = by_id.get_mut(&id) {
         view.state.mapped = true;
         view.state.ever_mapped = true;
         view.state.focus_mode = focus_mode;
+        // Only focusable views should be shown in taskbars etc.
+        if view_is_focusable(&view.state) {
+            for &mut client in foreign_toplevel_clients {
+                view.add_foreign_toplevel(client);
+            }
+        }
         let view_ptr = view.c_ptr;
         drop(views); // FIXME: to allow reentrant borrow
         unsafe { view_notify_map(view_ptr) };
@@ -207,6 +259,9 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
     let mut views = views_mut();
     if let Some(view) = views.by_id.get_mut(&id) {
         view.state.mapped = false;
+        for resource in view.foreign_toplevels.drain(..) {
+            resource.close();
+        }
         let view_ptr = view.c_ptr;
         drop(views); // FIXME: to allow reentrant borrow
         unsafe { view_notify_unmap(view_ptr) };
@@ -254,6 +309,35 @@ pub extern "C" fn view_offer_focus(id: ViewId) {
         if view.is_xwayland {
             unsafe { xwayland_view_offer_focus(view.c_ptr) };
         }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
+    let Views {
+        by_id,
+        foreign_toplevel_clients,
+        ..
+    } = &mut *views_mut();
+    foreign_toplevel_clients.push(client);
+    for view in by_id.values_mut() {
+        if view_is_focusable(&view.state) {
+            view.add_foreign_toplevel(client);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn views_remove_foreign_toplevel_client(client: *mut WlResource) {
+    views_mut()
+        .foreign_toplevel_clients
+        .retain(|&c| c != client);
+}
+
+#[no_mangle]
+pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlResource) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.foreign_toplevels.retain(|t| t.res != resource);
     }
 }
 

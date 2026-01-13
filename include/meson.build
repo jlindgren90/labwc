@@ -22,6 +22,7 @@ endforeach
 bindings = [
   custom_target(
     input: [
+      'foreign-toplevel.h',
       'rs-bindings.h',
       'rs-types.h',
       'view-c.h',

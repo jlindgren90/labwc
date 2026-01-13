@@ -169,8 +169,6 @@ struct view {
 	struct wl_listener request_fullscreen;
 	struct wl_listener set_title;
 
-	struct foreign_toplevel *foreign_toplevel;
-
 	/* used by scaled_icon_buffer */
 	struct {
 		char *name;
@@ -178,15 +176,6 @@ struct view {
 	} icon;
 
 	struct lab_data_buffer *icon_buffer;
-
-	struct {
-		struct wl_signal new_app_id;
-		struct wl_signal new_title;
-		struct wl_signal maximized;
-		struct wl_signal minimized;
-		struct wl_signal fullscreened;
-		struct wl_signal activated;     /* bool *activated */
-	} events;
 };
 
 struct xdg_toplevel_view {

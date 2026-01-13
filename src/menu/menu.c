@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <libxml/parser.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>

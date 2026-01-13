@@ -11,7 +11,6 @@ void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
 void view_notify_unmap(CView *view);
-void view_notify_maximized(CView *view);
 
 void xdg_toplevel_view_maximize(CView *view, /*enum view_axis*/ int maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
