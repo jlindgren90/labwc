@@ -14,7 +14,6 @@
 #include <wlr/types/wlr_drm_lease_v1.h>
 #include <wlr/types/wlr_export_dmabuf_v1.h>
 #include <wlr/types/wlr_ext_data_control_v1.h>
-#include <wlr/types/wlr_ext_foreign_toplevel_list_v1.h>
 #include <wlr/types/wlr_ext_image_capture_source_v1.h>
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
@@ -50,6 +49,7 @@
 #include "config/session.h"
 #include "decorations.h"
 #include "desktop-entry.h"
+#include "foreign-toplevel.h"
 #include "idle.h"
 #include "input/keyboard.h"
 #include "labwc.h"
@@ -64,7 +64,6 @@
 #include "xwayland.h"
 
 #define LAB_EXT_DATA_CONTROL_VERSION 1
-#define LAB_EXT_FOREIGN_TOPLEVEL_LIST_VERSION 1
 #define LAB_WLR_COMPOSITOR_VERSION 6
 #define LAB_WLR_FRACTIONAL_SCALE_V1_VERSION 1
 #define LAB_WLR_LINUX_DMABUF_VERSION 4
@@ -616,6 +615,7 @@ server_init(void)
 	xdg_shell_init();
 	kde_server_decoration_init();
 	xdg_server_decoration_init();
+	foreign_toplevel_manager_init(g_server.wl_display);
 
 	struct wlr_presentation *presentation =
 		wlr_presentation_create(g_server.wl_display, g_server.backend,
@@ -654,13 +654,6 @@ server_init(void)
 	g_server.new_constraint.notify = create_constraint;
 	wl_signal_add(&g_server.constraints->events.new_constraint,
 		&g_server.new_constraint);
-
-	g_server.foreign_toplevel_manager =
-		wlr_foreign_toplevel_manager_v1_create(g_server.wl_display);
-
-	g_server.foreign_toplevel_list =
-		wlr_ext_foreign_toplevel_list_v1_create(g_server.wl_display,
-			LAB_EXT_FOREIGN_TOPLEVEL_LIST_VERSION);
 
 	wlr_alpha_modifier_v1_create(g_server.wl_display);
 
@@ -752,6 +745,7 @@ server_finish(void)
 	layers_finish();
 	kde_server_decoration_finish();
 	xdg_server_decoration_finish();
+	foreign_toplevel_manager_finish();
 	wl_list_remove(&g_server.new_constraint.link);
 	wl_list_remove(&g_server.output_power_manager_set_mode.link);
 	if (g_server.drm_lease_request.notify) {

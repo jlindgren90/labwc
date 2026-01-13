@@ -13,7 +13,6 @@
 #include "common/box.h"
 #include "config/rcxml.h"
 #include "cycle.h"
-#include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "output.h"
@@ -138,8 +137,6 @@ view_discover_output(struct view *view, struct wlr_box *geometry)
 void
 view_notify_active(struct view *view)
 {
-	wl_signal_emit_mutable(&view->events.activated,
-		(void *)&view->st->active);
 	ssd_set_active(view->ssd, view->st->active);
 }
 
@@ -291,7 +288,6 @@ _minimize(struct view *view, bool minimized, bool *need_refocus)
 	}
 
 	view_set_minimized(view->id, minimized);
-	wl_signal_emit_mutable(&view->events.minimized, NULL);
 	view_update_visibility(view);
 
 	/*
@@ -655,12 +651,6 @@ view_apply_special_geometry(struct view *view)
 	}
 }
 
-void
-view_notify_maximized(struct view *view)
-{
-	wl_signal_emit_mutable(&view->events.maximized, NULL);
-}
-
 static bool
 in_interactive_move(struct view *view)
 {
@@ -833,7 +823,6 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	}
 
 	view_set_fullscreen_internal(view->id, fullscreen);
-	wl_signal_emit_mutable(&view->events.fullscreened, NULL);
 
 	if (view->ssd_enabled) {
 		if (fullscreen) {
@@ -1082,7 +1071,6 @@ void
 view_notify_title_change(struct view *view)
 {
 	ssd_update_title(view->ssd);
-	wl_signal_emit_mutable(&view->events.new_title, NULL);
 }
 
 static void
@@ -1097,8 +1085,6 @@ drop_icon_buffer(struct view *view)
 void
 view_notify_app_id_change(struct view *view)
 {
-	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
-
 	drop_icon_buffer(view);
 	ssd_update_icon(view->ssd);
 }
@@ -1220,13 +1206,6 @@ view_init(struct view *view, bool is_xwayland)
 	view->id = view_add(view, is_xwayland);
 	view->st = view_get_state(view->id);
 	assert(view->st);
-
-	wl_signal_init(&view->events.new_app_id);
-	wl_signal_init(&view->events.new_title);
-	wl_signal_init(&view->events.maximized);
-	wl_signal_init(&view->events.minimized);
-	wl_signal_init(&view->events.fullscreened);
-	wl_signal_init(&view->events.activated);
 }
 
 void
@@ -1245,11 +1224,6 @@ view_destroy(struct view *view)
 	wl_list_remove(&view->request_fullscreen.link);
 	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->destroy.link);
-
-	if (view->foreign_toplevel) {
-		foreign_toplevel_destroy(view->foreign_toplevel);
-		view->foreign_toplevel = NULL;
-	}
 
 	cursor_on_view_destroy(view);
 
@@ -1286,13 +1260,6 @@ view_destroy(struct view *view)
 		wlr_scene_node_destroy(&view->scene_tree->node);
 		view->scene_tree = NULL;
 	}
-
-	assert(wl_list_empty(&view->events.new_app_id.listener_list));
-	assert(wl_list_empty(&view->events.new_title.listener_list));
-	assert(wl_list_empty(&view->events.maximized.listener_list));
-	assert(wl_list_empty(&view->events.minimized.listener_list));
-	assert(wl_list_empty(&view->events.fullscreened.listener_list));
-	assert(wl_list_empty(&view->events.activated.listener_list));
 
 	view_remove(view->id);
 

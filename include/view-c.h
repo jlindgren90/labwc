@@ -50,7 +50,6 @@ void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
 void view_notify_unmap(CView *view);
 void view_notify_active(CView *view);
-void view_notify_maximized(CView *view);
 
 void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
