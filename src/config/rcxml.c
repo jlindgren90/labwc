@@ -664,8 +664,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		} else {
 			rc.xdg_shell_server_side_deco = true;
 		}
-	} else if (!strcmp(nodename, "gap.core")) {
-		rc.gap = atoi(content);
 	} else if (!strcasecmp(nodename, "adaptiveSync.core")) {
 		set_adaptive_sync_mode(content, &rc.adaptive_sync);
 	} else if (!strcasecmp(nodename, "Hdr.core")) {
@@ -832,7 +830,6 @@ rcxml_init(void)
 	rc.xdg_shell_server_side_deco = true;
 	rc.hide_maximized_window_titlebar = false;
 
-	rc.gap = 0;
 	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;
 	rc.target_render_depth = LAB_RENDER_BIT_DEPTH_DEFAULT;
 	rc.auto_enable_outputs = true;

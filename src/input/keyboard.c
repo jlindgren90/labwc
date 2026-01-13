@@ -138,11 +138,6 @@ handle_modifiers(struct wl_listener *listener, void *data)
 
 	key_state_indicator_update();
 
-	if (server.input_mode == LAB_INPUT_STATE_MOVE) {
-		/* Pressing/releasing modifier key may show/hide region overlay */
-		overlay_update();
-	}
-
 	bool cycling = server.input_mode == LAB_INPUT_STATE_CYCLE;
 
 	if (cycling && !keyboard_get_all_modifiers()) {
