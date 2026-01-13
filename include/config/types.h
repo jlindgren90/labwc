@@ -27,13 +27,6 @@ enum lab_rotation {
 	LAB_ROTATE_270,
 };
 
-enum lab_ssd_mode {
-	LAB_SSD_MODE_NONE = 0,
-	LAB_SSD_MODE_BORDER,
-	LAB_SSD_MODE_FULL,
-	LAB_SSD_MODE_INVALID,
-};
-
 enum lab_tristate {
 	LAB_STATE_UNSPECIFIED = 0,
 	LAB_STATE_ENABLED,
