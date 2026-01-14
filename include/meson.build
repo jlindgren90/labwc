@@ -22,6 +22,7 @@ endforeach
 bindings = [
   custom_target(
     input: [
+      'common/edge.h',
       'rs-bindings.h',
       'rs-types.h',
       'view-c.h',
@@ -29,6 +30,7 @@ bindings = [
     output: 'bindings.rs',
     command: [
       'bindgen',
+      '--no-prepend-enum-name',
       '--with-derive-default',
       '../include/rs-bindings.h',
       '-o', '@OUTPUT@'

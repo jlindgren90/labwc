@@ -117,7 +117,7 @@ ssd_titlebar_create(struct ssd *ssd)
 	ssd_update_icon(ssd);
 	ssd_update_title(ssd);
 
-	bool maximized = view->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
 	if (maximized) {
 		set_alt_button_icon(ssd, LAB_NODE_BUTTON_MAXIMIZE, true);
@@ -269,7 +269,7 @@ ssd_titlebar_update(struct ssd *ssd)
 	int width = view->current.width;
 	int corner_width = ssd_get_corner_width();
 
-	bool maximized = view->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 	bool squared = ssd_should_be_squared(ssd);
 
 	if (ssd->state.was_maximized != maximized
@@ -529,6 +529,7 @@ ssd_should_be_squared(struct ssd *ssd)
 	struct view *view = ssd->view;
 	int corner_width = ssd_get_corner_width();
 
-	return (view_is_tiled(view) || view->current.width < corner_width * 2)
-		&& view->maximized != VIEW_AXIS_BOTH;
+	return (view->st->tiled != LAB_EDGE_NONE
+			|| view->current.width < corner_width * 2)
+		&& view->st->maximized != VIEW_AXIS_BOTH;
 }

@@ -9,7 +9,6 @@
 #include <xkbcommon/xkbcommon.h>
 #include "common/edge.h"
 #include "config.h"
-#include "config/types.h"
 
 #include "view-c.h"
 #include "view-rs.h"
@@ -36,23 +35,6 @@ enum ssd_preference {
 	LAB_SSD_PREF_UNSPEC = 0,
 	LAB_SSD_PREF_CLIENT,
 	LAB_SSD_PREF_SERVER,
-};
-
-/**
- * Directions in which a view can be maximized. "None" is used
- * internally to mean "not maximized" but is not valid in rc.xml.
- * Therefore when parsing rc.xml, "None" means "Invalid".
- */
-enum view_axis {
-	VIEW_AXIS_NONE = 0,
-	VIEW_AXIS_HORIZONTAL = (1 << 0),
-	VIEW_AXIS_VERTICAL = (1 << 1),
-	VIEW_AXIS_BOTH = (VIEW_AXIS_HORIZONTAL | VIEW_AXIS_VERTICAL),
-	/*
-	 * If view_axis is treated as a bitfield, INVALID should never
-	 * set the HORIZONTAL or VERTICAL bits.
-	 */
-	VIEW_AXIS_INVALID = (1 << 2),
 };
 
 enum view_wants_focus {
@@ -99,11 +81,6 @@ struct view_size_hints {
 struct view_impl {
 	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
-	void (*set_activated)(struct view *view, bool activated);
-	void (*set_fullscreen)(struct view *view, bool fullscreen);
-	void (*notify_tiled)(struct view *view);
-	void (*maximize)(struct view *view, enum view_axis maximized);
-	void (*minimize)(struct view *view, bool minimize);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
@@ -148,14 +125,8 @@ struct view {
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
 
-	bool mapped;
-	bool been_mapped;
 	bool ssd_enabled;
 	enum ssd_preference ssd_preference;
-	bool minimized;
-	enum view_axis maximized;
-	bool fullscreen;
-	enum lab_edge tiled;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 
 	/*
@@ -298,7 +269,6 @@ void mappable_disconnect(struct mappable *mappable);
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
-void view_set_activated(struct view *view, bool activated);
 void view_set_output(struct view *view, struct output *output);
 void view_close(struct view *view);
 
@@ -335,8 +305,6 @@ void view_center(struct view *view, const struct wlr_box *ref);
 
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
-void view_set_maximized(struct view *view, enum view_axis maximized);
-void view_set_untiled(struct view *view);
 void view_maximize(struct view *view, enum view_axis axis);
 void view_set_fullscreen(struct view *view, bool fullscreen);
 void view_toggle_maximize(struct view *view, enum view_axis axis);
@@ -345,8 +313,6 @@ bool view_wants_decorations(struct view *view);
 bool view_is_always_on_top(struct view *view);
 void view_toggle_always_on_top(struct view *view);
 
-bool view_is_tiled(struct view *view);
-bool view_is_floating(struct view *view);
 void view_set_ssd_enabled(struct view *view, bool enabled);
 void view_toggle_fullscreen(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
@@ -383,7 +349,7 @@ void view_adjust_size(struct view *view, int *w, int *h);
 void view_on_output_destroy(struct view *view);
 void view_update_visibility(struct view *view);
 
-void view_init(struct view *view);
+void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
