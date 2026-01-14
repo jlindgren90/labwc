@@ -90,16 +90,17 @@ static void
 do_late_positioning(struct view *view)
 {
 	struct server *server = view->server;
+	struct wlr_box geo = view->st->pending;
 	if (server->input_mode == LAB_INPUT_STATE_MOVE
 			&& view == server->grabbed_view) {
 		/* Reposition the view while anchoring it to cursor */
-		interactive_anchor_to_cursor(server, &view->pending);
+		interactive_anchor_to_cursor(server, &geo);
 	} else {
 		/* TODO: smart placement? */
 		view_compute_centered_position(view, NULL,
-			view->pending.width, view->pending.height,
-			&view->pending.x, &view->pending.y);
+			geo.width, geo.height, &geo.x, &geo.y);
 	}
+	view_set_pending_pos(view->id, geo.x, geo.y);
 }
 
 static void
@@ -126,15 +127,14 @@ center_fullscreen_if_needed(struct view *view)
 	struct wlr_box output_box = {0};
 	wlr_output_layout_get_box(view->server->output_layout,
 		view->output->wlr_output, &output_box);
-	view->current = rect_center(view->current.width, view->current.height,
-		output_box, output_box);
+	struct wlr_box geom = rect_center(view->st->current.width,
+		view->st->current.height, output_box, output_box);
 
 	/* Reset pending x/y to computed position also */
-	view->pending.x = view->current.x;
-	view->pending.y = view->current.y;
+	view_set_current_pos(view->id, geom.x, geom.y);
+	view_set_pending_pos(view->id, geom.x, geom.y);
 
-	if (view->current.width >= output_box.width
-			&& view->current.width >= output_box.height) {
+	if (geom.width >= output_box.width && geom.width >= output_box.height) {
 		disable_fullscreen_bg(view);
 		return;
 	}
@@ -148,7 +148,7 @@ center_fullscreen_if_needed(struct view *view)
 	}
 
 	wlr_scene_node_set_position(&xdg_view->fullscreen_bg->node,
-		output_box.x - view->current.x, output_box.y - view->current.y);
+		output_box.x - geom.x, output_box.y - geom.y);
 	wlr_scene_rect_set_size(xdg_view->fullscreen_bg,
 		output_box.width, output_box.height);
 	wlr_scene_node_set_enabled(&xdg_view->fullscreen_bg->node, true);
@@ -211,9 +211,8 @@ handle_commit(struct wl_listener *listener, void *data)
 	 * the pending x/y is also unset and we still need to position
 	 * the window.
 	 */
-	if (wlr_box_empty(&view->pending) && !wlr_box_empty(&size)) {
-		view->pending.width = size.width;
-		view->pending.height = size.height;
+	if (wlr_box_empty(&view->st->pending) && !wlr_box_empty(&size)) {
+		view_set_pending_size(view->id, size.width, size.height);
 		do_late_positioning(view);
 		update_required = true;
 	}
@@ -226,8 +225,8 @@ handle_commit(struct wl_listener *listener, void *data)
 	 * size of the client area. As a workaround, we try to detect
 	 * this case and ignore the out-of-date window geometry.
 	 */
-	if (size.width != view->pending.width
-			|| size.height != view->pending.height) {
+	if (size.width != view->st->pending.width
+			|| size.height != view->st->pending.height) {
 		/*
 		 * Not using wlr_surface_get_extend() since Thunderbird
 		 * sometimes resizes the window geometry and the toplevel
@@ -237,8 +236,8 @@ handle_commit(struct wl_listener *listener, void *data)
 			.width = view->surface->current.width,
 			.height = view->surface->current.height,
 		};
-		if (extent.width == view->pending.width
-				&& extent.height == view->pending.height) {
+		if (extent.width == view->st->pending.width
+				&& extent.height == view->st->pending.height) {
 			wlr_log(WLR_DEBUG,
 				"window geometry for client (%s) appears to be "
 				"incorrect - ignoring",
@@ -247,8 +246,8 @@ handle_commit(struct wl_listener *listener, void *data)
 		}
 	}
 
-	struct wlr_box *current = &view->current;
-	if (current->width != size.width || current->height != size.height) {
+	if (view->st->current.width != size.width
+			|| view->st->current.height != size.height) {
 		update_required = true;
 	}
 
@@ -277,7 +276,10 @@ handle_commit(struct wl_listener *listener, void *data)
 		 * actual view.
 		 */
 		if (!view->pending_configure_serial) {
-			view->pending = view->current;
+			view_set_pending_pos(view->id, view->st->current.x,
+				view->st->current.y);
+			view_set_pending_size(view->id, view->st->current.width,
+				view->st->current.height);
 
 			/*
 			 * wlroots retains the size set by any call to
@@ -297,8 +299,8 @@ handle_commit(struct wl_listener *listener, void *data)
 			 *
 			 * This is not ideal, but it is the cleanest option.
 			 */
-			toplevel->scheduled.width = view->current.width;
-			toplevel->scheduled.height = view->current.height;
+			toplevel->scheduled.width = view->st->current.width;
+			toplevel->scheduled.height = view->st->current.height;
 		}
 	}
 }
@@ -326,9 +328,9 @@ handle_configure_timeout(void *data)
 		return 0; /* ignored per wl_event_loop docs */
 	}
 
-	bool empty_pending = wlr_box_empty(&view->pending);
-	if (empty_pending || view->pending.x != view->current.x
-			|| view->pending.y != view->current.y) {
+	bool empty_pending = wlr_box_empty(&view->st->pending);
+	if (empty_pending || view->st->pending.x != view->st->current.x
+			|| view->st->pending.y != view->st->current.y) {
 		/*
 		 * This is a pending move + resize and the client is
 		 * taking too long to respond to the resize. Apply the
@@ -350,25 +352,29 @@ handle_configure_timeout(void *data)
 		 */
 		if (empty_pending) {
 			wlr_log(WLR_INFO, "using fallback position");
-			view->pending.x = VIEW_FALLBACK_X;
-			view->pending.y = VIEW_FALLBACK_Y;
+			int x = VIEW_FALLBACK_X;
+			int y = VIEW_FALLBACK_Y;
 			/* At least try to keep it on the same output */
 			if (output_is_usable(view->output)) {
 				struct wlr_box box =
 					output_usable_area_in_layout_coords(view->output);
-				view->pending.x += box.x;
-				view->pending.y += box.y;
+				x += box.x;
+				y += box.y;
 			}
+			view_set_pending_pos(view->id, x, y);
 		}
-		view->current.x = view->pending.x;
-		view->current.y = view->pending.y;
+		view_set_current_pos(view->id, view->st->pending.x,
+			view->st->pending.y);
 	}
 
 	center_fullscreen_if_needed(view);
 	view_moved(view);
 
 	/* Re-sync pending view with current state */
-	view->pending = view->current;
+	view_set_pending_pos(view->id, view->st->current.x,
+		view->st->current.y);
+	view_set_pending_size(view->id, view->st->current.width,
+		view->st->current.height);
 
 	return 0; /* ignored per wl_event_loop docs */
 }
@@ -535,8 +541,9 @@ handle_set_app_id(struct wl_listener *listener, void *data)
 	view_set_app_id(view->id, toplevel->app_id);
 }
 
-static void
-xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
+void
+xdg_toplevel_view_configure(struct view *view, struct wlr_box geo,
+		struct wlr_box *pending, struct wlr_box *current)
 {
 	uint32_t serial = 0;
 
@@ -548,8 +555,7 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
 	 * size is the same (and there is no pending configure request)
 	 * then we can just move the view directly.
 	 */
-	if (geo.width != view->pending.width
-			|| geo.height != view->pending.height) {
+	if (geo.width != pending->width || geo.height != pending->height) {
 		if (toplevel->base->initialized) {
 			serial = wlr_xdg_toplevel_set_size(toplevel, geo.width, geo.height);
 		} else {
@@ -566,12 +572,12 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo)
 		}
 	}
 
-	view->pending = geo;
+	*pending = geo;
 	if (serial > 0) {
 		set_pending_configure_serial(view, serial);
 	} else if (view->pending_configure_serial == 0) {
-		view->current.x = geo.x;
-		view->current.y = geo.y;
+		current->x = geo.x;
+		current->y = geo.y;
 		/*
 		 * It's a bit difficult to think of a corner case where
 		 * center_fullscreen_if_needed() would actually be needed
@@ -750,7 +756,7 @@ set_initial_position(struct view *view)
 	if (parent) {
 		/* Child views are center-aligned relative to their parents */
 		view_set_output(view, parent->output);
-		view_center(view, &parent->pending);
+		view_center(view, &parent->st->pending);
 		return;
 	}
 
@@ -780,11 +786,12 @@ handle_map(struct wl_listener *listener, void *data)
 		 * Set initial "pending" dimensions. "Current"
 		 * dimensions remain zero until handle_commit().
 		 */
-		if (wlr_box_empty(&view->pending)) {
+		if (wlr_box_empty(&view->st->pending)) {
 			struct wlr_xdg_surface *xdg_surface =
 				xdg_surface_from_view(view);
-			view->pending.width = xdg_surface->geometry.width;
-			view->pending.height = xdg_surface->geometry.height;
+			view_set_pending_size(view->id,
+				xdg_surface->geometry.width,
+				xdg_surface->geometry.height);
 		}
 
 		/*
@@ -801,8 +808,8 @@ handle_map(struct wl_listener *listener, void *data)
 		 * Set initial "current" position directly before
 		 * calling view_moved() to reduce flicker
 		 */
-		view->current.x = view->pending.x;
-		view->current.y = view->pending.y;
+		view_set_current_pos(view->id, view->st->pending.x,
+			view->st->pending.y);
 
 		view_moved(view);
 	}
@@ -820,7 +827,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 }
 
 static const struct view_impl xdg_toplevel_view_impl = {
-	.configure = xdg_toplevel_view_configure,
 	.close = xdg_toplevel_view_close,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,

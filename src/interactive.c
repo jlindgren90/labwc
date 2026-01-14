@@ -86,7 +86,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		}
 
 		/* Store natural geometry at start of move */
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
@@ -125,7 +125,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	/* Remember view and cursor positions at start of move/resize */
 	server->grab_x = seat->cursor->x;
 	server->grab_y = seat->cursor->y;
-	server->grab_box = view->current;
+	server->grab_box = view->st->current;
 	server->resize_edges = edges;
 
 	seat_focus_override_begin(seat, mode, cursor_shape);
@@ -139,11 +139,11 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	 */
 	if (mode == LAB_INPUT_STATE_MOVE && !view_is_floating(view->st)
 			&& rc.unsnap_threshold <= 0) {
-		struct wlr_box natural_geo = view->natural_geometry;
+		struct wlr_box natural_geo = view->st->natural_geom;
 		interactive_anchor_to_cursor(server, &natural_geo);
 		view_set_maximized(view->id, VIEW_AXIS_NONE);
 		view_set_tiled(view->id, LAB_EDGE_NONE);
-		view_move_resize(view, natural_geo);
+		view_move_resize(view->id, natural_geo);
 	}
 }
 

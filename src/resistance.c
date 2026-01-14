@@ -10,22 +10,22 @@ resistance_unsnap_apply(struct view *view, int *x, int *y)
 		return false;
 	}
 
-	int dx = *x - view->current.x;
-	int dy = *y - view->current.y;
+	int dx = *x - view->st->current.x;
+	int dy = *y - view->st->current.y;
 	if (view->st->maximized == VIEW_AXIS_HORIZONTAL) {
 		if (abs(dx) < rc.unmaximize_threshold) {
-			*x = view->current.x;
+			*x = view->st->current.x;
 			return false;
 		}
 	} else if (view->st->maximized == VIEW_AXIS_VERTICAL) {
 		if (abs(dy) < rc.unmaximize_threshold) {
-			*y = view->current.y;
+			*y = view->st->current.y;
 			return false;
 		}
 	} else {
 		if (dx * dx + dy * dy < rc.unsnap_threshold * rc.unsnap_threshold) {
-			*x = view->current.x;
-			*y = view->current.y;
+			*x = view->st->current.x;
+			*y = view->st->current.y;
 			return false;
 		}
 	}

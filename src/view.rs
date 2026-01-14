@@ -50,7 +50,10 @@ pub struct ViewState {
     fullscreen: bool,
     maximized: ViewAxis,
     minimized: bool,
-    tiled: i32, // enum lab_edge
+    tiled: i32,         // enum lab_edge
+    current: Rect,      // current displayed geometry
+    pending: Rect,      // expected geometry after any pending move/resize
+    natural_geom: Rect, // un-{maximized/fullscreen/tiled} geometry
 }
 
 #[no_mangle]
@@ -162,6 +165,45 @@ impl View {
             if !self.is_xwayland {
                 unsafe { xdg_toplevel_view_notify_tiled(self.c_ptr) };
             }
+        }
+    }
+
+    fn move_resize(&mut self, geom: Rect) {
+        if self.is_xwayland {
+            unsafe {
+                xwayland_view_configure(
+                    self.c_ptr,
+                    geom,
+                    &mut self.state.pending,
+                    &mut self.state.current,
+                )
+            };
+        } else {
+            unsafe {
+                xdg_toplevel_view_configure(
+                    self.c_ptr,
+                    geom,
+                    &mut self.state.pending,
+                    &mut self.state.current,
+                )
+            };
+        }
+        unsafe { view_notify_move_resize(self.c_ptr) };
+    }
+
+    fn store_natural_geom(&mut self) {
+        // Don't save natural geometry if fullscreen or tiled
+        if self.state.fullscreen || self.state.tiled != 0 {
+            return;
+        }
+        // If only one axis is maximized, save geometry of the other
+        if self.state.maximized == ViewAxis::None || self.state.maximized == ViewAxis::Vertical {
+            self.state.natural_geom.x = self.state.pending.x;
+            self.state.natural_geom.width = self.state.pending.width;
+        }
+        if self.state.maximized == ViewAxis::None || self.state.maximized == ViewAxis::Horizontal {
+            self.state.natural_geom.y = self.state.pending.y;
+            self.state.natural_geom.height = self.state.pending.height;
         }
     }
 
@@ -300,6 +342,59 @@ pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
 pub extern "C" fn view_set_tiled(id: ViewId, tiled: i32) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_tiled(tiled);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_current_pos(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.current.x = x;
+        view.state.current.y = y;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_current_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.current.width = width;
+        view.state.current.height = height;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_pending_pos(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.pending.x = x;
+        view.state.pending.y = y;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_pending_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.pending.width = width;
+        view.state.pending.height = height;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.move_resize(geom);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_natural_geom(id: ViewId, geom: Rect) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.state.natural_geom = geom;
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_store_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.store_natural_geom();
     }
 }
 
