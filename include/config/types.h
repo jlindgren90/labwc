@@ -33,27 +33,4 @@ enum lab_tristate {
 	LAB_STATE_DISABLED
 };
 
-/*
- * This enum type is a set of bit flags where each set bit makes the
- * criteria more restrictive. For example:
- *
- * (LAB_VIEW_CRITERIA_FULLSCREEN | LAB_VIEW_CRITERIA_CURRENT_WORKSPACE)
- * matches only fullscreen views on the current workspace, while
- *
- * (LAB_VIEW_CRITERIA_ALWAYS_ON_TOP | LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP)
- * would be contradictory and match nothing at all.
- */
-enum lab_view_criteria {
-	/* No filter -> all focusable views */
-	LAB_VIEW_CRITERIA_NONE = 0,
-
-	/* Positive criteria */
-	LAB_VIEW_CRITERIA_FULLSCREEN              = 1 << 1,
-	LAB_VIEW_CRITERIA_ALWAYS_ON_TOP           = 1 << 2,
-
-	/* Negative criteria */
-	LAB_VIEW_CRITERIA_NO_DIALOG               = 1 << 5,
-	LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP        = 1 << 6,
-};
-
 #endif /* LABWC_CONFIG_TYPES_H */

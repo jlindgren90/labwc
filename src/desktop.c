@@ -128,8 +128,8 @@ static struct view *
 desktop_topmost_focusable_view(void)
 {
 	struct view *view;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
-		if (!view->minimized) {
+	wl_list_for_each(view, &g_server.views, link) {
+		if (view_is_focusable(view) && !view->minimized) {
 			return view;
 		}
 	}
@@ -171,8 +171,8 @@ desktop_update_top_layer_visibility(void)
 	 * any views above it
 	 */
 	uint64_t outputs_covered = 0;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
-		if (view->minimized) {
+	wl_list_for_each(view, &g_server.views, link) {
+		if (!view->mapped || view->minimized) {
 			continue;
 		}
 		if (!output_is_usable(view->output)) {

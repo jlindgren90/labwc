@@ -174,10 +174,11 @@ handle_osd_tree_destroy(struct wl_listener *listener, void *data)
 static bool
 init_cycle(void)
 {
-	enum lab_view_criteria criteria = LAB_VIEW_CRITERIA_NO_DIALOG;
-
 	struct view *view;
-	for_each_view(view, &g_server.views, criteria) {
+	wl_list_for_each(view, &g_server.views, link) {
+		if (!view_is_focusable(view) || view != view_get_root(view)) {
+			continue;
+		}
 		wl_list_append(&g_server.cycle.views, &view->cycle_link);
 	}
 	if (wl_list_empty(&g_server.cycle.views)) {
