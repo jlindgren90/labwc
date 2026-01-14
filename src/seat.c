@@ -543,10 +543,10 @@ handle_focus_change(struct wl_listener *listener, void *data)
 
 	if (view != g_server.active_view) {
 		if (g_server.active_view) {
-			view_set_activated(g_server.active_view, false);
+			view_set_active(g_server.active_view->id, false);
 		}
 		if (view) {
-			view_set_activated(view, true);
+			view_set_active(view->id, true);
 		}
 		g_server.active_view = view;
 	}

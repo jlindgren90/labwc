@@ -9,18 +9,18 @@
 bool
 resistance_unsnap_apply(struct view *view, int *x, int *y)
 {
-	if (view_is_floating(view)) {
+	if (view_is_floating(view->st)) {
 		return false;
 	}
 
 	int dx = *x - view->current.x;
 	int dy = *y - view->current.y;
-	if (view->maximized == VIEW_AXIS_HORIZONTAL) {
+	if (view->st->maximized == VIEW_AXIS_HORIZONTAL) {
 		if (abs(dx) < SINGLE_AXIS_UNMAXIMIZE_THRESHOLD) {
 			*x = view->current.x;
 			return false;
 		}
-	} else if (view->maximized == VIEW_AXIS_VERTICAL) {
+	} else if (view->st->maximized == VIEW_AXIS_VERTICAL) {
 		if (abs(dy) < SINGLE_AXIS_UNMAXIMIZE_THRESHOLD) {
 			*y = view->current.y;
 			return false;

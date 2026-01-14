@@ -234,7 +234,7 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 	case ACTION_TYPE_UNMAXIMIZE:
 		if (!strcmp(argument, "direction")) {
 			enum view_axis axis = view_axis_parse(content);
-			if (axis == VIEW_AXIS_NONE || axis == VIEW_AXIS_INVALID) {
+			if (axis == VIEW_AXIS_NONE) {
 				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
 					action_names[action->type], argument, content);
 			} else {
@@ -553,7 +553,7 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		if (view) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, view->maximized & ~axis);
+			view_maximize(view, view->st->maximized & ~axis);
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_FULLSCREEN:
