@@ -10,7 +10,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include "action.h"
 #include "buffer.h"
-#include "common/box.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "cycle.h"
@@ -21,6 +20,7 @@
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
+#include "util.h"
 #include "wlr/util/log.h"
 
 #if HAVE_XWAYLAND
@@ -387,10 +387,11 @@ view_compute_centered_position(struct view *view, const struct wlr_box *ref,
 	int height = h + margin.top + margin.bottom;
 
 	/* If reference box is NULL then center to usable area */
-	box_center(width, height, ref ? ref : &usable, &usable, x, y);
+	struct wlr_box centered =
+		rect_center(width, height, ref ? *ref : usable, usable);
 
-	*x += margin.left;
-	*y += margin.top;
+	*x = centered.x + margin.left;
+	*y = centered.y + margin.top;
 
 	return true;
 }
@@ -610,7 +611,7 @@ view_apply_maximized_geometry(struct view *view)
 	 */
 	struct wlr_box natural = view->natural_geometry;
 	if (view->st->maximized != VIEW_AXIS_BOTH
-			&& !box_intersects(&box, &natural)) {
+			&& !rect_intersects(box, natural)) {
 		view_compute_centered_position(view, NULL,
 			natural.width, natural.height,
 			&natural.x, &natural.y);
