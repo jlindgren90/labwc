@@ -74,42 +74,6 @@ view_get_root(struct view *view)
 	return view;
 }
 
-enum view_wants_focus
-view_wants_focus(struct view *view)
-{
-	assert(view);
-	if (view->impl->wants_focus) {
-		return view->impl->wants_focus(view);
-	}
-	return VIEW_WANTS_FOCUS_ALWAYS;
-}
-
-bool
-view_is_focusable(struct view *view)
-{
-	assert(view);
-	if (!view->st->mapped) {
-		return false;
-	}
-
-	switch (view_wants_focus(view)) {
-	case VIEW_WANTS_FOCUS_ALWAYS:
-	case VIEW_WANTS_FOCUS_LIKELY:
-		return view->st->mapped;
-	default:
-		return false;
-	}
-}
-
-void
-view_offer_focus(struct view *view)
-{
-	assert(view);
-	if (view->impl->offer_focus) {
-		view->impl->offer_focus(view);
-	}
-}
-
 /**
  * All view_apply_xxx_geometry() functions must *not* modify
  * any state besides repositioning or resizing the view.
