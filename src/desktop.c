@@ -37,7 +37,7 @@ desktop_arrange_all_views(struct server *server)
 	struct view *view;
 	wl_list_for_each(view, &server->views, link) {
 		if (!wlr_box_empty(&view->st->pending)) {
-			view_adjust_for_layout_change(view);
+			view_adjust_for_layout_change(view->id);
 		}
 	}
 }

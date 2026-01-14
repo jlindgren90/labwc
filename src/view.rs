@@ -95,6 +95,9 @@ struct View {
     title: CString,
     state: Box<ViewState>,
     foreign_toplevels: Vec<ForeignToplevel>,
+    saved_geom: Rect, // geometry before adjusting for layout change
+    in_layout_change: bool,
+    lost_output: bool,
 }
 
 impl View {
@@ -232,7 +235,11 @@ impl View {
                 )
             };
         }
-        unsafe { view_notify_move_resize(self.c_ptr) };
+        // User-initiated move/resize invalidates saved geometry
+        if !self.in_layout_change {
+            self.saved_geom = Rect::default();
+            self.lost_output = false;
+        }
     }
 
     fn store_natural_geom(&mut self) {
@@ -327,6 +334,29 @@ impl View {
         } else if self.state.tiled != 0 {
             self.apply_tiled_geom();
         }
+    }
+
+    fn adjust_for_layout_change(&mut self) {
+        // Save user geometry prior to first layout-change adjustment
+        if rect_empty(self.saved_geom) {
+            self.saved_geom = self.state.pending;
+        }
+        self.in_layout_change = true;
+        self.lost_output |= unsafe { !view_has_usable_output(self.c_ptr) };
+        // Keep non-floating views on the same output if possible
+        let is_floating = view_is_floating(&*self.state);
+        if is_floating || self.lost_output {
+            unsafe { view_discover_output(self.c_ptr, &self.saved_geom) };
+        }
+        if is_floating {
+            // Restore saved geometry, ensuring view is on-screen
+            let mut geom = self.saved_geom;
+            self.ensure_geom_onscreen(&mut geom);
+            self.move_resize(geom);
+        } else {
+            self.apply_special_geom();
+        }
+        self.in_layout_change = false;
     }
 
     fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
@@ -547,6 +577,13 @@ pub extern "C" fn view_apply_natural_geom(id: ViewId) {
 pub extern "C" fn view_apply_special_geom(id: ViewId) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.apply_special_geom();
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_adjust_for_layout_change(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.adjust_for_layout_change();
     }
 }
 

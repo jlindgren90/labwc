@@ -688,7 +688,7 @@ set_initial_position(struct view *view,
 	 * layout changes that could have occurred between map_request
 	 * and the actual map event.
 	 */
-	view_adjust_for_layout_change(view);
+	view_adjust_for_layout_change(view->id);
 }
 
 static void

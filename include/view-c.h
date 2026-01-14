@@ -9,6 +9,8 @@
 
 Border ssd_get_margin(CView *view);
 
+_Bool view_discover_output(CView *view, const Rect *geometry);
+_Bool view_has_usable_output(CView *view);
 Rect view_get_output_area(CView *view);
 Rect view_get_output_usable_area(CView *view);
 
