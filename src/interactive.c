@@ -248,7 +248,7 @@ snap_to_edge(struct view *view)
 	view_set_output(view, output);
 	if (edge == LAB_EDGE_TOP && rc.snap_top_maximize) {
 		/* <topMaximize> */
-		view_maximize(view, VIEW_AXIS_BOTH);
+		view_maximize(view->id, VIEW_AXIS_BOTH);
 	} else {
 		view_snap_to_edge(view, edge, /*across_outputs*/ false,
 			/*combine*/ false);
@@ -287,4 +287,11 @@ interactive_cancel(struct view *view)
 
 	/* Restore keyboard/pointer focus */
 	seat_focus_override_end(&view->server->seat);
+}
+
+bool
+interactive_move_is_active(struct view *view)
+{
+	return (view->server->input_mode == LAB_INPUT_STATE_MOVE
+		&& view->server->grabbed_view == view);
 }

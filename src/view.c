@@ -317,17 +317,6 @@ view_minimize(struct view *view, bool minimized)
 	}
 }
 
-struct wlr_box
-view_get_fallback_natural_geometry(struct view *view)
-{
-	struct wlr_box box = {
-		.width = VIEW_FALLBACK_WIDTH,
-		.height = VIEW_FALLBACK_HEIGHT,
-	};
-	view_center_geom(view->id, &box, NULL);
-	return box;
-}
-
 void
 view_center(struct view *view, const struct wlr_box *ref)
 {
@@ -382,67 +371,6 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 	view_move_resize(view->id, box);
 }
 
-static bool
-in_interactive_move(struct view *view)
-{
-	return (view->server->input_mode == LAB_INPUT_STATE_MOVE
-		&& view->server->grabbed_view == view);
-}
-
-void
-view_maximize(struct view *view, enum view_axis axis)
-{
-	assert(view);
-
-	if (view->st->maximized == axis) {
-		return;
-	}
-
-	if (view->st->fullscreen) {
-		return;
-	}
-
-	bool store_natural_geometry = !in_interactive_move(view);
-
-	if (axis != VIEW_AXIS_NONE) {
-		/*
-		 * Maximize via keybind or client request cancels
-		 * interactive move/resize since we can't move/resize
-		 * a maximized view.
-		 */
-		interactive_cancel(view);
-	}
-
-	/*
-	 * Update natural geometry for any axis that wasn't already
-	 * maximized. This is needed even when unmaximizing, because in
-	 * single-axis cases the client may have resized the other axis
-	 * while one axis was maximized.
-	 */
-	if (store_natural_geometry) {
-		view_store_natural_geom(view->id);
-	}
-
-	/*
-	 * When natural geometry is unknown (0x0) for an xdg-shell view,
-	 * we normally send a configure event of 0x0 to get the client's
-	 * preferred size, but this doesn't work if unmaximizing only
-	 * one axis. So in that corner case, set a fallback geometry.
-	 */
-	if ((axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
-			&& wlr_box_empty(&view->st->natural_geom)) {
-		view_set_natural_geom(view->id,
-			view_get_fallback_natural_geometry(view));
-	}
-
-	view_set_maximized(view->id, axis);
-	if (view_is_floating(view->st)) {
-		view_apply_natural_geom(view->id);
-	} else {
-		view_apply_special_geom(view->id);
-	}
-}
-
 void
 view_toggle_maximize(struct view *view, enum view_axis axis)
 {
@@ -451,14 +379,14 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 	case VIEW_AXIS_HORIZONTAL:
 	case VIEW_AXIS_VERTICAL:
 		/* Toggle one axis (XOR) */
-		view_maximize(view, view->st->maximized ^ axis);
+		view_maximize(view->id, view->st->maximized ^ axis);
 		break;
 	case VIEW_AXIS_BOTH:
 		/*
 		 * Maximize in both directions if unmaximized or partially
 		 * maximized, otherwise unmaximize.
 		 */
-		view_maximize(view, (view->st->maximized == VIEW_AXIS_BOTH) ?
+		view_maximize(view->id, (view->st->maximized == VIEW_AXIS_BOTH) ?
 			VIEW_AXIS_NONE : VIEW_AXIS_BOTH);
 		break;
 	default:
@@ -555,46 +483,20 @@ view_toggle_fullscreen(struct view *view)
 {
 	assert(view);
 
-	view_set_fullscreen(view, !view->st->fullscreen);
+	view_fullscreen(view->id, !view->st->fullscreen);
 }
 
 void
-view_set_fullscreen(struct view *view, bool fullscreen)
+view_notify_fullscreen(struct view *view)
 {
-	assert(view);
-	if (fullscreen == view->st->fullscreen) {
-		return;
-	}
-	if (fullscreen) {
-		if (!output_is_usable(view->output)) {
-			/* Prevent fullscreen with no available outputs */
-			return;
-		}
-		/*
-		 * Fullscreen via keybind or client request cancels
-		 * interactive move/resize since we can't move/resize
-		 * a fullscreen view.
-		 */
-		interactive_cancel(view);
-		view_store_natural_geom(view->id);
-	}
-
-	view_set_fullscreen_internal(view->id, fullscreen);
-
 	if (view->ssd_enabled) {
-		if (fullscreen) {
+		if (view->st->fullscreen) {
 			/* Hide decorations when going fullscreen */
 			undecorate(view);
 		} else {
 			/* Re-show decorations when no longer fullscreen */
 			decorate(view);
 		}
-	}
-
-	if (view_is_floating(view->st)) {
-		view_apply_natural_geom(view->id);
-	} else {
-		view_apply_special_geom(view->id);
 	}
 
 	/* Show fullscreen views above top-layer */
@@ -647,7 +549,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 		return;
 	}
 
-	bool store_natural_geometry = !in_interactive_move(view);
+	bool store_natural_geometry = !interactive_move_is_active(view);
 
 	if (lab_edge_is_cardinal(edge) && view->st->maximized == VIEW_AXIS_NONE
 			&& view->st->tiled != LAB_EDGE_CENTER) {
@@ -693,7 +595,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 
 	if (view->st->maximized != VIEW_AXIS_NONE) {
 		/* Unmaximize + keep using existing natural_geometry */
-		view_maximize(view, VIEW_AXIS_NONE);
+		view_maximize(view->id, VIEW_AXIS_NONE);
 	} else if (store_natural_geometry) {
 		/* store current geometry as new natural_geometry */
 		view_store_natural_geom(view->id);

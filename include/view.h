@@ -32,8 +32,6 @@
  */
 #define VIEW_FALLBACK_X 100
 #define VIEW_FALLBACK_Y 100
-#define VIEW_FALLBACK_WIDTH  640
-#define VIEW_FALLBACK_HEIGHT 480
 
 /*
  * In labwc, a view is a container for surfaces which can be moved around by
@@ -183,7 +181,6 @@ void view_close(struct view *view);
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
-struct wlr_box view_get_fallback_natural_geometry(struct view *view);
 
 /**
  * view_center - center view within some region
@@ -195,8 +192,6 @@ void view_center(struct view *view, const struct wlr_box *ref);
 
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
-void view_maximize(struct view *view, enum view_axis axis);
-void view_set_fullscreen(struct view *view, bool fullscreen);
 void view_toggle_maximize(struct view *view, enum view_axis axis);
 bool view_wants_decorations(struct view *view);
 

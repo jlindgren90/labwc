@@ -83,7 +83,7 @@ set_fullscreen_from_request(struct view *view,
 		view_set_output(view, output_from_wlr_output(view->server,
 			requested->fullscreen_output));
 	}
-	view_set_fullscreen(view, requested->fullscreen);
+	view_fullscreen(view->id, requested->fullscreen);
 }
 
 static void
@@ -196,7 +196,7 @@ handle_commit(struct wl_listener *listener, void *data)
 			set_fullscreen_from_request(view, &toplevel->requested);
 		}
 		if (toplevel->requested.maximized) {
-			view_maximize(view, VIEW_AXIS_BOTH);
+			view_maximize(view->id, VIEW_AXIS_BOTH);
 		}
 		return;
 	}
@@ -481,7 +481,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 		view_set_output(view, output_nearest_to_cursor(view->server));
 	}
 	bool maximized = toplevel->requested.maximized;
-	view_maximize(view, maximized ? VIEW_AXIS_BOTH : VIEW_AXIS_NONE);
+	view_maximize(view->id, maximized ? VIEW_AXIS_BOTH : VIEW_AXIS_NONE);
 }
 
 static void

@@ -7,6 +7,9 @@
 
 #include "rs-types.h"
 
+void interactive_cancel(CView *view);
+_Bool interactive_move_is_active(CView *view);
+
 Border ssd_get_margin(CView *view);
 
 _Bool view_discover_output(CView *view, const Rect *geometry);
@@ -19,6 +22,7 @@ void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
 void view_notify_unmap(CView *view);
 void view_notify_move_resize(CView *view);
+void view_notify_fullscreen(CView *view);
 
 void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xdg_toplevel_view_maximize(CView *view, /*enum view_axis*/ int maximized);

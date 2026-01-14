@@ -386,7 +386,6 @@ void interactive_anchor_to_cursor(struct server *server, struct wlr_box *geo);
 void interactive_begin(struct view *view, enum input_mode mode,
 	enum lab_edge edges);
 void interactive_finish(struct view *view);
-void interactive_cancel(struct view *view);
 
 /**
  * Returns the edge to snap a window to.

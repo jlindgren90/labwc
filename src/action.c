@@ -550,14 +550,14 @@ run_action(struct view *view, struct server *server, struct action *action,
 		if (view) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, axis);
+			view_maximize(view->id, axis);
 		}
 		break;
 	case ACTION_TYPE_UNMAXIMIZE:
 		if (view) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, view->st->maximized & ~axis);
+			view_maximize(view->id, view->st->maximized & ~axis);
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_FULLSCREEN:

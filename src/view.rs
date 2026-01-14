@@ -14,6 +14,8 @@ const EDGE_BOTTOM: i32 = 1 << 1;
 const EDGE_LEFT: i32 = 1 << 2;
 const EDGE_RIGHT: i32 = 1 << 3;
 
+const FALLBACK_WIDTH: i32 = 640;
+const FALLBACK_HEIGHT: i32 = 480;
 const MIN_VISIBLE_PX: i32 = 16;
 
 #[repr(C)]
@@ -242,6 +244,16 @@ impl View {
         }
     }
 
+    fn set_fallback_natural_geom(&mut self) {
+        let mut natural = Rect {
+            width: FALLBACK_WIDTH,
+            height: FALLBACK_HEIGHT,
+            ..self.state.natural_geom
+        };
+        self.center_geom(&mut natural, None);
+        self.state.natural_geom = natural;
+    }
+
     fn store_natural_geom(&mut self) {
         // Don't save natural geometry if fullscreen or tiled
         if self.state.fullscreen || self.state.tiled != 0 {
@@ -357,6 +369,53 @@ impl View {
             self.apply_special_geom();
         }
         self.in_layout_change = false;
+    }
+
+    fn maximize(&mut self, axis: ViewAxis) {
+        if self.state.maximized == axis {
+            return;
+        }
+        // In snap-to-maximize case, natural geometry was already stored
+        let store_natural_geometry = unsafe { !interactive_move_is_active(self.c_ptr) };
+        // Maximizing ends any interactive move/resize
+        if axis != ViewAxis::None {
+            unsafe { interactive_cancel(self.c_ptr) };
+        }
+        if store_natural_geometry {
+            self.store_natural_geom();
+        }
+        // Corner case: if unmaximizing one axis but natural geometry is
+        // unknown (e.g. for an initially maximized xdg-shell view), we
+        // can't request geometry from the client, so use a fallback
+        if (axis == ViewAxis::Horizontal || axis == ViewAxis::Vertical)
+            && rect_empty(self.state.natural_geom)
+        {
+            self.set_fallback_natural_geom();
+        }
+        self.set_maximized(axis);
+        if view_is_floating(&*self.state) {
+            self.apply_natural_geom();
+        } else {
+            self.apply_special_geom();
+        }
+    }
+
+    fn fullscreen(&mut self, fullscreen: bool) {
+        if self.state.fullscreen == fullscreen {
+            return;
+        }
+        // Fullscreening ends any interactive move/resize
+        if fullscreen {
+            unsafe { interactive_cancel(self.c_ptr) };
+            self.store_natural_geom();
+        }
+        self.set_fullscreen(fullscreen);
+        if view_is_floating(&*self.state) {
+            self.apply_natural_geom();
+        } else {
+            self.apply_special_geom();
+        }
+        unsafe { view_notify_fullscreen(self.c_ptr) };
     }
 
     fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
@@ -560,6 +619,13 @@ pub extern "C" fn view_set_natural_geom(id: ViewId, geom: Rect) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.set_fallback_natural_geom();
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_store_natural_geom(id: ViewId) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.store_natural_geom();
@@ -593,6 +659,20 @@ pub extern "C" fn view_offer_focus(id: ViewId) {
         if view.is_xwayland {
             unsafe { xwayland_view_offer_focus(view.c_ptr) };
         }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.maximize(axis);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.fullscreen(fullscreen);
     }
 }
 
