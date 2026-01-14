@@ -4,14 +4,15 @@
 #include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "view.h"
+#include "view-c.h"
 
 void
-view_impl_map(struct view *view)
+view_notify_map(struct view *view)
 {
 	view_update_visibility(view);
 
 	/* Leave minimized, if minimized before map */
-	if (!view->minimized) {
+	if (!view->st->minimized) {
 		desktop_focus_view(view, /* raise */ true);
 	}
 
@@ -35,7 +36,7 @@ view_impl_map(struct view *view)
 }
 
 void
-view_impl_unmap(struct view *view)
+view_notify_unmap(struct view *view)
 {
 	view_update_visibility(view);
 

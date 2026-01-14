@@ -244,8 +244,8 @@ process_cursor_move(struct server *server, uint32_t time)
 			.height = view->natural_geometry.height,
 		};
 		interactive_anchor_to_cursor(server, &new_geo);
-		view_set_maximized(view, VIEW_AXIS_NONE);
-		view_set_untiled(view);
+		view_set_maximized(view->id, VIEW_AXIS_NONE);
+		view_set_tiled(view->id, LAB_EDGE_NONE);
 		view_move_resize(view, new_geo);
 		x = new_geo.x;
 		y = new_geo.y;
