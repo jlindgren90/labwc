@@ -10,6 +10,7 @@
 
 // Rust likes camelcase types
 #define view_axis ViewAxis
+#define view_focus_mode ViewFocusMode
 
 typedef enum view_axis {
 	VIEW_AXIS_NONE = 0x0,
@@ -18,11 +19,25 @@ typedef enum view_axis {
 	VIEW_AXIS_BOTH = 0x3,
 } ViewAxis;
 
+// Indicates whether a view wants keyboard focus. Likely and Unlikely
+// apply to XWayland views using ICCCM's "Globally Active" input model.
+// The client voluntarily decides whether to take focus or not, while
+// a heuristic is used to determine whether to show the view in Alt-Tab,
+// taskbars, etc.
+//
+typedef enum view_focus_mode {
+	VIEW_FOCUS_MODE_NEVER = 0,
+	VIEW_FOCUS_MODE_ALWAYS,
+	VIEW_FOCUS_MODE_LIKELY,
+	VIEW_FOCUS_MODE_UNLIKELY,
+} ViewFocusMode;
+
 typedef struct ViewState {
 	const char *app_id;
 	const char *title;
 	_Bool mapped;
 	_Bool ever_mapped;
+	ViewFocusMode focus_mode;
 	_Bool active;
 	_Bool fullscreen;
 	ViewAxis maximized;
@@ -46,5 +61,6 @@ void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);
+void xwayland_view_offer_focus(CView *view);
 
 #endif // LABWC_VIEW_C_H

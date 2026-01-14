@@ -4,6 +4,12 @@ use crate::bindings::*;
 use std::ffi::CString;
 
 impl ViewState {
+    pub fn focusable(&self) -> bool {
+        self.mapped
+            && (self.focus_mode == VIEW_FOCUS_MODE_ALWAYS
+                || self.focus_mode == VIEW_FOCUS_MODE_LIKELY)
+    }
+
     pub fn floating(&self) -> bool {
         !self.fullscreen && self.maximized == VIEW_AXIS_NONE && self.tiled == LAB_EDGE_NONE
     }
@@ -51,9 +57,10 @@ impl View {
     }
 
     // Returns CView pointer to pass to view_notify_map()
-    pub fn set_mapped(&mut self) -> *mut CView {
+    pub fn set_mapped(&mut self, focus_mode: ViewFocusMode) -> *mut CView {
         self.state.mapped = true;
         self.state.ever_mapped = true;
+        self.state.focus_mode = focus_mode;
         return self.c_ptr;
     }
 
@@ -113,6 +120,12 @@ impl View {
             if self.is_xwayland {
                 unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
             }
+        }
+    }
+
+    pub fn offer_focus(&self) {
+        if self.is_xwayland {
+            unsafe { xwayland_view_offer_focus(self.c_ptr) };
         }
     }
 }
