@@ -64,8 +64,8 @@ xwayland_view_get_size_hints(struct view *view)
 	};
 }
 
-static enum view_wants_focus
-xwayland_view_wants_focus(struct view *view)
+static enum view_focus_mode
+xwayland_view_focus_mode(struct view *view)
 {
 	struct wlr_xwayland_surface *xsurface =
 		xwayland_surface_from_view(view);
@@ -86,7 +86,7 @@ xwayland_view_wants_focus(struct view *view)
 	 */
 	case WLR_ICCCM_INPUT_MODEL_PASSIVE:
 	case WLR_ICCCM_INPUT_MODEL_LOCAL:
-		return VIEW_WANTS_FOCUS_ALWAYS;
+		return VIEW_FOCUS_MODE_ALWAYS;
 
 	/*
 	 * Globally Active Input - The client expects keyboard input and
@@ -110,7 +110,7 @@ xwayland_view_wants_focus(struct view *view)
 				WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL)
 			|| wlr_xwayland_surface_has_window_type(xsurface,
 				WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG)) ?
-			VIEW_WANTS_FOCUS_LIKELY : VIEW_WANTS_FOCUS_UNLIKELY;
+			VIEW_FOCUS_MODE_LIKELY : VIEW_FOCUS_MODE_UNLIKELY;
 
 	/*
 	 * No Input - The client never expects keyboard input.
@@ -123,7 +123,7 @@ xwayland_view_wants_focus(struct view *view)
 		break;
 	}
 
-	return VIEW_WANTS_FOCUS_NEVER;
+	return VIEW_FOCUS_MODE_NEVER;
 }
 
 static bool
@@ -134,7 +134,7 @@ xwayland_view_has_strut_partial(struct view *view)
 	return (bool)xsurface->strut_partial;
 }
 
-static void
+void
 xwayland_view_offer_focus(struct view *view)
 {
 	wlr_xwayland_surface_offer_focus(xwayland_surface_from_view(view));
@@ -724,7 +724,7 @@ handle_map(struct wl_listener *listener, void *data)
 		seat_focus_surface(view->surface);
 	}
 
-	view_map_common(view->id);
+	view_map_common(view->id, xwayland_view_focus_mode(view));
 }
 
 static void
@@ -824,8 +824,6 @@ static const struct view_impl xwayland_view_impl = {
 	.append_children = xwayland_view_append_children,
 	.is_modal_dialog = xwayland_view_is_modal_dialog,
 	.get_size_hints = xwayland_view_get_size_hints,
-	.wants_focus = xwayland_view_wants_focus,
-	.offer_focus = xwayland_view_offer_focus,
 	.has_strut_partial = xwayland_view_has_strut_partial,
 };
 

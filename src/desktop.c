@@ -47,17 +47,17 @@ desktop_arrange_all_views(void)
 static void
 set_or_offer_focus(struct view *view)
 {
-	switch (view_wants_focus(view)) {
-	case VIEW_WANTS_FOCUS_ALWAYS:
+	switch (view->st->focus_mode) {
+	case VIEW_FOCUS_MODE_ALWAYS:
 		if (view->surface != g_seat.seat->keyboard_state.focused_surface) {
 			seat_focus_surface(view->surface);
 		}
 		break;
-	case VIEW_WANTS_FOCUS_LIKELY:
-	case VIEW_WANTS_FOCUS_UNLIKELY:
-		view_offer_focus(view);
+	case VIEW_FOCUS_MODE_LIKELY:
+	case VIEW_FOCUS_MODE_UNLIKELY:
+		view_offer_focus(view->id);
 		break;
-	case VIEW_WANTS_FOCUS_NEVER:
+	case VIEW_FOCUS_MODE_NEVER:
 		break;
 	}
 }
@@ -137,7 +137,7 @@ desktop_topmost_focusable_view(void)
 			continue;
 		}
 		view = node_view_from_node(node);
-		if (view_is_focusable(view) && !view->st->minimized) {
+		if (view_is_focusable(view->st) && !view->st->minimized) {
 			return view;
 		}
 	}

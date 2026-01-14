@@ -51,10 +51,10 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 }
 
 #[no_mangle]
-pub extern "C" fn view_map_common(id: ViewId) {
+pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
     let mut views = views_mut();
     if let Some(view) = views.by_id.get_mut(&id) {
-        let view_ptr = view.set_mapped();
+        let view_ptr = view.set_mapped(focus_mode);
         drop(views); // FIXME: to allow reentrant borrow
         unsafe { view_notify_map(view_ptr) };
     }
@@ -102,5 +102,12 @@ pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
 pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_tiled(tiled);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_offer_focus(id: ViewId) {
+    if let Some(view) = views().by_id.get(&id) {
+        view.offer_focus();
     }
 }
