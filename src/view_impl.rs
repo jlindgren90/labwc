@@ -8,6 +8,8 @@ pub trait ViewImpl {
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
+    fn get_focus_mode(&self) -> ViewFocusMode;
+    fn offer_focus(&self);
 }
 
 pub struct XView {
@@ -40,6 +42,14 @@ impl ViewImpl for XView {
     fn set_minimized(&self, minimized: bool) {
         unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
     }
+
+    fn get_focus_mode(&self) -> ViewFocusMode {
+        unsafe { xwayland_view_get_focus_mode(self.c_ptr) }
+    }
+
+    fn offer_focus(&self) {
+        unsafe { xwayland_view_offer_focus(self.c_ptr) };
+    }
 }
 
 pub struct XdgView {
@@ -70,6 +80,14 @@ impl ViewImpl for XdgView {
     }
 
     fn set_minimized(&self, _minimized: bool) {
+        // not supported
+    }
+
+    fn get_focus_mode(&self) -> ViewFocusMode {
+        VIEW_FOCUS_MODE_ALWAYS
+    }
+
+    fn offer_focus(&self) {
         // not supported
     }
 }

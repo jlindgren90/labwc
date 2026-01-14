@@ -8,6 +8,11 @@ use std::ffi::c_char;
 use std::ptr::null;
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_is_focusable(state: &ViewState) -> bool {
+    state.focusable()
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_is_floating(state: &ViewState) -> bool {
     state.floating()
 }
@@ -106,5 +111,12 @@ pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
 pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_tiled(tiled);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_offer_focus(id: ViewId) {
+    if let Some(view) = views().get_view(id) {
+        view.offer_focus();
     }
 }
