@@ -704,7 +704,7 @@ handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, map);
 	if (!view->st->mapped) {
-		view_map_common(view->id);
+		view_map_common(view->id, VIEW_FOCUS_MODE_ALWAYS);
 	}
 }
 

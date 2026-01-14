@@ -29,26 +29,6 @@
 #define VIEW_FALLBACK_WIDTH  640
 #define VIEW_FALLBACK_HEIGHT 480
 
-enum view_wants_focus {
-	/* View does not want focus */
-	VIEW_WANTS_FOCUS_NEVER = 0,
-	/* View wants focus */
-	VIEW_WANTS_FOCUS_ALWAYS,
-	/*
-	 * The following values apply only to XWayland views using the
-	 * Globally Active input model per the ICCCM. These views are
-	 * offered focus and will voluntarily accept or decline it.
-	 *
-	 * In some cases, labwc needs to decide in advance whether to
-	 * focus the view. For this purpose, these views are classified
-	 * (by a heuristic) as likely or unlikely to want focus. However,
-	 * it is still ultimately up to the client whether the view gets
-	 * focus or not.
-	 */
-	VIEW_WANTS_FOCUS_LIKELY,
-	VIEW_WANTS_FOCUS_UNLIKELY,
-};
-
 enum view_layer {
 	VIEW_LAYER_NORMAL = 0,
 	VIEW_LAYER_ALWAYS_ON_TOP,
@@ -76,9 +56,6 @@ struct view_impl {
 	void (*append_children)(struct view *self, struct wl_array *children);
 	bool (*is_modal_dialog)(struct view *self);
 	struct view_size_hints (*get_size_hints)(struct view *self);
-	/* if not implemented, VIEW_WANTS_FOCUS_ALWAYS is assumed */
-	enum view_wants_focus (*wants_focus)(struct view *self);
-	void (*offer_focus)(struct view *self);
 	/* returns true if view reserves space at screen edge */
 	bool (*has_strut_partial)(struct view *self);
 };
@@ -227,32 +204,6 @@ struct view *view_from_wlr_surface(struct wlr_surface *surface);
 struct wlr_surface *view_get_surface(struct view *view);
 
 struct view *view_get_root(struct view *view);
-
-enum view_wants_focus view_wants_focus(struct view *view);
-
-/* If view is NULL, the size of SSD is not considered */
-struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
-	enum lab_edge edge);
-
-/**
- * view_is_focusable() - Check whether or not a view can be focused
- * @view: view to be checked
- *
- * The purpose of this test is to filter out views (generally Xwayland) which
- * are not meant to be focused such as those with surfaces
- *	a. that have been created but never mapped;
- *	b. set to NULL after client minimize-request.
- *
- * The only views that are allowed to be focused are those that have a surface
- * and have been mapped at some point since creation.
- */
-bool view_is_focusable(struct view *view);
-
-/*
- * For use by desktop_focus_view() only - please do not call directly.
- * See the description of VIEW_WANTS_FOCUS_OFFER for more information.
- */
-void view_offer_focus(struct view *view);
 
 struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
 	enum lab_edge edge);

@@ -45,19 +45,19 @@ set_or_offer_focus(struct view *view)
 {
 	struct wlr_surface *surface = view_get_surface(view);
 
-	switch (view_wants_focus(view)) {
-	case VIEW_WANTS_FOCUS_ALWAYS:
+	switch (view->st->focus_mode) {
+	case VIEW_FOCUS_MODE_ALWAYS:
 		if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
 			seat_focus_surface(surface);
 		}
 		break;
-	case VIEW_WANTS_FOCUS_LIKELY:
-	case VIEW_WANTS_FOCUS_UNLIKELY:
+	case VIEW_FOCUS_MODE_LIKELY:
+	case VIEW_FOCUS_MODE_UNLIKELY:
 		if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
-			view_offer_focus(view);
+			view_offer_focus(view->id);
 		}
 		break;
-	case VIEW_WANTS_FOCUS_NEVER:
+	case VIEW_FOCUS_MODE_NEVER:
 		break;
 	}
 }
@@ -127,7 +127,7 @@ desktop_topmost_focusable_view(void)
 {
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
-		if (view_is_focusable(view) && !view->st->minimized) {
+		if (view_is_focusable(view->st) && !view->st->minimized) {
 			return view;
 		}
 	}
