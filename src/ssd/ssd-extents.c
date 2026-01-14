@@ -100,8 +100,8 @@ ssd_extents_update(struct ssd *ssd)
 		return;
 	}
 
-	int width = view->current.width;
-	int height = view->current.height;
+	int width = view->st->current.width;
+	int height = view->st->current.height;
 	int full_height =
 		height + g_theme.border_width * 2 + ssd->titlebar.height;
 	int full_width = width + 2 * g_theme.border_width;
@@ -124,7 +124,7 @@ ssd_extents_update(struct ssd *ssd)
 	wl_list_for_each(output, &g_server.outputs, link) {
 		bool view_on_output = output_is_usable(output)
 			&& wlr_output_layout_intersects(layout,
-				output->wlr_output, &view->current);
+				output->wlr_output, &view->st->current);
 		if (!view_on_output) {
 			continue;
 		}

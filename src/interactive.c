@@ -83,7 +83,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		}
 
 		/* Store natural geometry at start of move */
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
@@ -122,7 +122,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	/* Remember view and cursor positions at start of move/resize */
 	g_server.grab_x = g_seat.cursor->x;
 	g_server.grab_y = g_seat.cursor->y;
-	g_server.grab_box = view->current;
+	g_server.grab_box = view->st->current;
 	g_server.resize_edges = edges;
 
 	seat_focus_override_begin(mode, cursor_shape);

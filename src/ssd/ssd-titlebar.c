@@ -27,7 +27,7 @@ void
 ssd_titlebar_create(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 	int corner_width = ssd_get_corner_width();
 
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
@@ -154,7 +154,7 @@ static void
 set_squared_corners(struct ssd *ssd, bool enable)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 	int corner_width = ssd_get_corner_width();
 
 	int x = enable ? 0 : corner_width;
@@ -215,7 +215,7 @@ static void
 update_visible_buttons(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	int width = MAX(view->current.width
+	int width = MAX(view->st->current.width
 		- 2 * g_theme.window_titlebar_padding_width, 0);
 	int button_width = g_theme.window_button_width;
 	int button_spacing = g_theme.window_button_spacing;
@@ -266,7 +266,7 @@ void
 ssd_titlebar_update(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 	int corner_width = ssd_get_corner_width();
 
 	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
@@ -351,7 +351,7 @@ static void
 ssd_update_title_positions(struct ssd *ssd, int offset_left, int offset_right)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 	int title_bg_width = width - offset_left - offset_right;
 
 	enum ssd_active_state active;
@@ -435,7 +435,7 @@ ssd_update_title(struct ssd *ssd)
 
 	int offset_left, offset_right;
 	get_title_offsets(ssd, &offset_left, &offset_right);
-	int title_bg_width = view->current.width - offset_left - offset_right;
+	int title_bg_width = view->st->current.width - offset_left - offset_right;
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -530,6 +530,6 @@ ssd_should_be_squared(struct ssd *ssd)
 	int corner_width = ssd_get_corner_width();
 
 	return (view->st->tiled != LAB_EDGE_NONE
-			|| view->current.width < corner_width * 2)
+			|| view->st->current.width < corner_width * 2)
 		&& view->st->maximized != VIEW_AXIS_BOTH;
 }

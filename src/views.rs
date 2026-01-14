@@ -118,6 +118,55 @@ pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_set_current_pos(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.set_current_pos(x, y);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_current_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.set_current_size(width, height);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_pending_pos(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.set_pending_pos(x, y);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_pending_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.set_pending_size(width, height);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.move_resize(geom);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_natural_geom(id: ViewId, geom: Rect) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.set_natural_geom(geom);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_store_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.store_natural_geom();
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_offer_focus(id: ViewId) {
     if let Some(view) = views().by_id.get(&id) {
         view.offer_focus();
