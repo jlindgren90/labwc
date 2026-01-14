@@ -54,7 +54,7 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	return NULL;
 }
 
-static struct view *
+struct view *
 view_get_root(struct view *view)
 {
 	assert(view);
@@ -62,81 +62,6 @@ view_get_root(struct view *view)
 		return view->impl->get_root(view);
 	}
 	return view;
-}
-
-static bool
-matches_criteria(struct view *view, enum lab_view_criteria criteria)
-{
-	if (!view_is_focusable(view)) {
-		return false;
-	}
-	if (criteria & LAB_VIEW_CRITERIA_FULLSCREEN) {
-		if (!view->fullscreen) {
-			return false;
-		}
-	}
-	if (criteria & LAB_VIEW_CRITERIA_ALWAYS_ON_TOP) {
-		if (!view_is_always_on_top(view)) {
-			return false;
-		}
-	}
-	if (criteria & LAB_VIEW_CRITERIA_ROOT_TOPLEVEL) {
-		if (view != view_get_root(view)) {
-			return false;
-		}
-	}
-	if (criteria & LAB_VIEW_CRITERIA_NO_ALWAYS_ON_TOP) {
-		if (view_is_always_on_top(view)) {
-			return false;
-		}
-	}
-	return true;
-}
-
-struct view *
-view_next(struct wl_list *head, struct view *view, enum lab_view_criteria criteria)
-{
-	assert(head);
-
-	struct wl_list *elm = view ? &view->link : head;
-
-	for (elm = elm->next; elm != head; elm = elm->next) {
-		view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
-		}
-	}
-	return NULL;
-}
-
-struct view *
-view_prev(struct wl_list *head, struct view *view, enum lab_view_criteria criteria)
-{
-	assert(head);
-
-	struct wl_list *elm = view ? &view->link : head;
-
-	for (elm = elm->prev; elm != head; elm = elm->prev) {
-		view = wl_container_of(elm, view, link);
-		if (matches_criteria(view, criteria)) {
-			return view;
-		}
-	}
-	return NULL;
-}
-
-void
-view_array_append(struct wl_array *views, enum lab_view_criteria criteria)
-{
-	struct view *view;
-	for_each_view(view, &g_server.views, criteria) {
-		struct view **entry = wl_array_add(views, sizeof(*entry));
-		if (!entry) {
-			wlr_log(WLR_ERROR, "wl_array_add(): out of memory");
-			continue;
-		}
-		*entry = view;
-	}
 }
 
 enum view_wants_focus

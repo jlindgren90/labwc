@@ -172,7 +172,10 @@ static bool
 init_cycle(void)
 {
 	struct view *view;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_ROOT_TOPLEVEL) {
+	wl_list_for_each(view, &g_server.views, link) {
+		if (!view_is_focusable(view) || view != view_get_root(view)) {
+			continue;
+		}
 		wl_list_append(&g_server.cycle.views, &view->cycle_link);
 	}
 	if (wl_list_empty(&g_server.cycle.views)) {
