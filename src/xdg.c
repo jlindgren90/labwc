@@ -809,7 +809,7 @@ handle_map(struct wl_listener *listener, void *data)
 		view_moved(view);
 	}
 
-	view_map_common(view->id);
+	view_map_common(view->id, VIEW_FOCUS_MODE_ALWAYS);
 }
 
 static void
