@@ -547,8 +547,7 @@ for_each_subview(struct view *view, void (*action)(struct view *))
 static void
 move_to_front(struct view *view)
 {
-	wl_list_remove(&view->link);
-	wl_list_insert(&view->server->views, &view->link);
+	view_move_to_front_internal(view->id);
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 }
 
@@ -836,9 +835,6 @@ view_destroy(struct view *view)
 	}
 
 	view_remove(view->id);
-
-	/* Remove view from server->views */
-	wl_list_remove(&view->link);
 	free(view);
 
 	cursor_update_focus(server);

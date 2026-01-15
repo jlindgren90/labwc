@@ -637,9 +637,9 @@ static void
 xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
 {
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(self);
-	struct view *view;
 
-	wl_list_for_each_reverse(view, &self->server->views, link) {
+	for (int i = 0, n = view_count(); i < n; i++) {
+		struct view *view = view_c_ptr(view_nth_id(i));
 		if (view == self) {
 			continue;
 		}
@@ -1001,8 +1001,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	CONNECT_SIGNAL(toplevel, xdg_toplevel_view, set_app_id);
 	CONNECT_SIGNAL(toplevel, xdg_toplevel_view, request_show_window_menu);
 	CONNECT_SIGNAL(xdg_surface, xdg_toplevel_view, new_popup);
-
-	wl_list_insert(&server->views, &view->link);
 }
 
 static void

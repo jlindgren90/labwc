@@ -82,8 +82,8 @@ reload_config_and_theme(struct server *server)
 	desktop_entry_init(server);
 #endif
 
-	struct view *view;
-	wl_list_for_each(view, &server->views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_c_ptr(view_nth_id(i));
 		view_reload_ssd(view);
 	}
 
@@ -524,7 +524,6 @@ server_init(struct server *server)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&server->views);
 	wl_list_init(&server->unmanaged_surfaces);
 	wl_list_init(&server->cycle.views);
 

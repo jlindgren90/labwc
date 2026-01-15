@@ -9,7 +9,6 @@
 #include <xkbcommon/xkbcommon.h>
 #include "common/edge.h"
 #include "config.h"
-#include "config/types.h"
 
 #define Rect struct wlr_box
 #include "view-c.h"
@@ -86,7 +85,6 @@ struct view {
 	struct server *server;
 	enum view_type type;
 	const struct view_impl *impl;
-	struct wl_list link;
 
 	/* This is cleared when the view is not in the cycle list */
 	struct wl_list cycle_link;

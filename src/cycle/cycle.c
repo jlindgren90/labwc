@@ -227,8 +227,8 @@ create_osd_on_output(struct output *output)
 static bool
 init_cycle(struct server *server)
 {
-	struct view *view;
-	wl_list_for_each(view, &server->views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_c_ptr(view_nth_id(i));
 		if (!view_is_focusable(view->st) || view != view_get_root(view)) {
 			continue;
 		}

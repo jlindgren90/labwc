@@ -443,6 +443,7 @@ impl View {
 struct Views {
     by_id: BTreeMap<ViewId, View>, // can be iterated in creation-order
     max_used_id: ViewId,
+    order: Vec<ViewId>, // from back to front
     foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
@@ -461,7 +462,27 @@ pub extern "C" fn view_add(c_ptr: *mut CView, is_xwayland: bool) -> ViewId {
     view.state.app_id = view.app_id.as_ptr(); // for C interop
     view.state.title = view.title.as_ptr(); // for C interop
     views.by_id.insert(id, view);
+    views.order.push(id);
     return id;
+}
+
+#[no_mangle]
+pub extern "C" fn view_count() -> usize {
+    views().order.len()
+}
+
+#[no_mangle]
+pub extern "C" fn view_nth_id(n: usize) -> ViewId {
+    *views().order.get(n).unwrap_or(&0)
+}
+
+#[no_mangle]
+pub extern "C" fn view_c_ptr(id: ViewId) -> *mut CView {
+    if let Some(view) = views().by_id.get(&id) {
+        view.c_ptr
+    } else {
+        std::ptr::null_mut()
+    }
 }
 
 #[no_mangle]
@@ -703,6 +724,16 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_move_to_front_internal(id: ViewId) {
+    let mut views = views_mut();
+    let old_len = views.order.len();
+    views.order.retain(|&i| i != id);
+    if views.order.len() < old_len {
+        views.order.push(id);
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
     let Views {
         by_id,
@@ -733,5 +764,7 @@ pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlReso
 
 #[no_mangle]
 pub extern "C" fn view_remove(id: ViewId) {
-    views_mut().by_id.remove(&id);
+    let mut views = views_mut();
+    views.by_id.remove(&id);
+    views.order.retain(|&i| i != id);
 }

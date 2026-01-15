@@ -824,9 +824,9 @@ static void
 xwayland_view_append_children(struct view *self, struct wl_array *children)
 {
 	struct wlr_xwayland_surface *surface = xwayland_surface_from_view(self);
-	struct view *view;
 
-	wl_list_for_each_reverse(view, &self->server->views, link) {
+	for (int i = 0, n = view_count(); i < n; i++) {
+		struct view *view = view_c_ptr(view_nth_id(i));
 		if (view == self) {
 			continue;
 		}
@@ -934,8 +934,6 @@ xwayland_view_create(struct server *server,
 	CONNECT_SIGNAL(xsurface, xwayland_view, focus_in);
 	CONNECT_SIGNAL(xsurface, xwayland_view, map_request);
 
-	wl_list_insert(&view->server->views, &view->link);
-
 	if (xsurface->surface) {
 		handle_associate(&xwayland_view->associate, NULL);
 	}
@@ -965,8 +963,8 @@ handle_new_surface(struct wl_listener *listener, void *data)
 static struct xwayland_view *
 xwayland_view_from_window_id(struct server *server, xcb_window_t id)
 {
-	struct view *view;
-	wl_list_for_each(view, &server->views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_c_ptr(view_nth_id(i));
 		if (view->type != LAB_XWAYLAND_VIEW) {
 			continue;
 		}
