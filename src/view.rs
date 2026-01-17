@@ -163,13 +163,17 @@ impl View {
         }
     }
 
-    fn set_minimized(&mut self, minimized: bool) {
+    fn set_minimized(&mut self, minimized: bool, visibility_changed: &mut bool) {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
             if self.is_xwayland {
                 unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
             }
             self.send_foreign_toplevel_state();
+            if self.state.mapped {
+                unsafe { view_set_visible(self.c_ptr, !minimized) };
+                *visibility_changed = true;
+            }
         }
     }
 
@@ -501,9 +505,12 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
                 view.add_foreign_toplevel(client);
             }
         }
-        let view_ptr = view.c_ptr;
-        drop(views); // FIXME: to allow reentrant borrow
-        unsafe { view_notify_map(view_ptr) };
+        if !view.state.minimized {
+            let view_ptr = view.c_ptr;
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_set_visible(view_ptr, true) };
+            unsafe { view_notify_visible(view_ptr) };
+        }
     }
 }
 
@@ -515,9 +522,12 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
         for resource in view.foreign_toplevels.drain(..) {
             resource.close();
         }
-        let view_ptr = view.c_ptr;
-        drop(views); // FIXME: to allow reentrant borrow
-        unsafe { view_notify_unmap(view_ptr) };
+        if !view.state.minimized {
+            let view_ptr = view.c_ptr;
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_set_visible(view_ptr, false) };
+            unsafe { view_notify_visible(view_ptr) };
+        }
     }
 }
 
@@ -539,13 +549,6 @@ pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
 pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_maximized(maximized);
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.set_minimized(minimized);
     }
 }
 
@@ -673,6 +676,29 @@ pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.fullscreen(fullscreen);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
+    let mut views = views_mut();
+    if let Some(view) = views.by_id.get(&id) {
+        if view.state.minimized == minimized {
+            return;
+        }
+        // Minimize/unminimize all related views together
+        let view_ptr = view.c_ptr;
+        let root_ptr = unsafe { view_get_root(view_ptr) };
+        let mut visibility_changed = false;
+        for view in views.by_id.values_mut() {
+            if unsafe { view_get_root(view.c_ptr) } == root_ptr {
+                view.set_minimized(minimized, &mut visibility_changed);
+            }
+        }
+        if visibility_changed {
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_notify_visible(view_ptr) };
+        }
     }
 }
 

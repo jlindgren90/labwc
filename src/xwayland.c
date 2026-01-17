@@ -382,7 +382,7 @@ handle_request_minimize(struct wl_listener *listener, void *data)
 {
 	struct wlr_xwayland_minimize_event *event = data;
 	struct view *view = wl_container_of(listener, view, request_minimize);
-	view_minimize(view, event->minimize);
+	view_minimize(view->id, event->minimize);
 }
 
 static void

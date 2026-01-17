@@ -460,7 +460,7 @@ static void
 handle_request_minimize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_minimize);
-	view_minimize(view, xdg_toplevel_from_view(view)->requested.minimized);
+	view_minimize(view->id, xdg_toplevel_from_view(view)->requested.minimized);
 }
 
 static void

@@ -165,8 +165,6 @@ struct xdg_toplevel_view {
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
-struct view *view_get_root(struct view *view);
-
 void mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
 	wl_notify_func_t notify_map, wl_notify_func_t notify_unmap);
 void mappable_disconnect(struct mappable *mappable);
@@ -180,7 +178,6 @@ void view_close(struct view *view);
 
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
-void view_minimize(struct view *view, bool minimized);
 
 /**
  * view_center - center view within some region
@@ -232,7 +229,6 @@ struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);
 
 void view_on_output_destroy(struct view *view);
-void view_update_visibility(struct view *view);
 
 void view_init(struct view *view);
 void view_destroy(struct view *view);

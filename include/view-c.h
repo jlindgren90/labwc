@@ -17,6 +17,10 @@ _Bool view_has_usable_output(CView *view);
 Rect view_get_output_area(CView *view);
 Rect view_get_output_usable_area(CView *view);
 
+CView *view_get_root(CView *view);
+void view_set_visible(CView *view, _Bool visible);
+void view_notify_visible(CView *view);
+
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
