@@ -14,6 +14,32 @@ struct Views {
     foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
+impl Views {
+    fn get_c_ptr(&self, id: ViewId) -> *mut CView {
+        let view = self.by_id.get(&id);
+        return view.map_or(std::ptr::null_mut(), View::get_c_ptr);
+    }
+
+    // Returns CView pointer to pass to view_notify_visible()
+    fn minimize(&mut self, id: ViewId, minimized: bool) -> *mut CView {
+        if let Some(view) = self.by_id.get(&id) {
+            if view.get_state().minimized != minimized {
+                // Minimize/unminimize all related views together
+                let view_ptr = view.get_c_ptr();
+                let root = view.get_root_id();
+                let mut visibility_changed = false;
+                for v in self.by_id.values_mut().filter(|v| v.get_root_id() == root) {
+                    v.set_minimized(minimized, &mut visibility_changed);
+                }
+                if visibility_changed {
+                    return view_ptr;
+                }
+            }
+        }
+        return std::ptr::null_mut();
+    }
+}
+
 lazy_static!(VIEWS, Views, Views::default(), views, views_mut);
 
 #[no_mangle]
@@ -35,6 +61,12 @@ pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
     let views = views();
     let view = views.by_id.get(&id);
     return view.map_or(std::ptr::null(), |v| v.get_state());
+}
+
+#[no_mangle]
+pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
+    let views = views();
+    return views.get_c_ptr(views.by_id.get(&id).map_or(0, View::get_root_id));
 }
 
 #[no_mangle]
@@ -60,15 +92,19 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
         ..
     } = &mut *views;
     if let Some(view) = by_id.get_mut(&id) {
-        let view_ptr = view.set_mapped(focus_mode);
+        let mut was_shown = false;
+        view.set_mapped(focus_mode, &mut was_shown);
         // Only focusable views should be shown in taskbars etc.
         if view_is_focusable(view.get_state()) {
             for &mut client in foreign_toplevel_clients {
                 view.add_foreign_toplevel(client);
             }
         }
-        drop(views); // FIXME: to allow reentrant borrow
-        unsafe { view_notify_map(view_ptr) };
+        if was_shown {
+            let view_ptr = view.get_c_ptr();
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_notify_visible(view_ptr) };
+        }
     }
 }
 
@@ -76,9 +112,13 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
 pub extern "C" fn view_unmap_common(id: ViewId) {
     let mut views = views_mut();
     if let Some(view) = views.by_id.get_mut(&id) {
-        let view_ptr = view.set_unmapped();
-        drop(views); // FIXME: to allow reentrant borrow
-        unsafe { view_notify_unmap(view_ptr) };
+        let mut was_hidden = false;
+        view.set_unmapped(&mut was_hidden);
+        if was_hidden {
+            let view_ptr = view.get_c_ptr();
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_notify_visible(view_ptr) };
+        }
     }
 }
 
@@ -93,13 +133,6 @@ pub extern "C" fn view_set_active(id: ViewId, active: bool) {
 pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_maximized(maximized);
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.set_minimized(minimized);
     }
 }
 
@@ -206,6 +239,14 @@ pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
 pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.maximize(axis);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
+    let view_ptr = views_mut().minimize(id, minimized);
+    if !view_ptr.is_null() {
+        unsafe { view_notify_visible(view_ptr) };
     }
 }
 
