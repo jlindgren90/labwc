@@ -137,7 +137,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	}
 
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (view->output == output) {
 			view_on_output_destroy(view);
 		}
@@ -590,7 +590,7 @@ output_update_for_layout_change(struct server *server)
 	if (server->max_output_scale != max_scale) {
 		server->max_output_scale = max_scale;
 		for (int i = view_count() - 1; i >= 0; i--) {
-			struct view *view = view_c_ptr(view_nth_id(i));
+			struct view *view = view_nth(i);
 			if (view->st->mapped) {
 				view_reload_ssd(view);
 			}
@@ -1019,7 +1019,7 @@ update_usable_area(struct output *output)
 
 #if HAVE_XWAYLAND
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (view->st->mapped && view->type == LAB_XWAYLAND_VIEW) {
 			xwayland_adjust_usable_area(view,
 				output->server->output_layout,

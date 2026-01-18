@@ -826,7 +826,7 @@ xwayland_view_append_children(struct view *self, struct wl_array *children)
 	struct wlr_xwayland_surface *surface = xwayland_surface_from_view(self);
 
 	for (int i = 0, n = view_count(); i < n; i++) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (view == self) {
 			continue;
 		}
@@ -964,7 +964,7 @@ static struct xwayland_view *
 xwayland_view_from_window_id(struct server *server, xcb_window_t id)
 {
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (view->type != LAB_XWAYLAND_VIEW) {
 			continue;
 		}

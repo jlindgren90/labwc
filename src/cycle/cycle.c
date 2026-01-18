@@ -228,7 +228,7 @@ static bool
 init_cycle(struct server *server)
 {
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (!view_is_focusable(view->st) || view != view_get_root(view)) {
 			continue;
 		}

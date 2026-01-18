@@ -83,7 +83,7 @@ reload_config_and_theme(struct server *server)
 #endif
 
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		view_reload_ssd(view);
 	}
 

@@ -35,7 +35,7 @@ desktop_arrange_all_views(struct server *server)
 	 * views.
 	 */
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (!wlr_box_empty(&view->st->pending)) {
 			view_adjust_for_layout_change(view->id);
 		}
@@ -178,7 +178,7 @@ desktop_update_top_layer_visibility(struct server *server)
 	 */
 	uint64_t outputs_covered = 0;
 	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_c_ptr(view_nth_id(i));
+		struct view *view = view_nth(i);
 		if (!view->st->mapped || view->st->minimized) {
 			continue;
 		}

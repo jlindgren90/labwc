@@ -472,17 +472,14 @@ pub extern "C" fn view_count() -> usize {
 }
 
 #[no_mangle]
-pub extern "C" fn view_nth_id(n: usize) -> ViewId {
-    *views().order.get(n).unwrap_or(&0)
-}
-
-#[no_mangle]
-pub extern "C" fn view_c_ptr(id: ViewId) -> *mut CView {
-    if let Some(view) = views().by_id.get(&id) {
-        view.c_ptr
-    } else {
-        std::ptr::null_mut()
+pub extern "C" fn view_nth(n: usize) -> *mut CView {
+    let views = views();
+    if let Some(id) = views.order.get(n) {
+        if let Some(view) = views.by_id.get(&id) {
+            return view.c_ptr;
+        }
     }
+    return std::ptr::null_mut();
 }
 
 #[no_mangle]
