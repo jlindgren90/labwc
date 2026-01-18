@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
-use bindings::*;
+use crate::bindings::*;
 use std::ffi::{c_char, CStr, CString};
 
 pub fn cstring(s: *const c_char) -> CString {

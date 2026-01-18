@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
-use bindings::*;
-use foreign_toplevel::ForeignToplevel;
-use lazy_static;
+use crate::bindings::*;
+use crate::foreign_toplevel::ForeignToplevel;
+use crate::lazy_static;
+use crate::util::*;
 use std::cmp::min;
 use std::collections::BTreeMap;
 use std::ffi::{c_char, CString};
-use util::*;
 
 // from enum lab_edge
 const EDGE_TOP: i32 = 1 << 0;
