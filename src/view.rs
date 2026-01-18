@@ -740,12 +740,37 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
 }
 
 #[no_mangle]
-pub extern "C" fn view_move_to_front_internal(id: ViewId) {
+pub extern "C" fn view_move_to_front(id: ViewId) {
     let mut views = views_mut();
-    let old_len = views.order.len();
-    views.order.retain(|&i| i != id);
-    if views.order.len() < old_len {
-        views.order.push(id);
+    if let Some(view) = views.by_id.get(&id) {
+        let mut ids_moved: Vec<ViewId> = Vec::new();
+        // Raise root view first
+        let root_id = view.get_root_id();
+        if let Some(root) = views.by_id.get(&root_id) {
+            unsafe { view_move_to_front_impl(root.c_ptr) };
+            ids_moved.push(root_id);
+        }
+        // Then other sub-views (in current stacking order)
+        for &other_id in &views.order {
+            if other_id != id && other_id != root_id {
+                if let Some(other) = views.by_id.get(&other_id) {
+                    if other.get_root_id() == root_id {
+                        unsafe { view_move_to_front_impl(other.c_ptr) };
+                        ids_moved.push(other_id);
+                    }
+                }
+            }
+        }
+        // And finally specified view (if not root)
+        if id != root_id {
+            unsafe { view_move_to_front_impl(view.c_ptr) };
+            ids_moved.push(id);
+        }
+        let view_ptr = view.c_ptr;
+        views.order.retain(|i| !ids_moved.contains(i));
+        views.order.append(&mut ids_moved);
+        drop(views); // FIXME: to allow reentrant borrow
+        unsafe { view_notify_move_to_front(view_ptr) };
     }
 }
 

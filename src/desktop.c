@@ -92,7 +92,7 @@ desktop_focus_view(struct view *view, bool raise)
 	}
 
 	if (raise) {
-		view_move_to_front(view);
+		view_move_to_front(view->id);
 	}
 
 	/*

@@ -520,48 +520,15 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	view_apply_special_geom(view->id);
 }
 
-static void
-for_each_subview(struct view *view, void (*action)(struct view *))
+void
+view_move_to_front_impl(struct view *view)
 {
-	struct wl_array subviews;
-	struct view **subview;
-
-	wl_array_init(&subviews);
-	view_append_children(view, &subviews);
-	wl_array_for_each(subview, &subviews) {
-		action(*subview);
-	}
-	wl_array_release(&subviews);
-}
-
-static void
-move_to_front(struct view *view)
-{
-	view_move_to_front_internal(view->id);
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 }
 
-/*
- * In the view_move_to_{front,back} functions, a modal dialog is always
- * shown above its parent window, and the two always move together, so
- * other windows cannot come between them.
- * This is consistent with GTK3/Qt5 applications on mutter and openbox.
- */
 void
-view_move_to_front(struct view *view)
+view_notify_move_to_front(struct view *view)
 {
-	assert(view);
-
-	struct view *root = view_get_root(view->id);
-	assert(root);
-
-	move_to_front(root);
-	for_each_subview(root, move_to_front);
-	/* make sure view is in front of other sub-views */
-	if (view != root) {
-		move_to_front(view);
-	}
-
 #if HAVE_XWAYLAND
 	/*
 	 * view_move_to_front() is typically called on each mouse press

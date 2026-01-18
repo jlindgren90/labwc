@@ -196,8 +196,6 @@ void view_toggle_fullscreen(struct view *view);
 void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool combine);
 
-void view_move_to_front(struct view *view);
-
 /**
  * view_get_modal_dialog() - returns any modal dialog found among this
  * view's children or siblings (or possibly this view itself). Applies

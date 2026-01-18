@@ -20,6 +20,9 @@ Rect view_get_output_usable_area(CView *view);
 void view_set_visible(CView *view, _Bool visible);
 void view_notify_visible(CView *view);
 
+void view_move_to_front_impl(CView *view);
+void view_notify_move_to_front(CView *view);
+
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
