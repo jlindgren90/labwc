@@ -103,6 +103,14 @@ struct View {
 }
 
 impl View {
+    fn get_root_id(&self) -> ViewId {
+        if self.is_xwayland {
+            unsafe { xwayland_view_get_root_id(self.c_ptr) }
+        } else {
+            unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
+        }
+    }
+
     fn set_app_id(&mut self, app_id: CString) {
         if self.app_id != app_id {
             self.app_id = app_id;
@@ -483,6 +491,17 @@ pub extern "C" fn view_nth(n: usize) -> *mut CView {
 }
 
 #[no_mangle]
+pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
+    let views = views();
+    let root_id = views.by_id.get(&id).map_or(0, View::get_root_id);
+    if let Some(root) = views.by_id.get(&root_id) {
+        root.c_ptr
+    } else {
+        std::ptr::null_mut()
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
     if let Some(view) = views().by_id.get(&id) {
         &*view.state
@@ -706,10 +725,10 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
         }
         // Minimize/unminimize all related views together
         let view_ptr = view.c_ptr;
-        let root_ptr = unsafe { view_get_root(view_ptr) };
+        let root_id = view.get_root_id();
         let mut visibility_changed = false;
         for view in views.by_id.values_mut() {
-            if unsafe { view_get_root(view.c_ptr) } == root_ptr {
+            if view.get_root_id() == root_id {
                 view.set_minimized(minimized, &mut visibility_changed);
             }
         }

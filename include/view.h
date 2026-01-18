@@ -72,8 +72,6 @@ struct view_size_hints {
 
 struct view_impl {
 	void (*close)(struct view *view);
-	struct view *(*get_parent)(struct view *self);
-	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
 	bool (*is_modal_dialog)(struct view *self);
 	struct view_size_hints (*get_size_hints)(struct view *self);

@@ -147,13 +147,6 @@ xwayland_view_offer_focus(struct view *view)
 	wlr_xwayland_surface_offer_focus(xwayland_surface_from_view(view));
 }
 
-static struct view *
-xwayland_view_get_parent(struct view *view)
-{
-	struct wlr_xwayland_surface *xsurface = xwayland_surface_from_view(view);
-	return xsurface->parent ? (struct view *)xsurface->parent->data : NULL;
-}
-
 static struct wlr_xwayland_surface *
 top_parent_of(struct view *view)
 {
@@ -806,8 +799,8 @@ xwayland_view_minimize(struct view *view, bool minimized)
 		minimized);
 }
 
-static struct view *
-xwayland_view_get_root(struct view *view)
+unsigned long
+xwayland_view_get_root_id(struct view *view)
 {
 	struct wlr_xwayland_surface *root = top_parent_of(view);
 
@@ -817,7 +810,9 @@ xwayland_view_get_root(struct view *view)
 	 * believed to be caused by setting override-redirect on the root
 	 * wlr_xwayland_surface making it not be associated with a view anymore.
 	 */
-	return (root && root->data) ? (struct view *)root->data : view;
+	struct view *root_view =
+		(root && root->data) ? (struct view *)root->data : view;
+	return root_view->id;
 }
 
 static void
@@ -879,8 +874,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 
 static const struct view_impl xwayland_view_impl = {
 	.close = xwayland_view_close,
-	.get_parent = xwayland_view_get_parent,
-	.get_root = xwayland_view_get_root,
 	.append_children = xwayland_view_append_children,
 	.is_modal_dialog = xwayland_view_is_modal_dialog,
 	.get_size_hints = xwayland_view_get_size_hints,

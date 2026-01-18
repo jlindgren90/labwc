@@ -17,7 +17,6 @@ _Bool view_has_usable_output(CView *view);
 Rect view_get_output_area(CView *view);
 Rect view_get_output_usable_area(CView *view);
 
-CView *view_get_root(CView *view);
 void view_set_visible(CView *view, _Bool visible);
 void view_notify_visible(CView *view);
 
@@ -28,12 +27,14 @@ void view_notify_unmap(CView *view);
 void view_notify_move_resize(CView *view);
 void view_notify_fullscreen(CView *view);
 
+unsigned long xdg_toplevel_view_get_root_id(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xdg_toplevel_view_maximize(CView *view, /*enum view_axis*/ int maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_set_activated(CView *view, _Bool activated);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 
+unsigned long xwayland_view_get_root_id(CView *view);
 void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xwayland_view_maximize(CView *view, /*enum view_axis*/ int maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);

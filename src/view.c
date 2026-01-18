@@ -74,16 +74,6 @@ view_get_output_usable_area(struct view *view)
 	return output_usable_area_in_layout_coords(view->output);
 }
 
-struct view *
-view_get_root(struct view *view)
-{
-	assert(view);
-	if (view->impl->get_root) {
-		return view->impl->get_root(view);
-	}
-	return view;
-}
-
 bool
 view_discover_output(struct view *view, const struct wlr_box *geometry)
 {
@@ -562,7 +552,7 @@ view_move_to_front(struct view *view)
 {
 	assert(view);
 
-	struct view *root = view_get_root(view);
+	struct view *root = view_get_root(view->id);
 	assert(root);
 
 	move_to_front(root);
@@ -601,7 +591,7 @@ view_get_modal_dialog(struct view *view)
 
 	/* check sibling views */
 	struct view *dialog = NULL;
-	struct view *root = view_get_root(view);
+	struct view *root = view_get_root(view->id);
 	struct wl_array children;
 	struct view **child;
 
