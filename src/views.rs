@@ -11,6 +11,7 @@ use std::ffi::c_char;
 struct Views {
     by_id: BTreeMap<ViewId, View>, // in creation order
     max_used_id: ViewId,
+    order: Vec<ViewId>, // from back to front
     foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
@@ -18,6 +19,10 @@ impl Views {
     fn get_c_ptr(&self, id: ViewId) -> *mut CView {
         let view = self.by_id.get(&id);
         return view.map_or(std::ptr::null_mut(), View::get_c_ptr);
+    }
+
+    fn get_root_of(&self, id: ViewId) -> ViewId {
+        self.by_id.get(&id).map_or(0, View::get_root_id)
     }
 
     // Returns CView pointer to pass to view_notify_visible()
@@ -38,6 +43,40 @@ impl Views {
         }
         return std::ptr::null_mut();
     }
+
+    // Returns CView pointer to pass to view_notify_raise()
+    fn raise(&mut self, id: ViewId) -> *mut CView {
+        // Check if view or a sub-view is already in front
+        if let Some(&front) = self.order.last() {
+            if id == front || self.get_root_of(front) == id {
+                return std::ptr::null_mut();
+            }
+        }
+        let Some(view) = self.by_id.get(&id) else {
+            return std::ptr::null_mut();
+        };
+        let mut ids_to_raise = Vec::new();
+        // Raise root parent view first
+        let root = view.get_root_id();
+        ids_to_raise.push(root);
+        // Then other sub-views (in current stacking order)
+        for &i in &self.order {
+            if i != id && i != root && self.get_root_of(i) == root {
+                ids_to_raise.push(i);
+            }
+        }
+        // And finally specified view (if not root)
+        if id != root {
+            ids_to_raise.push(id);
+        }
+        for v in ids_to_raise.iter().filter_map(|i| self.by_id.get(i)) {
+            v.raise();
+        }
+        let view_ptr = view.get_c_ptr();
+        self.order.retain(|i| !ids_to_raise.contains(i));
+        self.order.append(&mut ids_to_raise);
+        return view_ptr;
+    }
 }
 
 lazy_static!(VIEWS, Views, Views::default(), views, views_mut);
@@ -48,12 +87,26 @@ pub extern "C" fn view_add(c_ptr: *mut CView, is_xwayland: bool) -> ViewId {
     views.max_used_id += 1;
     let id = views.max_used_id;
     views.by_id.insert(id, View::new(c_ptr, is_xwayland));
+    views.order.push(id);
     return id;
 }
 
 #[no_mangle]
 pub extern "C" fn view_remove(id: ViewId) {
-    views_mut().by_id.remove(&id);
+    let mut views = views_mut();
+    views.by_id.remove(&id);
+    views.order.retain(|&i| i != id);
+}
+
+#[no_mangle]
+pub extern "C" fn view_count() -> usize {
+    views().order.len()
+}
+
+#[no_mangle]
+pub extern "C" fn view_nth(n: usize) -> *mut CView {
+    let views = views();
+    return views.get_c_ptr(*views.order.get(n).unwrap_or(&0));
 }
 
 #[no_mangle]
@@ -247,6 +300,14 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
     let view_ptr = views_mut().minimize(id, minimized);
     if !view_ptr.is_null() {
         unsafe { view_notify_visible(view_ptr) };
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_raise(id: ViewId) {
+    let view_ptr_to_notify = views_mut().raise(id);
+    if !view_ptr_to_notify.is_null() {
+        unsafe { view_notify_raise(view_ptr_to_notify) };
     }
 }
 

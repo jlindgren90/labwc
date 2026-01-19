@@ -70,13 +70,13 @@ desktop_focus_view(struct view *view, bool raise)
 	}
 
 	if (raise) {
-		view_move_to_front(view);
+		view_raise(view->id);
 	}
 
 	/*
 	 * If any child/sibling of the view is a modal dialog, focus
 	 * the dialog instead. It does not need to be raised separately
-	 * since view_move_to_front() raises all sibling views together.
+	 * since view_raise() raises all sibling views together.
 	 */
 	struct view *dialog = view_get_modal_dialog(view);
 	set_or_offer_focus(dialog ? dialog : view);
@@ -139,7 +139,6 @@ desktop_focus_topmost_view(void)
 void
 desktop_update_top_layer_visibility(void)
 {
-	struct view *view;
 	struct output *output;
 	uint32_t top = ZWLR_LAYER_SHELL_V1_LAYER_TOP;
 
@@ -156,7 +155,8 @@ desktop_update_top_layer_visibility(void)
 	 * any views above it
 	 */
 	uint64_t outputs_covered = 0;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_nth(i);
 		if (!view->st->mapped || view->st->minimized) {
 			continue;
 		}
