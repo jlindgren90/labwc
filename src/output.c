@@ -1002,6 +1002,17 @@ output_is_usable(struct output *output)
 	return output && output->wlr_output->enabled;
 }
 
+struct wlr_box
+output_layout_coords(struct output *output)
+{
+	struct wlr_box box = {0};
+	if (output_is_usable(output)) {
+		wlr_output_layout_get_box(g_server.output_layout,
+			output->wlr_output, &box);
+	}
+	return box;
+}
+
 /* returns true if usable area changed */
 static bool
 update_usable_area(struct output *output)
@@ -1055,7 +1066,7 @@ output_update_all_usable_areas(bool layout_changed)
 struct wlr_box
 output_usable_area_in_layout_coords(struct output *output)
 {
-	if (!output) {
+	if (!output_is_usable(output)) {
 		return (struct wlr_box){0};
 	}
 	struct wlr_box box = output->usable_area;

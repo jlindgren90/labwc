@@ -74,15 +74,17 @@ set_fullscreen_from_request(struct view *view,
 static void
 do_late_positioning(struct view *view)
 {
+	if (!view_is_floating(view->st)) {
+		return;
+	}
 	struct wlr_box geo = view->st->pending;
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE
 			&& view == g_server.grabbed_view) {
 		/* Reposition the view while anchoring it to cursor */
 		interactive_anchor_to_cursor(&geo);
 	} else {
-		/* TODO: smart placement? */
-		view_compute_centered_position(view, NULL,
-			geo.width, geo.height, &geo.x, &geo.y);
+		/* Using only position (not size) computed here */
+		view_compute_default_geom(view->id, &geo);
 	}
 	view_set_pending_pos(view->id, geo.x, geo.y);
 }
@@ -718,22 +720,6 @@ xdg_toplevel_view_notify_tiled(struct view *view)
 }
 
 static void
-set_initial_position(struct view *view)
-{
-	view_constrain_size_to_that_of_usable_area(view);
-
-	struct view *parent = xdg_toplevel_view_get_parent(view);
-	if (parent) {
-		/* Child views are center-aligned relative to their parents */
-		view_set_output(view->id, parent->st->output);
-		view_center(view, &parent->st->pending);
-		return;
-	}
-
-	view_center(view, NULL);
-}
-
-static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.map);
@@ -768,7 +754,11 @@ handle_map(struct wl_listener *listener, void *data)
 		 * Set initial "pending" position for floating views.
 		 */
 		if (view_is_floating(view->st)) {
-			set_initial_position(view);
+			struct view *parent =
+				xdg_toplevel_view_get_parent(view);
+			view_set_initial_geom(view->id,
+				parent ? &parent->st->pending : NULL,
+				/* keep_position */ false);
 		}
 
 		/*

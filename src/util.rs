@@ -66,6 +66,16 @@ pub extern "C" fn rect_center(width: i32, height: i32, rel_to: Rect) -> Rect {
 }
 
 #[no_mangle]
+pub extern "C" fn rect_minus_margin(rect: Rect, margin: Border) -> Rect {
+    Rect {
+        x: rect.x + margin.left,
+        y: rect.y + margin.top,
+        width: rect.width - margin.left - margin.right,
+        height: rect.height - margin.top - margin.bottom,
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn rect_move_within(rect: &mut Rect, bound: Rect) {
     if rect.x < bound.x {
         rect.x = bound.x;
