@@ -7,10 +7,10 @@
 #include <wlr/util/box.h>
 #include <libxml/tree.h>
 
-#include "common/border.h"
 #include "common/font.h"
 #include "common/node-type.h"
 #include "config/types.h"
+#include "rs-types.h"
 
 #define BUTTON_MAP_MAX 16
 

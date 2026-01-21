@@ -100,6 +100,20 @@ pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_ensure_geom_onscreen(id: ViewId, geom: &mut Rect) {
+    if let Some(view) = views().get_view(id) {
+        view.ensure_geom_onscreen(geom);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_compute_default_geom(id: ViewId, geom: &mut Rect) {
+    if let Some(view) = views().get_view(id) {
+        view.compute_default_geom(geom, /* rel_to */ None, /* keep_position */ false);
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_set_current_pos(id: ViewId, x: i32, y: i32) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_current_pos(x, y);
@@ -128,9 +142,16 @@ pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_set_natural_geom(id: ViewId, geom: Rect) {
+pub extern "C" fn view_set_initial_geom(id: ViewId, rel_to: Option<&Rect>, keep_position: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_natural_geom(geom);
+        view.set_initial_geom(rel_to, keep_position);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.set_fallback_natural_geom();
     }
 }
 

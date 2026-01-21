@@ -3,7 +3,14 @@
 use crate::bindings::*;
 use crate::foreign_toplevel::*;
 use crate::rect::*;
+use std::cmp::{max, min};
 use std::ffi::CString;
+
+const FALLBACK_WIDTH: i32 = 640;
+const FALLBACK_HEIGHT: i32 = 480;
+const MIN_WIDTH: i32 = 100;
+const MIN_HEIGHT: i32 = 60;
+const MIN_VISIBLE_PX: i32 = 16;
 
 impl ViewState {
     pub fn focusable(&self) -> bool {
@@ -155,6 +162,74 @@ impl View {
         }
     }
 
+    pub fn ensure_geom_onscreen(&self, geom: &mut Rect) {
+        if rect_empty(*geom) {
+            return;
+        }
+        let usable = unsafe { output_usable_area_in_layout_coords(self.state.output) };
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        let usable_minus_margin = rect_minus_margin(usable, margin);
+        if rect_empty(usable_minus_margin) {
+            return;
+        }
+        // Require a minimum number of pixels to be visible on each edge.
+        // If the geometry minus this margin is offscreen, then center it.
+        let hmargin = min(MIN_VISIBLE_PX, (geom.width - 1) / 2);
+        let vmargin = min(MIN_VISIBLE_PX, (geom.height - 1) / 2);
+        let reduced = Rect {
+            x: geom.x + hmargin,
+            y: geom.y + vmargin,
+            width: geom.width - 2 * hmargin,
+            height: geom.height - 2 * vmargin,
+        };
+        if !rect_intersects(reduced, usable) {
+            *geom = rect_center(geom.width, geom.height, usable_minus_margin);
+            rect_move_within(geom, usable_minus_margin);
+        }
+    }
+
+    // Note: rel_to and keep_position are mutually exclusive
+    pub fn compute_default_geom(
+        &self,
+        geom: &mut Rect,
+        rel_to: Option<&Rect>,
+        keep_position: bool,
+    ) {
+        let margin = unsafe { ssd_get_margin(self.c_ptr) };
+        if rect_empty(*geom) {
+            // Invalid size - just ensure top-left corner is non-negative
+            geom.x = max(geom.x, margin.left);
+            geom.y = max(geom.y, margin.top);
+            return;
+        }
+        // Recompute output from reference (parent) geometry if specified
+        let output = rel_to.map_or(self.state.output, |&r| nearest_output_to_geom(r));
+        let usable = unsafe { output_usable_area_in_layout_coords(output) };
+        let usable_minus_margin = rect_minus_margin(usable, margin);
+        let rel_to_minus_margin = rel_to.map(|&r| rect_minus_margin(r, margin));
+        if rect_empty(usable_minus_margin) {
+            // Invalid output geometry - center to parent if possible,
+            // then ensure top-left corner is non-negative
+            if let Some(r) = rel_to_minus_margin {
+                *geom = rect_center(geom.width, geom.height, r);
+            }
+            geom.x = max(geom.x, margin.left);
+            geom.y = max(geom.y, margin.top);
+            return;
+        }
+        // Limit size (including margins) to usable area
+        geom.width = min(geom.width, usable_minus_margin.width);
+        geom.height = min(geom.height, usable_minus_margin.height);
+        // Center as requested
+        if let Some(r) = rel_to_minus_margin {
+            *geom = rect_center(geom.width, geom.height, r);
+        } else if !keep_position {
+            *geom = rect_center(geom.width, geom.height, usable_minus_margin);
+        }
+        // Finally, move within usable area
+        rect_move_within(geom, usable_minus_margin);
+    }
+
     pub fn set_current_pos(&mut self, x: i32, y: i32) {
         self.state.current.x = x;
         self.state.current.y = y;
@@ -199,8 +274,35 @@ impl View {
         unsafe { view_notify_move_resize(self.c_ptr) };
     }
 
-    pub fn set_natural_geom(&mut self, geom: Rect) {
-        self.state.natural_geom = geom;
+    pub fn set_initial_geom(&mut self, rel_to: Option<&Rect>, keep_position: bool) {
+        if self.state.floating() {
+            let mut geom = self.state.pending;
+            self.compute_default_geom(&mut geom, rel_to, keep_position);
+            self.move_resize(geom);
+        } else {
+            // An xwayland view should have a reasonable natural geometry.
+            // For an xdg-shell view, it is allowed to be empty initially.
+            if self.is_xwayland
+                && (self.state.natural_geom.width < MIN_WIDTH
+                    || self.state.natural_geom.height < MIN_HEIGHT)
+            {
+                self.set_fallback_natural_geom();
+            }
+        }
+    }
+
+    pub fn set_fallback_natural_geom(&mut self) {
+        let mut natural = Rect {
+            width: FALLBACK_WIDTH,
+            height: FALLBACK_HEIGHT,
+            ..self.state.natural_geom
+        };
+        self.compute_default_geom(
+            &mut natural,
+            /* rel_to */ None,
+            /* keep_position */ false,
+        );
+        self.state.natural_geom = natural;
     }
 
     pub fn store_natural_geom(&mut self) {
