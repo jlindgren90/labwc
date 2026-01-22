@@ -15,7 +15,7 @@ typedef struct {
 void foreign_toplevel_manager_init(WlDisplay *display);
 void foreign_toplevel_manager_finish(void);
 
-WlResource *foreign_toplevel_create(WlResource *client_resource, CView *view);
+WlResource *foreign_toplevel_create(WlResource *client_resource, ViewId view_id);
 void foreign_toplevel_send_app_id(WlResource *resource, const char *app_id);
 void foreign_toplevel_send_title(WlResource *resource, const char *title);
 void foreign_toplevel_send_state(WlResource *resource, ForeignToplevelState state);

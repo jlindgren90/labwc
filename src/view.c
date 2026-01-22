@@ -64,15 +64,6 @@ view_notify_active(struct view *view)
 }
 
 void
-view_close(struct view *view)
-{
-	assert(view);
-	if (view->impl->close) {
-		view->impl->close(view);
-	}
-}
-
-void
 view_move(struct view *view, int x, int y)
 {
 	assert(view);

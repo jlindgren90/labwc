@@ -47,7 +47,6 @@ struct view_size_hints {
 };
 
 struct view_impl {
-	void (*close)(struct view *view);
 	struct view_size_hints (*get_size_hints)(struct view *self);
 	/* returns true if view reserves space at screen edge */
 	bool (*has_strut_partial)(struct view *self);
@@ -134,8 +133,6 @@ struct wlr_surface *view_get_surface(struct view *view);
 
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
-
-void view_close(struct view *view);
 
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);

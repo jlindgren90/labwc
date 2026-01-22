@@ -80,7 +80,7 @@ impl Views {
             // Only focusable views should be shown in taskbars etc.
             if view.get_state().focusable() {
                 for &client in &self.foreign_toplevel_clients {
-                    view.add_foreign_toplevel(client);
+                    view.add_foreign_toplevel(client, id);
                 }
             }
             if was_shown {
@@ -259,9 +259,9 @@ impl Views {
 
     pub fn add_foreign_toplevel_client(&mut self, client: *mut WlResource) {
         self.foreign_toplevel_clients.push(client);
-        for view in self.by_id.values_mut() {
+        for (&id, view) in &mut self.by_id {
             if view.get_state().focusable() {
-                view.add_foreign_toplevel(client);
+                view.add_foreign_toplevel(client, id);
             }
         }
     }

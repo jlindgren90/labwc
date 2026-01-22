@@ -490,7 +490,7 @@ run_action(struct view *view, struct action *action,
 	switch (action->type) {
 	case ACTION_TYPE_CLOSE:
 		if (view) {
-			view_close(view);
+			view_close(view->id);
 		}
 		break;
 	case ACTION_TYPE_EXECUTE: {

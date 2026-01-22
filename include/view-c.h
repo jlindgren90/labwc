@@ -67,6 +67,7 @@ void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
+void xdg_toplevel_view_close(CView *view);
 
 ViewId xwayland_view_get_root_id(CView *view);
 _Bool xwayland_view_is_modal_dialog(CView *view);
@@ -76,6 +77,7 @@ void xwayland_view_maximize(CView *view, ViewAxis maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);
 void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xwayland_view_offer_focus(CView *view);
+void xwayland_view_close(CView *view);
 
 // from cursor.h
 void cursor_update_focus(void);
