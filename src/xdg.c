@@ -553,7 +553,7 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo,
 	}
 }
 
-static void
+void
 xdg_toplevel_view_close(struct view *view)
 {
 	wlr_xdg_toplevel_send_close(xdg_toplevel_from_view(view));
@@ -755,7 +755,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 }
 
 static const struct view_impl xdg_toplevel_view_impl = {
-	.close = xdg_toplevel_view_close,
 	.get_size_hints = xdg_toplevel_view_get_size_hints,
 };
 

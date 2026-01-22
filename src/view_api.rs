@@ -217,6 +217,13 @@ pub extern "C" fn view_focus_topmost() {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_close(id: ViewId) {
+    if let Some(view) = views().get_view(id) {
+        view.close();
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
     views_mut().add_foreign_toplevel_client(client);
 }

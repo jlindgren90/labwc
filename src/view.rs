@@ -549,8 +549,16 @@ impl View {
         return false;
     }
 
-    pub fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
-        let toplevel = ForeignToplevel::new(client, self.c_ptr);
+    pub fn close(&self) {
+        if self.is_xwayland {
+            unsafe { xwayland_view_close(self.c_ptr) };
+        } else {
+            unsafe { xdg_toplevel_view_close(self.c_ptr) };
+        }
+    }
+
+    pub fn add_foreign_toplevel(&mut self, client: *mut WlResource, id: ViewId) {
+        let toplevel = ForeignToplevel::new(client, id);
         toplevel.send_app_id(&self.app_id);
         toplevel.send_title(&self.title);
         toplevel.send_state((&*self.state).into());
