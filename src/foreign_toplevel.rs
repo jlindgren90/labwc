@@ -8,9 +8,9 @@ pub struct ForeignToplevel {
 }
 
 impl ForeignToplevel {
-    pub fn new(client: *mut WlResource, view_ptr: *mut CView) -> Self {
+    pub fn new(client: *mut WlResource, view_id: ViewId) -> Self {
         Self {
-            res: unsafe { foreign_toplevel_create(client, view_ptr) },
+            res: unsafe { foreign_toplevel_create(client, view_id) },
         }
     }
 
