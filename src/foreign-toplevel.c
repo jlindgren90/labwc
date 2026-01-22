@@ -3,7 +3,6 @@
 #include "foreign-toplevel.h"
 #include <assert.h>
 #include "common/mem.h"
-#include "labwc.h"
 #include "view.h"
 #include "wlr-foreign-toplevel-management-unstable-v1-protocol.h"
 
@@ -12,92 +11,68 @@
 static const struct zwlr_foreign_toplevel_handle_v1_interface
 	toplevel_handle_impl;
 
-static struct view *
-view_try_from_handle(struct wl_resource *resource)
+static ViewId
+view_id_from_handle(struct wl_resource *resource)
 {
 	assert(wl_resource_instance_of(resource,
 		&zwlr_foreign_toplevel_handle_v1_interface,
 		&toplevel_handle_impl));
-	return wl_resource_get_user_data(resource);
+	return (ViewId)wl_resource_get_user_data(resource);
 }
 
 static void
 toplevel_handle_set_maximized(struct wl_client *client,
 		struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_maximize(view->id, VIEW_AXIS_BOTH);
-	}
+	view_maximize(view_id_from_handle(resource), VIEW_AXIS_BOTH);
 }
 
 static void
 toplevel_handle_unset_maximized(struct wl_client *client,
 		struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_maximize(view->id, VIEW_AXIS_NONE);
-	}
+	view_maximize(view_id_from_handle(resource), VIEW_AXIS_NONE);
 }
 
 static void
 toplevel_handle_set_minimized(struct wl_client *client,
 		struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_minimize(view->id, true);
-	}
+	view_minimize(view_id_from_handle(resource), true);
 }
 
 static void
 toplevel_handle_unset_minimized(struct wl_client *client,
 		struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_minimize(view->id, false);
-	}
+	view_minimize(view_id_from_handle(resource), false);
 }
 
 static void
 toplevel_handle_set_fullscreen(struct wl_client *client,
 		struct wl_resource *resource, struct wl_resource *output)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_fullscreen(view->id, true);
-	}
+	view_fullscreen(view_id_from_handle(resource), true);
 }
 
 static void
 toplevel_handle_unset_fullscreen(struct wl_client *client,
 		struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_fullscreen(view->id, false);
-	}
+	view_fullscreen(view_id_from_handle(resource), false);
 }
 
 static void
 toplevel_handle_activate(struct wl_client *client, struct wl_resource *resource,
 		struct wl_resource *seat)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_focus(view->id, /*raise*/ true);
-	}
+	view_focus(view_id_from_handle(resource), /*raise*/ true);
 }
 
 static void
 toplevel_handle_close(struct wl_client *client, struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_close(view);
-	}
+	view_close(view_id_from_handle(resource));
 }
 
 static void
@@ -131,14 +106,11 @@ static const struct zwlr_foreign_toplevel_handle_v1_interface
 static void
 toplevel_handle_destroyed(struct wl_resource *resource)
 {
-	struct view *view = view_try_from_handle(resource);
-	if (view) {
-		view_remove_foreign_toplevel(view->id, resource);
-	}
+	view_remove_foreign_toplevel(view_id_from_handle(resource), resource);
 }
 
 struct wl_resource *
-foreign_toplevel_create(struct wl_resource *client_resource, struct view *view)
+foreign_toplevel_create(struct wl_resource *client_resource, ViewId view_id)
 {
 	struct wl_client *client = wl_resource_get_client(client_resource);
 	struct wl_resource *resource = wl_resource_create(client,
@@ -146,8 +118,8 @@ foreign_toplevel_create(struct wl_resource *client_resource, struct view *view)
 		wl_resource_get_version(client_resource), 0);
 	die_if_null(resource);
 
-	wl_resource_set_implementation(resource, &toplevel_handle_impl, view,
-		toplevel_handle_destroyed);
+	wl_resource_set_implementation(resource, &toplevel_handle_impl,
+		(void *)view_id, toplevel_handle_destroyed);
 	zwlr_foreign_toplevel_manager_v1_send_toplevel(client_resource,
 		resource);
 
@@ -202,10 +174,8 @@ foreign_toplevel_send_done(struct wl_resource *resource)
 void
 foreign_toplevel_close(struct wl_resource *resource)
 {
-	// Send "closed" and unlink the resource from the view;
-	// the handle will be destroyed by the client later
+	// Just send "closed"; the client will destroy the handle later
 	zwlr_foreign_toplevel_handle_v1_send_closed(resource);
-	wl_resource_set_user_data(resource, NULL);
 }
 
 static const struct zwlr_foreign_toplevel_manager_v1_interface
