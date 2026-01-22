@@ -67,6 +67,7 @@ void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
+void xdg_toplevel_view_close(CView *view);
 
 WlrSurface *xwayland_view_get_surface(CView *view);
 ViewId xwayland_view_get_root_id(CView *view);
@@ -78,6 +79,7 @@ void xwayland_view_minimize(CView *view, _Bool minimized);
 void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 ViewFocusMode xwayland_view_get_focus_mode(CView *view);
 void xwayland_view_offer_focus(CView *view);
+void xwayland_view_close(CView *view);
 
 // from cursor.h
 void cursor_update_focus(void);
