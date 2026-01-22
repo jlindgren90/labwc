@@ -14,6 +14,7 @@ pub trait ViewImpl {
     fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn offer_focus(&self);
+    fn close(&self);
 }
 
 pub struct XView {
@@ -72,6 +73,10 @@ impl ViewImpl for XView {
     fn offer_focus(&self) {
         unsafe { xwayland_view_offer_focus(self.c_ptr) };
     }
+
+    fn close(&self) {
+        unsafe { xwayland_view_close(self.c_ptr) };
+    }
 }
 
 pub struct XdgView {
@@ -129,5 +134,9 @@ impl ViewImpl for XdgView {
 
     fn offer_focus(&self) {
         // not supported
+    }
+
+    fn close(&self) {
+        unsafe { xdg_toplevel_view_close(self.c_ptr) };
     }
 }

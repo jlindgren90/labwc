@@ -429,7 +429,7 @@ static void
 handle_request_close(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_close);
-	view_close(view);
+	view_close(view->id);
 }
 
 static void
@@ -494,7 +494,7 @@ handle_set_class(struct wl_listener *listener, void *data)
 	view_set_app_id(view->id, view->xwayland_surface->instance);
 }
 
-static void
+void
 xwayland_view_close(struct view *view)
 {
 	wlr_xwayland_surface_close(xwayland_surface_from_view(view));
@@ -763,7 +763,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 }
 
 static const struct view_impl xwayland_view_impl = {
-	.close = xwayland_view_close,
 	.get_size_hints = xwayland_view_get_size_hints,
 	.has_strut_partial = xwayland_view_has_strut_partial,
 };
