@@ -238,7 +238,7 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
         // Only focusable views should be shown in taskbars etc.
         if view_is_focusable(view.get_state()) {
             for &mut client in foreign_toplevel_clients {
-                view.add_foreign_toplevel(client);
+                view.add_foreign_toplevel(client, id);
             }
         }
         if was_shown {
@@ -421,6 +421,13 @@ pub extern "C" fn view_focus_topmost() {
 }
 
 #[no_mangle]
+pub extern "C" fn view_close(id: ViewId) {
+    if let Some(view) = views().by_id.get(&id) {
+        view.close();
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
     let Views {
         by_id,
@@ -428,9 +435,9 @@ pub extern "C" fn views_add_foreign_toplevel_client(client: *mut WlResource) {
         ..
     } = &mut *views_mut();
     foreign_toplevel_clients.push(client);
-    for view in by_id.values_mut() {
+    for (&id, view) in by_id {
         if view_is_focusable(view.get_state()) {
-            view.add_foreign_toplevel(client);
+            view.add_foreign_toplevel(client, id);
         }
     }
 }
