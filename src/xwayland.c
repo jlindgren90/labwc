@@ -359,7 +359,7 @@ static void
 handle_request_activate(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_activate);
-	desktop_focus_view(view, /*raise*/ true);
+	view_focus(view->id, /*raise*/ true);
 }
 
 static void
@@ -684,6 +684,9 @@ handle_map(struct wl_listener *listener, void *data)
 	}
 
 	view_map_common(view->id, xwayland_view_focus_mode(view));
+	if (view_has_strut_partial(view)) {
+		output_update_all_usable_areas(false);
+	}
 }
 
 static void
@@ -694,6 +697,9 @@ handle_unmap(struct wl_listener *listener, void *data)
 		return;
 	}
 	view_unmap_common(view->id);
+	if (view_has_strut_partial(view)) {
+		output_update_all_usable_areas(false);
+	}
 
 	/*
 	 * Destroy the content_tree at unmap. Alternatively, we could

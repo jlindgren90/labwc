@@ -371,6 +371,18 @@ view_raise_impl(struct view *view)
 }
 
 bool
+view_focus_impl(struct view *view)
+{
+	struct wlr_surface *surface = view ? view->surface : NULL;
+
+	if (g_seat.seat->keyboard_state.focused_surface != surface) {
+		seat_focus_surface_no_notify(surface);
+	}
+
+	return g_seat.seat->keyboard_state.focused_surface == surface;
+}
+
+bool
 view_has_strut_partial(struct view *view)
 {
 	assert(view);
@@ -458,27 +470,6 @@ void
 view_set_visible(struct view *view, bool visible)
 {
 	wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
-}
-
-void
-view_notify_visible(struct view *view)
-{
-	if (view->st->mapped && !view->st->minimized) {
-		desktop_focus_view(view, /* raise */ true);
-	} else {
-		// Detect the active view getting unmapped/minimized,
-		// whether directly or indirectly (e.g. by a sibling)
-		struct view *active_view = view_get_active();
-		if (!active_view || !active_view->st->mapped
-				|| active_view->st->minimized) {
-			desktop_focus_topmost_view();
-		}
-	}
-
-	/* Update usable area to account for XWayland "struts" (panels) */
-	if (view_has_strut_partial(view)) {
-		output_update_all_usable_areas(false);
-	}
 }
 
 struct lab_data_buffer *

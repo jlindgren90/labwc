@@ -278,9 +278,9 @@ handle_lock_unlock(struct wl_listener *listener, void *data)
 	manager->locked = false;
 
 	if (manager->last_active_view) {
-		desktop_focus_view(manager->last_active_view, /* raise */ false);
+		view_focus(manager->last_active_view->id, /* raise */ false);
 	} else {
-		desktop_focus_topmost_view();
+		view_focus_topmost();
 	}
 	manager->last_active_view = NULL;
 

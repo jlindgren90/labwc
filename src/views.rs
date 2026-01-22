@@ -45,6 +45,11 @@ impl Views {
         return None;
     }
 
+    fn is_active_visible(&self) -> bool {
+        let active = self.by_id.get(&self.active_id);
+        return active.map_or(false, |a| a.get_state().visible());
+    }
+
     fn set_active(&mut self, id: ViewId) {
         if id != self.active_id {
             let prev_id = self.active_id;
@@ -76,12 +81,11 @@ impl Views {
         }
     }
 
-    // Returns CView pointer to pass to view_notify_visible()
-    fn minimize(&mut self, id: ViewId, minimized: bool) -> *mut CView {
+    // Returns true if visibility of any view changed
+    fn minimize(&mut self, id: ViewId, minimized: bool) -> bool {
         if let Some(view) = self.by_id.get(&id) {
             if view.get_state().minimized != minimized {
                 // Minimize/unminimize all related views together
-                let view_ptr = view.get_c_ptr();
                 let root = view.get_root_id();
                 let mut visibility_changed = false;
                 for v in self.by_id.values_mut().filter(|v| v.get_root_id() == root) {
@@ -89,11 +93,11 @@ impl Views {
                 }
                 if visibility_changed {
                     self.update_top_layer_visibility();
-                    return view_ptr;
+                    return true;
                 }
             }
         }
-        return std::ptr::null_mut();
+        return false;
     }
 
     fn raise(&mut self, id: ViewId) {
@@ -127,6 +131,33 @@ impl Views {
         self.order.append(&mut ids_to_raise);
         self.update_top_layer_visibility();
         unsafe { cursor_update_focus() };
+    }
+
+    fn focus(&mut self, id: ViewId, raise: bool) {
+        // Focus a modal dialog rather than its parent view
+        let id_to_focus = self.get_modal_dialog(id).unwrap_or(id);
+        if raise {
+            self.raise(id_to_focus);
+        }
+        if let Some(view) = self.by_id.get_mut(&id_to_focus) {
+            if view.focus() {
+                self.set_active(id_to_focus);
+            }
+        }
+    }
+
+    fn focus_topmost(&mut self) {
+        for &i in self.order.iter().rev() {
+            if let Some(state) = self.by_id.get(&i).map(View::get_state) {
+                if view_is_focusable(state) && !state.minimized {
+                    self.focus(i, /* raise */ true);
+                    return;
+                }
+            }
+        }
+        if unsafe { view_focus_impl(std::ptr::null_mut()) } {
+            self.set_active(0);
+        }
     }
 }
 
@@ -211,10 +242,8 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
             }
         }
         if was_shown {
-            let view_ptr = view.get_c_ptr();
             views.update_top_layer_visibility();
-            drop(views); // FIXME: to allow reentrant borrow
-            unsafe { view_notify_visible(view_ptr) };
+            views.focus(id, /* raise */ true);
         }
     }
 }
@@ -226,10 +255,10 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
         let mut was_hidden = false;
         view.set_unmapped(&mut was_hidden);
         if was_hidden {
-            let view_ptr = view.get_c_ptr();
             views.update_top_layer_visibility();
-            drop(views); // FIXME: to allow reentrant borrow
-            unsafe { view_notify_visible(view_ptr) };
+            if !views.is_active_visible() {
+                views.focus_topmost();
+            }
         }
     }
 }
@@ -364,9 +393,13 @@ pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
 
 #[no_mangle]
 pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
-    let view_ptr = views_mut().minimize(id, minimized);
-    if !view_ptr.is_null() {
-        unsafe { view_notify_visible(view_ptr) };
+    let mut views = views_mut();
+    if views.minimize(id, minimized) {
+        if !minimized {
+            views.focus(id, /* raise */ true);
+        } else if !views.is_active_visible() {
+            views.focus_topmost();
+        }
     }
 }
 
@@ -376,10 +409,15 @@ pub extern "C" fn view_raise(id: ViewId) {
 }
 
 #[no_mangle]
-pub extern "C" fn view_offer_focus(id: ViewId) {
-    if let Some(view) = views().by_id.get(&id) {
-        view.offer_focus();
-    }
+pub extern "C" fn view_focus(id: ViewId, raise: bool) {
+    let mut views = views_mut();
+    views.minimize(id, false);
+    views.focus(id, raise);
+}
+
+#[no_mangle]
+pub extern "C" fn view_focus_topmost() {
+    views_mut().focus_topmost();
 }
 
 #[no_mangle]
