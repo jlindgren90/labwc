@@ -381,8 +381,12 @@ impl View {
         self.v.focus();
     }
 
-    pub fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
-        let toplevel = ForeignToplevel::new(client, self.c_ptr);
+    pub fn close(&self) {
+        self.v.close();
+    }
+
+    pub fn add_foreign_toplevel(&mut self, client: *mut WlResource, id: ViewId) {
+        let toplevel = ForeignToplevel::new(client, id);
         toplevel.send_app_id(&self.d.app_id);
         toplevel.send_title(&self.d.title);
         toplevel.send_state((&*self.state).into());
