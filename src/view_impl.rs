@@ -5,6 +5,8 @@ use crate::bindings::*;
 pub trait ViewImpl {
     fn get_root_id(&self) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
+    fn get_size_hints(&self) -> ViewSizeHints;
+    fn has_strut_partial(&self) -> bool;
     fn set_active(&self, active: bool);
     fn set_fullscreen(&self, fullscreen: bool);
     fn set_maximized(&self, maximized: ViewAxis);
@@ -38,6 +40,14 @@ impl ViewImpl for XView {
 
     fn is_modal_dialog(&self) -> bool {
         unsafe { xwayland_view_is_modal_dialog(self.c_ptr) }
+    }
+
+    fn get_size_hints(&self) -> ViewSizeHints {
+        unsafe { xwayland_view_get_size_hints(self.c_ptr) }
+    }
+
+    fn has_strut_partial(&self) -> bool {
+        unsafe { xwayland_view_has_strut_partial(self.c_ptr) }
     }
 
     fn set_active(&self, active: bool) {
@@ -104,6 +114,14 @@ impl ViewImpl for XdgView {
 
     fn is_modal_dialog(&self) -> bool {
         unsafe { xdg_toplevel_view_is_modal_dialog(self.c_ptr) }
+    }
+
+    fn get_size_hints(&self) -> ViewSizeHints {
+        unsafe { xdg_toplevel_view_get_size_hints(self.c_ptr) }
+    }
+
+    fn has_strut_partial(&self) -> bool {
+        false
     }
 
     fn set_active(&self, active: bool) {
