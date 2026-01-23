@@ -75,16 +75,6 @@ view_moved(struct view *view)
 	cursor_update_focus();
 }
 
-struct view_size_hints
-view_get_size_hints(struct view *view)
-{
-	assert(view);
-	if (view->impl->get_size_hints) {
-		return view->impl->get_size_hints(view);
-	}
-	return (struct view_size_hints){0};
-}
-
 static void
 substitute_nonzero(int *a, int *b)
 {
@@ -108,7 +98,7 @@ void
 view_adjust_size(struct view *view, int *w, int *h)
 {
 	assert(view);
-	struct view_size_hints hints = view_get_size_hints(view);
+	struct view_size_hints hints = view_get_size_hints(view->id);
 
 	/*
 	 * "If a base size is not provided, the minimum size is to be
@@ -282,14 +272,6 @@ view_raise_impl(struct view *view)
 	if (view->xwayland_surface) {
 		xwayland_flush();
 	}
-}
-
-bool
-view_has_strut_partial(struct view *view)
-{
-	assert(view);
-	return view->impl->has_strut_partial &&
-		view->impl->has_strut_partial(view);
 }
 
 void
