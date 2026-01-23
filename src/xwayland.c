@@ -46,7 +46,7 @@ xwayland_surface_from_view(struct view *view)
 	return view->xwayland_surface;
 }
 
-static struct view_size_hints
+struct view_size_hints
 xwayland_view_get_size_hints(struct view *view)
 {
 	xcb_size_hints_t *hints = xwayland_surface_from_view(view)->size_hints;
@@ -125,7 +125,7 @@ xwayland_view_focus_mode(struct view *view)
 	return VIEW_FOCUS_MODE_NEVER;
 }
 
-static bool
+bool
 xwayland_view_has_strut_partial(struct view *view)
 {
 	struct wlr_xwayland_surface *xsurface =
@@ -759,17 +759,10 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 		fullscreen);
 }
 
-static const struct view_impl xwayland_view_impl = {
-	.get_size_hints = xwayland_view_get_size_hints,
-	.has_strut_partial = xwayland_view_has_strut_partial,
-};
-
 void
 xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 {
 	struct view *view = znew(*view);
-
-	view->impl = &xwayland_view_impl;
 	view_init(view, /* is_xwayland */ true);
 
 	/*

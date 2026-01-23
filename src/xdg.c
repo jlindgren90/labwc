@@ -37,7 +37,7 @@ xdg_toplevel_from_view(struct view *view)
 	return xdg_surface->toplevel;
 }
 
-static struct view_size_hints
+struct view_size_hints
 xdg_toplevel_view_get_size_hints(struct view *view)
 {
 	assert(view);
@@ -754,10 +754,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 	}
 }
 
-static const struct view_impl xdg_toplevel_view_impl = {
-	.get_size_hints = xdg_toplevel_view_get_size_hints,
-};
-
 struct token_data {
 	bool had_valid_surface;
 	bool had_valid_seat;
@@ -841,8 +837,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	assert(xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 
 	struct view *view = znew(*view);
-
-	view->impl = &xdg_toplevel_view_impl;
 	view_init(view, /* is_xwayland */ false);
 
 	view->xdg_surface = xdg_surface;

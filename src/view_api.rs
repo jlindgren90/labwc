@@ -3,6 +3,7 @@
 use crate::bindings::*;
 use crate::lazy_static;
 use crate::util::*;
+use crate::view::*;
 use crate::views::*;
 use std::ffi::c_char;
 use std::ptr::null;
@@ -48,6 +49,20 @@ pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
 pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
     let views = views();
     return views.get_c_ptr(views.get_root_of(id));
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_get_size_hints(id: ViewId) -> ViewSizeHints {
+    let views = views();
+    let view = views.get_view(id);
+    return view.map_or(ViewSizeHints::default(), View::get_size_hints);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_has_strut_partial(id: ViewId) -> bool {
+    let views = views();
+    let view = views.get_view(id);
+    return view.map_or(false, View::has_strut_partial);
 }
 
 #[unsafe(no_mangle)]

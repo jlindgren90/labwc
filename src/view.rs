@@ -93,6 +93,22 @@ impl View {
         }
     }
 
+    pub fn get_size_hints(&self) -> ViewSizeHints {
+        if self.is_xwayland {
+            unsafe { xwayland_view_get_size_hints(self.c_ptr) }
+        } else {
+            unsafe { xdg_toplevel_view_get_size_hints(self.c_ptr) }
+        }
+    }
+
+    pub fn has_strut_partial(&self) -> bool {
+        if self.is_xwayland {
+            unsafe { xwayland_view_has_strut_partial(self.c_ptr) }
+        } else {
+            false
+        }
+    }
+
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.app_id != app_id {
             self.app_id = app_id;
@@ -452,7 +468,7 @@ impl View {
         }
         if !is_floating {
             self.apply_special_geom();
-        } else if unsafe { view_has_strut_partial(self.c_ptr) } {
+        } else if self.has_strut_partial() {
             // Do not move panels etc. out of their own reserved area
         } else {
             // Restore saved geometry, ensuring view is on-screen
