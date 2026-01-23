@@ -16,7 +16,7 @@ enum lab_cycle_dir {
 };
 
 struct cycle_state {
-	struct view *selected_view;
+	int current_idx;
 	struct wl_list views;
 	struct wl_list osd_outputs; /* struct cycle_osd_output.link */
 };
@@ -57,15 +57,12 @@ void cycle_step(enum lab_cycle_dir direction);
 /* Closes the OSD */
 void cycle_finish(bool switch_focus);
 
-/* Re-initialize the window switcher */
-void cycle_reinitialize(void);
-
 /* Focus the clicked window and close OSD */
 void cycle_on_cursor_release(struct wlr_scene_node *node);
 
 /* Internal API */
 struct cycle_osd_item {
-	struct view *view;
+	int cycle_idx;
 	struct wlr_scene_tree *tree;
 	struct wl_list link;
 };

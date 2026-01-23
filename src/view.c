@@ -303,9 +303,6 @@ view_destroy(struct view *view)
 		interactive_cancel(view);
 	}
 
-	/* TODO: call this on map/unmap instead */
-	cycle_reinitialize();
-
 	undecorate(view);
 	menu_on_view_destroy(view);
 

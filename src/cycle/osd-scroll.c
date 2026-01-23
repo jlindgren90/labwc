@@ -37,21 +37,6 @@ cycle_osd_scroll_init(struct cycle_osd_output *osd_output, struct wlr_box bar_ar
 	scroll->bar = lab_scene_rect_create(scroll->bar_tree, &scrollbar_opts);
 }
 
-static int
-get_cycle_idx(struct cycle_osd_output *osd_output)
-{
-	int idx = 0;
-	struct cycle_osd_item *item;
-	wl_list_for_each(item, &osd_output->items, link) {
-		if (item->view == g_server.cycle.selected_view) {
-			return idx;
-		}
-		idx++;
-	}
-	assert(false && "selected view not found in items");
-	return -1;
-}
-
 void
 cycle_osd_scroll_update(struct cycle_osd_output *osd_output)
 {
@@ -60,7 +45,7 @@ cycle_osd_scroll_update(struct cycle_osd_output *osd_output)
 		return;
 	}
 
-	int cycle_idx = get_cycle_idx(osd_output);
+	int cycle_idx = g_server.cycle.current_idx;
 
 	/* Update the range of visible rows */
 	int bottom_row_idx = scroll->top_row_idx + scroll->nr_visible_rows;

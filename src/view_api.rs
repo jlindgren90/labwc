@@ -10,11 +10,6 @@ use std::ffi::c_char;
 use std::ptr::{null, null_mut};
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_is_focusable(state: &ViewState) -> bool {
-    state.focusable()
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_is_floating(state: &ViewState) -> bool {
     state.floating()
 }
@@ -44,12 +39,6 @@ pub extern "C" fn view_nth(n: usize) -> *mut CView {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
     views().get_view(id).map_or(null(), |v| v.get_state())
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
-    let views = views();
-    return views.get_c_ptr(views.get_root_of(id));
 }
 
 #[unsafe(no_mangle)]
@@ -318,4 +307,19 @@ pub extern "C" fn view_drop_icon_buffer(id: ViewId) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.drop_icon_buffer();
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cycle_list_build() {
+    views_mut().build_cycle_list();
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cycle_list_len() -> usize {
+    views().cycle_list_len()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cycle_list_nth(n: usize) -> ViewId {
+    views().cycle_list_nth(n)
 }
