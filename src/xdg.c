@@ -25,21 +25,11 @@
 #define LAB_XDG_SHELL_VERSION 6
 #define CONFIGURE_TIMEOUT_MS 100
 
-static struct xdg_toplevel_view *
-xdg_toplevel_view_from_view(struct view *view)
-{
-	assert(view->type == LAB_XDG_SHELL_VIEW);
-	return (struct xdg_toplevel_view *)view;
-}
-
 struct wlr_xdg_surface *
 xdg_surface_from_view(struct view *view)
 {
-	assert(view->type == LAB_XDG_SHELL_VIEW);
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		(struct xdg_toplevel_view *)view;
-	assert(xdg_toplevel_view->xdg_surface);
-	return xdg_toplevel_view->xdg_surface;
+	assert(view->xdg_surface);
+	return view->xdg_surface;
 }
 
 static struct wlr_xdg_toplevel *
@@ -75,9 +65,7 @@ xdg_toplevel_view_get_size_hints(struct view *view)
 static void
 handle_new_popup(struct wl_listener *listener, void *data)
 {
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		wl_container_of(listener, xdg_toplevel_view, new_popup);
-	struct view *view = &xdg_toplevel_view->base;
+	struct view *view = wl_container_of(listener, view, new_popup);
 	struct wlr_xdg_popup *wlr_popup = data;
 	xdg_popup_create(view, wlr_popup);
 }
@@ -119,9 +107,8 @@ set_initial_position(struct view *view)
 static void
 disable_fullscreen_bg(struct view *view)
 {
-	struct xdg_toplevel_view *xdg_view = xdg_toplevel_view_from_view(view);
-	if (xdg_view->fullscreen_bg) {
-		wlr_scene_node_set_enabled(&xdg_view->fullscreen_bg->node, false);
+	if (view->fullscreen_bg) {
+		wlr_scene_node_set_enabled(&view->fullscreen_bg->node, false);
 	}
 }
 
@@ -153,19 +140,18 @@ center_fullscreen_if_needed(struct view *view)
 		return;
 	}
 
-	struct xdg_toplevel_view *xdg_view = xdg_toplevel_view_from_view(view);
-	if (!xdg_view->fullscreen_bg) {
+	if (!view->fullscreen_bg) {
 		const float black[4] = {0, 0, 0, 1};
-		xdg_view->fullscreen_bg =
+		view->fullscreen_bg =
 			wlr_scene_rect_create(view->scene_tree, 0, 0, black);
-		wlr_scene_node_lower_to_bottom(&xdg_view->fullscreen_bg->node);
+		wlr_scene_node_lower_to_bottom(&view->fullscreen_bg->node);
 	}
 
-	wlr_scene_node_set_position(&xdg_view->fullscreen_bg->node,
+	wlr_scene_node_set_position(&view->fullscreen_bg->node,
 		output_box.x - view->current.x, output_box.y - view->current.y);
-	wlr_scene_rect_set_size(xdg_view->fullscreen_bg,
+	wlr_scene_rect_set_size(view->fullscreen_bg,
 		output_box.width, output_box.height);
-	wlr_scene_node_set_enabled(&xdg_view->fullscreen_bg->node, true);
+	wlr_scene_node_set_enabled(&view->fullscreen_bg->node, true);
 }
 
 /* TODO: reorder so this forward declaration isn't needed */
@@ -411,22 +397,20 @@ static void
 handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, destroy);
-	assert(view->type == LAB_XDG_SHELL_VIEW);
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		xdg_toplevel_view_from_view(view);
+	assert(view->xdg_surface);
 
 	struct wlr_xdg_popup *popup, *tmp;
-	wl_list_for_each_safe(popup, tmp, &xdg_toplevel_view->xdg_surface->popups, link) {
+	wl_list_for_each_safe(popup, tmp, &view->xdg_surface->popups, link) {
 		wlr_xdg_popup_destroy(popup);
 	}
 
-	xdg_toplevel_view->xdg_surface->data = NULL;
-	xdg_toplevel_view->xdg_surface = NULL;
+	view->xdg_surface->data = NULL;
+	view->xdg_surface = NULL;
 
 	/* Remove xdg-shell view specific listeners */
-	wl_list_remove(&xdg_toplevel_view->set_app_id.link);
-	wl_list_remove(&xdg_toplevel_view->request_show_window_menu.link);
-	wl_list_remove(&xdg_toplevel_view->new_popup.link);
+	wl_list_remove(&view->set_app_id.link);
+	wl_list_remove(&view->request_show_window_menu.link);
+	wl_list_remove(&view->new_popup.link);
 	wl_list_remove(&view->commit.link);
 
 	if (view->pending_configure_timeout) {
@@ -518,12 +502,12 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 static void
 handle_request_show_window_menu(struct wl_listener *listener, void *data)
 {
-	struct xdg_toplevel_view *xdg_toplevel_view = wl_container_of(
-		listener, xdg_toplevel_view, request_show_window_menu);
+	struct view *view =
+		wl_container_of(listener, view, request_show_window_menu);
 
 	struct menu *menu = menu_get_by_id("client-menu");
 	assert(menu);
-	menu->triggered_by_view = &xdg_toplevel_view->base;
+	menu->triggered_by_view = view;
 
 	struct wlr_cursor *cursor = g_seat.cursor;
 	menu_open_root(menu, cursor->x, cursor->y);
@@ -541,9 +525,7 @@ handle_set_title(struct wl_listener *listener, void *data)
 static void
 handle_set_app_id(struct wl_listener *listener, void *data)
 {
-	struct xdg_toplevel_view *xdg_toplevel_view =
-		wl_container_of(listener, xdg_toplevel_view, set_app_id);
-	struct view *view = &xdg_toplevel_view->base;
+	struct view *view = wl_container_of(listener, view, set_app_id);
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 
 	view_set_app_id(view, toplevel->app_id);
@@ -650,10 +632,7 @@ xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
 		if (view == self) {
 			continue;
 		}
-		if (view->type != LAB_XDG_SHELL_VIEW) {
-			continue;
-		}
-		if (!view->mapped) {
+		if (!view->xdg_surface || !view->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != toplevel) {
@@ -874,14 +853,12 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 
 	assert(xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 
-	struct xdg_toplevel_view *xdg_toplevel_view = znew(*xdg_toplevel_view);
-	struct view *view = &xdg_toplevel_view->base;
+	struct view *view = znew(*view);
 
-	view->type = LAB_XDG_SHELL_VIEW;
 	view->impl = &xdg_toplevel_view_impl;
 	view_init(view);
 
-	xdg_toplevel_view->xdg_surface = xdg_surface;
+	view->xdg_surface = xdg_surface;
 
 	/*
 	 * Pick an output for the surface as soon as its created, so that the
@@ -943,9 +920,9 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	CONNECT_SIGNAL(view->surface, view, commit);
 
 	/* Events specific to XDG toplevel views */
-	CONNECT_SIGNAL(toplevel, xdg_toplevel_view, set_app_id);
-	CONNECT_SIGNAL(toplevel, xdg_toplevel_view, request_show_window_menu);
-	CONNECT_SIGNAL(xdg_surface, xdg_toplevel_view, new_popup);
+	CONNECT_SIGNAL(toplevel, view, set_app_id);
+	CONNECT_SIGNAL(toplevel, view, request_show_window_menu);
+	CONNECT_SIGNAL(xdg_surface, view, new_popup);
 
 	wl_list_insert(&g_server.views, &view->link);
 }

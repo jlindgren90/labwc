@@ -9,7 +9,6 @@
 #include <xkbcommon/xkbcommon.h>
 #include "common/edge.h"
 #include "config.h"
-#include "config/types.h"
 
 /*
  * Default minimal window size. Clients can explicitly set smaller values via
@@ -27,17 +26,6 @@
 #define VIEW_FALLBACK_Y 100
 #define VIEW_FALLBACK_WIDTH  640
 #define VIEW_FALLBACK_HEIGHT 480
-
-/*
- * In labwc, a view is a container for surfaces which can be moved around by
- * the user. In practice this means XDG toplevel and XWayland windows.
- */
-enum view_type {
-	LAB_XDG_SHELL_VIEW,
-#if HAVE_XWAYLAND
-	LAB_XWAYLAND_VIEW,
-#endif
-};
 
 /**
  * Directions in which a view can be maximized. "None" is used
@@ -123,7 +111,6 @@ struct view_impl {
 };
 
 struct view {
-	enum view_type type;
 	const struct view_impl *impl;
 	struct wl_list link;
 
@@ -234,10 +221,8 @@ struct view {
 		struct wl_signal fullscreened;
 		struct wl_signal activated; /* bool *activated */
 	} events;
-};
 
-struct xdg_toplevel_view {
-	struct view base;
+	/* xdg-shell view fields */
 	struct wlr_xdg_surface *xdg_surface;
 
 	/* Optional black background fill behind fullscreen view */
@@ -247,6 +232,27 @@ struct xdg_toplevel_view {
 	struct wl_listener set_app_id;
 	struct wl_listener request_show_window_menu;
 	struct wl_listener new_popup;
+
+#if HAVE_XWAYLAND
+	/* xwayland view fields */
+	struct wlr_xwayland_surface *xwayland_surface;
+	bool focused_before_map;
+
+	/* Events unique to XWayland views */
+	struct wl_listener associate;
+	struct wl_listener dissociate;
+	struct wl_listener request_above;
+	struct wl_listener request_activate;
+	struct wl_listener request_configure;
+	struct wl_listener set_class;
+	struct wl_listener set_decorations;
+	struct wl_listener set_override_redirect;
+	struct wl_listener set_strut_partial;
+	struct wl_listener set_window_type;
+	struct wl_listener set_icon;
+	struct wl_listener focus_in;
+	struct wl_listener map_request;
+#endif
 };
 
 /**

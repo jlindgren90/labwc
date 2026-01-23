@@ -26,19 +26,11 @@ static void set_surface(struct view *view, struct wlr_surface *surface);
 static void handle_map(struct wl_listener *listener, void *data);
 static void handle_unmap(struct wl_listener *listener, void *data);
 
-static struct xwayland_view *
-xwayland_view_from_view(struct view *view)
-{
-	assert(view->type == LAB_XWAYLAND_VIEW);
-	return (struct xwayland_view *)view;
-}
-
 static struct wlr_xwayland_surface *
 xwayland_surface_from_view(struct view *view)
 {
-	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	assert(xwayland_view->xwayland_surface);
-	return xwayland_view->xwayland_surface;
+	assert(view->xwayland_surface);
+	return view->xwayland_surface;
 }
 
 static struct view_size_hints
@@ -245,30 +237,25 @@ handle_request_resize(struct wl_listener *listener, void *data)
 static void
 handle_associate(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, associate);
-	assert(xwayland_view->xwayland_surface &&
-		xwayland_view->xwayland_surface->surface);
+	struct view *view = wl_container_of(listener, view, associate);
+	assert(view->xwayland_surface && view->xwayland_surface->surface);
 
-	set_surface(&xwayland_view->base,
-		xwayland_view->xwayland_surface->surface);
+	set_surface(view, view->xwayland_surface->surface);
 }
 
 static void
 handle_dissociate(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, dissociate);
-
-	set_surface(&xwayland_view->base, NULL);
+	struct view *view = wl_container_of(listener, view, dissociate);
+	set_surface(view, NULL);
 }
 
 static void
 handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, destroy);
-	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	assert(xwayland_view->xwayland_surface->data == view);
+	assert(view->xwayland_surface);
+	assert(view->xwayland_surface->data == view);
 
 	set_surface(view, NULL);
 
@@ -278,23 +265,23 @@ handle_destroy(struct wl_listener *listener, void *data)
 	 * "unmanaged" surface instead (in that case it is important
 	 * that xsurface->data not point to the destroyed view).
 	 */
-	xwayland_view->xwayland_surface->data = NULL;
-	xwayland_view->xwayland_surface = NULL;
+	view->xwayland_surface->data = NULL;
+	view->xwayland_surface = NULL;
 
 	/* Remove XWayland view specific listeners */
-	wl_list_remove(&xwayland_view->associate.link);
-	wl_list_remove(&xwayland_view->dissociate.link);
-	wl_list_remove(&xwayland_view->request_above.link);
-	wl_list_remove(&xwayland_view->request_activate.link);
-	wl_list_remove(&xwayland_view->request_configure.link);
-	wl_list_remove(&xwayland_view->set_class.link);
-	wl_list_remove(&xwayland_view->set_decorations.link);
-	wl_list_remove(&xwayland_view->set_override_redirect.link);
-	wl_list_remove(&xwayland_view->set_strut_partial.link);
-	wl_list_remove(&xwayland_view->set_window_type.link);
-	wl_list_remove(&xwayland_view->set_icon.link);
-	wl_list_remove(&xwayland_view->focus_in.link);
-	wl_list_remove(&xwayland_view->map_request.link);
+	wl_list_remove(&view->associate.link);
+	wl_list_remove(&view->dissociate.link);
+	wl_list_remove(&view->request_above.link);
+	wl_list_remove(&view->request_activate.link);
+	wl_list_remove(&view->request_configure.link);
+	wl_list_remove(&view->set_class.link);
+	wl_list_remove(&view->set_decorations.link);
+	wl_list_remove(&view->set_override_redirect.link);
+	wl_list_remove(&view->set_strut_partial.link);
+	wl_list_remove(&view->set_window_type.link);
+	wl_list_remove(&view->set_icon.link);
+	wl_list_remove(&view->focus_in.link);
+	wl_list_remove(&view->map_request.link);
 
 	view_destroy(view);
 }
@@ -329,9 +316,7 @@ xwayland_view_configure(struct view *view, struct wlr_box geo)
 static void
 handle_request_configure(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, request_configure);
-	struct view *view = &xwayland_view->base;
+	struct view *view = wl_container_of(listener, view, request_configure);
 	struct wlr_xwayland_surface_configure_event *event = data;
 
 	if (view_is_floating(view)) {
@@ -354,20 +339,15 @@ handle_request_configure(struct wl_listener *listener, void *data)
 static void
 handle_request_above(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, request_above);
-	struct view *view = &xwayland_view->base;
-
-	view_set_layer(view, xwayland_view->xwayland_surface->above
+	struct view *view = wl_container_of(listener, view, request_above);
+	view_set_layer(view, view->xwayland_surface->above
 		? VIEW_LAYER_ALWAYS_ON_TOP : VIEW_LAYER_NORMAL);
 }
 
 static void
 handle_request_activate(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, request_activate);
-	struct view *view = &xwayland_view->base;
+	struct view *view = wl_container_of(listener, view, request_activate);
 	desktop_focus_view(view, /*raise*/ true);
 }
 
@@ -418,16 +398,13 @@ static void
 handle_set_title(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_title);
-	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	view_set_title(view, xwayland_view->xwayland_surface->title);
+	view_set_title(view, view->xwayland_surface->title);
 }
 
 static void
 handle_set_class(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, set_class);
-	struct view *view = &xwayland_view->base;
+	struct view *view = wl_container_of(listener, view, set_class);
 
 	/*
 	 * Use the WM_CLASS 'instance' (1st string) for the app_id. Per
@@ -438,7 +415,7 @@ handle_set_class(struct wl_listener *listener, void *data)
 	 * 'instance' except for being capitalized. We want lowercase
 	 * here since we use the app_id for icon lookups.
 	 */
-	view_set_app_id(view, xwayland_view->xwayland_surface->instance);
+	view_set_app_id(view, view->xwayland_surface->instance);
 }
 
 static void
@@ -450,11 +427,8 @@ xwayland_view_close(struct view *view)
 static void
 handle_set_decorations(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, set_decorations);
-	struct view *view = &xwayland_view->base;
-
-	view_set_ssd_enabled(view, want_deco(xwayland_view->xwayland_surface));
+	struct view *view = wl_container_of(listener, view, set_decorations);
+	view_set_ssd_enabled(view, want_deco(view->xwayland_surface));
 }
 
 static void
@@ -466,10 +440,9 @@ handle_set_window_type(struct wl_listener *listener, void *data)
 static void
 handle_set_override_redirect(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, set_override_redirect);
-	struct view *view = &xwayland_view->base;
-	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
+	struct view *view =
+		wl_container_of(listener, view, set_override_redirect);
+	struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
 
 	bool mapped = xsurface->surface && xsurface->surface->mapped;
 	if (mapped) {
@@ -483,9 +456,7 @@ handle_set_override_redirect(struct wl_listener *listener, void *data)
 static void
 handle_set_strut_partial(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, set_strut_partial);
-	struct view *view = &xwayland_view->base;
+	struct view *view = wl_container_of(listener, view, set_strut_partial);
 
 	if (view->mapped) {
 		output_update_all_usable_areas(false);
@@ -495,13 +466,12 @@ handle_set_strut_partial(struct wl_listener *listener, void *data)
 static void
 handle_set_icon(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, set_icon);
+	struct view *view = wl_container_of(listener, view, set_icon);
 
 	xcb_ewmh_get_wm_icon_reply_t icon_reply = {0};
-	if (!wlr_xwayland_surface_fetch_icon(xwayland_view->xwayland_surface,
+	if (!wlr_xwayland_surface_fetch_icon(view->xwayland_surface,
 			&icon_reply)) {
-		view_set_icon(&xwayland_view->base, NULL);
+		view_set_icon(view, NULL);
 		goto out;
 	}
 
@@ -531,7 +501,7 @@ handle_set_icon(struct wl_listener *listener, void *data)
 	}
 
 	/* view takes ownership of the buffers */
-	view_set_icon(&xwayland_view->base, &buffers);
+	view_set_icon(view, &buffers);
 	wl_array_release(&buffers);
 
 out:
@@ -541,9 +511,7 @@ out:
 static void
 handle_focus_in(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, focus_in);
-	struct view *view = &xwayland_view->base;
+	struct view *view = wl_container_of(listener, view, focus_in);
 
 	if (!view->surface) {
 		/*
@@ -559,7 +527,7 @@ handle_focus_in(struct wl_listener *listener, void *data)
 		 * seat focus later when the view is actually mapped.
 		 */
 		wlr_log(WLR_DEBUG, "focus_in received before map");
-		xwayland_view->focused_before_map = true;
+		view->focused_before_map = true;
 		return;
 	}
 
@@ -577,10 +545,8 @@ handle_focus_in(struct wl_listener *listener, void *data)
 static void
 handle_map_request(struct wl_listener *listener, void *data)
 {
-	struct xwayland_view *xwayland_view =
-		wl_container_of(listener, xwayland_view, map_request);
-	struct view *view = &xwayland_view->base;
-	struct wlr_xwayland_surface *xsurface = xwayland_view->xwayland_surface;
+	struct view *view = wl_container_of(listener, view, map_request);
+	struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
 
 	if (view->mapped) {
 		/* Probably shouldn't happen, but be sure */
@@ -704,9 +670,7 @@ static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, mappable.map);
-	struct xwayland_view *xwayland_view = xwayland_view_from_view(view);
-	struct wlr_xwayland_surface *xwayland_surface =
-		xwayland_view->xwayland_surface;
+	struct wlr_xwayland_surface *xwayland_surface = view->xwayland_surface;
 	assert(xwayland_surface);
 	assert(xwayland_surface->surface);
 	assert(xwayland_surface->surface == view->surface);
@@ -721,7 +685,7 @@ handle_map(struct wl_listener *listener, void *data)
 	 * have valid geometry in that case, call handle_map_request()
 	 * explicitly (calling it twice is harmless).
 	 */
-	handle_map_request(&xwayland_view->map_request, NULL);
+	handle_map_request(&view->map_request, NULL);
 
 	view->mapped = true;
 
@@ -751,8 +715,8 @@ handle_map(struct wl_listener *listener, void *data)
 	 * In all other cases, it's redundant since view_impl_map()
 	 * results in the view being focused anyway.
 	 */
-	if (xwayland_view->focused_before_map) {
-		xwayland_view->focused_before_map = false;
+	if (view->focused_before_map) {
+		view->focused_before_map = false;
 		seat_focus_surface(view->surface);
 	}
 
@@ -820,17 +784,7 @@ xwayland_view_append_children(struct view *self, struct wl_array *children)
 		if (view == self) {
 			continue;
 		}
-		if (view->type != LAB_XWAYLAND_VIEW) {
-			continue;
-		}
-		/*
-		 * This happens when a view has never been mapped or when a
-		 * client has requested a `handle_unmap`.
-		 */
-		if (!view->surface) {
-			continue;
-		}
-		if (!view->mapped) {
+		if (!view->xwayland_surface || !view->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != surface) {
@@ -887,10 +841,8 @@ static const struct view_impl xwayland_view_impl = {
 void
 xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 {
-	struct xwayland_view *xwayland_view = znew(*xwayland_view);
-	struct view *view = &xwayland_view->base;
+	struct view *view = znew(*view);
 
-	view->type = LAB_XWAYLAND_VIEW;
 	view->impl = &xwayland_view_impl;
 	view_init(view);
 
@@ -901,7 +853,7 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	 * the xsurface, which removes it from the view (destroying the view)
 	 * and makes it an "unmanaged" surface.
 	 */
-	xwayland_view->xwayland_surface = xsurface;
+	view->xwayland_surface = xsurface;
 	xsurface->data = view;
 
 	view->scene_tree =
@@ -918,27 +870,27 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	CONNECT_SIGNAL(xsurface, view, set_title);
 
 	/* Events specific to XWayland views */
-	CONNECT_SIGNAL(xsurface, xwayland_view, associate);
-	CONNECT_SIGNAL(xsurface, xwayland_view, dissociate);
-	CONNECT_SIGNAL(xsurface, xwayland_view, request_above);
-	CONNECT_SIGNAL(xsurface, xwayland_view, request_activate);
-	CONNECT_SIGNAL(xsurface, xwayland_view, request_configure);
-	CONNECT_SIGNAL(xsurface, xwayland_view, set_class);
-	CONNECT_SIGNAL(xsurface, xwayland_view, set_decorations);
-	CONNECT_SIGNAL(xsurface, xwayland_view, set_override_redirect);
-	CONNECT_SIGNAL(xsurface, xwayland_view, set_strut_partial);
-	CONNECT_SIGNAL(xsurface, xwayland_view, set_window_type);
-	CONNECT_SIGNAL(xsurface, xwayland_view, set_icon);
-	CONNECT_SIGNAL(xsurface, xwayland_view, focus_in);
-	CONNECT_SIGNAL(xsurface, xwayland_view, map_request);
+	CONNECT_SIGNAL(xsurface, view, associate);
+	CONNECT_SIGNAL(xsurface, view, dissociate);
+	CONNECT_SIGNAL(xsurface, view, request_above);
+	CONNECT_SIGNAL(xsurface, view, request_activate);
+	CONNECT_SIGNAL(xsurface, view, request_configure);
+	CONNECT_SIGNAL(xsurface, view, set_class);
+	CONNECT_SIGNAL(xsurface, view, set_decorations);
+	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
+	CONNECT_SIGNAL(xsurface, view, set_strut_partial);
+	CONNECT_SIGNAL(xsurface, view, set_window_type);
+	CONNECT_SIGNAL(xsurface, view, set_icon);
+	CONNECT_SIGNAL(xsurface, view, focus_in);
+	CONNECT_SIGNAL(xsurface, view, map_request);
 
 	wl_list_insert(&g_server.views, &view->link);
 
 	if (xsurface->surface) {
-		handle_associate(&xwayland_view->associate, NULL);
+		handle_associate(&view->associate, NULL);
 	}
 	if (mapped) {
-		handle_map(&xwayland_view->base.mappable.map, NULL);
+		handle_map(&view->mappable.map, NULL);
 	}
 }
 
@@ -1104,7 +1056,7 @@ xwayland_adjust_usable_area(struct view *view, struct wlr_output_layout *layout,
 	assert(output);
 	assert(usable);
 
-	if (view->type != LAB_XWAYLAND_VIEW) {
+	if (!view->xwayland_surface) {
 		return;
 	}
 
