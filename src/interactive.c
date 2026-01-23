@@ -89,7 +89,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	}
 
 	/* Prevent moving/resizing panel-like views */
-	if (view_has_strut_partial(view)) {
+	if (view_has_strut_partial(view->id)) {
 		return;
 	}
 
