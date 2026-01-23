@@ -33,9 +33,6 @@ struct mappable {
 };
 
 struct view {
-	/* This is cleared when the view is not in the cycle list */
-	struct wl_list cycle_link;
-
 	/* rust interop */
 	ViewId id;
 	const ViewState *st;

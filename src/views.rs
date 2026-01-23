@@ -12,6 +12,7 @@ pub struct Views {
     order: Vec<ViewId>, // from back to front
     active_id: ViewId,
     foreign_toplevel_clients: Vec<*mut WlResource>,
+    cycle_list: Vec<ViewId>, // TODO: move elsewhere?
 }
 
 impl Views {
@@ -48,7 +49,7 @@ impl Views {
         self.get_c_ptr(*self.order.get(n).unwrap_or(&0))
     }
 
-    pub fn get_root_of(&self, id: ViewId) -> ViewId {
+    fn get_root_of(&self, id: ViewId) -> ViewId {
         self.by_id.get(&id).map_or(0, View::get_root_id)
     }
 
@@ -259,5 +260,24 @@ impl Views {
 
     pub fn remove_foreign_toplevel_client(&mut self, client: *mut WlResource) {
         self.foreign_toplevel_clients.retain(|&c| c != client);
+    }
+
+    pub fn build_cycle_list(&mut self) {
+        self.cycle_list.clear();
+        for &i in self.order.iter().rev() {
+            if let Some(v) = self.by_id.get(&i)
+                && v.get_state().focusable()
+            {
+                self.cycle_list.push(i);
+            }
+        }
+    }
+
+    pub fn cycle_list_len(&self) -> usize {
+        self.cycle_list.len()
+    }
+
+    pub fn cycle_list_nth(&self, n: usize) -> *mut CView {
+        self.get_c_ptr(*self.cycle_list.get(n).unwrap_or(&0))
     }
 }

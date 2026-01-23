@@ -248,10 +248,7 @@ struct server {
 	struct wlr_security_context_manager_v1 *security_context_manager_v1;
 
 	/* Set when in cycle (alt-tab) mode */
-	struct cycle_state {
-		struct view *selected_view;
-		struct wl_list views;
-	} cycle;
+	int current_cycle_idx;
 
 	struct menu *menu_current;
 	struct wl_list menus;

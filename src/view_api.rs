@@ -46,12 +46,6 @@ pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
-    let views = views();
-    return views.get_c_ptr(views.get_root_of(id));
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_adjust_size(id: ViewId, width: &mut i32, height: &mut i32) {
     if let Some(view) = views().get_view(id) {
         view.adjust_size(width, height);
@@ -260,4 +254,19 @@ pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlReso
     if let Some(view) = views_mut().get_view_mut(id) {
         view.remove_foreign_toplevel(resource);
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cycle_list_build() {
+    views_mut().build_cycle_list();
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cycle_list_len() -> usize {
+    views().cycle_list_len()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn cycle_list_nth(n: usize) -> *mut CView {
+    views().cycle_list_nth(n)
 }

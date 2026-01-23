@@ -529,7 +529,6 @@ server_init(void)
 	}
 
 	wl_list_init(&g_server.unmanaged_surfaces);
-	wl_list_init(&g_server.cycle.views);
 
 	g_server.scene = wlr_scene_create();
 	die_if_null(g_server.scene);
