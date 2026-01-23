@@ -213,22 +213,6 @@ handle_request_activate(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	/*
-	 * Validate that the unmanaged surface trying to grab focus is actually
-	 * a child of the active view before granting the request.
-	 *
-	 * FIXME: this logic is a bit incomplete/inconsistent. Refer to
-	 * https://github.com/labwc/labwc/discussions/2821 for more info.
-	 */
-	struct view *view = g_server.active_view;
-	if (view && view->type == LAB_XWAYLAND_VIEW) {
-		struct wlr_xwayland_surface *surf =
-			wlr_xwayland_surface_try_from_wlr_surface(view->surface);
-		if (surf && surf->pid != xsurface->pid) {
-			return;
-		}
-	}
-
 	seat_focus_surface(xsurface->surface);
 }
 
