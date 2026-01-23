@@ -843,7 +843,12 @@ view_set_layer(struct view *view, enum view_layer layer)
 	wlr_scene_node_reparent(&view->scene_tree->node,
 		server.view_trees[layer]);
 
-	wl_signal_emit_mutable(&view->events.always_on_top, NULL);
+#if HAVE_XWAYLAND
+	if (view->xwayland_surface) {
+		wlr_xwayland_surface_set_above(view->xwayland_surface,
+			layer == VIEW_LAYER_ALWAYS_ON_TOP);
+	}
+#endif
 }
 
 void
@@ -1163,7 +1168,7 @@ view_move_to_front(struct view *view)
 	 * to an incorrect X window depending on timing. To mitigate the
 	 * race, perform an explicit flush after restacking.
 	 */
-	if (view->type == LAB_XWAYLAND_VIEW) {
+	if (view->xwayland_surface) {
 		xwayland_flush();
 	}
 #endif
@@ -1374,7 +1379,6 @@ view_init(struct view *view)
 	wl_signal_init(&view->events.minimized);
 	wl_signal_init(&view->events.fullscreened);
 	wl_signal_init(&view->events.activated);
-	wl_signal_init(&view->events.always_on_top);
 
 	view->title = xstrdup("");
 	view->app_id = xstrdup("");
@@ -1445,7 +1449,6 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.minimized.listener_list));
 	assert(wl_list_empty(&view->events.fullscreened.listener_list));
 	assert(wl_list_empty(&view->events.activated.listener_list));
-	assert(wl_list_empty(&view->events.always_on_top.listener_list));
 
 	zfree(view->title);
 	zfree(view->app_id);
