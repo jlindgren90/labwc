@@ -88,6 +88,14 @@ impl View {
         self.v.is_modal_dialog()
     }
 
+    pub fn get_size_hints(&self) -> ViewSizeHints {
+        self.v.get_size_hints()
+    }
+
+    pub fn has_strut_partial(&self) -> bool {
+        self.v.has_strut_partial()
+    }
+
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
@@ -281,7 +289,7 @@ impl View {
         }
         if !is_floating {
             self.apply_special_geom();
-        } else if unsafe { view_has_strut_partial(self.c_ptr) } {
+        } else if self.has_strut_partial() {
             // Do not move panels etc. out of their own reserved area
         } else {
             // Restore saved geometry, ensuring view is on-screen
