@@ -386,7 +386,6 @@ server_init(void)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&server.cycle.views);
 	wl_list_init(&server.cycle.osd_outputs);
 
 	server.scene = wlr_scene_create();
