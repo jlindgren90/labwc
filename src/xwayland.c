@@ -19,7 +19,6 @@
 #include "node.h"
 #include "output.h"
 #include "view.h"
-#include "view-impl-common.h"
 
 enum atoms {
 	ATOM_NET_WM_ICON = 0,
@@ -212,7 +211,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	 */
 	if (view->st->current.width != state->width
 			|| view->st->current.height != state->height) {
-		view_impl_apply_geometry(view, state->width, state->height);
+		view_commit_size(view->id, state->width, state->height);
 		view_moved(view);
 	}
 }

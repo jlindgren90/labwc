@@ -346,6 +346,13 @@ pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
 }
 
 #[no_mangle]
+pub extern "C" fn view_commit_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.commit_size(width, height);
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_initial_geom(id: ViewId, rel_to: Option<&Rect>, keep_position: bool) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_initial_geom(rel_to, keep_position);

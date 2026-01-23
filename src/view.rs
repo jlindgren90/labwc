@@ -337,6 +337,33 @@ impl View {
         }
     }
 
+    pub fn commit_size(&mut self, width: i32, height: i32) {
+        let cur = self.state.current;
+        let pend = self.state.pending;
+        // Anchor right edge if resizing via left edge
+        // (or if recently resizing, detected via heuristic)
+        let resizing_left = unsafe { interactive_resize_is_active(self.c_ptr, LAB_EDGE_LEFT) };
+        let x = if resizing_left || (cur.x != pend.x && cur.x + cur.width == pend.x + pend.width) {
+            pend.x + pend.width - width
+        } else {
+            pend.x
+        };
+        // Anchor bottom edge if resizing via top edge
+        // (or if recently resizing, detected via heuristic)
+        let resizing_top = unsafe { interactive_resize_is_active(self.c_ptr, LAB_EDGE_TOP) };
+        let y = if resizing_top || (cur.y != pend.y && cur.y + cur.height == pend.y + pend.height) {
+            pend.y + pend.height - height
+        } else {
+            pend.y
+        };
+        self.state.current = Rect {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+        };
+    }
+
     pub fn set_initial_geom(&mut self, rel_to: Option<&Rect>, keep_position: bool) {
         if view_is_floating(&*self.state) {
             let mut geom = self.state.pending;
