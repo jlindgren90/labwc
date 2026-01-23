@@ -211,6 +211,20 @@ pub extern "C" fn view_get_modal_dialog(id: ViewId) -> *mut CView {
 }
 
 #[no_mangle]
+pub extern "C" fn view_get_size_hints(id: ViewId) -> ViewSizeHints {
+    let views = views();
+    let view = views.by_id.get(&id);
+    return view.map_or(ViewSizeHints::default(), View::get_size_hints);
+}
+
+#[no_mangle]
+pub extern "C" fn view_has_strut_partial(id: ViewId) -> bool {
+    let views = views();
+    let view = views.by_id.get(&id);
+    return view.map_or(false, View::has_strut_partial);
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_app_id(cstring(app_id));

@@ -47,25 +47,7 @@ struct mappable {
 	struct wl_listener unmap;
 };
 
-/* Basic size hints (subset of XSizeHints from X11) */
-struct view_size_hints {
-	int min_width;
-	int min_height;
-	int width_inc;
-	int height_inc;
-	int base_width;
-	int base_height;
-};
-
-struct view_impl {
-	struct view_size_hints (*get_size_hints)(struct view *self);
-	/* returns true if view reserves space at screen edge */
-	bool (*has_strut_partial)(struct view *self);
-};
-
 struct view {
-	const struct view_impl *impl;
-
 	/* This is cleared when the view is not in the cycle list */
 	struct wl_list cycle_link;
 
@@ -163,14 +145,6 @@ void view_toggle_fullscreen(struct view *view);
 void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool combine);
 
-/**
- * view_has_strut_partial() - returns true for views that reserve space
- * at a screen edge (e.g. panels). These views are treated as if they
- * have the fixedPosition window rule: i.e. they are not restricted to
- * the usable area and cannot be moved/resized interactively.
- */
-bool view_has_strut_partial(struct view *view);
-
 void view_reload_ssd(struct view *view);
 
 struct lab_data_buffer *view_get_icon_buffer(struct view *view);
@@ -178,7 +152,6 @@ struct lab_data_buffer *view_get_icon_buffer(struct view *view);
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, struct wl_array *buffers);
 
-struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);
 
 void view_init(struct view *view, bool is_xwayland);
