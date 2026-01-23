@@ -35,29 +35,6 @@ struct xwayland_unmanaged {
 	bool ever_grabbed_focus;
 };
 
-struct xwayland_view {
-	struct view base;
-	struct wlr_xwayland_surface *xwayland_surface;
-	bool focused_before_map;
-
-	/* Events unique to XWayland views */
-	struct wl_listener associate;
-	struct wl_listener dissociate;
-	struct wl_listener request_activate;
-	struct wl_listener request_configure;
-	struct wl_listener set_class;
-	struct wl_listener set_decorations;
-	struct wl_listener set_override_redirect;
-	struct wl_listener set_strut_partial;
-	struct wl_listener set_window_type;
-	struct wl_listener focus_in;
-	struct wl_listener map_request;
-
-	/* Not (yet) implemented */
-/*	struct wl_listener set_role; */
-/*	struct wl_listener set_hints; */
-};
-
 void xwayland_unmanaged_create(struct wlr_xwayland_surface *xsurface,
 	bool mapped);
 
