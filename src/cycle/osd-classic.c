@@ -71,7 +71,7 @@ cycle_osd_classic_create(struct output *output)
 	struct window_switcher_classic_theme *switcher_theme =
 		&g_theme.osd_window_switcher_classic;
 	int padding = g_theme.osd_border_width + switcher_theme->padding;
-	int nr_views = wl_list_length(&g_server.cycle.views);
+	int nr_views = cycle_list_len();
 
 	struct wlr_box output_box;
 	wlr_output_layout_get_box(g_server.output_layout, output->wlr_output,
@@ -112,11 +112,10 @@ cycle_osd_classic_create(struct output *output)
 	}
 
 	/* Draw text for each node */
-	struct view *view;
-	wl_list_for_each(view, &g_server.cycle.views, cycle_link) {
+	for (int i = 0; i < nr_views; i++) {
 		struct cycle_osd_classic_item *item = znew(*item);
 		wl_list_append(&output->cycle_osd.items, &item->base.link);
-		item->base.view = view;
+		item->base.cycle_idx = i;
 		item->base.tree = wlr_scene_tree_create(output->cycle_osd.tree);
 		node_descriptor_create(&item->base.tree->node,
 			LAB_NODE_CYCLE_OSD_ITEM, NULL, item);
@@ -164,10 +163,13 @@ cycle_osd_classic_create(struct output *output)
 			w - 2 * padding, switcher_theme->item_height, (float[4]) {0});
 		wlr_scene_node_set_position(&hitbox->node, padding, y);
 
-		create_fields_scene(view, item->normal_tree, text_color,
-			bg_color, field_widths_sum, x, y);
-		create_fields_scene(view, item->active_tree, text_color,
-			active_bg_color, field_widths_sum, x, y);
+		struct view *view = cycle_list_nth(i);
+		if (view) {
+			create_fields_scene(view, item->normal_tree, text_color,
+				bg_color, field_widths_sum, x, y);
+			create_fields_scene(view, item->active_tree, text_color,
+				active_bg_color, field_widths_sum, x, y);
+		}
 
 		y += switcher_theme->item_height;
 	}
@@ -184,7 +186,7 @@ cycle_osd_classic_update(struct output *output)
 {
 	struct cycle_osd_classic_item *item;
 	wl_list_for_each(item, &output->cycle_osd.items, base.link) {
-		bool active = item->base.view == g_server.cycle.selected_view;
+		bool active = item->base.cycle_idx == g_server.current_cycle_idx;
 		wlr_scene_node_set_enabled(&item->normal_tree->node, !active);
 		wlr_scene_node_set_enabled(&item->active_tree->node, active);
 	}

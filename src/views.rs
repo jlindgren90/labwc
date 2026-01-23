@@ -14,6 +14,7 @@ struct Views {
     order: Vec<ViewId>, // from back to front
     active_id: ViewId,
     foreign_toplevel_clients: Vec<*mut WlResource>,
+    cycle_list: Vec<ViewId>, // TODO: move elsewhere?
 }
 
 impl Views {
@@ -474,4 +475,33 @@ pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlReso
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.remove_foreign_toplevel(resource);
     }
+}
+
+#[no_mangle]
+pub extern "C" fn cycle_list_build() {
+    let Views {
+        by_id,
+        order,
+        cycle_list,
+        ..
+    } = &mut *views_mut();
+    cycle_list.clear();
+    for &i in order.iter().rev() {
+        if let Some(v) = by_id.get(&i) {
+            if view_is_focusable(v.get_state()) {
+                cycle_list.push(i);
+            }
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn cycle_list_len() -> usize {
+    views().cycle_list.len()
+}
+
+#[no_mangle]
+pub extern "C" fn cycle_list_nth(n: usize) -> *mut CView {
+    let views = views();
+    return views.get_c_ptr(*views.cycle_list.get(n).unwrap_or(&0));
 }
