@@ -32,6 +32,16 @@ typedef enum view_focus_mode {
 	VIEW_FOCUS_MODE_UNLIKELY,
 } ViewFocusMode;
 
+// Basic size hints (subset of XSizeHints from X11)
+typedef struct view_size_hints {
+	int min_width;
+	int min_height;
+	int width_inc;
+	int height_inc;
+	int base_width;
+	int base_height;
+} ViewSizeHints;
+
 typedef struct ViewState {
 	const char *app_id;
 	const char *title;
@@ -50,7 +60,6 @@ typedef struct ViewState {
 	Output *output;
 } ViewState;
 
-_Bool view_has_strut_partial(CView *view);
 void view_set_visible(CView *view, _Bool visible);
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
@@ -62,6 +71,7 @@ _Bool view_focus_impl(CView *view);
 
 ViewId xdg_toplevel_view_get_root_id(CView *view);
 _Bool xdg_toplevel_view_is_modal_dialog(CView *view);
+ViewSizeHints xdg_toplevel_view_get_size_hints(CView *view);
 void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
@@ -71,6 +81,8 @@ void xdg_toplevel_view_close(CView *view);
 
 ViewId xwayland_view_get_root_id(CView *view);
 _Bool xwayland_view_is_modal_dialog(CView *view);
+ViewSizeHints xwayland_view_get_size_hints(CView *view);
+_Bool xwayland_view_has_strut_partial(CView *view);
 void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);

@@ -84,16 +84,6 @@ view_moved(struct view *view)
 	cursor_update_focus();
 }
 
-struct view_size_hints
-view_get_size_hints(struct view *view)
-{
-	assert(view);
-	if (view->impl->get_size_hints) {
-		return view->impl->get_size_hints(view);
-	}
-	return (struct view_size_hints){0};
-}
-
 static void
 substitute_nonzero(int *a, int *b)
 {
@@ -117,7 +107,7 @@ void
 view_adjust_size(struct view *view, int *w, int *h)
 {
 	assert(view);
-	struct view_size_hints hints = view_get_size_hints(view);
+	struct view_size_hints hints = view_get_size_hints(view->id);
 
 	/*
 	 * "If a base size is not provided, the minimum size is to be
@@ -284,14 +274,6 @@ view_focus_impl(struct view *view)
 	}
 
 	return g_seat.wlr_seat->keyboard_state.focused_surface == surface;
-}
-
-bool
-view_has_strut_partial(struct view *view)
-{
-	assert(view);
-	return view->impl->has_strut_partial &&
-		view->impl->has_strut_partial(view);
 }
 
 void
