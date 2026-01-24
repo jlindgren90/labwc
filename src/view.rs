@@ -29,6 +29,10 @@ impl From<&ViewState> for ForeignToplevelState {
     }
 }
 
+fn nearest_output_to_geom(geom: Rect) -> *mut Output {
+    return unsafe { output_nearest_to(geom.x + geom.width / 2, geom.y + geom.height / 2) };
+}
+
 #[derive(Default)]
 struct ViewData {
     app_id: CString,
@@ -172,6 +176,10 @@ impl View {
         }
         self.v
             .configure(geom, &mut self.state.pending, &mut self.state.current);
+        if self.state.floating() {
+            // Moving a floating view also sets the output
+            self.state.output = nearest_output_to_geom(self.state.pending);
+        }
         unsafe { view_notify_move_resize(self.c_ptr) };
     }
 
@@ -193,6 +201,10 @@ impl View {
             self.state.natural_geom.y = self.state.pending.y;
             self.state.natural_geom.height = self.state.pending.height;
         }
+    }
+
+    pub fn set_output(&mut self, output: *mut Output) {
+        self.state.output = output;
     }
 
     pub fn offer_focus(&self) {
