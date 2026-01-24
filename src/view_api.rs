@@ -149,6 +149,13 @@ pub extern "C" fn view_store_natural_geom(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.set_output(output);
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_offer_focus(id: ViewId) {
     if let Some(view) = views().get_view(id) {
         view.offer_focus();

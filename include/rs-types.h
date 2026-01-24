@@ -15,6 +15,7 @@ typedef unsigned long ViewId;
 
 // Other Rust-friendly typedefs
 typedef struct view CView;
+typedef struct output Output;
 typedef struct wl_display WlDisplay;
 typedef struct wl_resource WlResource;
 

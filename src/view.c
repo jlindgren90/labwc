@@ -134,8 +134,8 @@ view_discover_output(struct view *view, const struct wlr_box *geometry)
 		output_nearest_to(geometry->x + geometry->width / 2,
 			geometry->y + geometry->height / 2);
 
-	if (output && output != view->output) {
-		view->output = output;
+	if (output && output != view->st->output) {
+		view_set_output(view->id, output);
 		return true;
 	}
 
@@ -146,21 +146,6 @@ void
 view_notify_active(struct view *view)
 {
 	ssd_set_active(view->ssd, view->st->active);
-}
-
-void
-view_set_output(struct view *view, struct output *output)
-{
-	assert(view);
-	if (!output_is_usable(output)) {
-		wlr_log(WLR_ERROR, "invalid output set for view");
-		return;
-	}
-	view->output = output;
-	/* Show fullscreen views above top-layer */
-	if (view->st->fullscreen) {
-		desktop_update_top_layer_visibility();
-	}
 }
 
 void
@@ -189,14 +174,6 @@ view_moved(struct view *view)
 	assert(view);
 	wlr_scene_node_set_position(&view->scene_tree->node,
 		view->st->current.x, view->st->current.y);
-	/*
-	 * Only floating views change output when moved. Non-floating
-	 * views (maximized/tiled/fullscreen) are tied to a particular
-	 * output when they enter that state.
-	 */
-	if (view_is_floating(view->st)) {
-		view_discover_output(view, NULL);
-	}
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus();
 }
@@ -209,12 +186,6 @@ view_notify_move_resize(struct view *view)
 	/*
 	 * If the move/resize was user-initiated (rather than due to
 	 * output layout change), then update the last placement info.
-	 *
-	 * TODO: consider also updating view->output here for floating
-	 * views (based on view->pending) rather than waiting until
-	 * view_moved(). This might eliminate some race conditions with
-	 * view_adjust_for_layout_change(), which uses view->pending.
-	 * Not sure if it might have other side-effects though.
 	 */
 	if (!view->adjusting_for_layout_change) {
 		save_last_placement(view);
@@ -375,13 +346,14 @@ view_compute_centered_position(struct view *view, const struct wlr_box *ref,
 		wlr_log(WLR_ERROR, "view has empty geometry, not centering");
 		return false;
 	}
-	if (!output_is_usable(view->output)) {
+	if (!output_is_usable(view->st->output)) {
 		wlr_log(WLR_ERROR, "view has no output, not centering");
 		return false;
 	}
 
 	struct border margin = ssd_get_margin(view);
-	struct wlr_box usable = output_usable_area_in_layout_coords(view->output);
+	struct wlr_box usable =
+		output_usable_area_in_layout_coords(view->st->output);
 	int width = w + margin.left + margin.right;
 	int height = h + margin.top + margin.bottom;
 
@@ -403,7 +375,7 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 {
 	assert(view);
 
-	if (!output_is_usable(view->output)) {
+	if (!output_is_usable(view->st->output)) {
 		wlr_log(WLR_ERROR, "view has no output, not positioning");
 		return false;
 	}
@@ -416,11 +388,11 @@ adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
 	bool adjusted = false;
 	bool onscreen = false;
 	if (wlr_output_layout_intersects(g_server.output_layout,
-			view->output->wlr_output, geometry)) {
+			view->st->output->wlr_output, geometry)) {
 		/* Always make sure the titlebar starts within the usable area */
 		struct border margin = ssd_get_margin(view);
 		struct wlr_box usable =
-			output_usable_area_in_layout_coords(view->output);
+			output_usable_area_in_layout_coords(view->st->output);
 
 		if (geometry->x < usable.x + margin.left) {
 			geometry->x = usable.x + margin.left;
@@ -482,12 +454,12 @@ view_center(struct view *view, const struct wlr_box *ref)
 void
 view_constrain_size_to_that_of_usable_area(struct view *view)
 {
-	if (!view || !output_is_usable(view->output) || view->st->fullscreen) {
+	if (!view || !output_is_usable(view->st->output) || view->st->fullscreen) {
 		return;
 	}
 
 	struct wlr_box usable_area =
-			output_usable_area_in_layout_coords(view->output);
+		output_usable_area_in_layout_coords(view->st->output);
 	struct border margin = ssd_get_margin(view);
 
 	int available_width = usable_area.width - margin.left - margin.right;
@@ -543,10 +515,10 @@ view_apply_tiled_geometry(struct view *view)
 {
 	assert(view);
 	assert(view->st->tiled);
-	assert(output_is_usable(view->output));
+	assert(output_is_usable(view->st->output));
 
-	view_move_resize(view->id,
-		view_get_edge_snap_box(view, view->output, view->st->tiled));
+	view_move_resize(view->id, view_get_edge_snap_box(
+		view, view->st->output, view->st->tiled));
 }
 
 static void
@@ -554,11 +526,11 @@ view_apply_fullscreen_geometry(struct view *view)
 {
 	assert(view);
 	assert(view->st->fullscreen);
-	assert(output_is_usable(view->output));
+	assert(output_is_usable(view->st->output));
 
 	struct wlr_box box = { 0 };
 	wlr_output_layout_get_box(g_server.output_layout,
-		view->output->wlr_output, &box);
+		view->st->output->wlr_output, &box);
 	view_move_resize(view->id, box);
 }
 
@@ -567,7 +539,7 @@ view_apply_maximized_geometry(struct view *view)
 {
 	assert(view);
 	assert(view->st->maximized != VIEW_AXIS_NONE);
-	struct output *output = view->output;
+	struct output *output = view->st->output;
 	assert(output_is_usable(output));
 
 	struct wlr_box box = output_usable_area_in_layout_coords(output);
@@ -610,7 +582,7 @@ view_apply_special_geometry(struct view *view)
 {
 	assert(view);
 	assert(!view_is_floating(view->st));
-	if (!output_is_usable(view->output)) {
+	if (!output_is_usable(view->st->output)) {
 		wlr_log(WLR_ERROR, "view has no output, not updating geometry");
 		return;
 	}
@@ -777,7 +749,7 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 		return;
 	}
 	if (fullscreen) {
-		if (!output_is_usable(view->output)) {
+		if (!output_is_usable(view->st->output)) {
 			/* Prevent fullscreen with no available outputs */
 			return;
 		}
@@ -822,7 +794,7 @@ static void
 save_last_placement(struct view *view)
 {
 	assert(view);
-	struct output *output = view->output;
+	struct output *output = view->st->output;
 	if (!output_is_usable(output)) {
 		wlr_log(WLR_ERROR, "cannot save last placement in unusable output");
 		return;
@@ -868,7 +840,7 @@ view_adjust_for_layout_change(struct view *view)
 		new_geo = view->last_placement.relative_geo;
 		new_geo.x += output->scene_output->x;
 		new_geo.y += output->scene_output->y;
-		view->output = output;
+		view_set_output(view->id, output);
 	} else {
 		/*
 		 * Otherwise, evacuate the view to another output. Use the last
@@ -890,13 +862,6 @@ view_adjust_for_layout_change(struct view *view)
 	}
 
 	view->adjusting_for_layout_change = false;
-}
-
-void
-view_on_output_destroy(struct view *view)
-{
-	assert(view);
-	view->output = NULL;
 }
 
 enum view_axis
@@ -925,7 +890,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge)
 		return;
 	}
 
-	struct output *output = view->output;
+	struct output *output = view->st->output;
 	if (!output_is_usable(output)) {
 		wlr_log(WLR_ERROR, "view has no output, not snapping to edge");
 		return;
@@ -940,7 +905,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge)
 		/* store current geometry as new natural_geometry */
 		view_store_natural_geom(view->id);
 	}
-	view_set_output(view, output);
+	view_set_output(view->id, output);
 	view_set_tiled(view->id, edge);
 	view_apply_tiled_geometry(view);
 }

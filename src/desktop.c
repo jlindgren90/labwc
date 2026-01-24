@@ -173,14 +173,15 @@ desktop_update_top_layer_visibility(void)
 		if (!view->st->mapped || view->st->minimized) {
 			continue;
 		}
-		if (!output_is_usable(view->output)) {
+		if (!output_is_usable(view->st->output)) {
 			continue;
 		}
-		if (view->st->fullscreen && !(view->output->id_bit & outputs_covered)) {
+		if (view->st->fullscreen
+				&& !(view->st->output->id_bit & outputs_covered)) {
 			wlr_scene_node_set_enabled(
-				&view->output->layer_tree[top]->node, false);
+				&view->st->output->layer_tree[top]->node, false);
 		}
-		outputs_covered |= view->output->id_bit;
+		outputs_covered |= view->st->output->id_bit;
 	}
 }
 

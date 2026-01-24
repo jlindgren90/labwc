@@ -71,7 +71,8 @@ set_fullscreen_from_request(struct view *view,
 {
 	if (!view->st->fullscreen && requested->fullscreen
 			&& requested->fullscreen_output) {
-		view_set_output(view, output_from_wlr_output(requested->fullscreen_output));
+		view_set_output(view->id,
+			output_from_wlr_output(requested->fullscreen_output));
 	}
 	view_set_fullscreen(view, requested->fullscreen);
 }
@@ -121,14 +122,14 @@ disable_fullscreen_bg(struct view *view)
 static void
 center_fullscreen_if_needed(struct view *view)
 {
-	if (!view->st->fullscreen || !output_is_usable(view->output)) {
+	if (!view->st->fullscreen || !output_is_usable(view->st->output)) {
 		disable_fullscreen_bg(view);
 		return;
 	}
 
 	struct wlr_box output_box = {0};
 	wlr_output_layout_get_box(g_server.output_layout,
-		view->output->wlr_output, &output_box);
+		view->st->output->wlr_output, &output_box);
 	struct wlr_box geom = rect_center(view->st->current.width,
 		view->st->current.height, output_box);
 	rect_move_within(&geom, output_box);
@@ -181,16 +182,16 @@ handle_commit(struct wl_listener *listener, void *data)
 
 		/* Put view on the same output as its parent if possible */
 		struct view *parent = xdg_toplevel_view_get_parent(view);
-		if (parent && output_is_usable(parent->output)) {
-			view_set_output(view, parent->output);
+		if (parent && output_is_usable(parent->st->output)) {
+			view_set_output(view->id, parent->st->output);
 		} else {
-			view_set_output(view, output_nearest_to_cursor());
+			view_set_output(view->id, output_nearest_to_cursor());
 		}
 
-		if (output_is_usable(view->output)) {
+		if (output_is_usable(view->st->output)) {
 			wlr_xdg_toplevel_set_bounds(toplevel,
-				view->output->usable_area.width,
-				view->output->usable_area.height);
+				view->st->output->usable_area.width,
+				view->st->output->usable_area.height);
 		}
 
 		/*
@@ -316,7 +317,7 @@ handle_configure_timeout(void *data)
 	if (wlr_box_empty(&view->st->pending)) {
 		/* Pending geometry is invalid, set fallback position */
 		struct wlr_box usable =
-			output_usable_area_in_layout_coords(view->output);
+			output_usable_area_in_layout_coords(view->st->output);
 		geom.x = usable.x + VIEW_FALLBACK_X;
 		geom.y = usable.y + VIEW_FALLBACK_Y;
 	}
