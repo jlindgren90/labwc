@@ -224,7 +224,7 @@ snap_to_edge(struct view *view)
 	}
 	enum lab_edge edge = edge1 | edge2;
 
-	view_set_output(view, output);
+	view_set_output(view->id, output);
 	if (edge == LAB_EDGE_TOP) {
 		view_maximize(view, VIEW_AXIS_BOTH);
 	} else {

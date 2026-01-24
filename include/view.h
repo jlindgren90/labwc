@@ -74,23 +74,6 @@ struct view {
 	ViewId id;
 	const ViewState *st;
 
-	/*
-	 * The primary output that the view is displayed on. Specifically:
-	 *
-	 *  - For floating views, this is the output nearest to the
-	 *    center of the view. It is computed automatically when the
-	 *    view is moved or the output layout changes.
-	 *
-	 *  - For fullscreen/maximized/tiled views, this is the output
-	 *    used to compute the view's geometry. The view remains on
-	 *    the same output unless it is disabled or disconnected.
-	 *
-	 * Many view functions (e.g. view_center(), view_fullscreen(),
-	 * view_maximize(), etc.) allow specifying a particular output
-	 * by calling view_set_output() beforehand.
-	 */
-	struct output *output;
-
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
@@ -182,7 +165,6 @@ void mappable_disconnect(struct mappable *mappable);
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
-void view_set_output(struct view *view, struct output *output);
 void view_close(struct view *view);
 
 void view_move(struct view *view, int x, int y);
@@ -247,7 +229,6 @@ void view_set_icon(struct view *view, struct wl_array *buffers);
 struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);
 
-void view_on_output_destroy(struct view *view);
 void view_update_visibility(struct view *view);
 
 void view_init(struct view *view, bool is_xwayland);

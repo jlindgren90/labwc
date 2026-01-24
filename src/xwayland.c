@@ -156,12 +156,22 @@ top_parent_of(struct view *view)
 	return s;
 }
 
+static bool
+has_position_hint(struct wlr_xwayland_surface *xwayland_surface)
+{
+	return xwayland_surface->size_hints
+		&& (xwayland_surface->size_hints->flags
+			& (XCB_ICCCM_SIZE_HINT_US_POSITION
+			| XCB_ICCCM_SIZE_HINT_P_POSITION));
+}
+
 static void
 ensure_initial_geometry_and_output(struct view *view)
 {
+	struct wlr_xwayland_surface *xwayland_surface =
+		xwayland_surface_from_view(view);
+
 	if (wlr_box_empty(&view->st->current)) {
-		struct wlr_xwayland_surface *xwayland_surface =
-			xwayland_surface_from_view(view);
 		view_set_current_pos(view->id, xwayland_surface->x,
 			xwayland_surface->y);
 		view_set_current_size(view->id, xwayland_surface->width,
@@ -174,13 +184,12 @@ ensure_initial_geometry_and_output(struct view *view)
 			view_set_pending_geom(view->id, view->st->current);
 		}
 	}
-	if (!view->output) {
-		/*
-		 * Just use the cursor output since we don't know yet
-		 * whether the surface position is meaningful.
-		 */
-		view_set_output(view, output_nearest_to_cursor());
-	}
+
+	view_set_output(view->id, has_position_hint(xwayland_surface)
+		? output_nearest_to(
+			view->st->pending.x + view->st->pending.width / 2,
+			view->st->pending.y + view->st->pending.height / 2)
+		: output_nearest_to_cursor());
 }
 
 static bool
@@ -626,12 +635,7 @@ set_initial_position(struct view *view,
 		struct wlr_xwayland_surface *xwayland_surface)
 {
 	/* Don't center views with position explicitly specified */
-	bool has_position = xwayland_surface->size_hints &&
-		(xwayland_surface->size_hints->flags & (
-			XCB_ICCCM_SIZE_HINT_US_POSITION |
-			XCB_ICCCM_SIZE_HINT_P_POSITION));
-
-	if (!has_position) {
+	if (!has_position_hint(xwayland_surface)) {
 		view_constrain_size_to_that_of_usable_area(view);
 
 		if (view_is_floating(view->st)) {

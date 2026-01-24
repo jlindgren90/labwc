@@ -65,7 +65,7 @@ set_fullscreen_from_request(struct view *view,
 {
 	if (!view->st->fullscreen && requested->fullscreen
 			&& requested->fullscreen_output) {
-		view_set_output(view,
+		view_set_output(view->id,
 			output_from_wlr_output(requested->fullscreen_output));
 	}
 	view_set_fullscreen(view, requested->fullscreen);
@@ -107,14 +107,14 @@ disable_fullscreen_bg(struct view *view)
 static void
 center_fullscreen_if_needed(struct view *view)
 {
-	if (!view->st->fullscreen || !output_is_usable(view->output)) {
+	if (!view->st->fullscreen || !output_is_usable(view->st->output)) {
 		disable_fullscreen_bg(view);
 		return;
 	}
 
 	struct wlr_box output_box = {0};
 	wlr_output_layout_get_box(g_server.output_layout,
-		view->output->wlr_output, &output_box);
+		view->st->output->wlr_output, &output_box);
 	struct wlr_box geom = rect_center(view->st->current.width,
 		view->st->current.height, output_box);
 	rect_move_within(&geom, output_box);
@@ -163,10 +163,10 @@ handle_commit(struct wl_listener *listener, void *data)
 			| WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE;
 		wlr_xdg_toplevel_set_wm_capabilities(toplevel, wm_caps);
 
-		if (view->output) {
+		if (view->st->output) {
 			wlr_xdg_toplevel_set_bounds(toplevel,
-				view->output->usable_area.width,
-				view->output->usable_area.height);
+				view->st->output->usable_area.width,
+				view->st->output->usable_area.height);
 		}
 
 		/*
@@ -333,9 +333,10 @@ handle_configure_timeout(void *data)
 		geom.x = VIEW_FALLBACK_X;
 		geom.y = VIEW_FALLBACK_Y;
 		/* At least try to keep it on the same output */
-		if (output_is_usable(view->output)) {
+		if (output_is_usable(view->st->output)) {
 			struct wlr_box box =
-				output_usable_area_in_layout_coords(view->output);
+				output_usable_area_in_layout_coords(
+					view->st->output);
 			geom.x += box.x;
 			geom.y += box.y;
 		}
@@ -447,8 +448,8 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (!view->st->mapped && !view->output) {
-		view_set_output(view, output_nearest_to_cursor());
+	if (!view->st->mapped && !view->st->output) {
+		view_set_output(view->id, output_nearest_to_cursor());
 	}
 	bool maximized = toplevel->requested.maximized;
 	view_maximize(view, maximized ? VIEW_AXIS_BOTH : VIEW_AXIS_NONE);
@@ -468,8 +469,8 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (!view->st->mapped && !view->output) {
-		view_set_output(view, output_nearest_to_cursor());
+	if (!view->st->mapped && !view->st->output) {
+		view_set_output(view->id, output_nearest_to_cursor());
 	}
 	set_fullscreen_from_request(view,
 		&xdg_toplevel_from_view(view)->requested);
@@ -712,7 +713,7 @@ set_initial_position(struct view *view)
 	struct view *parent = xdg_toplevel_view_get_parent(view);
 	if (parent) {
 		/* Child views are center-aligned relative to their parents */
-		view_set_output(view, parent->output);
+		view_set_output(view->id, parent->st->output);
 		view_center(view, &parent->st->pending);
 		return;
 	}
@@ -732,8 +733,8 @@ handle_map(struct wl_listener *listener, void *data)
 	 * An output should have been chosen when the surface was first
 	 * created, but take one more opportunity to assign an output if not.
 	 */
-	if (!view->output) {
-		view_set_output(view, output_nearest_to_cursor());
+	if (!view->st->output) {
+		view_set_output(view->id, output_nearest_to_cursor());
 	}
 
 	if (!view->st->ever_mapped) {
@@ -884,10 +885,10 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	 * client can be notified about any fractional scale before it is given
 	 * the chance to configure itself (and possibly pick its dimensions).
 	 */
-	view_set_output(view, output_nearest_to_cursor());
-	if (view->output) {
+	view_set_output(view->id, output_nearest_to_cursor());
+	if (view->st->output) {
 		wlr_fractional_scale_v1_notify_scale(xdg_surface->surface,
-			view->output->wlr_output->scale);
+			view->st->output->wlr_output->scale);
 	}
 
 	view->scene_tree = wlr_scene_tree_create(g_server.view_tree);
