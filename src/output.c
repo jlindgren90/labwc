@@ -135,8 +135,8 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
-		if (view->output == output) {
-			view_on_output_destroy(view);
+		if (view->st->output == output) {
+			view_set_output(view->id, NULL);
 		}
 	}
 
