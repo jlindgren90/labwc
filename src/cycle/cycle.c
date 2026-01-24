@@ -108,7 +108,7 @@ cycle_begin(enum lab_cycle_dir direction)
 		return;
 	}
 
-	struct view *active_view = g_server.active_view;
+	struct view *active_view = view_get_active();
 	if (active_view && active_view->cycle_link.next) {
 		/* Select the active view it's in the cycle list */
 		g_server.cycle.selected_view = active_view;

@@ -186,20 +186,6 @@ struct server {
 	struct wlr_box grab_box;
 	enum lab_edge resize_edges;
 
-	/*
-	 * 'active_view' is generally the view with keyboard-focus, updated with
-	 * each "focus change". This view is drawn with "active" SSD coloring.
-	 *
-	 * The exceptions are:
-	 * - when a layer-shell client takes keyboard-focus in which case the
-	 *   currently active view stays active
-	 * - when keyboard focus is temporarily cleared for server-side
-	 *   interactions like Move/Resize, window switcher and menus.
-	 *
-	 * Note that active_view is synced with foreign-toplevel clients.
-	 */
-	struct view *active_view;
-
 	struct ssd_button *hovered_button;
 
 	/* Tree for all non-layer xdg/xwayland-shell surfaces */

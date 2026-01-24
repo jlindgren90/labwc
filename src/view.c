@@ -23,7 +23,6 @@
 
 #if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
-#include "xwayland.h"
 #endif
 
 struct view *
@@ -148,15 +147,6 @@ view_adjust_size(struct view *view, int *w, int *h)
 	*h = MAX(*h, hints.min_height);
 }
 
-static void
-view_append_children(struct view *view, struct wl_array *children)
-{
-	assert(view);
-	if (view->impl->append_children) {
-		view->impl->append_children(view, children);
-	}
-}
-
 void
 view_toggle_maximize(struct view *view, enum view_axis axis)
 {
@@ -226,7 +216,7 @@ static void
 decorate(struct view *view)
 {
 	if (!view->ssd) {
-		view->ssd = ssd_create(view, view == g_server.active_view);
+		view->ssd = ssd_create(view, view->st->active);
 	}
 }
 
@@ -396,36 +386,6 @@ view_notify_raise(struct view *view)
 	desktop_update_top_layer_visibility();
 }
 
-struct view *
-view_get_modal_dialog(struct view *view)
-{
-	assert(view);
-	if (!view->impl->is_modal_dialog) {
-		return NULL;
-	}
-	/* check view itself first */
-	if (view->impl->is_modal_dialog(view)) {
-		return view;
-	}
-
-	/* check sibling views */
-	struct view *dialog = NULL;
-	struct view *root = view_get_root(view->id);
-	struct wl_array children;
-	struct view **child;
-
-	wl_array_init(&children);
-	view_append_children(root, &children);
-	wl_array_for_each(child, &children) {
-		if (view->impl->is_modal_dialog(*child)) {
-			dialog = *child;
-			break;
-		}
-	}
-	wl_array_release(&children);
-	return dialog;
-}
-
 bool
 view_has_strut_partial(struct view *view)
 {
@@ -524,8 +484,9 @@ view_notify_visible(struct view *view)
 	} else {
 		// Detect the active view getting unmapped/minimized,
 		// whether directly or indirectly (e.g. by a sibling)
-		if (!g_server.active_view || !g_server.active_view->st->mapped
-				|| g_server.active_view->st->minimized) {
+		struct view *active_view = view_get_active();
+		if (!active_view || !active_view->st->mapped
+				|| active_view->st->minimized) {
 			desktop_focus_topmost_view();
 		}
 	}
@@ -602,10 +563,6 @@ view_destroy(struct view *view)
 	if (g_server.grabbed_view == view) {
 		/* Application got killed while moving around */
 		interactive_cancel(view);
-	}
-
-	if (g_server.active_view == view) {
-		g_server.active_view = NULL;
 	}
 
 	if (g_server.session_lock_manager->last_active_view == view) {

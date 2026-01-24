@@ -12,6 +12,7 @@ struct Views {
     by_id: BTreeMap<ViewId, View>, // in creation order
     max_used_id: ViewId,
     order: Vec<ViewId>, // from back to front
+    active_id: ViewId,
     foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
@@ -23,6 +24,38 @@ impl Views {
 
     fn get_root_of(&self, id: ViewId) -> ViewId {
         self.by_id.get(&id).map_or(0, View::get_root_id)
+    }
+
+    fn get_modal_dialog(&self, id: ViewId) -> Option<ViewId> {
+        if let Some(view) = self.by_id.get(&id) {
+            // Check if view itself is a modal dialog
+            if view.is_modal_dialog() {
+                return Some(id);
+            }
+            // Check child/sibling views (in reverse stacking order)
+            let root = view.get_root_id();
+            for &i in self.order.iter().rev().filter(|&&i| i != id && i != root) {
+                if let Some(v) = self.by_id.get(&i) {
+                    if v.get_root_id() == root && v.is_modal_dialog() {
+                        return Some(i);
+                    }
+                }
+            }
+        }
+        return None;
+    }
+
+    fn set_active(&mut self, id: ViewId) {
+        if id != self.active_id {
+            let prev_id = self.active_id;
+            self.active_id = id;
+            if let Some(prev) = self.by_id.get_mut(&prev_id) {
+                prev.set_active(false);
+            }
+            if let Some(view) = self.by_id.get_mut(&id) {
+                view.set_active(true);
+            }
+        }
     }
 
     // Returns CView pointer to pass to view_notify_visible()
@@ -123,6 +156,12 @@ pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
 }
 
 #[no_mangle]
+pub extern "C" fn view_get_modal_dialog(id: ViewId) -> *mut CView {
+    let views = views();
+    return views.get_c_ptr(views.get_modal_dialog(id).unwrap_or(0));
+}
+
+#[no_mangle]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_app_id(cstring(app_id));
@@ -176,10 +215,15 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
 }
 
 #[no_mangle]
-pub extern "C" fn view_set_active(id: ViewId, active: bool) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.set_active(active);
-    }
+pub extern "C" fn view_get_active() -> *mut CView {
+    let views = views();
+    let active = views.by_id.get(&views.active_id);
+    return active.map_or(std::ptr::null_mut(), View::get_c_ptr);
+}
+
+#[no_mangle]
+pub extern "C" fn view_set_active(id: ViewId) {
+    views_mut().set_active(id);
 }
 
 #[no_mangle]
