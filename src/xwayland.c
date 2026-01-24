@@ -155,7 +155,7 @@ want_deco(struct wlr_xwayland_surface *xwayland_surface)
 static void
 set_output_from_pending_geometry(struct view *view)
 {
-	view_set_output(view, output_nearest_to(
+	view_set_output(view->id, output_nearest_to(
 		view->st->pending.x + view->st->pending.width / 2,
 		view->st->pending.y + view->st->pending.height / 2));
 }
@@ -165,7 +165,7 @@ ensure_initial_geometry_and_output(struct view *view)
 {
 	if (view->initial_geometry_set) {
 		/* Just make sure we still have an output */
-		if (!output_is_usable(view->output)) {
+		if (!output_is_usable(view->st->output)) {
 			set_output_from_pending_geometry(view);
 		}
 		return;
@@ -200,7 +200,7 @@ ensure_initial_geometry_and_output(struct view *view)
 	if (has_position) {
 		set_output_from_pending_geometry(view);
 	} else {
-		view_set_output(view, output_nearest_to_cursor());
+		view_set_output(view->id, output_nearest_to_cursor());
 	}
 
 	view_set_ssd_enabled(view->id, want_deco(xsurface));
