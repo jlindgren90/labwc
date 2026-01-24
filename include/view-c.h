@@ -47,6 +47,7 @@ typedef struct ViewState {
 	Rect current;      // current displayed geometry
 	Rect pending;      // expected geometry after any pending move/resize
 	Rect natural_geom; // un-{maximized/fullscreen/tiled} geometry
+	Output *output;
 } ViewState;
 
 void view_notify_app_id_change(CView *view);
@@ -73,5 +74,8 @@ void xwayland_view_offer_focus(CView *view);
 
 // from cursor.h
 void cursor_update_focus(void);
+
+// from output.h
+Output *output_nearest_to(int lx, int ly);
 
 #endif // LABWC_VIEW_C_H
