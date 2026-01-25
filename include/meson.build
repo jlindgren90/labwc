@@ -2,7 +2,7 @@ configure_file(output: 'config.h',  configuration: conf_data)
 
 # generate C headers from Rust modules
 gen_headers = []
-foreach module : ['view', 'views']
+foreach module : ['util', 'view', 'views']
   gen_headers += custom_target(
     input: '../src/' + module + '.rs',
     output: module + '-rs.h',
