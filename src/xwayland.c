@@ -652,17 +652,6 @@ handle_map(struct wl_listener *listener, void *data)
 	if (!view->st->ever_mapped) {
 		check_natural_geometry(view);
 		/*
-		 * view->last_placement might not have been set yet if
-		 * view->pending is unchanged from the surface geometry.
-		 */
-		view_save_last_placement(view);
-		/*
-		 * Make sure the view is onscreen and adjusted for any
-		 * layout changes that could have occurred between
-		 * ensure_initial_geometry_and_output() and map.
-		 */
-		view_adjust_for_layout_change(view);
-		/*
 		 * When mapping the view for the first time, visual
 		 * artifacts are reduced if we display it immediately at
 		 * the final intended position/size rather than waiting
