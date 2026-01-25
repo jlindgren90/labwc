@@ -27,8 +27,6 @@
  */
 #define VIEW_FALLBACK_X 100
 #define VIEW_FALLBACK_Y 100
-#define VIEW_FALLBACK_WIDTH  640
-#define VIEW_FALLBACK_HEIGHT 480
 
 enum view_layer {
 	VIEW_LAYER_NORMAL = 0,
@@ -150,15 +148,12 @@ void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
 
-void view_maximize(struct view *view, enum view_axis axis);
-void view_set_fullscreen(struct view *view, bool fullscreen);
 void view_toggle_maximize(struct view *view, enum view_axis axis);
 
 void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
-void view_snap_to_edge(struct view *view, enum lab_edge direction);
 
 void view_move_to_front(struct view *view);
 

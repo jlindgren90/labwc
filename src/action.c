@@ -508,7 +508,7 @@ run_action(struct view *view, struct action *action,
 		if (view) {
 			/* Config parsing makes sure that direction is a valid direction */
 			enum lab_edge edge = action_get_int(action, "direction", 0);
-			view_snap_to_edge(view, edge);
+			view_tile(view->id, edge);
 		}
 		break;
 	case ACTION_TYPE_NEXT_WINDOW:
@@ -543,14 +543,14 @@ run_action(struct view *view, struct action *action,
 		if (view) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, axis);
+			view_maximize(view->id, axis);
 		}
 		break;
 	case ACTION_TYPE_UNMAXIMIZE:
 		if (view) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view, view->st->maximized & ~axis);
+			view_maximize(view->id, view->st->maximized & ~axis);
 		}
 		break;
 	case ACTION_TYPE_TOGGLE_FULLSCREEN:
