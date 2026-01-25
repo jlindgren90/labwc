@@ -49,6 +49,7 @@ typedef struct ViewState {
 	Output *output;
 } ViewState;
 
+_Bool view_has_strut_partial(CView *view);
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
@@ -69,8 +70,12 @@ void xwayland_view_minimize(CView *view, _Bool minimized);
 void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xwayland_view_offer_focus(CView *view);
 
+// from labwc.h
+void desktop_update_top_layer_visibility(void);
+
 // from output.h
 Output *output_nearest_to(int lx, int ly);
+_Bool output_is_usable(Output *output);
 Rect output_layout_coords(Output *output);
 Rect output_usable_area_in_layout_coords(Output *output);
 

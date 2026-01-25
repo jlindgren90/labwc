@@ -209,6 +209,16 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
 }
 
 #[no_mangle]
+pub extern "C" fn views_adjust_for_layout_change() {
+    let mut views = views_mut();
+    for v in views.by_id.values_mut() {
+        v.adjust_for_layout_change();
+    }
+    drop(views); // FIXME: to allow reentrant borrow
+    unsafe { desktop_update_top_layer_visibility() };
+}
+
+#[no_mangle]
 pub extern "C" fn view_offer_focus(id: ViewId) {
     if let Some(view) = views().by_id.get(&id) {
         view.offer_focus();
