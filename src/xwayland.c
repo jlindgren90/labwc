@@ -590,7 +590,7 @@ handle_set_icon(struct wl_listener *listener, void *data)
 	if (!wlr_xwayland_surface_fetch_icon(xwayland_view->xwayland_surface,
 			&icon_reply)) {
 		wlr_log(WLR_INFO, "Invalid x11 icon");
-		view_set_icon(&xwayland_view->base, NULL, NULL);
+		view_set_icon(&xwayland_view->base, NULL);
 		goto out;
 	}
 
@@ -620,7 +620,7 @@ handle_set_icon(struct wl_listener *listener, void *data)
 	}
 
 	/* view takes ownership of the buffers */
-	view_set_icon(&xwayland_view->base, NULL, &buffers);
+	view_set_icon(&xwayland_view->base, &buffers);
 	wl_array_release(&buffers);
 
 out:

@@ -139,9 +139,6 @@ struct server {
 	struct wl_listener xdg_activation_request;
 	struct wl_listener xdg_activation_new_token;
 
-	struct wlr_xdg_toplevel_icon_manager_v1 *xdg_toplevel_icon_manager;
-	struct wl_listener xdg_toplevel_icon_set_icon;
-
 	struct {
 		struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1 *manager;
 		struct {
