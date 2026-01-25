@@ -108,11 +108,6 @@ pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_ensure_geom_onscreen(view_st: &ViewState, geom: &mut Rect) {
-    ensure_geom_onscreen(view_st, geom);
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_compute_default_geom(
     view_st: &ViewState,
     geom: &mut Rect,
@@ -194,6 +189,12 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_output(output);
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn views_adjust_for_layout_change() {
+    views_mut().adjust_for_layout_change();
+    unsafe { desktop_update_top_layer_visibility() };
 }
 
 #[unsafe(no_mangle)]

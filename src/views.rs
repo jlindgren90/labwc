@@ -55,6 +55,12 @@ impl Views {
         return null_mut();
     }
 
+    pub fn adjust_for_layout_change(&mut self) {
+        for v in self.by_id.values_mut() {
+            v.adjust_for_layout_change();
+        }
+    }
+
     pub fn add_foreign_toplevel_client(&mut self, client: *mut WlResource) {
         self.foreign_toplevel_clients.push(client);
         for view in self.by_id.values_mut() {

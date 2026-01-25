@@ -13,8 +13,6 @@
 #include "action.h"
 #include "buffer.h"
 #include "common/macros.h"
-#include "common/mem.h"
-#include "common/string-helpers.h"
 #include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
@@ -71,27 +69,6 @@ view_get_root(struct view *view)
 	return view;
 }
 
-static bool
-view_discover_output(struct view *view, const struct wlr_box *geometry)
-{
-	assert(view);
-
-	if (!geometry) {
-		geometry = &view->st->current;
-	}
-
-	struct output *output =
-		output_nearest_to(geometry->x + geometry->width / 2,
-			geometry->y + geometry->height / 2);
-
-	if (output && output != view->st->output) {
-		view_set_output(view->id, output);
-		return true;
-	}
-
-	return false;
-}
-
 void
 view_notify_active(struct view *view)
 {
@@ -126,20 +103,6 @@ view_moved(struct view *view)
 		view->st->current.x, view->st->current.y);
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus();
-}
-
-static void save_last_placement(struct view *view);
-
-void
-view_notify_move_resize(struct view *view)
-{
-	/*
-	 * If the move/resize was user-initiated (rather than due to
-	 * output layout change), then update the last placement info.
-	 */
-	if (!view->adjusting_for_layout_change) {
-		save_last_placement(view);
-	}
 }
 
 struct view_size_hints
@@ -478,81 +441,6 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	cursor_update_focus();
 }
 
-static void
-save_last_placement(struct view *view)
-{
-	assert(view);
-	struct output *output = view->st->output;
-	if (!output_is_usable(output)) {
-		wlr_log(WLR_ERROR, "cannot save last placement in unusable output");
-		return;
-	}
-	if (!str_equal(view->last_placement.output_name, output->wlr_output->name)) {
-		xstrdup_replace(view->last_placement.output_name,
-			output->wlr_output->name);
-	}
-	view->last_placement.layout_geo = view->st->pending;
-	view->last_placement.relative_geo = view->st->pending;
-	view->last_placement.relative_geo.x -= output->scene_output->x;
-	view->last_placement.relative_geo.y -= output->scene_output->y;
-}
-
-static void
-clear_last_placement(struct view *view)
-{
-	assert(view);
-	zfree(view->last_placement.output_name);
-	view->last_placement.relative_geo = (struct wlr_box){0};
-	view->last_placement.layout_geo = (struct wlr_box){0};
-}
-
-void
-view_adjust_for_layout_change(struct view *view)
-{
-	assert(view);
-	if (wlr_box_empty(&view->last_placement.layout_geo)) {
-		/* Not using assert() just in case */
-		wlr_log(WLR_ERROR, "view has no last placement info");
-		return;
-	}
-
-	view->adjusting_for_layout_change = true;
-
-	struct wlr_box new_geo;
-	struct output *output = output_from_name(view->last_placement.output_name);
-	if (output_is_usable(output)) {
-		/*
-		 * When the previous output (which might have been reconnected
-		 * or relocated) is available, keep the relative position on it.
-		 */
-		new_geo = view->last_placement.relative_geo;
-		new_geo.x += output->scene_output->x;
-		new_geo.y += output->scene_output->y;
-		view_set_output(view->id, output);
-	} else {
-		/*
-		 * Otherwise, evacuate the view to another output. Use the last
-		 * layout geometry so that the view position is kept when the
-		 * user reconnects the previous output in a different connector
-		 * or the reconnected output somehow gets a different name.
-		 */
-		view_discover_output(view, &view->last_placement.layout_geo);
-		new_geo = view->last_placement.layout_geo;
-	}
-
-	if (!view_is_floating(view->st)) {
-		view_apply_special_geom(view->id);
-	} else if (view_has_strut_partial(view)) {
-		/* Do not move panels etc. out of their own reserved area */
-	} else {
-		/* Ensure view is on-screen */
-		view_ensure_geom_onscreen(view->st, &new_geo);
-		view_move_resize(view->id, new_geo);
-	}
-
-	view->adjusting_for_layout_change = false;
-}
-
 enum view_axis
 view_axis_parse(const char *direction)
 {
@@ -845,7 +733,6 @@ view_destroy(struct view *view)
 
 	undecorate(view);
 
-	clear_last_placement(view);
 	view_set_icon(view, NULL);
 	menu_on_view_destroy(view);
 

@@ -40,6 +40,9 @@ pub struct View {
     title: CString,
     state: Box<ViewState>,
     foreign_toplevels: Vec<ForeignToplevel>,
+    saved_geom: Rect, // geometry before adjusting for layout change
+    in_layout_change: bool,
+    lost_output: bool,
 }
 
 impl View {
@@ -203,7 +206,11 @@ impl View {
             // Moving a floating view also sets the output
             self.state.output = nearest_output_to_geom(self.state.pending);
         }
-        unsafe { view_notify_move_resize(self.c_ptr) };
+        if !self.in_layout_change {
+            // User-initiated move/resize invalidates saved geometry
+            self.saved_geom = Rect::default();
+            self.lost_output = false;
+        }
     }
 
     // Used only for xwayland views
@@ -275,6 +282,31 @@ impl View {
 
     pub fn set_output(&mut self, output: *mut Output) {
         self.state.output = output;
+    }
+
+    pub fn adjust_for_layout_change(&mut self) {
+        // Save user geometry prior to first layout-change adjustment
+        if rect_empty(self.saved_geom) {
+            self.saved_geom = self.state.pending;
+        }
+        self.in_layout_change = true;
+        self.lost_output |= unsafe { !output_is_usable(self.state.output) };
+        // Keep non-floating views on the same output if possible
+        let is_floating = self.state.floating();
+        if is_floating || self.lost_output {
+            self.state.output = nearest_output_to_geom(self.saved_geom);
+        }
+        if !is_floating {
+            self.apply_special_geom();
+        } else if unsafe { view_has_strut_partial(self.c_ptr) } {
+            // Do not move panels etc. out of their own reserved area
+        } else {
+            // Restore saved geometry, ensuring view is on-screen
+            let mut geom = self.saved_geom;
+            ensure_geom_onscreen(&*self.state, &mut geom);
+            self.move_resize(geom);
+        }
+        self.in_layout_change = false;
     }
 
     pub fn offer_focus(&self) {
