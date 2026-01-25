@@ -151,32 +151,6 @@ buffer_create_from_data(void *pixel_data, uint32_t width, uint32_t height,
 }
 
 struct lab_data_buffer *
-buffer_create_from_wlr_buffer(struct wlr_buffer *wlr_buffer)
-{
-	void *data;
-	uint32_t format;
-	size_t stride;
-	if (!wlr_buffer_begin_data_ptr_access(wlr_buffer,
-			WLR_BUFFER_DATA_PTR_ACCESS_READ, &data, &format, &stride)) {
-		wlr_log(WLR_ERROR, "failed to access wlr_buffer");
-		return NULL;
-	}
-	if (format != DRM_FORMAT_ARGB8888) {
-		/* TODO: support other formats */
-		wlr_buffer_end_data_ptr_access(wlr_buffer);
-		wlr_log(WLR_ERROR, "cannot create buffer: format=%d", format);
-		return NULL;
-	}
-	size_t buffer_size = stride * wlr_buffer->height;
-	void *copied_data = xmalloc(buffer_size);
-	memcpy(copied_data, data, buffer_size);
-	wlr_buffer_end_data_ptr_access(wlr_buffer);
-
-	return buffer_create_from_data(copied_data,
-		wlr_buffer->width, wlr_buffer->height, stride);
-}
-
-struct lab_data_buffer *
 buffer_resize(struct lab_data_buffer *src_buffer, int width, int height,
 		double scale)
 {

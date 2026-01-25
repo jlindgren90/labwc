@@ -50,20 +50,12 @@ img_to_buffer(struct lab_img *img, int width, int height, double scale)
 }
 
 /*
- * Load an icon from application-supplied icon name or buffers.
- * Wayland apps can provide icon names and buffers via xdg-toplevel-icon protocol.
+ * Load an icon from application-supplied buffers.
  * X11 apps can provide icon buffers via _NET_WM_ICON property.
  */
 static struct lab_data_buffer *
 load_client_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 {
-	struct lab_img *img =
-		desktop_entry_load_icon(self->view_icon_name, icon_size, scale);
-	if (img) {
-		wlr_log(WLR_DEBUG, "loaded icon from client icon name");
-		return img_to_buffer(img, self->width, self->height, scale);
-	}
-
 	struct lab_data_buffer *buffer = choose_best_icon_buffer(self, icon_size, scale);
 	if (buffer) {
 		wlr_log(WLR_DEBUG, "loaded icon from client buffer");
@@ -153,7 +145,6 @@ _destroy(struct scaled_buffer *scaled_buffer)
 		wl_list_remove(&self->on_view.destroy.link);
 	}
 	free(self->view_app_id);
-	free(self->view_icon_name);
 	set_icon_buffers(self, NULL);
 	free(self);
 }
@@ -175,7 +166,6 @@ _equal(struct scaled_buffer *scaled_buffer_a,
 	struct scaled_icon_buffer *b = scaled_buffer_b->data;
 
 	return str_equal(a->view_app_id, b->view_app_id)
-		&& str_equal(a->view_icon_name, b->view_icon_name)
 		&& icon_buffers_equal(&a->view_icon_buffers, &b->view_icon_buffers)
 		&& a->width == b->width
 		&& a->height == b->height;
@@ -212,17 +202,9 @@ handle_view_set_icon(struct wl_listener *listener, void *data)
 	struct scaled_icon_buffer *self =
 		wl_container_of(listener, self, on_view.set_icon);
 
-	bool icon_name_equal = str_equal(self->view_icon_name, self->view->icon.name);
-	if (icon_name_equal && icon_buffers_equal(&self->view_icon_buffers,
+	if (icon_buffers_equal(&self->view_icon_buffers,
 			&self->view->icon.buffers)) {
 		return;
-	}
-
-	if (!icon_name_equal) {
-		zfree(self->view_icon_name);
-		if (self->view->icon.name) {
-			xstrdup_replace(self->view_icon_name, self->view->icon.name);
-		}
 	}
 
 	set_icon_buffers(self, &self->view->icon.buffers);

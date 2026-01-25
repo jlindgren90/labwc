@@ -521,7 +521,7 @@ update_icon(struct xwayland_view *xwayland_view)
 	xcb_ewmh_get_wm_icon_reply_t icon;
 	if (!xcb_ewmh_get_wm_icon_from_reply(&icon, reply)) {
 		wlr_log(WLR_INFO, "Invalid x11 icon");
-		view_set_icon(&xwayland_view->base, NULL, NULL);
+		view_set_icon(&xwayland_view->base, NULL);
 		goto out;
 	}
 
@@ -551,7 +551,7 @@ update_icon(struct xwayland_view *xwayland_view)
 	}
 
 	/* view takes ownership of the buffers */
-	view_set_icon(&xwayland_view->base, NULL, &buffers);
+	view_set_icon(&xwayland_view->base, &buffers);
 	wl_array_release(&buffers);
 
 out:
