@@ -76,22 +76,6 @@ struct view {
 	enum view_layer layer;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 
-	/*
-	 * last_placement represents the last view position set by the user.
-	 * output_name and relative_geo are used to keep or restore the view
-	 * position relative to the output and layout_geo is used to keep the
-	 * global position when the output is lost.
-	 */
-	struct {
-		char *output_name;
-		/* view geometry in output-relative coordinates */
-		struct wlr_box relative_geo;
-		/* view geometry in layout coordinates */
-		struct wlr_box layout_geo;
-	} last_placement;
-	/* Set temporarily when moving view due to layout change */
-	bool adjusting_for_layout_change;
-
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
@@ -176,15 +160,6 @@ void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
-
-/*
- * Saves the window position in view->last_placement. This should be called
- * when a view is first mapped or manually moved by the user.
- */
-void view_save_last_placement(struct view *view);
-/* Restores and adjusts the view's position from the view->last_placement */
-void view_adjust_for_layout_change(struct view *view);
-
 void view_snap_to_edge(struct view *view, enum lab_edge direction);
 
 void view_move_to_front(struct view *view);
