@@ -1495,14 +1495,8 @@ view_update_visibility(struct view *view)
 }
 
 void
-view_set_icon(struct view *view, const char *icon_name, struct wl_array *buffers)
+view_set_icon(struct view *view, struct wl_array *buffers)
 {
-	/* Update icon name */
-	zfree(view->icon.name);
-	if (icon_name) {
-		view->icon.name = xstrdup(icon_name);
-	}
-
 	/* Update icon images */
 	struct lab_data_buffer **buffer;
 	wl_array_for_each(buffer, &view->icon.buffers) {
@@ -1585,7 +1579,7 @@ view_destroy(struct view *view)
 	undecorate(view);
 
 	clear_last_placement(view);
-	view_set_icon(view, NULL, NULL);
+	view_set_icon(view, NULL);
 	menu_on_view_destroy(view);
 
 	/*
