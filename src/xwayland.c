@@ -395,7 +395,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 	if (surf->maximized_horz) {
 		maximize |= VIEW_AXIS_HORIZONTAL;
 	}
-	view_maximize(view, maximize);
+	view_maximize(view->id, maximize);
 }
 
 static void
@@ -406,7 +406,7 @@ handle_request_fullscreen(struct wl_listener *listener, void *data)
 	if (!view->st->mapped) {
 		ensure_initial_geometry_and_output(view);
 	}
-	view_set_fullscreen(view, fullscreen);
+	view_fullscreen(view->id, fullscreen);
 }
 
 static void
@@ -595,7 +595,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	 *   2. set decorations (depends on fullscreen state)
 	 *   3. set maximized (geometry depends on decorations)
 	 */
-	view_set_fullscreen(view, xsurface->fullscreen);
+	view_fullscreen(view->id, xsurface->fullscreen);
 	if (!view->st->ever_mapped) {
 		view_set_ssd_enabled(view, want_deco(xsurface));
 	}
@@ -606,7 +606,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	if (xsurface->maximized_vert) {
 		axis |= VIEW_AXIS_VERTICAL;
 	}
-	view_maximize(view, axis);
+	view_maximize(view->id, axis);
 	/*
 	 * We could also call set_initial_position() here, but it's not
 	 * really necessary until the view is actually mapped (and at

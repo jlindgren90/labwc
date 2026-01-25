@@ -27,7 +27,7 @@ toplevel_handle_set_maximized(struct wl_client *client,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		view_maximize(view, VIEW_AXIS_BOTH);
+		view_maximize(view->id, VIEW_AXIS_BOTH);
 	}
 }
 
@@ -37,7 +37,7 @@ toplevel_handle_unset_maximized(struct wl_client *client,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		view_maximize(view, VIEW_AXIS_NONE);
+		view_maximize(view->id, VIEW_AXIS_NONE);
 	}
 }
 
@@ -67,7 +67,7 @@ toplevel_handle_set_fullscreen(struct wl_client *client,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		view_set_fullscreen(view, true);
+		view_fullscreen(view->id, true);
 	}
 }
 
@@ -77,7 +77,7 @@ toplevel_handle_unset_fullscreen(struct wl_client *client,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		view_set_fullscreen(view, false);
+		view_fullscreen(view->id, false);
 	}
 }
 

@@ -5,7 +5,7 @@ use crate::lazy_static;
 use crate::util::*;
 use crate::views::*;
 use std::ffi::c_char;
-use std::ptr::null;
+use std::ptr::{null, null_mut};
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_is_focusable(state: &ViewState) -> bool {
@@ -68,13 +68,6 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
 pub extern "C" fn view_set_active(id: ViewId, active: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_active(active);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_fullscreen(fullscreen);
     }
 }
 
@@ -142,23 +135,9 @@ pub extern "C" fn view_set_initial_geom(id: ViewId, rel_to: Option<&Rect>, keep_
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_fallback_natural_geom();
-    }
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_store_natural_geom(id: ViewId) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.store_natural_geom();
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_apply_natural_geom(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.apply_natural_geom();
     }
 }
 
@@ -180,6 +159,35 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
 pub extern "C" fn views_adjust_for_layout_change() {
     views_mut().adjust_for_layout_change();
     unsafe { desktop_update_top_layer_visibility() };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
+    let mut view_ptr = null_mut();
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view_ptr = view.fullscreen(fullscreen);
+    }
+    if !view_ptr.is_null() {
+        unsafe { view_notify_fullscreen(view_ptr) };
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.maximize(axis);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_tile(id: ViewId, edge: LabEdge) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        if edge != LAB_EDGE_NONE {
+            // Unmaximize, otherwise tiling will have no effect
+            view.maximize(VIEW_AXIS_NONE);
+        }
+        view.tile(edge);
+    }
 }
 
 #[unsafe(no_mangle)]

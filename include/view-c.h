@@ -55,6 +55,7 @@ void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
 void view_notify_unmap(CView *view);
 void view_notify_active(CView *view);
+void view_notify_fullscreen(CView *view);
 
 void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
@@ -71,6 +72,9 @@ void xwayland_view_offer_focus(CView *view);
 
 // from labwc.h
 void desktop_update_top_layer_visibility(void);
+
+void interactive_cancel(CView *view);
+_Bool interactive_move_is_active(CView *view);
 
 // from output.h
 Output *output_nearest_to(int lx, int ly);
