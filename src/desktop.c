@@ -21,29 +21,6 @@
 #include <wlr/xwayland.h>
 #endif
 
-void
-desktop_arrange_all_views(void)
-{
-	/*
-	 * Adjust window positions/sizes. Skip views with no size since
-	 * we can't do anything useful with them; they will presumably
-	 * be initialized with valid positions/sizes later.
-	 *
-	 * We do not simply check view->mapped/been_mapped here because
-	 * views can have maximized/fullscreen geometry applied while
-	 * still unmapped. We do want to adjust the geometry of those
-	 * views.
-	 */
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
-		if (!wlr_box_empty(&view->st->pending)) {
-			view_adjust_for_layout_change(view);
-		}
-	}
-	/* Update top layer visibility after any/all views have moved */
-	desktop_update_top_layer_visibility();
-}
-
 static void
 set_or_offer_focus(struct view *view)
 {

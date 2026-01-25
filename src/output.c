@@ -1040,7 +1040,7 @@ output_update_usable_area(struct output *output)
 #if HAVE_XWAYLAND
 		xwayland_update_workarea();
 #endif
-		desktop_arrange_all_views();
+		views_adjust_for_layout_change();
 	}
 }
 
@@ -1059,7 +1059,7 @@ output_update_all_usable_areas(bool layout_changed)
 #if HAVE_XWAYLAND
 		xwayland_update_workarea();
 #endif
-		desktop_arrange_all_views();
+		views_adjust_for_layout_change();
 	}
 }
 

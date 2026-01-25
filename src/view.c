@@ -60,31 +60,6 @@ view_get_root(struct view *view)
 	return view;
 }
 
-static bool
-view_discover_output(struct view *view, const struct wlr_box *geometry)
-{
-	assert(view);
-
-	if (!geometry) {
-		geometry = &view->st->current;
-	}
-
-	struct output *output =
-		output_nearest_to(geometry->x + geometry->width / 2,
-			geometry->y + geometry->height / 2);
-
-	if (output && output != view->st->output) {
-		view_set_output(view->id, output);
-		/* Show fullscreen views above top-layer */
-		if (view->st->fullscreen) {
-			desktop_update_top_layer_visibility();
-		}
-		return true;
-	}
-
-	return false;
-}
-
 void
 view_notify_active(struct view *view)
 {
@@ -119,19 +94,6 @@ view_moved(struct view *view)
 		view->st->current.x, view->st->current.y);
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus();
-}
-
-void
-view_notify_move_resize(struct view *view)
-{
-	/*
-	 * If the move/resize was user-initiated (rather than due to
-	 * output layout change), then invalidate the saved geometry.
-	 */
-	if (!view->adjusting_for_layout_change) {
-		view->last_layout_geometry = (struct wlr_box){0};
-		view->lost_output_due_to_layout_change = false;
-	}
 }
 
 struct view_size_hints
@@ -476,64 +438,6 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	 * isn't called. Update cursor focus explicitly for that case.
 	 */
 	cursor_update_focus();
-}
-
-void
-view_adjust_for_layout_change(struct view *view)
-{
-	assert(view);
-
-	bool is_floating = view_is_floating(view->st);
-	view->adjusting_for_layout_change = true;
-
-	if (!output_is_usable(view->st->output)) {
-		view->lost_output_due_to_layout_change = true;
-	}
-
-	/*
-	 * Save the view's geometry if this is the first layout change
-	 * since a user-initiated move/resize. Do not save it again for
-	 * subsequent layout changes, since the point is to be able to
-	 * restore to the original location after multiple changes
-	 * (e.g. output disconnected and then reconnected).
-	 *
-	 * Note that it's important to do this even if an output change
-	 * is not (yet) required, to properly handle cases of multiple
-	 * outputs being disconnected/reconnected in any order. In that
-	 * case, there can be multiple layout change events, and a view
-	 * can be moved first and only later lose its own output.
-	 */
-	if (wlr_box_empty(&view->last_layout_geometry)) {
-		view->last_layout_geometry = view->st->pending;
-	}
-	/*
-	 * Check if an output change is required:
-	 * - Floating views are always mapped to the nearest output
-	 * - Any fullscreen/tiled/maximized view which lost its output
-	 *   due to a layout change should be moved back if the output
-	 *   is reconnected.
-	 *
-	 * If so, try to find the "nearest" output (in terms of layout
-	 * coordinates) to the saved geometry. Other strategies might be
-	 * possible here -- for example, trying to match the same physical
-	 * output the view was on previously -- but this is simplest.
-	 */
-	if (is_floating || view->lost_output_due_to_layout_change) {
-		view_discover_output(view, &view->last_layout_geometry);
-	}
-
-	if (!is_floating) {
-		view_apply_special_geom(view->id);
-	} else if (view_has_strut_partial(view)) {
-		/* Do not move panels etc. out of their own reserved area */
-	} else {
-		/* Restore saved geometry, ensuring view is on-screen */
-		struct wlr_box geometry = view->last_layout_geometry;
-		view_ensure_geom_onscreen(view->id, &geometry);
-		view_move_resize(view->id, geometry);
-	}
-
-	view->adjusting_for_layout_change = false;
 }
 
 enum view_axis

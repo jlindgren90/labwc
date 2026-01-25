@@ -81,17 +81,6 @@ struct view {
 	bool ssd_enabled;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 
-	/*
-	 * Whenever an output layout change triggers a view relocation, the
-	 * last pending position will be saved so the view may be restored
-	 * to its original location on a subsequent layout change.
-	 */
-	struct wlr_box last_layout_geometry;
-	/* Set temporarily when moving view due to layout change */
-	bool adjusting_for_layout_change;
-	/* True if original output was disconnected or disabled */
-	bool lost_output_due_to_layout_change;
-
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
@@ -177,7 +166,6 @@ void view_toggle_always_on_top(struct view *view);
 
 void view_set_ssd_enabled(struct view *view, bool enabled);
 void view_toggle_fullscreen(struct view *view);
-void view_adjust_for_layout_change(struct view *view);
 void view_snap_to_edge(struct view *view, enum lab_edge direction);
 
 void view_move_to_front(struct view *view);

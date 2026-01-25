@@ -325,8 +325,6 @@ void desktop_focus_view(struct view *view, bool raise);
 void desktop_focus_view_or_surface(struct view *view,
 	struct wlr_surface *surface, bool raise);
 
-void desktop_arrange_all_views(void);
-
 /**
  * Toggles the (output local) visibility of the layershell top layer
  * based on the existence of a fullscreen window on the current workspace.
