@@ -110,7 +110,6 @@ set_initial_commit_size(struct view *view, int width, int height)
 	} else {
 		view_move_resize(view->id, geom);
 	}
-	view_save_last_placement(view);
 }
 
 static void
