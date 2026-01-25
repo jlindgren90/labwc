@@ -1,6 +1,6 @@
 # generate C headers from Rust modules
 gen_headers = []
-foreach module : ['view_api']
+foreach module : ['rect', 'view_api']
   gen_headers += custom_target(
     input: '../src/' + module + '.rs',
     output: module + '.h',

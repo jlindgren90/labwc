@@ -26,12 +26,12 @@
 
 #include "buffer.h"
 #include <assert.h>
-#include <stdlib.h>
 #include <drm_fourcc.h>
+#include <stdlib.h>
 #include <wlr/interfaces/wlr_buffer.h>
 #include <wlr/util/log.h>
-#include "common/box.h"
 #include "common/mem.h"
+#include "util.h"
 
 static struct lab_data_buffer *data_buffer_from_buffer(
 	struct wlr_buffer *buffer);
@@ -169,7 +169,7 @@ buffer_resize(struct lab_data_buffer *src_buffer, int width, int height,
 		.height = height,
 	};
 
-	struct wlr_box dst_box = box_fit_within(src_w, src_h, &container);
+	struct wlr_box dst_box = rect_fit_within(src_w, src_h, container);
 	double scene_scale = (double)dst_box.width / (double)src_w;
 	cairo_translate(cairo, dst_box.x, dst_box.y);
 	cairo_scale(cairo, scene_scale, scene_scale);

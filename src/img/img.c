@@ -5,6 +5,7 @@
 #include "buffer.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
+#include "config.h"
 #include "img/img-png.h"
 #include "img/img-svg.h"
 #include "img/img-xbm.h"

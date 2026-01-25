@@ -7,13 +7,13 @@
 #include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_dialog_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include "common/box.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "node.h"
 #include "output.h"
+#include "util.h"
 #include "view.h"
 #include "view-impl-common.h"
 
@@ -122,8 +122,9 @@ center_fullscreen_if_needed(struct view *view)
 	struct wlr_box output_box = {0};
 	wlr_output_layout_get_box(g_server.output_layout,
 		view->output->wlr_output, &output_box);
-	box_center(view->current.width, view->current.height, &output_box,
-		&output_box, &view->current.x, &view->current.y);
+	view->current = rect_center(view->current.width, view->current.height,
+		output_box);
+	rect_move_within(&view->current, output_box);
 
 	/* Reset pending x/y to computed position also */
 	view->pending.x = view->current.x;
