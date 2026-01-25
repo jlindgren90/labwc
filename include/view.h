@@ -29,8 +29,6 @@
  */
 #define VIEW_FALLBACK_X 100
 #define VIEW_FALLBACK_Y 100
-#define VIEW_FALLBACK_WIDTH  640
-#define VIEW_FALLBACK_HEIGHT 480
 
 enum ssd_preference {
 	LAB_SSD_PREF_UNSPEC = 0,
@@ -165,8 +163,6 @@ void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
 
-void view_maximize(struct view *view, enum view_axis axis);
-void view_set_fullscreen(struct view *view, bool fullscreen);
 void view_toggle_maximize(struct view *view, enum view_axis axis);
 bool view_wants_decorations(struct view *view);
 

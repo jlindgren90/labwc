@@ -90,13 +90,6 @@ pub extern "C" fn view_set_active(id: ViewId, active: bool) {
 }
 
 #[no_mangle]
-pub extern "C" fn view_set_fullscreen_internal(id: ViewId, fullscreen: bool) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.set_fullscreen(fullscreen);
-    }
-}
-
-#[no_mangle]
 pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_maximized(maximized);
@@ -114,13 +107,6 @@ pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
 pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.set_tiled(tiled);
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn view_ensure_geom_onscreen(id: ViewId, geom: &mut Rect) {
-    if let Some(view) = views().by_id.get(&id) {
-        view.ensure_geom_onscreen(geom);
     }
 }
 
@@ -174,23 +160,9 @@ pub extern "C" fn view_set_initial_geom(id: ViewId, rel_to: Option<&Rect>, keep_
 }
 
 #[no_mangle]
-pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.set_fallback_natural_geom();
-    }
-}
-
-#[no_mangle]
 pub extern "C" fn view_store_natural_geom(id: ViewId) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.store_natural_geom();
-    }
-}
-
-#[no_mangle]
-pub extern "C" fn view_apply_natural_geom(id: ViewId) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.apply_natural_geom();
     }
 }
 
@@ -216,6 +188,25 @@ pub extern "C" fn views_adjust_for_layout_change() {
     }
     drop(views); // FIXME: to allow reentrant borrow
     unsafe { desktop_update_top_layer_visibility() };
+}
+
+#[no_mangle]
+pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
+    let mut views = views_mut();
+    if let Some(view) = views.by_id.get_mut(&id) {
+        let view_ptr = view.fullscreen(fullscreen);
+        if !view_ptr.is_null() {
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_notify_fullscreen(view_ptr) };
+        }
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.maximize(axis);
+    }
 }
 
 #[no_mangle]

@@ -122,7 +122,7 @@ impl View {
         }
     }
 
-    pub fn set_fullscreen(&mut self, fullscreen: bool) {
+    fn set_fullscreen(&mut self, fullscreen: bool) {
         if self.state.fullscreen != fullscreen {
             self.state.fullscreen = fullscreen;
             if self.is_xwayland {
@@ -165,7 +165,7 @@ impl View {
         }
     }
 
-    pub fn ensure_geom_onscreen(&self, geom: &mut Rect) {
+    fn ensure_geom_onscreen(&self, geom: &mut Rect) {
         if rect_empty(*geom) {
             return;
         }
@@ -304,7 +304,7 @@ impl View {
         }
     }
 
-    pub fn set_fallback_natural_geom(&mut self) {
+    fn set_fallback_natural_geom(&mut self) {
         let mut natural = Rect {
             width: FALLBACK_WIDTH,
             height: FALLBACK_HEIGHT,
@@ -334,7 +334,7 @@ impl View {
         }
     }
 
-    pub fn apply_natural_geom(&mut self) {
+    fn apply_natural_geom(&mut self) {
         let mut natural = self.state.natural_geom;
         self.ensure_geom_onscreen(&mut natural);
         self.move_resize(natural);
@@ -434,6 +434,54 @@ impl View {
             self.move_resize(geom);
         }
         self.in_layout_change = false;
+    }
+
+    // Returns CView pointer to pass to view_notify_fullscreen()
+    pub fn fullscreen(&mut self, fullscreen: bool) -> *mut CView {
+        if self.state.fullscreen == fullscreen {
+            return std::ptr::null_mut();
+        }
+        // Fullscreening ends any interactive move/resize
+        if fullscreen {
+            unsafe { interactive_cancel(self.c_ptr) };
+            self.store_natural_geom();
+        }
+        self.set_fullscreen(fullscreen);
+        if view_is_floating(&*self.state) {
+            self.apply_natural_geom();
+        } else {
+            self.apply_special_geom();
+        }
+        return self.c_ptr;
+    }
+
+    pub fn maximize(&mut self, axis: ViewAxis) {
+        if self.state.maximized == axis {
+            return;
+        }
+        // In snap-to-maximize case, natural geometry was already stored
+        let store_natural_geometry = unsafe { !interactive_move_is_active(self.c_ptr) };
+        // Maximizing ends any interactive move/resize
+        if axis != VIEW_AXIS_NONE {
+            unsafe { interactive_cancel(self.c_ptr) };
+        }
+        if store_natural_geometry {
+            self.store_natural_geom();
+        }
+        // Corner case: if unmaximizing one axis but natural geometry is
+        // unknown (e.g. for an initially maximized xdg-shell view), we
+        // can't request geometry from the client, so use a fallback
+        if (axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
+            && rect_empty(self.state.natural_geom)
+        {
+            self.set_fallback_natural_geom();
+        }
+        self.set_maximized(axis);
+        if view_is_floating(&*self.state) {
+            self.apply_natural_geom();
+        } else {
+            self.apply_special_geom();
+        }
     }
 
     pub fn offer_focus(&self) {
