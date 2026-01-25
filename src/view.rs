@@ -38,6 +38,9 @@ struct ViewData {
     app_id: CString,
     title: CString,
     foreign_toplevels: Vec<ForeignToplevel>,
+    saved_geom: Rect, // geometry before adjusting for layout change
+    in_layout_change: bool,
+    lost_output: bool,
 }
 
 pub struct View {
@@ -180,7 +183,11 @@ impl View {
             // Moving a floating view also sets the output
             self.state.output = nearest_output_to_geom(self.state.pending);
         }
-        unsafe { view_notify_move_resize(self.c_ptr) };
+        if !self.d.in_layout_change {
+            // User-initiated move/resize invalidates saved geometry
+            self.d.saved_geom = Rect::default();
+            self.d.lost_output = false;
+        }
     }
 
     pub fn set_fallback_natural_geom(&mut self) {
@@ -233,6 +240,31 @@ impl View {
 
     pub fn set_output(&mut self, output: *mut Output) {
         self.state.output = output;
+    }
+
+    pub fn adjust_for_layout_change(&mut self) {
+        // Save user geometry prior to first layout-change adjustment
+        if rect_empty(self.d.saved_geom) {
+            self.d.saved_geom = self.state.pending;
+        }
+        self.d.in_layout_change = true;
+        self.d.lost_output |= unsafe { !output_is_usable(self.state.output) };
+        // Keep non-floating views on the same output if possible
+        let is_floating = self.state.floating();
+        if is_floating || self.d.lost_output {
+            self.state.output = nearest_output_to_geom(self.d.saved_geom);
+        }
+        if !is_floating {
+            self.apply_special_geom();
+        } else if unsafe { view_has_strut_partial(self.c_ptr) } {
+            // Do not move panels etc. out of their own reserved area
+        } else {
+            // Restore saved geometry, ensuring view is on-screen
+            let mut geom = self.d.saved_geom;
+            ensure_geom_onscreen(&*self.state, &mut geom);
+            self.move_resize(geom);
+        }
+        self.d.in_layout_change = false;
     }
 
     pub fn offer_focus(&self) {
