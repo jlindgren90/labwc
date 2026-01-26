@@ -273,15 +273,6 @@ view_notify_fullscreen(struct view *view)
 			decorate(view);
 		}
 	}
-
-	/* Show fullscreen views above top-layer */
-	desktop_update_top_layer_visibility();
-	/*
-	 * Entering/leaving fullscreen might result in a different
-	 * scene node ending up under the cursor even if view_moved()
-	 * isn't called. Update cursor focus explicitly for that case.
-	 */
-	cursor_update_focus();
 }
 
 enum view_axis
@@ -377,13 +368,6 @@ void
 view_raise_impl(struct view *view)
 {
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
-}
-
-void
-view_notify_raise(struct view *view)
-{
-	cursor_update_focus();
-	desktop_update_top_layer_visibility();
 }
 
 bool
@@ -490,12 +474,6 @@ view_notify_visible(struct view *view)
 			desktop_focus_topmost_view();
 		}
 	}
-
-	/*
-	 * Show top layer when a fullscreen view is hidden.
-	 * Hide it if a fullscreen view is shown (or uncovered).
-	 */
-	desktop_update_top_layer_visibility();
 
 	/* Update usable area to account for XWayland "struts" (panels) */
 	if (view_has_strut_partial(view)) {

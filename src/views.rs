@@ -4,7 +4,7 @@ use crate::bindings::*;
 use crate::lazy_static;
 use crate::util::*;
 use crate::view::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::ffi::c_char;
 
 #[derive(Default)]
@@ -58,6 +58,24 @@ impl Views {
         }
     }
 
+    fn update_top_layer_visibility(&self) {
+        unsafe { top_layer_show_all() };
+        let mut outputs_seen = HashSet::new();
+        for v in self.order.iter().rev().filter_map(|i| self.by_id.get(i)) {
+            let state = v.get_state();
+            if state.visible()
+                && unsafe { output_is_usable(state.output) }
+                && !outputs_seen.contains(&state.output)
+            {
+                // Hide top layer if topmost view is fullscreen
+                if state.fullscreen {
+                    unsafe { top_layer_hide_on_output(state.output) };
+                }
+                outputs_seen.insert(state.output);
+            }
+        }
+    }
+
     // Returns CView pointer to pass to view_notify_visible()
     fn minimize(&mut self, id: ViewId, minimized: bool) -> *mut CView {
         if let Some(view) = self.by_id.get(&id) {
@@ -70,6 +88,7 @@ impl Views {
                     v.set_minimized(minimized, &mut visibility_changed);
                 }
                 if visibility_changed {
+                    self.update_top_layer_visibility();
                     return view_ptr;
                 }
             }
@@ -77,16 +96,15 @@ impl Views {
         return std::ptr::null_mut();
     }
 
-    // Returns CView pointer to pass to view_notify_raise()
-    fn raise(&mut self, id: ViewId) -> *mut CView {
+    fn raise(&mut self, id: ViewId) {
         // Check if view or a sub-view is already in front
         if let Some(&front) = self.order.last() {
             if id == front || self.get_root_of(front) == id {
-                return std::ptr::null_mut();
+                return;
             }
         }
         let Some(view) = self.by_id.get(&id) else {
-            return std::ptr::null_mut();
+            return;
         };
         let mut ids_to_raise = Vec::new();
         // Raise root parent view first
@@ -105,10 +123,10 @@ impl Views {
         for v in ids_to_raise.iter().filter_map(|i| self.by_id.get(i)) {
             v.raise();
         }
-        let view_ptr = view.get_c_ptr();
         self.order.retain(|i| !ids_to_raise.contains(i));
         self.order.append(&mut ids_to_raise);
-        return view_ptr;
+        self.update_top_layer_visibility();
+        unsafe { cursor_update_focus() };
     }
 }
 
@@ -194,6 +212,7 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
         }
         if was_shown {
             let view_ptr = view.get_c_ptr();
+            views.update_top_layer_visibility();
             drop(views); // FIXME: to allow reentrant borrow
             unsafe { view_notify_visible(view_ptr) };
         }
@@ -208,6 +227,7 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
         view.set_unmapped(&mut was_hidden);
         if was_hidden {
             let view_ptr = view.get_c_ptr();
+            views.update_top_layer_visibility();
             drop(views); // FIXME: to allow reentrant borrow
             unsafe { view_notify_visible(view_ptr) };
         }
@@ -311,23 +331,26 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
 }
 
 #[no_mangle]
+pub extern "C" fn views_update_top_layer_visibility() {
+    views().update_top_layer_visibility();
+}
+
+#[no_mangle]
 pub extern "C" fn views_adjust_for_layout_change() {
     let mut views = views_mut();
     for v in views.by_id.values_mut() {
         v.adjust_for_layout_change();
     }
-    drop(views); // FIXME: to allow reentrant borrow
-    unsafe { desktop_update_top_layer_visibility() };
+    views.update_top_layer_visibility();
 }
 
 #[no_mangle]
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
     let mut views = views_mut();
     if let Some(view) = views.by_id.get_mut(&id) {
-        let view_ptr = view.fullscreen(fullscreen);
-        if !view_ptr.is_null() {
-            drop(views); // FIXME: to allow reentrant borrow
-            unsafe { view_notify_fullscreen(view_ptr) };
+        if view.fullscreen(fullscreen) {
+            views.update_top_layer_visibility();
+            unsafe { cursor_update_focus() };
         }
     }
 }
@@ -349,10 +372,7 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
 
 #[no_mangle]
 pub extern "C" fn view_raise(id: ViewId) {
-    let view_ptr_to_notify = views_mut().raise(id);
-    if !view_ptr_to_notify.is_null() {
-        unsafe { view_notify_raise(view_ptr_to_notify) };
-    }
+    views_mut().raise(id);
 }
 
 #[no_mangle]

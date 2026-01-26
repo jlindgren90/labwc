@@ -12,6 +12,12 @@ const MIN_WIDTH: i32 = 100;
 const MIN_HEIGHT: i32 = 60;
 const MIN_VISIBLE_PX: i32 = 16;
 
+impl ViewState {
+    pub fn visible(&self) -> bool {
+        self.mapped && !self.minimized
+    }
+}
+
 #[no_mangle]
 pub extern "C" fn view_is_focusable(state: &ViewState) -> bool {
     state.mapped
@@ -464,10 +470,10 @@ impl View {
         self.in_layout_change = false;
     }
 
-    // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, fullscreen: bool) -> *mut CView {
+    // Returns true if fullscreen state changed
+    pub fn fullscreen(&mut self, fullscreen: bool) -> bool {
         if self.state.fullscreen == fullscreen {
-            return std::ptr::null_mut();
+            return false;
         }
         // Fullscreening ends any interactive move/resize
         if fullscreen {
@@ -480,7 +486,8 @@ impl View {
         } else {
             self.apply_special_geom();
         }
-        return self.c_ptr;
+        unsafe { view_notify_fullscreen(self.c_ptr) };
+        return true;
     }
 
     pub fn maximize(&mut self, axis: ViewAxis) {
