@@ -141,7 +141,7 @@ get_toplevel(struct wlr_surface *surface)
 static void
 handle_request_set_cursor(struct wl_listener *listener, void *data)
 {
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		/* Prevent setting a cursor image when moving or resizing */
 		return;
 	}
@@ -180,7 +180,7 @@ handle_request_set_shape(struct wl_listener *listener, void *data)
 		g_seat.seat->pointer_state.focused_client;
 
 	/* Prevent setting a cursor image when moving or resizing */
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return;
 	}
 
@@ -459,7 +459,7 @@ cursor_update_common(const struct cursor_context *ctx,
 
 	ssd_update_hovered_button(ctx->node);
 
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		/*
 		 * Prevent updating focus/cursor image during
 		 * interactive move/resize, window switcher and
@@ -536,10 +536,10 @@ bool
 cursor_process_motion(uint32_t time, double *sx, double *sy)
 {
 	/* If the mode is non-passthrough, delegate to those functions. */
-	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
+	if (g_server.input_mode == INPUT_MODE_MOVE) {
 		process_cursor_move(time);
 		return false;
-	} else if (g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
+	} else if (g_server.input_mode == INPUT_MODE_RESIZE) {
 		process_cursor_resize(time);
 		return false;
 	}
@@ -853,7 +853,7 @@ handle_motion_absolute(struct wl_listener *listener, void *data)
 static void
 process_release_mousebinding(struct cursor_context *ctx, uint32_t button)
 {
-	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
+	if (g_server.input_mode == INPUT_MODE_CYCLE) {
 		return;
 	}
 
@@ -921,7 +921,7 @@ is_double_click(long double_click_speed, uint32_t button,
 static bool
 process_press_mousebinding(struct cursor_context *ctx, uint32_t button)
 {
-	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
+	if (g_server.input_mode == INPUT_MODE_CYCLE) {
 		return false;
 	}
 
@@ -1007,7 +1007,7 @@ cursor_process_button_press(uint32_t button, uint32_t time_msec)
 		cursor_context_save(&g_seat.pressed, &ctx);
 	}
 
-	if (g_server.input_mode == LAB_INPUT_STATE_MENU) {
+	if (g_server.input_mode == INPUT_MODE_MENU) {
 		/*
 		 * If menu was already opened on press, set a very small value
 		 * so subsequent release always closes menu or selects menu item.
@@ -1074,7 +1074,7 @@ cursor_process_button_release(uint32_t button, uint32_t time_msec)
 
 	cursor_context_save(&g_seat.pressed, NULL);
 
-	if (g_server.input_mode == LAB_INPUT_STATE_MENU) {
+	if (g_server.input_mode == INPUT_MODE_MENU) {
 		/* TODO: take into account overflow of time_msec */
 		if (time_msec - press_msec > rc.menu_ignore_button_release_period) {
 			if (ctx.type == LAB_NODE_MENUITEM) {
@@ -1086,14 +1086,14 @@ cursor_process_button_release(uint32_t button, uint32_t time_msec)
 		}
 		return notify;
 	}
-	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
+	if (g_server.input_mode == INPUT_MODE_CYCLE) {
 		if (ctx.type == LAB_NODE_CYCLE_OSD_ITEM) {
 			cycle_on_cursor_release(ctx.node);
 		}
 		return notify;
 	}
 
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return notify;
 	}
 
@@ -1123,8 +1123,8 @@ cursor_finish_button_release(uint32_t button)
 
 	lab_set_remove(&g_seat.bound_buttons, button);
 
-	if (g_server.input_mode == LAB_INPUT_STATE_MOVE
-			|| g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
+	if (g_server.input_mode == INPUT_MODE_MOVE
+			|| g_server.input_mode == INPUT_MODE_RESIZE) {
 		/* Exit interactive move/resize mode */
 		interactive_finish(g_server.grabbed_view);
 		return true;

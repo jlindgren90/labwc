@@ -543,7 +543,7 @@ handle_focus_change(struct wl_listener *listener, void *data)
 	 * We clear the keyboard focus at the beginning of Move/Resize, window
 	 * switcher and opening menus, but don't want to deactivate the view.
 	 */
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return;
 	}
 
@@ -721,7 +721,7 @@ void
 seat_focus_surface(struct wlr_surface *surface)
 {
 	/* Don't update focus while window switcher, Move/Resize and menu interaction */
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return;
 	}
 	seat_focus(surface, /*replace_exclusive_layer*/ false,
@@ -779,13 +779,13 @@ handle_focus_override_surface_destroy(struct wl_listener *listener, void *data)
 }
 
 void
-seat_focus_override_begin(enum input_mode input_mode,
+seat_focus_override_begin(enum input_mode mode,
 		enum lab_cursors cursor_shape)
 {
 	assert(!g_seat.focus_override.surface);
-	assert(g_server.input_mode == LAB_INPUT_STATE_PASSTHROUGH);
+	assert(g_server.input_mode == INPUT_MODE_NORMAL);
 
-	g_server.input_mode = input_mode;
+	g_server.input_mode = mode;
 
 	g_seat.focus_override.surface =
 		g_seat.seat->keyboard_state.focused_surface;
@@ -820,7 +820,7 @@ seat_focus_override_end(void)
 		g_seat.focus_override.surface = NULL;
 	}
 
-	g_server.input_mode = LAB_INPUT_STATE_PASSTHROUGH;
+	g_server.input_mode = INPUT_MODE_NORMAL;
 
 	cursor_update_focus();
 }

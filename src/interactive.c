@@ -34,7 +34,7 @@ max_move_scale(double pos_cursor, double pos_old, double size_old,
 void
 interactive_anchor_to_cursor(struct wlr_box *geo)
 {
-	assert(g_server.input_mode == LAB_INPUT_STATE_MOVE);
+	assert(g_server.input_mode == INPUT_MODE_MOVE);
 	if (wlr_box_empty(geo)) {
 		return;
 	}
@@ -58,7 +58,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	 * the compositor stops propagating pointer events to clients and
 	 * instead consumes them itself, to move or resize windows.
 	 */
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return;
 	}
 
@@ -70,7 +70,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	enum lab_cursors cursor_shape = LAB_CURSOR_DEFAULT;
 
 	switch (mode) {
-	case LAB_INPUT_STATE_MOVE:
+	case INPUT_MODE_MOVE:
 		if (view->st->fullscreen) {
 			/**
 			 * We don't allow moving fullscreen windows.
@@ -87,7 +87,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
-	case LAB_INPUT_STATE_RESIZE: {
+	case INPUT_MODE_RESIZE: {
 		if (view->st->fullscreen || view->st->maximized == VIEW_AXIS_BOTH) {
 			/*
 			 * We don't allow resizing while fullscreen or
@@ -219,7 +219,7 @@ interactive_finish(struct view *view)
 		return;
 	}
 
-	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
+	if (g_server.input_mode == INPUT_MODE_MOVE) {
 		snap_to_edge(view);
 	}
 
@@ -247,14 +247,14 @@ interactive_cancel(struct view *view)
 bool
 interactive_move_is_active(struct view *view)
 {
-	return (g_server.input_mode == LAB_INPUT_STATE_MOVE
+	return (g_server.input_mode == INPUT_MODE_MOVE
 		&& g_server.grabbed_view == view);
 }
 
 bool
 interactive_resize_is_active(struct view *view, enum lab_edge edge)
 {
-	return (g_server.input_mode == LAB_INPUT_STATE_RESIZE
+	return (g_server.input_mode == INPUT_MODE_RESIZE
 		&& g_server.grabbed_view == view
 		&& (g_server.resize_edges & edge) != 0);
 }

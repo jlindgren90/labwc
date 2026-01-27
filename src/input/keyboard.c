@@ -132,7 +132,7 @@ handle_modifiers(struct wl_listener *listener, void *data)
 		wl_container_of(listener, keyboard, modifiers);
 	struct wlr_keyboard *wlr_keyboard = keyboard->wlr_keyboard;
 
-	bool cycling = g_server.input_mode == LAB_INPUT_STATE_CYCLE;
+	bool cycling = g_server.input_mode == INPUT_MODE_CYCLE;
 
 	if (cycling && !keyboard_get_all_modifiers()) {
 		if (cycling) {
@@ -403,7 +403,7 @@ handle_change_vt_key(struct keyboard *keyboard, struct keysyms *translated)
 static void
 handle_menu_keys(struct keysyms *syms)
 {
-	assert(g_server.input_mode == LAB_INPUT_STATE_MENU);
+	assert(g_server.input_mode == INPUT_MODE_MENU);
 
 	for (int i = 0; i < syms->nr_syms; i++) {
 		switch (syms->syms[i]) {
@@ -502,11 +502,11 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 	 * _all_ key press/releases are registered
 	 */
 	if (!locked) {
-		if (g_server.input_mode == LAB_INPUT_STATE_MENU) {
+		if (g_server.input_mode == INPUT_MODE_MENU) {
 			key_state_store_pressed_key_as_bound(event->keycode);
 			handle_menu_keys(&keyinfo.translated);
 			return LAB_KEY_HANDLED_TRUE;
-		} else if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
+		} else if (g_server.input_mode == INPUT_MODE_CYCLE) {
 			if (handle_cycle_view_key(&keyinfo)) {
 				key_state_store_pressed_key_as_bound(event->keycode);
 				return LAB_KEY_HANDLED_TRUE;

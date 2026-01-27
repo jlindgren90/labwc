@@ -961,7 +961,7 @@ menu_open_root(struct menu *menu, int x, int y)
 {
 	assert(menu);
 
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return;
 	}
 
@@ -976,7 +976,7 @@ menu_open_root(struct menu *menu, int x, int y)
 
 	g_server.menu_current = menu;
 	selected_item = NULL;
-	seat_focus_override_begin(LAB_INPUT_STATE_MENU, LAB_CURSOR_DEFAULT);
+	seat_focus_override_begin(INPUT_MODE_MENU, LAB_CURSOR_DEFAULT);
 }
 
 static void
@@ -1290,7 +1290,7 @@ menu_process_cursor_motion(struct wlr_scene_node *node)
 void
 menu_close_root(void)
 {
-	assert(g_server.input_mode == LAB_INPUT_STATE_MENU);
+	assert(g_server.input_mode == INPUT_MODE_MENU);
 	assert(g_server.menu_current);
 
 	menu_close(g_server.menu_current);

@@ -2,6 +2,17 @@
 #ifndef LABWC_RS_TYPES_H
 #define LABWC_RS_TYPES_H
 
+// Rust likes camelcase types
+#define input_mode InputMode
+
+typedef enum input_mode {
+	INPUT_MODE_NORMAL = 0,
+	INPUT_MODE_MOVE,
+	INPUT_MODE_RESIZE,
+	INPUT_MODE_MENU,
+	INPUT_MODE_CYCLE,
+} InputMode;
+
 typedef struct border {
 	int top;
 	int right;

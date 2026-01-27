@@ -378,8 +378,8 @@ static void
 show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 		bool at_cursor, const char *pos_x, const char *pos_y)
 {
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH
-			&& g_server.input_mode != LAB_INPUT_STATE_MENU) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL
+			&& g_server.input_mode != INPUT_MODE_MENU) {
 		/* Prevent opening a menu while resizing / moving a view */
 		return;
 	}
@@ -514,14 +514,14 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		}
 		break;
 	case ACTION_TYPE_NEXT_WINDOW:
-		if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
+		if (g_server.input_mode == INPUT_MODE_CYCLE) {
 			cycle_step(LAB_CYCLE_DIR_FORWARD);
 		} else {
 			cycle_begin(LAB_CYCLE_DIR_FORWARD);
 		}
 		break;
 	case ACTION_TYPE_PREVIOUS_WINDOW:
-		if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
+		if (g_server.input_mode == INPUT_MODE_CYCLE) {
 			cycle_step(LAB_CYCLE_DIR_BACKWARD);
 		} else {
 			cycle_begin(LAB_CYCLE_DIR_BACKWARD);
@@ -580,7 +580,7 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_MOVE:
 		if (view) {
-			interactive_begin(view, LAB_INPUT_STATE_MOVE,
+			interactive_begin(view, INPUT_MODE_MOVE,
 				LAB_EDGE_NONE);
 		}
 		break;
@@ -602,7 +602,7 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 				resize_edges = cursor_get_resize_edges(
 					g_seat.cursor, ctx);
 			}
-			interactive_begin(view, LAB_INPUT_STATE_RESIZE,
+			interactive_begin(view, INPUT_MODE_RESIZE,
 				resize_edges);
 		}
 		break;
@@ -645,7 +645,7 @@ actions_run(struct view *activator, struct wl_list *actions,
 
 	struct action *action;
 	wl_list_for_each(action, actions, link) {
-		if (g_server.input_mode == LAB_INPUT_STATE_CYCLE
+		if (g_server.input_mode == INPUT_MODE_CYCLE
 				&& action->type != ACTION_TYPE_NEXT_WINDOW
 				&& action->type != ACTION_TYPE_PREVIOUS_WINDOW) {
 			wlr_log(WLR_INFO, "Only NextWindow or PreviousWindow "

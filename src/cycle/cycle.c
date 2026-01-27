@@ -21,7 +21,7 @@ static void destroy_cycle(void);
 void
 cycle_on_cursor_release(struct wlr_scene_node *node)
 {
-	assert(g_server.input_mode == LAB_INPUT_STATE_CYCLE);
+	assert(g_server.input_mode == INPUT_MODE_CYCLE);
 
 	struct cycle_osd_item *item = node_cycle_osd_item_from_node(node);
 	g_server.current_cycle_idx = item->cycle_idx;
@@ -31,7 +31,7 @@ cycle_on_cursor_release(struct wlr_scene_node *node)
 void
 cycle_begin(enum lab_cycle_dir direction)
 {
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (g_server.input_mode != INPUT_MODE_NORMAL) {
 		return;
 	}
 
@@ -52,7 +52,7 @@ cycle_begin(enum lab_cycle_dir direction)
 		g_server.current_cycle_idx = len - 1;
 	}
 
-	seat_focus_override_begin(LAB_INPUT_STATE_CYCLE, LAB_CURSOR_DEFAULT);
+	seat_focus_override_begin(INPUT_MODE_CYCLE, LAB_CURSOR_DEFAULT);
 	update_cycle();
 
 	/* Update cursor, in case it is within the area covered by OSD */
@@ -62,7 +62,7 @@ cycle_begin(enum lab_cycle_dir direction)
 void
 cycle_step(enum lab_cycle_dir direction)
 {
-	assert(g_server.input_mode == LAB_INPUT_STATE_CYCLE);
+	assert(g_server.input_mode == INPUT_MODE_CYCLE);
 
 	int len = cycle_list_len();
 	assert(len > 0);
@@ -81,7 +81,7 @@ cycle_step(enum lab_cycle_dir direction)
 void
 cycle_finish(bool switch_focus)
 {
-	if (g_server.input_mode != LAB_INPUT_STATE_CYCLE) {
+	if (g_server.input_mode != INPUT_MODE_CYCLE) {
 		return;
 	}
 

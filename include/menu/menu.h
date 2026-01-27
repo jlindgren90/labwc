@@ -83,7 +83,7 @@ struct menu *menu_get_by_id(const char *id);
  * This function will close server->menu_current, open the
  * new menu and assign @menu to server->menu_current.
  *
- * Additionally, server->input_mode will be set to LAB_INPUT_STATE_MENU.
+ * Additionally, server->input_mode will be set to INPUT_MODE_MENU.
  */
 void menu_open_root(struct menu *menu, int x, int y);
 
@@ -99,9 +99,9 @@ void menu_process_cursor_motion(struct wlr_scene_node *node);
  *  menu_close_root- close root menu
  *
  * This function will close server->menu_current and set it to NULL.
- * Asserts that server->input_mode is set to LAB_INPUT_STATE_MENU.
+ * Asserts that server->input_mode is set to INPUT_MODE_MENU.
  *
- * Additionally, server->input_mode will be set to LAB_INPUT_STATE_PASSTHROUGH.
+ * Additionally, server->input_mode will be set to INPUT_MODE_NORMAL.
  */
 void menu_close_root(void);
 

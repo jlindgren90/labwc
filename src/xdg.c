@@ -77,7 +77,7 @@ do_late_positioning(struct view *view)
 		return;
 	}
 	struct wlr_box geo = view->st->pending;
-	if (g_server.input_mode == LAB_INPUT_STATE_MOVE
+	if (g_server.input_mode == INPUT_MODE_MOVE
 			&& view == g_server.grabbed_view) {
 		/* Reposition the view while anchoring it to cursor */
 		interactive_anchor_to_cursor(&geo);
@@ -418,7 +418,7 @@ handle_request_move(struct wl_listener *listener, void *data)
 	 */
 	struct view *view = wl_container_of(listener, view, request_move);
 	if (view == g_seat.pressed.ctx.view) {
-		interactive_begin(view, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
+		interactive_begin(view, INPUT_MODE_MOVE, LAB_EDGE_NONE);
 	}
 }
 
@@ -436,7 +436,7 @@ handle_request_resize(struct wl_listener *listener, void *data)
 	struct wlr_xdg_toplevel_resize_event *event = data;
 	struct view *view = wl_container_of(listener, view, request_resize);
 	if (view == g_seat.pressed.ctx.view) {
-		interactive_begin(view, LAB_INPUT_STATE_RESIZE, event->edges);
+		interactive_begin(view, INPUT_MODE_RESIZE, event->edges);
 	}
 }
 

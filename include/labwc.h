@@ -6,20 +6,13 @@
 #include <wlr/util/log.h>
 #include "common/set.h"
 #include "input/cursor.h"
+#include "rs-types.h"
 
 #define XCURSOR_DEFAULT "left_ptr"
 #define XCURSOR_SIZE 24
 
 struct output;
 struct wlr_xdg_popup;
-
-enum input_mode {
-	LAB_INPUT_STATE_PASSTHROUGH = 0,
-	LAB_INPUT_STATE_MOVE,
-	LAB_INPUT_STATE_RESIZE,
-	LAB_INPUT_STATE_MENU,
-	LAB_INPUT_STATE_CYCLE, /* a.k.a. window switching */
-};
 
 struct seat {
 	struct wlr_seat *seat;
