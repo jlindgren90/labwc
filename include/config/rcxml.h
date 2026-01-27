@@ -54,21 +54,6 @@ struct rcxml {
 	/* libinput */
 	struct wl_list libinput_categories;
 
-	/* resistance */
-	int screen_edge_strength;
-	int window_edge_strength;
-	int unsnap_threshold;
-	int unmaximize_threshold;
-
-	/* window snapping */
-	int snap_edge_range_inner;
-	int snap_edge_range_outer;
-	int snap_edge_corner_range;
-	bool snap_overlay_enabled;
-	int snap_overlay_delay_inner;
-	int snap_overlay_delay_outer;
-	bool snap_top_maximize;
-
 	int resize_corner_range;
 	int resize_minimum_area;
 
