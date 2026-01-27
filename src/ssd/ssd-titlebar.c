@@ -12,7 +12,6 @@
 #include "labwc.h"
 #include "node.h"
 #include "scaled-buffer/scaled-font-buffer.h"
-#include "scaled-buffer/scaled-icon-buffer.h"
 #include "scaled-buffer/scaled-img-buffer.h"
 #include "ssd.h"
 #include "ssd-internal.h"
@@ -390,15 +389,15 @@ ssd_update_icon(struct ssd *ssd)
 		return;
 	}
 
-	struct lab_data_buffer *buffer = view_get_icon_buffer(ssd->view);
+	struct wlr_buffer *buffer = view_get_icon_buffer(ssd->view->id,
+		g_theme.window_icon_size, g_server.max_output_scale);
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
 		struct ssd_titlebar_subtree *subtree =
 			&ssd->titlebar.subtrees[active];
 		if (subtree->button_left->window_icon) {
 			wlr_scene_buffer_set_buffer(
-				subtree->button_left->window_icon,
-				buffer ? &buffer->base : NULL);
+				subtree->button_left->window_icon, buffer);
 		}
 	}
 }
