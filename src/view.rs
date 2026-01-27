@@ -3,6 +3,7 @@
 use crate::bindings::*;
 use crate::foreign_toplevel::*;
 use crate::rect::*;
+use crate::util::*;
 use crate::view_geom::*;
 use crate::view_impl::*;
 use std::ffi::CString;
@@ -43,6 +44,8 @@ struct ViewData {
     app_id: CString,
     title: CString,
     foreign_toplevels: Vec<ForeignToplevel>,
+    icon_surfaces: Vec<CairoSurfacePtr>,
+    icon_buffer: Option<WlrBufferPtr>,
     saved_geom: Rect, // geometry before adjusting for layout change
     in_layout_change: bool,
     lost_output: bool,
@@ -96,16 +99,18 @@ impl View {
         self.v.has_strut_partial()
     }
 
-    pub fn set_app_id(&mut self, app_id: CString) {
+    // Returns CView pointer to pass to view_notify_icon_change()
+    pub fn set_app_id(&mut self, app_id: CString) -> *mut CView {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
             self.state.app_id = self.d.app_id.as_ptr(); // for C interop
-            unsafe { view_notify_app_id_change(self.c_ptr) };
             for toplevel in &self.d.foreign_toplevels {
                 toplevel.send_app_id(&self.d.app_id);
                 toplevel.send_done();
             }
+            return self.c_ptr;
         }
+        return null_mut();
     }
 
     pub fn set_title(&mut self, title: CString) {
@@ -150,11 +155,13 @@ impl View {
         }
     }
 
-    pub fn set_ssd_enabled(&mut self, ssd_enabled: bool) {
+    // Returns CView pointer to pass to view_notify_ssd_enabled()
+    pub fn set_ssd_enabled(&mut self, ssd_enabled: bool) -> *mut CView {
         if self.state.ssd_enabled != ssd_enabled {
             self.state.ssd_enabled = ssd_enabled;
-            unsafe { view_notify_ssd_enabled(self.c_ptr) };
+            return self.c_ptr;
         }
+        return null_mut();
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
@@ -428,5 +435,50 @@ impl View {
             toplevel.send_state((&*self.state).into());
             toplevel.send_done();
         }
+    }
+
+    pub fn add_icon_surface(&mut self, surface: CairoSurfacePtr) {
+        self.d.icon_surfaces.push(surface);
+    }
+
+    fn get_best_icon_surface(&self, desired_size: i32) -> *mut CairoSurface {
+        let mut best = null_mut();
+        let mut best_diff = i32::MIN;
+        for surf in &self.d.icon_surfaces {
+            let width = unsafe { cairo_image_surface_get_width(surf.surface) };
+            let height = unsafe { cairo_image_surface_get_height(surf.surface) };
+            let diff = ((width + height) / 2) - desired_size;
+            // Current is better if:
+            // - previous was too small and current is bigger, or
+            // - current is big enough and smaller than previous
+            if (best_diff < 0 && diff > best_diff) || (diff >= 0 && diff < best_diff) {
+                best = surf.surface;
+                best_diff = diff;
+            }
+        }
+        return best;
+    }
+
+    pub fn clear_icon_surfaces(&mut self) {
+        self.d.icon_surfaces.clear();
+    }
+
+    pub fn get_icon_buffer(&mut self, icon_size: i32, scale: f32) -> *mut WlrBuffer {
+        if let Some(buf) = &self.d.icon_buffer {
+            return buf.buffer;
+        }
+        let icon_surface = self.get_best_icon_surface((icon_size as f32 * scale) as i32);
+        let icon_buffer = unsafe {
+            scaled_icon_buffer_load(self.d.app_id.as_ptr(), icon_surface, icon_size, scale)
+        };
+        if !icon_buffer.is_null() {
+            self.d.icon_buffer = Some(WlrBufferPtr::new(icon_buffer));
+            return icon_buffer;
+        }
+        return null_mut();
+    }
+
+    pub fn drop_icon_buffer(&mut self) {
+        self.d.icon_buffer = None;
     }
 }
