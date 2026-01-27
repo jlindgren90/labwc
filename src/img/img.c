@@ -117,7 +117,8 @@ lab_img_render(struct lab_img *img, int width, int height, double scale)
 	case LAB_IMG_PNG:
 	case LAB_IMG_XBM:
 	case LAB_IMG_XPM:
-		buffer = buffer_resize(img->data->buffer, width, height, scale);
+		buffer = buffer_resize(img->data->buffer->surface,
+			width, height, scale);
 		break;
 #if HAVE_RSVG
 	case LAB_IMG_SVG:

@@ -227,8 +227,13 @@ pub extern "C" fn view_has_strut_partial(id: ViewId) -> bool {
 
 #[no_mangle]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
-    if let Some(view) = views_mut().by_id.get_mut(&id) {
-        view.set_app_id(cstring(app_id));
+    let mut views = views_mut();
+    if let Some(view) = views.by_id.get_mut(&id) {
+        let view_ptr = view.set_app_id(cstring(app_id));
+        if !view_ptr.is_null() {
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_notify_icon_change(view_ptr) };
+        }
     }
 }
 
@@ -474,6 +479,39 @@ pub extern "C" fn views_remove_foreign_toplevel_client(client: *mut WlResource) 
 pub extern "C" fn view_remove_foreign_toplevel(id: ViewId, resource: *mut WlResource) {
     if let Some(view) = views_mut().by_id.get_mut(&id) {
         view.remove_foreign_toplevel(resource);
+    }
+}
+
+// Transfers ownership of the surface to the view
+#[no_mangle]
+pub extern "C" fn view_add_icon_surface(id: ViewId, surface: *mut CairoSurface) {
+    let surf = CairoSurfacePtr::new(surface);
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.add_icon_surface(surf);
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_clear_icon_surfaces(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.clear_icon_surfaces();
+    }
+}
+
+// Does NOT transfer ownership out of the view
+#[no_mangle]
+pub extern "C" fn view_get_icon_buffer(id: ViewId, icon_size: i32, scale: f32) -> *mut WlrBuffer {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.get_icon_buffer(icon_size, scale)
+    } else {
+        std::ptr::null_mut()
+    }
+}
+
+#[no_mangle]
+pub extern "C" fn view_drop_icon_buffer(id: ViewId) {
+    if let Some(view) = views_mut().by_id.get_mut(&id) {
+        view.drop_icon_buffer();
     }
 }
 

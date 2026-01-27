@@ -77,13 +77,6 @@ struct view {
 	struct wl_listener request_fullscreen;
 	struct wl_listener set_title;
 
-	/* used by scaled_icon_buffer */
-	struct {
-		struct wl_array buffers; /* struct lab_data_buffer * */
-	} icon;
-
-	struct lab_data_buffer *icon_buffer;
-
 	/* xdg-shell view fields */
 	struct wlr_xdg_surface *xdg_surface;
 
@@ -143,11 +136,6 @@ void view_snap_to_edge(struct view *view, enum lab_edge direction,
 	bool across_outputs, bool combine);
 
 void view_reload_ssd(struct view *view);
-
-struct lab_data_buffer *view_get_icon_buffer(struct view *view);
-
-/* Icon buffers set with this function are dropped later */
-void view_set_icon(struct view *view, struct wl_array *buffers);
 
 void view_adjust_size(struct view *view, int *w, int *h);
 
