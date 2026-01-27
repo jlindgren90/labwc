@@ -10,4 +10,12 @@
 #include "foreign-toplevel.h"
 #include "view-c.h"
 
+// minimal cairo bindings
+int cairo_image_surface_get_width(CairoSurface *surface);
+int cairo_image_surface_get_height(CairoSurface *surface);
+void cairo_surface_destroy(CairoSurface *surface);
+
+// minimal wlroots bindings
+void wlr_buffer_drop(WlrBuffer *buffer);
+
 #endif // LABWC_RS_BINDINGS_H

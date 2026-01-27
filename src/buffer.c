@@ -151,12 +151,8 @@ buffer_create_from_data(void *pixel_data, uint32_t width, uint32_t height,
 }
 
 struct lab_data_buffer *
-buffer_resize(struct lab_data_buffer *src_buffer, int width, int height,
-		double scale)
+buffer_resize(cairo_surface_t *surface, int width, int height, double scale)
 {
-	assert(src_buffer);
-	cairo_surface_t *surface = src_buffer->surface;
-
 	int src_w = cairo_image_surface_get_width(surface);
 	int src_h = cairo_image_surface_get_height(surface);
 

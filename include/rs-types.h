@@ -23,8 +23,10 @@ typedef unsigned long ViewId;
 // Other Rust-friendly typedefs
 typedef struct view CView;
 typedef struct output Output;
+typedef struct _cairo_surface CairoSurface;
 typedef struct wl_display WlDisplay;
 typedef struct wl_resource WlResource;
+typedef struct wlr_buffer WlrBuffer;
 typedef struct wlr_surface WlrSurface;
 
 #endif // LABWC_RS_TYPES_H
