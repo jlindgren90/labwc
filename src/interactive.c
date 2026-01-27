@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <assert.h>
 #include <wlr/types/wlr_cursor.h>
-#include "config/rcxml.h"
-#include "input/keyboard.h"
 #include "labwc.h"
 #include "output.h"
 #include "view.h"
+
+#define SNAP_EDGE_RANGE 10
 
 /*
  *   pos_old  pos_cursor
@@ -153,22 +153,6 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 	}
 
 	seat_focus_override_begin(mode, cursor_shape);
-
-	/*
-	 * Un-tile maximized/tiled view immediately if <unSnapThreshold> is
-	 * zero. Otherwise, un-tile it later in cursor motion handler.
-	 * If the natural geometry is unknown (possible with xdg-shell views),
-	 * then we set a size of 0x0 here and determine the correct geometry
-	 * later. See do_late_positioning() in xdg.c.
-	 */
-	if (mode == LAB_INPUT_STATE_MOVE && !view_is_floating(view)
-			&& rc.unsnap_threshold <= 0) {
-		struct wlr_box natural_geo = view->natural_geometry;
-		interactive_anchor_to_cursor(&natural_geo);
-		view_set_maximized(view, VIEW_AXIS_NONE);
-		view_set_untiled(view);
-		view_move_resize(view, natural_geo);
-	}
 }
 
 bool
@@ -183,10 +167,6 @@ edge_from_cursor(struct output **dest_output,
 		return false;
 	}
 
-	if (rc.snap_edge_range_inner == 0 && rc.snap_edge_range_outer == 0) {
-		return false;
-	}
-
 	struct output *output = output_nearest_to_cursor();
 	if (!output_is_usable(output)) {
 		wlr_log(WLR_ERROR, "output at cursor is unusable");
@@ -196,27 +176,6 @@ edge_from_cursor(struct output **dest_output,
 
 	double cursor_x = g_seat.cursor->x;
 	double cursor_y = g_seat.cursor->y;
-
-	int top_range = rc.snap_edge_range_outer;
-	int bottom_range = rc.snap_edge_range_outer;
-	int left_range = rc.snap_edge_range_outer;
-	int right_range = rc.snap_edge_range_outer;
-	if (wlr_output_layout_adjacent_output(g_server.output_layout, WLR_DIRECTION_UP,
-			output->wlr_output, cursor_x, cursor_y)) {
-		top_range = rc.snap_edge_range_inner;
-	}
-	if (wlr_output_layout_adjacent_output(g_server.output_layout, WLR_DIRECTION_DOWN,
-			output->wlr_output, cursor_x, cursor_y)) {
-		bottom_range = rc.snap_edge_range_inner;
-	}
-	if (wlr_output_layout_adjacent_output(g_server.output_layout, WLR_DIRECTION_LEFT,
-			output->wlr_output, cursor_x, cursor_y)) {
-		left_range = rc.snap_edge_range_inner;
-	}
-	if (wlr_output_layout_adjacent_output(g_server.output_layout, WLR_DIRECTION_RIGHT,
-			output->wlr_output, cursor_x, cursor_y)) {
-		right_range = rc.snap_edge_range_inner;
-	}
 
 	/* Translate into output local coordinates */
 	wlr_output_layout_output_coords(g_server.output_layout,
@@ -229,28 +188,28 @@ edge_from_cursor(struct output **dest_output,
 	int left = cursor_x - area->x;
 	int right = area->x + area->width - cursor_x;
 
-	if (top < top_range) {
+	if (top < SNAP_EDGE_RANGE) {
 		*edge1 = LAB_EDGE_TOP;
-	} else if (bottom < bottom_range) {
+	} else if (bottom < SNAP_EDGE_RANGE) {
 		*edge1 = LAB_EDGE_BOTTOM;
-	} else if (left < left_range) {
+	} else if (left < SNAP_EDGE_RANGE) {
 		*edge1 = LAB_EDGE_LEFT;
-	} else if (right < right_range) {
+	} else if (right < SNAP_EDGE_RANGE) {
 		*edge1 = LAB_EDGE_RIGHT;
 	} else {
 		return false;
 	}
 
 	if (*edge1 == LAB_EDGE_TOP || *edge1 == LAB_EDGE_BOTTOM) {
-		if (left < rc.snap_edge_corner_range) {
+		if (left < SNAP_EDGE_RANGE) {
 			*edge2 = LAB_EDGE_LEFT;
-		} else if (right < rc.snap_edge_corner_range) {
+		} else if (right < SNAP_EDGE_RANGE) {
 			*edge2 = LAB_EDGE_RIGHT;
 		}
 	} else if (*edge1  == LAB_EDGE_LEFT || *edge1 == LAB_EDGE_RIGHT) {
-		if (top < rc.snap_edge_corner_range) {
+		if (top < SNAP_EDGE_RANGE) {
 			*edge2 = LAB_EDGE_TOP;
-		} else if (bottom < rc.snap_edge_corner_range) {
+		} else if (bottom < SNAP_EDGE_RANGE) {
 			*edge2 = LAB_EDGE_BOTTOM;
 		}
 	}
@@ -270,8 +229,7 @@ snap_to_edge(struct view *view)
 	enum lab_edge edge = edge1 | edge2;
 
 	view_set_output(view, output);
-	if (edge == LAB_EDGE_TOP && rc.snap_top_maximize) {
-		/* <topMaximize> */
+	if (edge == LAB_EDGE_TOP) {
 		view_maximize(view, VIEW_AXIS_BOTH);
 	} else {
 		view_snap_to_edge(view, edge, /*across_outputs*/ false,
