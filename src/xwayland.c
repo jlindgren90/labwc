@@ -9,8 +9,6 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/xwayland.h>
-#include "buffer.h"
-#include "common/array.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
@@ -487,26 +485,30 @@ update_icon(struct view *view)
 	if (!reply) {
 		return;
 	}
+
+	view_clear_icon_surfaces(view->id);
+
 	xcb_ewmh_get_wm_icon_reply_t icon;
 	if (!xcb_ewmh_get_wm_icon_from_reply(&icon, reply)) {
 		wlr_log(WLR_INFO, "Invalid x11 icon");
-		view_set_icon(view, NULL);
 		goto out;
 	}
 
 	xcb_ewmh_wm_icon_iterator_t iter = xcb_ewmh_get_wm_icon_iterator(&icon);
-	struct wl_array buffers;
-	wl_array_init(&buffers);
 	for (; iter.rem; xcb_ewmh_get_wm_icon_next(&iter)) {
-		size_t stride = iter.width * 4;
-		uint32_t *buf = xzalloc(iter.height * stride);
+		cairo_surface_t *surface =
+			cairo_image_surface_create(CAIRO_FORMAT_ARGB32,
+				iter.width, iter.height);
+		uint8_t *dst = cairo_image_surface_get_data(surface);
+		int dst_stride = cairo_format_stride_for_width(
+			CAIRO_FORMAT_ARGB32, iter.width);
 
 		/* Pre-multiply alpha */
 		for (uint32_t y = 0; y < iter.height; y++) {
 			for (uint32_t x = 0; x < iter.width; x++) {
 				uint32_t i = x + y * iter.width;
 				uint8_t *src_pixel = (uint8_t *)&iter.data[i];
-				uint8_t *dst_pixel = (uint8_t *)&buf[i];
+				uint8_t *dst_pixel = &dst[x * 4 + y * dst_stride];
 				dst_pixel[0] = src_pixel[0] * src_pixel[3] / 255;
 				dst_pixel[1] = src_pixel[1] * src_pixel[3] / 255;
 				dst_pixel[2] = src_pixel[2] * src_pixel[3] / 255;
@@ -514,16 +516,12 @@ update_icon(struct view *view)
 			}
 		}
 
-		struct lab_data_buffer *buffer = buffer_create_from_data(
-			buf, iter.width, iter.height, stride);
-		array_add(&buffers, buffer);
+		cairo_surface_mark_dirty(surface);
+		view_add_icon_surface(view->id, surface);
 	}
 
-	/* view takes ownership of the buffers */
-	view_set_icon(view, &buffers);
-	wl_array_release(&buffers);
-
 out:
+	view_notify_icon_change(view);
 	free(reply);
 }
 

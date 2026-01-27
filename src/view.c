@@ -9,14 +9,11 @@
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include "action.h"
-#include "buffer.h"
 #include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
-#include "scaled-buffer/scaled-icon-buffer.h"
 #include "session-lock.h"
 #include "ssd.h"
-#include "theme.h"
 
 #if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
@@ -228,19 +225,10 @@ view_notify_title_change(struct view *view)
 	ssd_update_title(view->ssd);
 }
 
-static void
-drop_icon_buffer(struct view *view)
-{
-	if (view->icon_buffer) {
-		wlr_buffer_drop(&view->icon_buffer->base);
-		view->icon_buffer = NULL;
-	}
-}
-
 void
-view_notify_app_id_change(struct view *view)
+view_notify_icon_change(struct view *view)
 {
-	drop_icon_buffer(view);
+	view_drop_icon_buffer(view->id);
 	ssd_update_icon(view->ssd);
 }
 
@@ -248,7 +236,7 @@ void
 view_reload_ssd(struct view *view)
 {
 	assert(view);
-	drop_icon_buffer(view);
+	view_drop_icon_buffer(view->id);
 
 	if (view->ssd_enabled && !view->st->fullscreen) {
 		undecorate(view);
@@ -309,34 +297,6 @@ view_set_visible(struct view *view, bool visible)
 	}
 }
 
-struct lab_data_buffer *
-view_get_icon_buffer(struct view *view)
-{
-	if (!view->icon_buffer) {
-		view->icon_buffer = scaled_icon_buffer_load(view,
-			g_theme.window_icon_size);
-	}
-	return view->icon_buffer;
-}
-
-void
-view_set_icon(struct view *view, struct wl_array *buffers)
-{
-	/* Update icon images */
-	struct lab_data_buffer **buffer;
-	wl_array_for_each(buffer, &view->icon.buffers) {
-		wlr_buffer_drop(&(*buffer)->base);
-	}
-	wl_array_release(&view->icon.buffers);
-	wl_array_init(&view->icon.buffers);
-	if (buffers) {
-		wl_array_copy(&view->icon.buffers, buffers);
-	}
-
-	drop_icon_buffer(view);
-	ssd_update_icon(view->ssd);
-}
-
 void
 view_init(struct view *view, bool is_xwayland)
 {
@@ -379,8 +339,6 @@ view_destroy(struct view *view)
 	}
 
 	undecorate(view);
-
-	view_set_icon(view, NULL);
 	menu_on_view_destroy(view);
 
 	/*

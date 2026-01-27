@@ -61,13 +61,6 @@ struct view {
 	struct wl_listener request_fullscreen;
 	struct wl_listener set_title;
 
-	/* used by scaled_icon_buffer */
-	struct {
-		struct wl_array buffers; /* struct lab_data_buffer * */
-	} icon;
-
-	struct lab_data_buffer *icon_buffer;
-
 	/* xdg-shell view fields */
 	struct wlr_xdg_surface *xdg_surface;
 
@@ -124,11 +117,6 @@ void view_set_ssd_enabled(struct view *view, bool enabled);
 void view_toggle_fullscreen(struct view *view);
 
 void view_reload_ssd(struct view *view);
-
-struct lab_data_buffer *view_get_icon_buffer(struct view *view);
-
-/* Icon buffers set with this function are dropped later */
-void view_set_icon(struct view *view, struct wl_array *buffers);
 
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);

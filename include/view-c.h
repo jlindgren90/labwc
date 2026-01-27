@@ -60,7 +60,7 @@ typedef struct ViewState {
 } ViewState;
 
 void view_set_visible(CView *view, _Bool visible);
-void view_notify_app_id_change(CView *view);
+void view_notify_icon_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_active(CView *view);
 void view_notify_fullscreen(CView *view);
@@ -102,6 +102,9 @@ Output *output_nearest_to(int lx, int ly);
 _Bool output_is_usable(Output *output);
 Rect output_layout_coords(Output *output);
 Rect output_usable_area_in_layout_coords(Output *output);
+
+WlrBuffer *scaled_icon_buffer_load(const char *app_id,
+	CairoSurface *icon_surface, int icon_size, float scale);
 
 // from ssd.h
 Border ssd_get_margin(CView *view);
