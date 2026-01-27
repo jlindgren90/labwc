@@ -74,7 +74,7 @@ struct lab_data_buffer *buffer_create_from_data(void *pixel_data, uint32_t width
  * Resize a buffer to the given size. The source buffer is rendered at the
  * center of the output buffer and shrunk if it overflows from the output buffer.
  */
-struct lab_data_buffer *buffer_resize(struct lab_data_buffer *src_buffer,
+struct lab_data_buffer *buffer_resize(cairo_surface_t *surface,
 	int width, int height, double scale);
 
 #endif /* LABWC_BUFFER_H */
