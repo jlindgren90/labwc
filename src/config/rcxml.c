@@ -771,33 +771,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		 * if we decide to also support "application".
 		 */
 		rc.kb_layout_per_window = !strcasecmp(content, "window");
-	} else if (!strcasecmp(nodename, "screenEdgeStrength.resistance")) {
-		rc.screen_edge_strength = atoi(content);
-	} else if (!strcasecmp(nodename, "windowEdgeStrength.resistance")) {
-		rc.window_edge_strength = atoi(content);
-	} else if (!strcasecmp(nodename, "unSnapThreshold.resistance")) {
-		rc.unsnap_threshold = atoi(content);
-	} else if (!strcasecmp(nodename, "unMaximizeThreshold.resistance")) {
-		rc.unmaximize_threshold = atoi(content);
-	} else if (!strcasecmp(nodename, "range.snapping")) {
-		rc.snap_edge_range_inner = atoi(content);
-		rc.snap_edge_range_outer = atoi(content);
-		wlr_log(WLR_ERROR, "<snapping><range> is deprecated. "
-			"Use <snapping><range inner=\"\" outer=\"\"> instead.");
-	} else if (!strcasecmp(nodename, "inner.range.snapping")) {
-		rc.snap_edge_range_inner = atoi(content);
-	} else if (!strcasecmp(nodename, "outer.range.snapping")) {
-		rc.snap_edge_range_outer = atoi(content);
-	} else if (!strcasecmp(nodename, "cornerRange.snapping")) {
-		rc.snap_edge_corner_range = atoi(content);
-	} else if (!strcasecmp(nodename, "enabled.overlay.snapping")) {
-		set_bool(content, &rc.snap_overlay_enabled);
-	} else if (!strcasecmp(nodename, "inner.delay.overlay.snapping")) {
-		rc.snap_overlay_delay_inner = atoi(content);
-	} else if (!strcasecmp(nodename, "outer.delay.overlay.snapping")) {
-		rc.snap_overlay_delay_outer = atoi(content);
-	} else if (!strcasecmp(nodename, "topMaximize.snapping")) {
-		set_bool(content, &rc.snap_top_maximize);
 	} else if (!strcasecmp(nodename, "cornerRange.resize")) {
 		rc.resize_corner_range = atoi(content);
 	} else if (!strcasecmp(nodename, "minimumArea.resize")) {
@@ -894,18 +867,6 @@ rcxml_init(void)
 	rc.repeat_delay = 600;
 	rc.kb_numlock_enable = LAB_STATE_UNSPECIFIED;
 	rc.kb_layout_per_window = false;
-	rc.screen_edge_strength = 20;
-	rc.window_edge_strength = 20;
-	rc.unsnap_threshold = 20;
-	rc.unmaximize_threshold = 150;
-
-	rc.snap_edge_range_inner = 10;
-	rc.snap_edge_range_outer = 10;
-	rc.snap_edge_corner_range = 50;
-	rc.snap_overlay_enabled = true;
-	rc.snap_overlay_delay_inner = 500;
-	rc.snap_overlay_delay_outer = 500;
-	rc.snap_top_maximize = true;
 
 	rc.resize_corner_range = -1;
 	rc.resize_minimum_area = 8;
