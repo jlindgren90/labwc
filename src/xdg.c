@@ -225,9 +225,10 @@ handle_commit(struct wl_listener *listener, void *data)
 		};
 		if (extent.width == view->pending.width
 				&& extent.height == view->pending.height) {
-			wlr_log(WLR_DEBUG, "window geometry for client (%s) "
-				"appears to be incorrect - ignoring",
-				view->app_id);
+			wlr_log(WLR_DEBUG,
+				"window geometry for client (%s) appears to be "
+				"incorrect - ignoring",
+				view->st->app_id);
 			size = extent; /* Use surface extent instead */
 		}
 	}
@@ -295,8 +296,9 @@ handle_configure_timeout(void *data)
 	assert(view->pending_configure_serial > 0);
 	assert(view->pending_configure_timeout);
 
-	wlr_log(WLR_INFO, "client (%s) did not respond to configure request "
-		"in %d ms", view->app_id, CONFIGURE_TIMEOUT_MS);
+	wlr_log(WLR_INFO,
+		"client (%s) did not respond to configure request in %d ms",
+		view->st->app_id, CONFIGURE_TIMEOUT_MS);
 
 	wl_event_source_remove(view->pending_configure_timeout);
 	view->pending_configure_serial = 0;
@@ -502,7 +504,7 @@ handle_set_title(struct wl_listener *listener, void *data)
 	struct view *view = wl_container_of(listener, view, set_title);
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 
-	view_set_title(view, toplevel->title);
+	view_set_title(view->id, toplevel->title);
 }
 
 static void
@@ -511,7 +513,7 @@ handle_set_app_id(struct wl_listener *listener, void *data)
 	struct view *view = wl_container_of(listener, view, set_app_id);
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 
-	view_set_app_id(view, toplevel->app_id);
+	view_set_app_id(view->id, toplevel->app_id);
 }
 
 static void

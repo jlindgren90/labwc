@@ -56,8 +56,8 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 
 		struct scaled_font_buffer *font_buffer =
 			scaled_font_buffer_create(parent);
-		scaled_font_buffer_update(font_buffer, view->title, field_width,
-			&rc.font_osd, text_color, bg_color);
+		scaled_font_buffer_update(font_buffer, view->st->title,
+			field_width, &rc.font_osd, text_color, bg_color);
 		wlr_scene_node_set_position(&font_buffer->scene_buffer->node, x,
 			y + (switcher_theme->item_height - height) / 2);
 	}
