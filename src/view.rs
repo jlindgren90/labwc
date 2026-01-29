@@ -517,10 +517,10 @@ impl View {
         self.in_layout_change = false;
     }
 
-    // Returns true if fullscreen state changed
-    pub fn fullscreen(&mut self, fullscreen: bool) -> bool {
+    // Returns CView pointer to pass to view_notify_fullscreen()
+    pub fn fullscreen(&mut self, fullscreen: bool) -> *mut CView {
         if self.state.fullscreen == fullscreen {
-            return false;
+            return std::ptr::null_mut();
         }
         // Fullscreening ends any interactive move/resize
         if fullscreen {
@@ -533,8 +533,7 @@ impl View {
         } else {
             self.apply_special_geom();
         }
-        unsafe { view_notify_fullscreen(self.c_ptr) };
-        return true;
+        return self.c_ptr;
     }
 
     pub fn maximize(&mut self, axis: ViewAxis) {

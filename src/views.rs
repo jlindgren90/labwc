@@ -404,8 +404,11 @@ pub extern "C" fn views_adjust_for_layout_change() {
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
     let mut views = views_mut();
     if let Some(view) = views.by_id.get_mut(&id) {
-        if view.fullscreen(fullscreen) {
+        let view_ptr = view.fullscreen(fullscreen);
+        if !view_ptr.is_null() {
             views.update_top_layer_visibility();
+            drop(views); // FIXME: to allow reentrant borrow
+            unsafe { view_notify_fullscreen(view_ptr) };
             unsafe { cursor_update_focus() };
         }
     }
