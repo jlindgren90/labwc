@@ -82,10 +82,11 @@ do_late_positioning(struct view *view, int width, int height)
 		.width = width,
 		.height = height
 	};
-	if (g_server.input_mode == LAB_INPUT_STATE_MOVE
-			&& view == g_server.grabbed_view) {
+	if (view == view_get_moving()) {
 		/* Reposition the view while anchoring it to cursor */
-		interactive_anchor_to_cursor(&geom);
+		view_adjust_move_origin(geom.width, geom.height);
+		view_compute_move_position(g_seat.cursor->x, g_seat.cursor->y,
+			&geom.x, &geom.y);
 	} else {
 		view_compute_default_geom(view->id, &geom);
 		/* Ignore size adjustments (keep client size) */

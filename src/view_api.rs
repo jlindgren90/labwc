@@ -3,7 +3,6 @@
 use crate::bindings::*;
 use crate::lazy_static;
 use crate::util::*;
-use crate::view::*;
 use crate::views::*;
 use std::ffi::c_char;
 use std::ptr::{null, null_mut};
@@ -53,13 +52,6 @@ pub extern "C" fn view_adjust_size(id: ViewId, width: &mut i32, height: &mut i32
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_has_strut_partial(id: ViewId) -> bool {
-    let views = views();
-    let view = views.get_view(id);
-    return view.map_or(false, View::has_strut_partial);
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
     let mut view_ptr = null_mut();
     if let Some(view) = views_mut().get_view_mut(id) {
@@ -95,20 +87,6 @@ pub extern "C" fn view_get_active() -> *mut CView {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_set_active(id: ViewId) {
     views_mut().set_active(id);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_maximized(maximized);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_tiled(tiled);
-    }
 }
 
 #[unsafe(no_mangle)]
@@ -148,22 +126,13 @@ pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_commit_size(id: ViewId, width: i32, height: i32) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.commit_size(width, height);
-    }
+    views_mut().commit_size(id, width, height);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_set_initial_geom(id: ViewId, rel_to: Option<&Rect>, keep_position: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_initial_geom(rel_to, keep_position);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_store_natural_geom(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.store_natural_geom();
     }
 }
 
@@ -196,20 +165,17 @@ pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.maximize(axis);
-    }
+    views_mut().maximize(id, axis);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_tile(id: ViewId, edge: LabEdge) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        if edge != LAB_EDGE_NONE {
-            // Unmaximize, otherwise tiling will have no effect
-            view.maximize(VIEW_AXIS_NONE);
-        }
-        view.tile(edge);
+    let mut views = views_mut();
+    if edge != LAB_EDGE_NONE {
+        // Unmaximize, otherwise tiling will have no effect
+        views.maximize(id, VIEW_AXIS_NONE);
     }
+    views.tile(id, edge);
 }
 
 #[unsafe(no_mangle)]
@@ -291,6 +257,73 @@ pub extern "C" fn view_drop_icon_buffer(id: ViewId) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.drop_icon_buffer();
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_set_grab_context(id: ViewId, cursor_x: i32, cursor_y: i32, edges: LabEdge) {
+    views_mut().set_grab_context(id, cursor_x, cursor_y, edges);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_start_move(id: ViewId) -> bool {
+    views_mut().start_move(id)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_get_moving() -> *mut CView {
+    views().get_moving()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_adjust_move_origin(width: i32, height: i32) {
+    views_mut().adjust_move_origin(width, height);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_compute_move_position(
+    cursor_x: i32,
+    cursor_y: i32,
+    x: &mut i32,
+    y: &mut i32,
+) {
+    (*x, *y) = views().compute_move_position(cursor_x, cursor_y);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_continue_move(cursor_x: i32, cursor_y: i32) {
+    views_mut().continue_move(cursor_x, cursor_y);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_start_resize(id: ViewId, edges: LabEdge) -> bool {
+    views_mut().start_resize(id, edges)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_get_resizing() -> *mut CView {
+    views().get_resizing()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_get_resize_edges() -> LabEdge {
+    views().get_resize_edges()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_continue_resize(cursor_x: i32, cursor_y: i32) {
+    views_mut().continue_resize(cursor_x, cursor_y);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_finish_grab(cursor_x: i32, cursor_y: i32) {
+    let mut views = views_mut();
+    views.snap_to_edge(cursor_x, cursor_y);
+    views.reset_grab_for(None);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_reset_grab() {
+    views_mut().reset_grab_for(None);
 }
 
 #[unsafe(no_mangle)]

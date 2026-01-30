@@ -92,11 +92,6 @@ void xwayland_view_close(CView *view);
 // from cursor.h
 void cursor_update_focus(void);
 
-// from labwc.h
-void interactive_cancel(CView *view);
-_Bool interactive_move_is_active(CView *view);
-_Bool interactive_resize_is_active(CView *view, LabEdge edge);
-
 // from output.h
 Output *output_nearest_to(int lx, int ly);
 _Bool output_is_usable(Output *output);
@@ -105,6 +100,9 @@ Rect output_usable_area_in_layout_coords(Output *output);
 
 WlrBuffer *scaled_icon_buffer_load(const char *app_id,
 	CairoSurface *icon_surface, int icon_size, float scale);
+
+// from labwc.h
+void seat_focus_override_end(void);
 
 // from ssd.h
 Border ssd_get_margin(CView *view);

@@ -370,12 +370,12 @@ impl View {
         }
     }
 
-    pub fn commit_size(&mut self, width: i32, height: i32) {
+    pub fn commit_size(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
         let cur = self.state.current;
         let pend = self.state.pending;
         // Anchor right edge if resizing via left edge
         // (or if recently resizing, detected via heuristic)
-        let resizing_left = unsafe { interactive_resize_is_active(self.c_ptr, LAB_EDGE_LEFT) };
+        let resizing_left = (resize_edges & LAB_EDGE_LEFT) != 0;
         let x = if resizing_left || (cur.x != pend.x && cur.x + cur.width == pend.x + pend.width) {
             pend.x + pend.width - width
         } else {
@@ -383,7 +383,7 @@ impl View {
         };
         // Anchor bottom edge if resizing via top edge
         // (or if recently resizing, detected via heuristic)
-        let resizing_top = unsafe { interactive_resize_is_active(self.c_ptr, LAB_EDGE_TOP) };
+        let resizing_top = (resize_edges & LAB_EDGE_TOP) != 0;
         let y = if resizing_top || (cur.y != pend.y && cur.y + cur.height == pend.y + pend.height) {
             pend.y + pend.height - height
         } else {
@@ -551,9 +551,7 @@ impl View {
         if self.state.fullscreen == fullscreen {
             return null_mut();
         }
-        // Fullscreening ends any interactive move/resize
         if fullscreen {
-            unsafe { interactive_cancel(self.c_ptr) };
             self.store_natural_geom();
         }
         self.set_fullscreen(fullscreen);
@@ -565,15 +563,12 @@ impl View {
         return self.c_ptr;
     }
 
-    pub fn maximize(&mut self, axis: ViewAxis) {
+    pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) {
         if self.state.maximized == axis {
             return;
         }
         // In snap-to-maximize case, natural geometry was already stored
-        let store_natural_geometry = unsafe { !interactive_move_is_active(self.c_ptr) };
-        // Maximizing/unmaximizing ends any interactive move/resize
-        unsafe { interactive_cancel(self.c_ptr) };
-        if store_natural_geometry {
+        if !is_moving {
             self.store_natural_geom();
         }
         // Corner case: if unmaximizing one axis but natural geometry is
@@ -592,17 +587,12 @@ impl View {
         }
     }
 
-    pub fn tile(&mut self, edge: LabEdge) {
+    pub fn tile(&mut self, edge: LabEdge, is_moving: bool) {
         if self.state.tiled == edge {
             return;
         }
         // In snap-to-tile case, natural geometry was already stored
-        let store_natural_geometry = unsafe { !interactive_move_is_active(self.c_ptr) };
-        // Tiling ends any interactive move/resize
-        if edge != LAB_EDGE_NONE {
-            unsafe { interactive_cancel(self.c_ptr) };
-        }
-        if store_natural_geometry {
+        if !is_moving {
             self.store_natural_geom();
         }
         self.set_tiled(edge);
