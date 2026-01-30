@@ -228,8 +228,7 @@ snap_to_edge(struct view *view)
 	if (edge == LAB_EDGE_TOP) {
 		view_maximize(view, VIEW_AXIS_BOTH);
 	} else {
-		view_snap_to_edge(view, edge, /*across_outputs*/ false,
-			/*combine*/ false);
+		view_snap_to_edge(view, edge);
 	}
 
 	return true;

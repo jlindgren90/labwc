@@ -1205,8 +1205,7 @@ view_axis_parse(const char *direction)
 }
 
 void
-view_snap_to_edge(struct view *view, enum lab_edge edge,
-		bool across_outputs, bool combine)
+view_snap_to_edge(struct view *view, enum lab_edge edge)
 {
 	assert(view);
 
@@ -1221,48 +1220,6 @@ view_snap_to_edge(struct view *view, enum lab_edge edge,
 	}
 
 	bool store_natural_geometry = !in_interactive_move(view);
-
-	if (lab_edge_is_cardinal(edge) && view->maximized == VIEW_AXIS_NONE
-			&& view->tiled != LAB_EDGE_CENTER) {
-		enum lab_edge invert_edge = lab_edge_invert(edge);
-		/* Represents axis of snapping direction */
-		enum lab_edge parallel_mask = edge | invert_edge;
-		/*
-		 * The vector view->tiled is split to components
-		 * parallel/orthogonal to snapping direction. For example,
-		 * view->tiled=TOP_LEFT is split to parallel_tiled=TOP and
-		 * orthogonal_tiled=LEFT when edge=TOP or edge=BOTTOM.
-		 */
-		enum lab_edge parallel_tiled = view->tiled & parallel_mask;
-		enum lab_edge orthogonal_tiled = view->tiled & ~parallel_mask;
-
-		if (across_outputs && view->tiled == edge) {
-			/*
-			 * E.g. when window is tiled to up and being snapped
-			 * to up again, move it to the output above and tile
-			 * it to down.
-			 */
-			output = output_get_adjacent(view->output, edge,
-				/* wrap */ false);
-			if (!output) {
-				return;
-			}
-			edge = invert_edge;
-		} else if (combine && parallel_tiled == invert_edge
-				&& orthogonal_tiled != LAB_EDGE_NONE) {
-			/*
-			 * E.g. when window is tiled to downleft/downright and
-			 * being snapped to up, tile it to left/right.
-			 */
-			edge = view->tiled & ~parallel_mask;
-		} else if (combine && parallel_tiled == LAB_EDGE_NONE) {
-			/*
-			 * E.g. when window is tiled to left/right and being
-			 * snapped to up, tile it to upleft/upright.
-			 */
-			edge = view->tiled | edge;
-		}
-	}
 
 	if (view->maximized != VIEW_AXIS_NONE) {
 		/* Unmaximize + keep using existing natural_geometry */
