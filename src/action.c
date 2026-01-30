@@ -508,9 +508,7 @@ run_action(struct view *view, struct action *action,
 		if (view) {
 			/* Config parsing makes sure that direction is a valid direction */
 			enum lab_edge edge = action_get_int(action, "direction", 0);
-			bool combine = action_get_bool(action, "combine", false);
-			view_snap_to_edge(view, edge, /*across_outputs*/ true,
-				combine);
+			view_snap_to_edge(view, edge);
 		}
 		break;
 	case ACTION_TYPE_NEXT_WINDOW:

@@ -448,8 +448,7 @@ bool view_titlebar_visible(struct view *view);
 void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
 void view_toggle_fullscreen(struct view *view);
 void view_adjust_for_layout_change(struct view *view);
-void view_snap_to_edge(struct view *view, enum lab_edge direction,
-	bool across_outputs, bool combine);
+void view_snap_to_edge(struct view *view, enum lab_edge direction);
 
 void view_move_to_front(struct view *view);
 
