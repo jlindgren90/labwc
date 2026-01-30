@@ -456,8 +456,7 @@ void view_save_last_placement(struct view *view);
 /* Restores and adjusts the view's position from the view->last_placement */
 void view_adjust_for_layout_change(struct view *view);
 
-void view_snap_to_edge(struct view *view, enum lab_edge direction,
-	bool across_outputs, bool combine);
+void view_snap_to_edge(struct view *view, enum lab_edge direction);
 
 void view_move_to_front(struct view *view);
 
