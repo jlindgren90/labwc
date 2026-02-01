@@ -135,9 +135,6 @@ struct server {
 	struct wl_listener xdg_activation_request;
 	struct wl_listener xdg_activation_new_token;
 
-	/* front to back order */
-	struct wl_list views;
-
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
 	bool direct_scanout_enabled;
