@@ -174,8 +174,8 @@ handle_osd_tree_destroy(struct wl_listener *listener, void *data)
 static bool
 init_cycle(void)
 {
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_nth(i);
 		if (!view_is_focusable(view->st) || view != view_get_root(view->id)) {
 			continue;
 		}

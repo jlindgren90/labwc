@@ -57,7 +57,6 @@ struct view_impl {
 
 struct view {
 	const struct view_impl *impl;
-	struct wl_list link;
 
 	/* This is cleared when the view is not in the cycle list */
 	struct wl_list cycle_link;
@@ -149,8 +148,6 @@ void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
-
-void view_move_to_front(struct view *view);
 
 bool view_is_modal_dialog(struct view *view);
 

@@ -60,6 +60,8 @@ void view_notify_active(CView *view);
 void view_notify_ssd_enabled(CView *view);
 void view_notify_fullscreen(CView *view);
 void view_notify_minimize(CView *view, _Bool minimized);
+void view_raise_impl(CView *view);
+void view_notify_raise(CView *view);
 
 ViewId xdg_toplevel_view_get_root_id(CView *view);
 void xdg_toplevel_view_set_active(CView *view, _Bool active);

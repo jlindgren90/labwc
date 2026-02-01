@@ -309,60 +309,15 @@ view_axis_parse(const char *direction)
 	}
 }
 
-static void
-for_each_subview(struct view *view, void (*action)(struct view *))
+void
+view_raise_impl(struct view *view)
 {
-	struct wl_array subviews;
-	struct view **subview;
-
-	wl_array_init(&subviews);
-	view_append_children(view, &subviews);
-	wl_array_for_each(subview, &subviews) {
-		action(*subview);
-	}
-	wl_array_release(&subviews);
-}
-
-static void
-move_to_front(struct view *view)
-{
-	wl_list_remove(&view->link);
-	wl_list_insert(&g_server.views, &view->link);
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
 }
 
-/*
- * In the view_move_to_{front,back} functions, a modal dialog is always
- * shown above its parent window, and the two always move together, so
- * other windows cannot come between them.
- * This is consistent with GTK3/Qt5 applications on mutter and openbox.
- */
 void
-view_move_to_front(struct view *view)
+view_notify_raise(struct view *view)
 {
-	assert(view);
-	assert(!wl_list_empty(&g_server.views));
-
-	/*
-	 * Check whether the view is already in front, or is the root
-	 * parent of the view in front (in which case we don't want to
-	 * raise it in front of its sub-view).
-	 */
-	struct view *front = wl_container_of(g_server.views.next, front, link);
-	if (view == front || view == view_get_root(front->id)) {
-		return;
-	}
-
-	struct view *root = view_get_root(view->id);
-	assert(root);
-
-	move_to_front(root);
-	for_each_subview(root, move_to_front);
-	/* make sure view is in front of other sub-views */
-	if (view != root) {
-		move_to_front(view);
-	}
-
 	cursor_update_focus();
 	desktop_update_top_layer_visibility();
 }
@@ -553,9 +508,6 @@ view_destroy(struct view *view)
 	}
 
 	view_remove(view->id);
-
-	/* Remove view from g_server.views */
-	wl_list_remove(&view->link);
 	free(view);
 
 	cursor_update_focus();

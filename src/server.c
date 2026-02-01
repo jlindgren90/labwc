@@ -70,8 +70,8 @@ reload_config_and_theme(void)
 	desktop_entry_finish();
 	desktop_entry_init();
 
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_nth(i);
 		view_reload_ssd(view);
 	}
 
@@ -382,7 +382,6 @@ server_init(void)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&g_server.views);
 	wl_list_init(&g_server.unmanaged_surfaces);
 	wl_list_init(&g_server.cycle.views);
 	wl_list_init(&g_server.cycle.osd_outputs);

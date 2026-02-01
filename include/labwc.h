@@ -135,8 +135,6 @@ struct server {
 	struct wl_listener xdg_activation_request;
 	struct wl_listener xdg_activation_new_token;
 
-	/* front to back order */
-	struct wl_list views;
 	struct wl_list unmanaged_surfaces;
 
 	struct wlr_scene *scene;
