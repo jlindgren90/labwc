@@ -133,8 +133,8 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 		output->workspace_osd = NULL;
 	}
 
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_nth(i);
 		if (view->st->output == output) {
 			view_set_output(view->id, NULL);
 		}
@@ -587,8 +587,8 @@ output_update_for_layout_change(void)
 
 	if (g_server.max_output_scale != max_scale) {
 		g_server.max_output_scale = max_scale;
-		struct view *view;
-		wl_list_for_each(view, &g_server.views, link) {
+		for (int i = view_count() - 1; i >= 0; i--) {
+			struct view *view = view_nth(i);
 			if (view->st->mapped) {
 				view_reload_ssd(view);
 			}
@@ -1021,8 +1021,8 @@ update_usable_area(struct output *output)
 	layers_arrange(output);
 
 #if HAVE_XWAYLAND
-	struct view *view;
-	wl_list_for_each(view, &g_server.views, link) {
+	for (int i = view_count() - 1; i >= 0; i--) {
+		struct view *view = view_nth(i);
 		if (view->st->mapped && view->xwayland_surface) {
 			xwayland_adjust_usable_area(view,
 				g_server.output_layout, output->wlr_output,

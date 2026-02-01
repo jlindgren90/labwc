@@ -634,7 +634,7 @@ _cursor_update_focus(void)
 void
 cursor_update_focus(void)
 {
-	/* Prevent recursion via view_move_to_front() */
+	/* Prevent recursion via view_raise() */
 	static bool updating_focus = false;
 	if (!updating_focus) {
 		updating_focus = true;

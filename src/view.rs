@@ -518,6 +518,10 @@ impl View {
         }
     }
 
+    pub fn raise(&self) {
+        unsafe { view_raise_impl(self.c_ptr) };
+    }
+
     pub fn offer_focus(&self) {
         if self.is_xwayland {
             unsafe { xwayland_view_offer_focus(self.c_ptr) };
