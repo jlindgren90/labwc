@@ -587,7 +587,7 @@ run_action(struct view *view, struct action *action,
 		break;
 	case ACTION_TYPE_RAISE:
 		if (view) {
-			view_move_to_front(view);
+			view_raise(view->id);
 		}
 		break;
 	case ACTION_TYPE_MOVE:

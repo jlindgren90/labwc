@@ -351,6 +351,10 @@ impl View {
         }
     }
 
+    pub fn raise(&self) {
+        unsafe { view_raise_impl(self.c_ptr) };
+    }
+
     pub fn offer_focus(&self) {
         self.v.offer_focus();
     }
