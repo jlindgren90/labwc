@@ -31,6 +31,16 @@ pub extern "C" fn view_remove(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_count() -> usize {
+    views().count()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_nth(n: usize) -> *mut CView {
+    views().get_nth(n)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
     views().get_view(id).map_or(null(), |v| v.get_state())
 }
@@ -214,6 +224,14 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
     let view_ptr = views_mut().minimize(id, minimized);
     if !view_ptr.is_null() {
         unsafe { view_notify_minimize(view_ptr, minimized) };
+        unsafe { desktop_update_top_layer_visibility() };
+    }
+    unsafe { cursor_update_focus() };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_raise(id: ViewId) {
+    if views_mut().raise(id) {
         unsafe { desktop_update_top_layer_visibility() };
     }
     unsafe { cursor_update_focus() };
