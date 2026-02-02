@@ -22,6 +22,7 @@
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
+#include "view.h"
 
 #define LAB_LAYERSHELL_VERSION 4
 
@@ -705,4 +706,23 @@ void
 layers_finish(void)
 {
 	wl_list_remove(&server.new_layer_surface.link);
+}
+
+void
+top_layer_show_all(void)
+{
+	struct output *output;
+	wl_list_for_each(output, &server.outputs, link) {
+		if (output_is_usable(output)) {
+			wlr_scene_node_set_enabled(&output->layer_tree
+				[ZWLR_LAYER_SHELL_V1_LAYER_TOP]->node, true);
+		}
+	}
+}
+
+void
+top_layer_hide_on_output(struct output *output)
+{
+	wlr_scene_node_set_enabled(&output->layer_tree
+		[ZWLR_LAYER_SHELL_V1_LAYER_TOP]->node, false);
 }
