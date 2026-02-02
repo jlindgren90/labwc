@@ -272,8 +272,6 @@ view_notify_fullscreen(struct view *view)
 		}
 	}
 
-	/* Show fullscreen views above top-layer */
-	desktop_update_top_layer_visibility();
 	/*
 	 * Entering/leaving fullscreen might result in a different
 	 * scene node ending up under the cursor even if view_moved()

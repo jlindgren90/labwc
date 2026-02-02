@@ -6,7 +6,7 @@ use crate::util::*;
 use crate::view_geom::*;
 use crate::views::*;
 use std::ffi::c_char;
-use std::ptr::{null, null_mut};
+use std::ptr::null;
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_is_focusable(state: &ViewState) -> bool {
@@ -76,7 +76,6 @@ pub extern "C" fn view_map_common(id: ViewId) {
     let view_ptr = views_mut().map_common(id);
     if !view_ptr.is_null() {
         unsafe { view_notify_map(view_ptr) };
-        unsafe { desktop_update_top_layer_visibility() };
     }
     unsafe { cursor_update_focus() };
 }
@@ -86,7 +85,6 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
     let view_ptr = views_mut().unmap_common(id);
     if !view_ptr.is_null() {
         unsafe { view_notify_unmap(view_ptr) };
-        unsafe { desktop_update_top_layer_visibility() };
     }
     unsafe { cursor_update_focus() };
 }
@@ -196,15 +194,11 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
 #[unsafe(no_mangle)]
 pub extern "C" fn views_adjust_for_layout_change() {
     views_mut().adjust_for_layout_change();
-    unsafe { desktop_update_top_layer_visibility() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
-    let mut view_ptr = null_mut();
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view_ptr = view.fullscreen(fullscreen);
-    }
+    let view_ptr = views_mut().fullscreen(id, fullscreen);
     if !view_ptr.is_null() {
         unsafe { view_notify_fullscreen(view_ptr) };
     }
@@ -233,16 +227,13 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
     let view_ptr = views_mut().minimize(id, minimized);
     if !view_ptr.is_null() {
         unsafe { view_notify_minimize(view_ptr, minimized) };
-        unsafe { desktop_update_top_layer_visibility() };
     }
     unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_raise(id: ViewId) {
-    if views_mut().raise(id) {
-        unsafe { desktop_update_top_layer_visibility() };
-    }
+    views_mut().raise(id);
     unsafe { cursor_update_focus() };
 }
 
