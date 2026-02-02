@@ -163,7 +163,6 @@ struct server {
 	struct wl_list outputs;
 	struct wl_listener new_output;
 	struct wlr_output_layout *output_layout;
-	uint64_t next_output_id_bit;
 	float max_output_scale;
 
 	struct wl_listener output_layout_change;
@@ -253,12 +252,6 @@ void desktop_focus_view(struct view *view, bool raise);
  */
 void desktop_focus_view_or_surface(struct view *view,
 	struct wlr_surface *surface, bool raise);
-
-/**
- * Toggles the (output local) visibility of the layershell top layer
- * based on the existence of a fullscreen window on the current workspace.
- */
-void desktop_update_top_layer_visibility(void);
 
 /**
  * desktop_focus_topmost_view() - focus the topmost view on the current

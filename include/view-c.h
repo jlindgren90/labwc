@@ -61,7 +61,6 @@ void view_notify_ssd_enabled(CView *view);
 void view_notify_fullscreen(CView *view);
 void view_notify_minimize(CView *view, _Bool minimized);
 void view_raise_impl(CView *view);
-void view_notify_raise(CView *view);
 
 ViewId xdg_toplevel_view_get_root_id(CView *view);
 _Bool xdg_toplevel_view_is_modal_dialog(CView *view);
@@ -80,9 +79,10 @@ void xwayland_view_minimize(CView *view, _Bool minimized);
 void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xwayland_view_offer_focus(CView *view);
 
-// from labwc.h
-void desktop_update_top_layer_visibility(void);
+// from cursor.h
+void cursor_update_focus(void);
 
+// from labwc.h
 void interactive_cancel(CView *view);
 _Bool interactive_move_is_active(CView *view);
 
@@ -94,5 +94,8 @@ Rect output_usable_area_in_layout_coords(Output *output);
 
 // from ssd.h
 Border ssd_get_margin(const ViewState *view_st);
+
+void top_layer_show_all(void);
+void top_layer_hide_on_output(Output *output);
 
 #endif // LABWC_VIEW_C_H

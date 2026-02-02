@@ -11,6 +11,10 @@ const FALLBACK_WIDTH: i32 = 640;
 const FALLBACK_HEIGHT: i32 = 480;
 
 impl ViewState {
+    pub fn visible(&self) -> bool {
+        self.mapped && !self.minimized
+    }
+
     pub fn focusable(&self) -> bool {
         self.mapped
             && (self.focus_mode == VIEW_FOCUS_MODE_ALWAYS

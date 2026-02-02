@@ -2,7 +2,7 @@
 //
 use crate::bindings::*;
 use crate::view::*;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::ptr::null_mut;
 
 #[derive(Default)]
@@ -85,7 +85,9 @@ impl Views {
                 }
             }
             if was_shown {
-                return view.get_c_ptr();
+                let view_ptr = view.get_c_ptr();
+                self.update_top_layer_visibility();
+                return view_ptr;
             }
         }
         return null_mut();
@@ -97,7 +99,9 @@ impl Views {
             let mut was_hidden = false;
             view.set_unmapped(&mut was_hidden);
             if was_hidden {
-                return view.get_c_ptr();
+                let view_ptr = view.get_c_ptr();
+                self.update_top_layer_visibility();
+                return view_ptr;
             }
         }
         return null_mut();
@@ -121,10 +125,41 @@ impl Views {
         }
     }
 
+    fn update_top_layer_visibility(&self) {
+        unsafe { top_layer_show_all() };
+        let mut outputs_seen = HashSet::new();
+        for v in self.order.iter().rev().filter_map(|i| self.by_id.get(i)) {
+            let state = v.get_state();
+            if state.visible()
+                && unsafe { output_is_usable(state.output) }
+                && !outputs_seen.contains(&state.output)
+            {
+                // Hide top layer if topmost view is fullscreen
+                if state.fullscreen {
+                    unsafe { top_layer_hide_on_output(state.output) };
+                }
+                outputs_seen.insert(state.output);
+            }
+        }
+    }
+
     pub fn adjust_for_layout_change(&mut self) {
         for v in self.by_id.values_mut() {
             v.adjust_for_layout_change();
         }
+        self.update_top_layer_visibility();
+    }
+
+    // Returns CView pointer to pass to view_notify_fullscreen()
+    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) -> *mut CView {
+        let Some(view) = self.by_id.get_mut(&id) else {
+            return null_mut();
+        };
+        let view_ptr = view.fullscreen(fullscreen);
+        if !view_ptr.is_null() {
+            self.update_top_layer_visibility();
+        }
+        return view_ptr;
     }
 
     // Returns CView pointer to pass to view_notify_minimize()
@@ -140,22 +175,22 @@ impl Views {
                 v.set_minimized(minimized, &mut visibility_changed);
             }
             if visibility_changed {
+                self.update_top_layer_visibility();
                 return view_ptr;
             }
         }
         return null_mut();
     }
 
-    // Returns CView pointer to pass to view_notify_raise()
-    pub fn raise(&mut self, id: ViewId) -> *mut CView {
+    pub fn raise(&mut self, id: ViewId) {
         // Check if view or a sub-view is already in front
         if let Some(&front) = self.order.last()
             && (id == front || self.get_root_of(front) == id)
         {
-            return null_mut();
+            return;
         }
         let Some(view) = self.by_id.get(&id) else {
-            return null_mut();
+            return;
         };
         let mut ids_to_raise = Vec::new();
         // Raise root parent view first
@@ -176,7 +211,8 @@ impl Views {
         }
         self.order.retain(|i| !ids_to_raise.contains(i));
         self.order.append(&mut ids_to_raise);
-        return view.get_c_ptr();
+        self.update_top_layer_visibility();
+        unsafe { cursor_update_focus() };
     }
 
     pub fn add_foreign_toplevel_client(&mut self, client: *mut WlResource) {
