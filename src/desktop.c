@@ -13,7 +13,6 @@
 #include "labwc.h"
 #include "layers.h"
 #include "node.h"
-#include "output.h"
 #include "ssd.h"
 #include "view.h"
 
@@ -133,42 +132,6 @@ desktop_focus_topmost_view(void)
 		 * focusable (e.g. unmapped or on a different workspace).
 		 */
 		seat_focus_surface(NULL);
-	}
-}
-
-void
-desktop_update_top_layer_visibility(void)
-{
-	struct output *output;
-	uint32_t top = ZWLR_LAYER_SHELL_V1_LAYER_TOP;
-
-	/* Enable all top layers */
-	wl_list_for_each(output, &g_server.outputs, link) {
-		if (!output_is_usable(output)) {
-			continue;
-		}
-		wlr_scene_node_set_enabled(&output->layer_tree[top]->node, true);
-	}
-
-	/*
-	 * And disable them again when there is a fullscreen view without
-	 * any views above it
-	 */
-	uint64_t outputs_covered = 0;
-	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_nth(i);
-		if (!view->st->mapped || view->st->minimized) {
-			continue;
-		}
-		if (!output_is_usable(view->st->output)) {
-			continue;
-		}
-		if (view->st->fullscreen
-				&& !(view->st->output->id_bit & outputs_covered)) {
-			wlr_scene_node_set_enabled(
-				&view->st->output->layer_tree[top]->node, false);
-		}
-		outputs_covered |= view->st->output->id_bit;
 	}
 }
 

@@ -14,6 +14,10 @@ const MIN_HEIGHT: i32 = 60;
 const MIN_VISIBLE_PX: i32 = 16;
 
 impl ViewState {
+    pub fn visible(&self) -> bool {
+        self.mapped && !self.minimized
+    }
+
     pub fn focusable(&self) -> bool {
         self.mapped
             && (self.focus_mode == VIEW_FOCUS_MODE_ALWAYS
