@@ -84,8 +84,6 @@ void xwayland_view_offer_focus(CView *view);
 void cursor_update_focus(void);
 
 // from labwc.h
-void desktop_update_top_layer_visibility(void);
-
 void interactive_cancel(CView *view);
 _Bool interactive_move_is_active(CView *view);
 
@@ -97,5 +95,8 @@ Rect output_usable_area_in_layout_coords(Output *output);
 
 // from ssd.h
 Border ssd_get_margin(const ViewState *view_st);
+
+void top_layer_show_all(void);
+void top_layer_hide_on_output(Output *output);
 
 #endif // LABWC_VIEW_C_H
