@@ -1,9 +1,9 @@
 project(
   'labwc',
-  'c',
+  ['c', 'rust'],
   version: '0.9.3',
   license: 'GPL-2.0-only',
-  meson_version: '>=0.59.0',
+  meson_version: '>=1.3.0',
   default_options: [
     'c_std=c11',
     'warning_level=2',
@@ -195,13 +195,22 @@ if dep_cmocka.found()
   subdir('t')
 endif
 
+rustlib = static_library(
+  'rustlib',
+  ['src/lib.rs', bindings],
+  rust_abi: 'c',
+  install: false,
+  override_options: ['rust_std=2024']
+)
+
 executable(
   meson.project_name(),
-  labwc_sources,
+  [labwc_sources, gen_headers],
   include_directories: [labwc_inc],
   dependencies: labwc_deps,
   install: true,
   link_args: link_args,
+  link_with: rustlib,
 )
 
 install_data('data/labwc.desktop', install_dir: get_option('datadir') / 'wayland-sessions')
