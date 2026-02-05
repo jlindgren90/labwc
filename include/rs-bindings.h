@@ -8,6 +8,7 @@
 #define LABWC_RS_BINDINGS_H
 
 #include "foreign-toplevel.h"
+#include "ssd.h"
 #include "view-c.h"
 
 // minimal cairo bindings

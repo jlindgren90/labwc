@@ -27,6 +27,8 @@ typedef struct _cairo_surface CairoSurface;
 typedef struct wl_display WlDisplay;
 typedef struct wl_resource WlResource;
 typedef struct wlr_buffer WlrBuffer;
+typedef struct wlr_cursor WlrCursor;
+typedef struct wlr_scene_node WlrSceneNode;
 typedef struct wlr_surface WlrSurface;
 
 #endif // LABWC_RS_TYPES_H
