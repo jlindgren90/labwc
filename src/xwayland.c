@@ -472,7 +472,7 @@ static void
 handle_set_title(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_title);
-	view_set_title(view, view->xwayland_surface->title);
+	view_set_title(view->id, view->xwayland_surface->title);
 }
 
 static void
@@ -487,7 +487,7 @@ handle_set_class(struct wl_listener *listener, void *data)
 	 * but this caused missing icons with Firefox, which has an
 	 * instance of 'Navigator' for historical reasons.
 	 */
-	view_set_app_id(view, view->xwayland_surface->class);
+	view_set_app_id(view->id, view->xwayland_surface->class);
 }
 
 static void
