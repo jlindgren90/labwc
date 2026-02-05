@@ -3,6 +3,7 @@
 use crate::bindings::*;
 use crate::foreign_toplevel::*;
 use crate::rect::*;
+use crate::ssd::*;
 use crate::util::*;
 use crate::view_geom::*;
 use crate::view_impl::*;
@@ -61,6 +62,7 @@ impl From<&ViewState> for ForeignToplevelState {
 struct ViewData {
     app_id: CString,
     title: CString,
+    ssd: Ssd,
     foreign_toplevels: Vec<ForeignToplevel>,
     icon_surfaces: Vec<CairoSurfacePtr>,
     icon_buffer: Option<WlrBufferPtr>,
@@ -117,8 +119,7 @@ impl View {
         self.v.has_strut_partial()
     }
 
-    // Returns CView pointer to pass to view_notify_icon_change()
-    pub fn set_app_id(&mut self, app_id: CString) -> *mut CView {
+    pub fn set_app_id(&mut self, app_id: CString) {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
             self.state.app_id = self.d.app_id.as_ptr(); // for C interop
@@ -126,16 +127,15 @@ impl View {
                 toplevel.send_app_id(&self.d.app_id);
                 toplevel.send_done();
             }
-            return self.c_ptr;
+            self.update_icon();
         }
-        return null_mut();
     }
 
     pub fn set_title(&mut self, title: CString) {
         if self.d.title != title {
             self.d.title = title;
             self.state.title = self.d.title.as_ptr(); // for C interop
-            unsafe { view_notify_title_change(self.c_ptr) };
+            self.d.ssd.update_title();
             for toplevel in &self.d.foreign_toplevels {
                 toplevel.send_title(&self.d.title);
                 toplevel.send_done();
@@ -144,15 +144,18 @@ impl View {
     }
 
     pub fn set_mapped(&mut self, was_shown: &mut bool) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.focus_mode = self.v.get_focus_mode();
         if !self.state.minimized {
             unsafe { view_set_visible(self.c_ptr, true) };
             *was_shown = true;
-            return UpdateLevel::Cursor;
+            ul |= UpdateLevel::Cursor;
         }
-        return UpdateLevel::None;
+        // Create SSD at map (if needed)
+        ul |= self.update_ssd();
+        return ul;
     }
 
     pub fn set_unmapped(&mut self, was_hidden: &mut bool) -> UpdateLevel {
@@ -161,7 +164,7 @@ impl View {
         if !self.state.minimized {
             unsafe { view_set_visible(self.c_ptr, false) };
             *was_hidden = true;
-            ul = UpdateLevel::Cursor;
+            ul |= UpdateLevel::Cursor;
         }
         for resource in self.d.foreign_toplevels.drain(..) {
             resource.close();
@@ -173,18 +176,9 @@ impl View {
         if self.state.active != active {
             self.state.active = active;
             self.v.set_active(active);
-            unsafe { view_notify_active(self.c_ptr) };
+            self.d.ssd.set_active(active);
             self.send_foreign_toplevel_state();
         }
-    }
-
-    // Returns CView pointer to pass to view_notify_ssd_enabled()
-    pub fn set_ssd_enabled(&mut self, ssd_enabled: bool) -> *mut CView {
-        if self.state.ssd_enabled != ssd_enabled {
-            self.state.ssd_enabled = ssd_enabled;
-            return self.c_ptr;
-        }
-        return null_mut();
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
@@ -253,6 +247,7 @@ impl View {
     pub fn commit_move(&mut self, x: i32, y: i32) -> UpdateLevel {
         (self.state.current.x, self.state.current.y) = self.v.adjust_scene_pos(&self.state, x, y);
         unsafe { view_move_impl(self.c_ptr) };
+        self.d.ssd.update_geom();
         if self.state.visible() {
             return UpdateLevel::Cursor;
         }
@@ -304,7 +299,7 @@ impl View {
         return self.move_resize(natural);
     }
 
-    pub fn apply_special_geom(&mut self) -> UpdateLevel {
+    fn apply_special_geom(&mut self) -> UpdateLevel {
         let geom;
         if self.state.fullscreen {
             geom = unsafe { output_layout_coords(self.state.output) };
@@ -352,23 +347,59 @@ impl View {
         return ul;
     }
 
-    // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, fullscreen: bool) -> (*mut CView, UpdateLevel) {
+    fn update_ssd(&mut self) -> UpdateLevel {
+        if self.state.ssd_enabled && !self.state.fullscreen {
+            let icon_buffer = self.get_icon_buffer();
+            self.d.ssd.create(self.c_ptr, icon_buffer);
+        } else {
+            self.d.ssd.destroy();
+        }
+        if self.state.visible() {
+            return UpdateLevel::Cursor;
+        }
+        return UpdateLevel::None;
+    }
+
+    pub fn enable_ssd(&mut self, enabled: bool) -> UpdateLevel {
+        if self.state.ssd_enabled == enabled {
+            return UpdateLevel::None;
+        }
+        self.state.ssd_enabled = enabled;
+        let mut ul = UpdateLevel::None;
+        if !self.state.fullscreen {
+            if !self.state.floating() {
+                ul |= self.apply_special_geom();
+            }
+            if self.state.mapped {
+                ul |= self.update_ssd();
+            }
+        }
+        return ul;
+    }
+
+    pub fn destroy_ssd(&mut self) {
+        self.d.ssd.destroy();
+    }
+
+    // Returns >= UpdateLevel::Cursor if visible and state changed
+    pub fn fullscreen(&mut self, fullscreen: bool) -> UpdateLevel {
         if self.state.fullscreen == fullscreen {
-            return (null_mut(), UpdateLevel::None);
+            return UpdateLevel::None;
         }
         if fullscreen {
             self.store_natural_geom();
         }
         self.set_fullscreen(fullscreen);
-        // Cursor focus update is needed in case fullscreen bg was toggled
-        let mut ul = UpdateLevel::Cursor;
+        let mut ul = UpdateLevel::None;
         if self.state.floating() {
             ul |= self.apply_natural_geom();
         } else {
             ul |= self.apply_special_geom();
         }
-        return (self.c_ptr, ul);
+        if self.state.mapped {
+            ul |= self.update_ssd();
+        }
+        return ul;
     }
 
     pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) -> UpdateLevel {
@@ -488,14 +519,13 @@ impl View {
         self.d.icon_surfaces.clear();
     }
 
-    pub fn get_icon_buffer(&mut self, icon_size: i32, scale: f32) -> *mut WlrBuffer {
+    pub fn get_icon_buffer(&mut self) -> *mut WlrBuffer {
         if let Some(buf) = &self.d.icon_buffer {
             return buf.buffer;
         }
-        let icon_surface = self.get_best_icon_surface((icon_size as f32 * scale) as i32);
-        let icon_buffer = unsafe {
-            scaled_icon_buffer_load(self.d.app_id.as_ptr(), icon_surface, icon_size, scale)
-        };
+        let icon_size = unsafe { ssd_get_icon_buffer_size() };
+        let icon_surface = self.get_best_icon_surface(icon_size);
+        let icon_buffer = unsafe { scaled_icon_buffer_load(self.d.app_id.as_ptr(), icon_surface) };
         if !icon_buffer.is_null() {
             self.d.icon_buffer = Some(WlrBufferPtr::new(icon_buffer));
             return icon_buffer;
@@ -503,7 +533,18 @@ impl View {
         return null_mut();
     }
 
-    pub fn drop_icon_buffer(&mut self) {
+    pub fn update_icon(&mut self) {
         self.d.icon_buffer = None;
+        let icon_buffer = self.get_icon_buffer();
+        self.d.ssd.update_icon(icon_buffer);
+    }
+
+    pub fn reload_ssd(&mut self) -> UpdateLevel {
+        self.d.icon_buffer = None;
+        self.d.ssd.destroy();
+        if self.state.mapped {
+            return self.update_ssd();
+        }
+        return UpdateLevel::None;
     }
 }
