@@ -455,6 +455,10 @@ impl View {
         return false;
     }
 
+    pub fn set_inhibits_keybinds(&mut self, inhibits_keybinds: bool) {
+        self.state.inhibits_keybinds = inhibits_keybinds;
+    }
+
     pub fn close(&self) {
         if self.is_xwayland {
             unsafe { xwayland_view_close(self.c_ptr) };

@@ -36,7 +36,6 @@ struct view {
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
 
 	enum view_layer layer;
-	bool inhibits_keybinds; /* also inhibits mousebinds */
 
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
@@ -94,7 +93,6 @@ struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
 struct wlr_surface *view_get_surface(struct view *view);
 
-void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
 void view_moved(struct view *view);

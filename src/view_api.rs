@@ -219,6 +219,13 @@ pub extern "C" fn view_refocus_active() {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_set_inhibits_keybinds(id: ViewId, inhibits_keybinds: bool) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.set_inhibits_keybinds(inhibits_keybinds);
+    }
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_close(id: ViewId) {
     if let Some(view) = views().get_view(id) {
         view.close();

@@ -234,17 +234,11 @@ view_reload_ssd(struct view *view)
 	}
 }
 
-void
-view_toggle_keybinds(struct view *view)
-{
-	assert(view);
-	view->inhibits_keybinds = !view->inhibits_keybinds;
-}
-
 bool
 view_inhibits_actions(struct view *view, struct wl_list *actions)
 {
-	return view && view->inhibits_keybinds && !actions_contain_toggle_keybinds(actions);
+	return view && view->st->inhibits_keybinds
+		&& !actions_contain_toggle_keybinds(actions);
 }
 
 /* Used in both (un)map and (un)minimize */
