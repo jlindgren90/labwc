@@ -402,6 +402,10 @@ impl View {
         self.v.focus();
     }
 
+    pub fn set_inhibits_keybinds(&mut self, inhibits_keybinds: bool) {
+        self.state.inhibits_keybinds = inhibits_keybinds;
+    }
+
     pub fn close(&self) {
         self.v.close();
     }
