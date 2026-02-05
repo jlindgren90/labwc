@@ -15,7 +15,6 @@
 #include "labwc.h"
 #include "menu/menu.h"
 #include "session-lock.h"
-#include "ssd.h"
 
 struct view *
 view_from_wlr_surface(struct wlr_surface *surface)
@@ -42,18 +41,11 @@ view_from_wlr_surface(struct wlr_surface *surface)
 }
 
 void
-view_notify_active(struct view *view)
-{
-	ssd_set_active(view->ssd, view->st->active);
-}
-
-void
 view_move_impl(struct view *view)
 {
 	assert(view);
 	wlr_scene_node_set_position(&view->scene_tree->node,
 		view->st->current.x, view->st->current.y);
-	ssd_update_geometry(view->ssd);
 }
 
 void
@@ -99,59 +91,12 @@ view_toggle_always_on_top(struct view *view)
 	}
 }
 
-static void
-decorate(struct view *view)
-{
-	if (!view->ssd) {
-		view->ssd = ssd_create(view, view->st->active);
-	}
-}
-
-static void
-undecorate(struct view *view)
-{
-	ssd_destroy(view->ssd);
-	view->ssd = NULL;
-}
-
-void
-view_notify_ssd_enabled(struct view *view)
-{
-	if (view->st->fullscreen) {
-		return;
-	}
-
-	if (view->st->ssd_enabled) {
-		decorate(view);
-	} else {
-		undecorate(view);
-	}
-
-	if (!view_is_floating(view->st)) {
-		view_apply_special_geom(view->id);
-	}
-}
-
 void
 view_toggle_fullscreen(struct view *view)
 {
 	assert(view);
 
 	view_fullscreen(view->id, !view->st->fullscreen);
-}
-
-void
-view_notify_fullscreen(struct view *view)
-{
-	if (view->st->ssd_enabled) {
-		if (view->st->fullscreen) {
-			/* Hide decorations when going fullscreen */
-			undecorate(view);
-		} else {
-			/* Re-show decorations when no longer fullscreen */
-			decorate(view);
-		}
-	}
 }
 
 enum view_axis
@@ -175,31 +120,6 @@ void
 view_raise_impl(struct view *view)
 {
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
-}
-
-void
-view_notify_title_change(struct view *view)
-{
-	ssd_update_title(view->ssd);
-}
-
-void
-view_notify_icon_change(struct view *view)
-{
-	view_drop_icon_buffer(view->id);
-	ssd_update_icon(view->ssd);
-}
-
-void
-view_reload_ssd(struct view *view)
-{
-	assert(view);
-	view_drop_icon_buffer(view->id);
-
-	if (view->st->ssd_enabled && !view->st->fullscreen) {
-		undecorate(view);
-		decorate(view);
-	}
 }
 
 bool
@@ -241,7 +161,8 @@ view_destroy(struct view *view)
 
 	cursor_on_view_destroy(view);
 
-	undecorate(view);
+	/* Must come before destroying view->scene_tree */
+	view_destroy_ssd(view->id);
 	menu_on_view_destroy(view);
 
 	/*

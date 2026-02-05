@@ -178,18 +178,17 @@ impl Views {
         return ul;
     }
 
-    // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) -> (*mut CView, UpdateLevel) {
+    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) -> UpdateLevel {
         let Some(view) = self.by_id.get_mut(&id) else {
-            return (null_mut(), UpdateLevel::None);
+            return UpdateLevel::None;
         };
-        let (view_ptr, mut ul) = view.fullscreen(fullscreen);
-        if !view_ptr.is_null() {
+        let mut ul = view.fullscreen(fullscreen);
+        if ul != UpdateLevel::None {
             // Entering/leaving fullscreen ends any interactive move/resize
             ul |= self.reset_grab_for(Some(id));
             self.update_top_layer_visibility();
         }
-        return (view_ptr, ul);
+        return ul;
     }
 
     pub fn maximize(&mut self, id: ViewId, axis: ViewAxis) -> UpdateLevel {
@@ -333,6 +332,14 @@ impl Views {
 
     pub fn remove_foreign_toplevel_client(&mut self, client: *mut WlResource) {
         self.foreign_toplevel_clients.retain(|&c| c != client);
+    }
+
+    pub fn reload_ssds(&mut self) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
+        for view in self.by_id.values_mut() {
+            ul |= view.reload_ssd();
+        }
+        return ul;
     }
 
     pub fn set_grab_context(&mut self, id: ViewId, cursor_x: i32, cursor_y: i32, edges: LabEdge) {
