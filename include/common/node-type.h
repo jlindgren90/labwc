@@ -2,8 +2,10 @@
 #ifndef LABWC_NODE_TYPE_H
 #define LABWC_NODE_TYPE_H
 
-#include <stdbool.h>
-#include "common/edge.h"
+#include "edge.h"
+
+// Rust likes camelcase types
+#define lab_node_type LabNodeType
 
 /*
  * In labwc, "node type" indicates the role of a wlr_scene_node in the
@@ -67,7 +69,7 @@ enum lab_node_type {
 
 enum lab_node_type node_type_parse(const char *context);
 
-bool node_type_contains(enum lab_node_type whole, enum lab_node_type part);
+_Bool node_type_contains(enum lab_node_type whole, enum lab_node_type part);
 
 enum lab_edge node_type_to_edges(enum lab_node_type type);
 

@@ -200,7 +200,7 @@ ensure_initial_geometry_and_output(struct view *view)
 		view_set_output(view->id, output_nearest_to_cursor());
 	}
 
-	view_set_ssd_enabled(view->id, want_deco(xsurface));
+	view_enable_ssd(view->id, want_deco(xsurface));
 
 	struct wlr_box geom = view->st->pending;
 	view_compute_default_geom(view->st, &geom, NULL, has_position);
@@ -296,7 +296,7 @@ handle_associate(struct wl_listener *listener, void *data)
 	 */
 	view_fullscreen(view->id, xsurface->fullscreen);
 	if (!view->st->ever_mapped) {
-		view_set_ssd_enabled(view->id, want_deco(xsurface));
+		view_enable_ssd(view->id, want_deco(xsurface));
 	}
 	enum view_axis axis = VIEW_AXIS_NONE;
 	if (xsurface->maximized_horz) {
@@ -497,7 +497,7 @@ static void
 handle_set_decorations(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_decorations);
-	view_set_ssd_enabled(view->id, want_deco(view->xwayland_surface));
+	view_enable_ssd(view->id, want_deco(view->xwayland_surface));
 }
 
 static void
@@ -575,7 +575,7 @@ handle_set_icon(struct wl_listener *listener, void *data)
 	}
 
 out:
-	view_notify_icon_change(view);
+	view_update_icon(view->id);
 	xcb_ewmh_get_wm_icon_reply_wipe(&icon_reply);
 }
 

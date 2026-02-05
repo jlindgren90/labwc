@@ -507,12 +507,7 @@ output_update_for_layout_change(void)
 
 	if (server.max_output_scale != max_scale) {
 		server.max_output_scale = max_scale;
-		for (int i = view_count() - 1; i >= 0; i--) {
-			struct view *view = view_nth(i);
-			if (view->st->mapped) {
-				view_reload_ssd(view);
-			}
-		}
+		view_reload_ssds();
 	}
 
 	/*
