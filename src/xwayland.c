@@ -369,7 +369,7 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 		 * Set decorations early to avoid changing geometry
 		 * after maximize (reduces visual glitches).
 		 */
-		view_set_ssd_enabled(view, want_deco(surf));
+		view_enable_ssd(view->id, want_deco(surf));
 	}
 
 	enum view_axis maximize = VIEW_AXIS_NONE;
@@ -427,7 +427,7 @@ static void
 handle_set_decorations(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_decorations);
-	view_set_ssd_enabled(view, want_deco(view->xwayland_surface));
+	view_enable_ssd(view->id, want_deco(view->xwayland_surface));
 }
 
 static void
@@ -515,7 +515,7 @@ update_icon(struct view *view)
 	}
 
 out:
-	view_notify_icon_change(view);
+	view_update_icon(view->id);
 	free(reply);
 }
 
@@ -581,7 +581,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 	 */
 	view_fullscreen(view->id, xsurface->fullscreen);
 	if (!view->st->ever_mapped) {
-		view_set_ssd_enabled(view, want_deco(xsurface));
+		view_enable_ssd(view->id, want_deco(xsurface));
 	}
 	enum view_axis axis = VIEW_AXIS_NONE;
 	if (xsurface->maximized_horz) {

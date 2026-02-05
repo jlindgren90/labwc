@@ -5,6 +5,8 @@
 #include "config/rcxml.h"
 #include "desktop-entry.h"
 #include "img/img.h"
+#include "labwc.h"
+#include "theme.h"
 #include "view.h"
 
 #if HAVE_LIBSFDO
@@ -21,12 +23,13 @@ img_to_buffer(struct lab_img *img, int icon_size, float scale)
 #endif /* HAVE_LIBSFDO */
 
 struct wlr_buffer *
-scaled_icon_buffer_load(const char *app_id, cairo_surface_t *icon_surface,
-		int icon_size, float scale)
+scaled_icon_buffer_load(const char *app_id, cairo_surface_t *icon_surface)
 {
 #if HAVE_LIBSFDO
 	struct lab_img *img = NULL;
 	struct lab_data_buffer *buffer = NULL;
+	int icon_size = g_theme.window_icon_size;
+	float scale = g_server.max_output_scale;
 
 	/* window icon */
 	if (icon_surface) {

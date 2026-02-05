@@ -41,13 +41,9 @@ struct view {
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
 
-	bool ssd_enabled;
-
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
-
-	struct ssd *ssd;
 
 	struct mappable mappable;
 
@@ -108,10 +104,7 @@ void view_toggle_maximize(struct view *view, enum view_axis axis);
 bool view_is_always_on_top(struct view *view);
 void view_toggle_always_on_top(struct view *view);
 
-void view_set_ssd_enabled(struct view *view, bool enabled);
 void view_toggle_fullscreen(struct view *view);
-
-void view_reload_ssd(struct view *view);
 
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);

@@ -38,8 +38,7 @@ create_fields_scene(struct view *view, struct wlr_scene_tree *parent,
 		struct wlr_scene_buffer *scene_buffer =
 			wlr_scene_buffer_create(parent, NULL);
 		wlr_scene_buffer_set_dest_size(scene_buffer, icon_size, icon_size);
-		struct wlr_buffer *buffer = view_get_icon_buffer(view->id,
-			g_theme.window_icon_size, g_server.max_output_scale);
+		struct wlr_buffer *buffer = view_get_icon_buffer(view->id);
 		wlr_scene_buffer_set_buffer(scene_buffer, buffer);
 		wlr_scene_node_set_position(&scene_buffer->node, x,
 			y + (switcher_theme->item_height - icon_size) / 2);

@@ -53,12 +53,8 @@ pub extern "C" fn view_adjust_size(id: ViewId, width: &mut i32, height: &mut i32
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
-    let mut view_ptr = null_mut();
     if let Some(view) = views_mut().get_view_mut(id) {
-        view_ptr = view.set_app_id(cstring(app_id));
-    }
-    if !view_ptr.is_null() {
-        unsafe { view_notify_icon_change(view_ptr) };
+        view.set_app_id(cstring(app_id));
     }
 }
 
@@ -130,13 +126,6 @@ pub extern "C" fn view_set_initial_geom(id: ViewId, rel_to: Option<&Rect>, keep_
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_apply_special_geom(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.apply_special_geom();
-    }
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_output(output);
@@ -149,11 +138,22 @@ pub extern "C" fn views_adjust_for_layout_change() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
-    let view_ptr = views_mut().fullscreen(id, fullscreen);
-    if !view_ptr.is_null() {
-        unsafe { view_notify_fullscreen(view_ptr) };
+pub extern "C" fn view_enable_ssd(id: ViewId, enabled: bool) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.enable_ssd(enabled);
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_destroy_ssd(id: ViewId) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.destroy_ssd();
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
+    views_mut().fullscreen(id, fullscreen);
 }
 
 #[unsafe(no_mangle)]
@@ -244,19 +244,24 @@ pub extern "C" fn view_clear_icon_surfaces(id: ViewId) {
 
 // Does NOT transfer ownership out of the view
 #[unsafe(no_mangle)]
-pub extern "C" fn view_get_icon_buffer(id: ViewId, icon_size: i32, scale: f32) -> *mut WlrBuffer {
+pub extern "C" fn view_get_icon_buffer(id: ViewId) -> *mut WlrBuffer {
     if let Some(view) = views_mut().get_view_mut(id) {
-        view.get_icon_buffer(icon_size, scale)
+        view.get_icon_buffer()
     } else {
         null_mut()
     }
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_drop_icon_buffer(id: ViewId) {
+pub extern "C" fn view_update_icon(id: ViewId) {
     if let Some(view) = views_mut().get_view_mut(id) {
-        view.drop_icon_buffer();
+        view.update_icon();
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_reload_ssds() {
+    views_mut().reload_ssds();
 }
 
 #[unsafe(no_mangle)]

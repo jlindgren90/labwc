@@ -8,6 +8,7 @@ mod bindings {
 }
 mod foreign_toplevel;
 mod rect;
+mod ssd;
 mod util;
 mod view;
 mod view_api;

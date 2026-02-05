@@ -148,7 +148,7 @@ struct ssd_button *attach_ssd_button(struct wl_list *button_parts,
 	struct view *view);
 
 /* SSD internal */
-void ssd_titlebar_create(struct ssd *ssd);
+void ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer);
 void ssd_titlebar_update(struct ssd *ssd);
 void ssd_titlebar_destroy(struct ssd *ssd);
 bool ssd_should_be_squared(struct ssd *ssd);

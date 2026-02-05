@@ -3,6 +3,7 @@
 use crate::bindings::*;
 use crate::foreign_toplevel::*;
 use crate::rect::*;
+use crate::ssd::*;
 use crate::util::*;
 use std::cmp::{max, min};
 use std::ffi::CString;
@@ -67,6 +68,7 @@ pub struct View {
     app_id: CString,
     title: CString,
     state: Box<ViewState>,
+    ssd: Ssd,
     foreign_toplevels: Vec<ForeignToplevel>,
     icon_surfaces: Vec<CairoSurfacePtr>,
     icon_buffer: Option<WlrBufferPtr>,
@@ -147,8 +149,7 @@ impl View {
         }
     }
 
-    // Returns CView pointer to pass to view_notify_icon_change()
-    pub fn set_app_id(&mut self, app_id: CString) -> *mut CView {
+    pub fn set_app_id(&mut self, app_id: CString) {
         if self.app_id != app_id {
             self.app_id = app_id;
             self.state.app_id = self.app_id.as_ptr(); // for C interop
@@ -156,16 +157,15 @@ impl View {
                 toplevel.send_app_id(&self.app_id);
                 toplevel.send_done();
             }
-            return self.c_ptr;
+            self.update_icon();
         }
-        return null_mut();
     }
 
     pub fn set_title(&mut self, title: CString) {
         if self.title != title {
             self.title = title;
             self.state.title = self.title.as_ptr(); // for C interop
-            unsafe { view_notify_title_change(self.c_ptr) };
+            self.ssd.update_title();
             for toplevel in &self.foreign_toplevels {
                 toplevel.send_title(&self.title);
                 toplevel.send_done();
@@ -181,6 +181,8 @@ impl View {
             unsafe { view_set_visible(self.c_ptr, true) };
             *was_shown = true;
         }
+        // Create SSD at map (if needed)
+        self.update_ssd();
     }
 
     pub fn set_unmapped(&mut self, was_hidden: &mut bool) {
@@ -202,7 +204,7 @@ impl View {
             } else {
                 unsafe { xdg_toplevel_view_set_active(self.c_ptr, active) };
             }
-            unsafe { view_notify_active(self.c_ptr) };
+            self.ssd.set_active(active);
             self.send_foreign_toplevel_state();
         }
     }
@@ -380,6 +382,8 @@ impl View {
             self.center_fullscreen();
         }
         unsafe { view_move_impl(self.c_ptr) };
+        self.ssd.update_geom();
+        unsafe { cursor_update_focus() };
     }
 
     pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
@@ -516,7 +520,7 @@ impl View {
         }
     }
 
-    pub fn apply_special_geom(&mut self) {
+    fn apply_special_geom(&mut self) {
         if self.state.fullscreen {
             self.apply_fullscreen_geom();
         } else if self.state.maximized != VIEW_AXIS_NONE {
@@ -555,10 +559,39 @@ impl View {
         self.in_layout_change = false;
     }
 
-    // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, fullscreen: bool) -> *mut CView {
+    fn update_ssd(&mut self) {
+        if self.state.ssd_enabled && !self.state.fullscreen {
+            let icon_buffer = self.get_icon_buffer();
+            self.ssd.create(self.c_ptr, icon_buffer);
+        } else {
+            self.ssd.destroy();
+        }
+    }
+
+    pub fn enable_ssd(&mut self, enabled: bool) {
+        if self.state.ssd_enabled == enabled {
+            return;
+        }
+        self.state.ssd_enabled = enabled;
+        if !self.state.fullscreen {
+            if !self.state.floating() {
+                self.apply_special_geom();
+            }
+            if self.state.mapped {
+                self.update_ssd();
+                unsafe { cursor_update_focus() };
+            }
+        }
+    }
+
+    pub fn destroy_ssd(&mut self) {
+        self.ssd.destroy();
+    }
+
+    // Returns true if mapped and state changed
+    pub fn fullscreen(&mut self, fullscreen: bool) -> bool {
         if self.state.fullscreen == fullscreen {
-            return null_mut();
+            return false;
         }
         if fullscreen {
             self.store_natural_geom();
@@ -569,7 +602,11 @@ impl View {
         } else {
             self.apply_special_geom();
         }
-        return self.c_ptr;
+        if self.state.mapped {
+            self.update_ssd();
+            return true;
+        }
+        return false;
     }
 
     pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) {
@@ -634,7 +671,7 @@ impl View {
     pub fn set_inhibits_keybinds(&mut self, inhibits_keybinds: bool) {
         if self.state.inhibits_keybinds != inhibits_keybinds {
             self.state.inhibits_keybinds = inhibits_keybinds;
-            unsafe { view_notify_inhibits_keybinds(self.c_ptr) };
+            self.ssd.set_inhibits_keybinds(inhibits_keybinds);
         }
     }
 
@@ -692,14 +729,13 @@ impl View {
         self.icon_surfaces.clear();
     }
 
-    pub fn get_icon_buffer(&mut self, icon_size: i32, scale: f32) -> *mut WlrBuffer {
+    pub fn get_icon_buffer(&mut self) -> *mut WlrBuffer {
         if let Some(buf) = &self.icon_buffer {
             return buf.buffer;
         }
-        let icon_surface = self.get_best_icon_surface((icon_size as f32 * scale) as i32);
-        let icon_buffer = unsafe {
-            scaled_icon_buffer_load(self.app_id.as_ptr(), icon_surface, icon_size, scale)
-        };
+        let icon_size = unsafe { ssd_get_icon_buffer_size() };
+        let icon_surface = self.get_best_icon_surface(icon_size);
+        let icon_buffer = unsafe { scaled_icon_buffer_load(self.app_id.as_ptr(), icon_surface) };
         if !icon_buffer.is_null() {
             self.icon_buffer = Some(WlrBufferPtr::new(icon_buffer));
             return icon_buffer;
@@ -707,7 +743,17 @@ impl View {
         return null_mut();
     }
 
-    pub fn drop_icon_buffer(&mut self) {
+    pub fn update_icon(&mut self) {
         self.icon_buffer = None;
+        let icon_buffer = self.get_icon_buffer();
+        self.ssd.update_icon(icon_buffer);
+    }
+
+    pub fn reload_ssd(&mut self) {
+        self.icon_buffer = None;
+        self.ssd.destroy();
+        if self.state.mapped {
+            self.update_ssd();
+        }
     }
 }

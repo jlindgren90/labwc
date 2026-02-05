@@ -39,7 +39,7 @@ ssd_get_margin(struct view *view)
 	 * in border-only deco mode as view->ssd would only be set
 	 * after ssd_create() returns.
 	 */
-	if (!view->ssd_enabled || view->st->fullscreen) {
+	if (!view->st->ssd_enabled || view->st->fullscreen) {
 		return (struct border){ 0 };
 	}
 
@@ -81,10 +81,9 @@ ssd_max_extents(struct view *view)
  * bounds, so check the cursor against the view here.
  */
 enum lab_node_type
-ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
+ssd_get_resizing_type(struct view *view, struct wlr_cursor *cursor)
 {
-	struct view *view = ssd ? ssd->view : NULL;
-	if (!view || !cursor || !view->ssd_enabled || view->st->fullscreen) {
+	if (!view || !cursor || !view->st->ssd_enabled || view->st->fullscreen) {
 		return LAB_NODE_NONE;
 	}
 
@@ -129,7 +128,7 @@ ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 }
 
 struct ssd *
-ssd_create(struct view *view, bool active)
+ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
 {
 	assert(view);
 	struct ssd *ssd = znew(*ssd);
@@ -153,9 +152,9 @@ ssd_create(struct view *view, bool active)
 	 * TODO: Set the state here instead so the order does not matter
 	 * anymore.
 	 */
-	ssd_titlebar_create(ssd);
+	ssd_titlebar_create(ssd, icon_buffer);
 	ssd_border_create(ssd);
-	ssd_set_active(ssd, active);
+	ssd_set_active(ssd, view->st->active);
 	ssd_enable_keybind_inhibit_indicator(ssd, view->st->inhibits_keybinds);
 	ssd->state.geometry = view->st->current;
 

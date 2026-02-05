@@ -23,7 +23,7 @@ static void set_alt_button_icon(struct ssd *ssd, enum lab_node_type type, bool e
 static void update_visible_buttons(struct ssd *ssd);
 
 void
-ssd_titlebar_create(struct ssd *ssd)
+ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 {
 	struct view *view = ssd->view;
 	int width = view->st->current.width;
@@ -113,7 +113,7 @@ ssd_titlebar_create(struct ssd *ssd)
 
 	update_visible_buttons(ssd);
 
-	ssd_update_icon(ssd);
+	ssd_update_icon(ssd, icon_buffer);
 	ssd_update_title(ssd);
 
 	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
@@ -471,15 +471,19 @@ ssd_update_title(struct ssd *ssd)
 	ssd_update_title_positions(ssd, offset_left, offset_right);
 }
 
+int
+ssd_get_icon_buffer_size(void)
+{
+	return g_theme.window_icon_size * g_server.max_output_scale;
+}
+
 void
-ssd_update_icon(struct ssd *ssd)
+ssd_update_icon(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 {
 	if (!ssd) {
 		return;
 	}
 
-	struct wlr_buffer *buffer = view_get_icon_buffer(ssd->view->id,
-		g_theme.window_icon_size, g_server.max_output_scale);
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
 		struct ssd_titlebar_subtree *subtree =
@@ -487,12 +491,14 @@ ssd_update_icon(struct ssd *ssd)
 		struct ssd_button *button;
 		wl_list_for_each(button, &subtree->buttons_left, link) {
 			if (button->window_icon) {
-				wlr_scene_buffer_set_buffer(button->window_icon, buffer);
+				wlr_scene_buffer_set_buffer(button->window_icon,
+					icon_buffer);
 			}
 		}
 		wl_list_for_each(button, &subtree->buttons_right, link) {
 			if (button->window_icon) {
-				wlr_scene_buffer_set_buffer(button->window_icon, buffer);
+				wlr_scene_buffer_set_buffer(button->window_icon,
+					icon_buffer);
 			}
 		}
 	}

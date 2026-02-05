@@ -82,11 +82,7 @@ reload_config_and_theme(void)
 	desktop_entry_finish();
 	desktop_entry_init();
 #endif
-
-	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_nth(i);
-		view_reload_ssd(view);
-	}
+	view_reload_ssds();
 
 	menu_reconfigure();
 	seat_reconfigure();

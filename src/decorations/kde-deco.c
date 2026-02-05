@@ -37,7 +37,7 @@ handle_mode(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	view_set_ssd_enabled(kde_deco->view,
+	view_enable_ssd(kde_deco->view->id,
 		kde_deco->wlr_kde_decoration->mode
 			== WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 }
