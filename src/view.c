@@ -1206,18 +1206,8 @@ view_has_strut_partial(struct view *view)
 }
 
 void
-view_set_title(struct view *view, const char *title)
+view_notify_title_change(struct view *view)
 {
-	assert(view);
-	if (!title) {
-		title = "";
-	}
-
-	if (!strcmp(view->title, title)) {
-		return;
-	}
-	xstrdup_replace(view->title, title);
-
 	ssd_update_title(view->ssd);
 	wl_signal_emit_mutable(&view->events.new_title, NULL);
 }
@@ -1232,18 +1222,8 @@ drop_icon_buffer(struct view *view)
 }
 
 void
-view_set_app_id(struct view *view, const char *app_id)
+view_notify_app_id_change(struct view *view)
 {
-	assert(view);
-	if (!app_id) {
-		app_id = "";
-	}
-
-	if (!strcmp(view->app_id, app_id)) {
-		return;
-	}
-	xstrdup_replace(view->app_id, app_id);
-
 	wl_signal_emit_mutable(&view->events.new_app_id, NULL);
 
 	drop_icon_buffer(view);
@@ -1336,15 +1316,16 @@ view_init(struct view *view)
 {
 	assert(view);
 
+	view->id = view_add(view);
+	view->st = view_get_state(view->id);
+	assert(view->st);
+
 	wl_signal_init(&view->events.new_app_id);
 	wl_signal_init(&view->events.new_title);
 	wl_signal_init(&view->events.maximized);
 	wl_signal_init(&view->events.minimized);
 	wl_signal_init(&view->events.fullscreened);
 	wl_signal_init(&view->events.activated);
-
-	view->title = xstrdup("");
-	view->app_id = xstrdup("");
 }
 
 void
@@ -1359,9 +1340,6 @@ view_destroy(struct view *view)
 	wl_list_remove(&view->request_fullscreen.link);
 	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->destroy.link);
-
-	zfree(view->title);
-	zfree(view->app_id);
 
 	if (view->foreign_toplevel) {
 		foreign_toplevel_destroy(view->foreign_toplevel);
@@ -1407,6 +1385,8 @@ view_destroy(struct view *view)
 	assert(wl_list_empty(&view->events.minimized.listener_list));
 	assert(wl_list_empty(&view->events.fullscreened.listener_list));
 	assert(wl_list_empty(&view->events.activated.listener_list));
+
+	view_remove(view->id);
 
 	/* Remove view from g_server.views */
 	wl_list_remove(&view->link);

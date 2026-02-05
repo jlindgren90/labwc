@@ -68,7 +68,7 @@ static struct lab_data_buffer *
 load_server_icon(struct view *view, int icon_size, float scale)
 {
 	struct lab_img *img = desktop_entry_load_icon_from_app_id(
-		view->app_id, icon_size, scale);
+		view->st->app_id, icon_size, scale);
 	if (img) {
 		wlr_log(WLR_DEBUG, "loaded icon by app_id");
 		return img_to_buffer(img, icon_size, scale);

@@ -11,3 +11,7 @@
 # makepkg
 /pkg
 *.pkg.tar.*
+
+# cargo
+/target
+Cargo.lock
