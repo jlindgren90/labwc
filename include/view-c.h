@@ -53,6 +53,7 @@ typedef struct ViewState {
 	ViewAxis maximized;
 	LabEdge tiled;
 	_Bool minimized;
+	_Bool inhibits_keybinds;
 	Rect current;      // current displayed geometry
 	Rect pending;      // expected geometry after any pending move/resize
 	Rect natural_geom; // un-{maximized/fullscreen/tiled} geometry
@@ -64,6 +65,7 @@ void view_notify_icon_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_active(CView *view);
 void view_notify_fullscreen(CView *view);
+void view_notify_inhibits_keybinds(CView *view);
 void view_raise_impl(CView *view);
 _Bool view_focus_impl(CView *view);
 

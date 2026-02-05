@@ -618,7 +618,8 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_TOGGLE_KEYBINDS:
 		if (view) {
-			view_toggle_keybinds(view);
+			view_set_inhibits_keybinds(view->id,
+				!view->st->inhibits_keybinds);
 		}
 		break;
 	case ACTION_TYPE_INVALID:

@@ -42,7 +42,6 @@ struct view {
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
 
 	bool ssd_enabled;
-	bool inhibits_keybinds; /* also inhibits mousebinds */
 
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
@@ -102,7 +101,6 @@ void mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
 	wl_notify_func_t notify_map, wl_notify_func_t notify_unmap);
 void mappable_disconnect(struct mappable *mappable);
 
-void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
 void view_moved(struct view *view);
