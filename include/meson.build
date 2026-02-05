@@ -21,9 +21,11 @@ bindings = [
   custom_target(
     input: [
       'common/edge.h',
+      'common/node-type.h',
       'foreign-toplevel.h',
       'rs-bindings.h',
       'rs-types.h',
+      'ssd.h',
       'view-c.h',
     ],
     output: 'bindings.rs',
