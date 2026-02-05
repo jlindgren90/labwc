@@ -1,0 +1,9 @@
+# This file exists only for the sake of rust-analyzer.
+# Use meson (not cargo) to build the compositor.
+[package]
+name = "labwc"
+version = "0.9.3"
+edition = "2024"
+
+[lib]
+path = "src/lib.rs"
