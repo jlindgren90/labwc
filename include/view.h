@@ -41,8 +41,6 @@ struct view {
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
 
-	struct ssd *ssd;
-
 	struct wl_listener destroy;
 	struct wl_listener commit;
 	struct wl_listener map;
@@ -101,8 +99,6 @@ void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
-
-void view_reload_ssd(struct view *view);
 
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);

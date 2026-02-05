@@ -160,7 +160,7 @@ get_cursor_context(void)
 				 * types, which are mapped to mouse contexts
 				 * like Left and TLCorner.
 				 */
-				ret.type = ssd_get_resizing_type(ret.view->ssd, cursor);
+				ret.type = ssd_get_resizing_type(ret.view, cursor);
 				if (ret.type == LAB_NODE_NONE) {
 					/*
 					 * If cursor is not on border/extents,

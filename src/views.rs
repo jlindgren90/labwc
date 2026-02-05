@@ -93,6 +93,7 @@ impl Views {
                 self.update_top_layer_visibility();
                 self.focus(id, /* raise */ true);
             }
+            unsafe { cursor_update_focus() };
         }
     }
 
@@ -168,18 +169,15 @@ impl Views {
         self.update_top_layer_visibility();
     }
 
-    // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) -> *mut CView {
-        let Some(view) = self.by_id.get_mut(&id) else {
-            return null_mut();
-        };
-        let view_ptr = view.fullscreen(fullscreen);
-        if !view_ptr.is_null() {
+    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) {
+        if let Some(view) = self.by_id.get_mut(&id)
+            && view.fullscreen(fullscreen)
+        {
             // Entering/leaving fullscreen ends any interactive move/resize
             self.reset_grab_for(Some(id));
             self.update_top_layer_visibility();
+            unsafe { cursor_update_focus() };
         }
-        return view_ptr;
     }
 
     pub fn maximize(&mut self, id: ViewId, axis: ViewAxis) {
@@ -315,6 +313,13 @@ impl Views {
 
     pub fn remove_foreign_toplevel_client(&mut self, client: *mut WlResource) {
         self.foreign_toplevel_clients.retain(|&c| c != client);
+    }
+
+    pub fn reload_ssds(&mut self) {
+        for view in self.by_id.values_mut() {
+            view.reload_ssd();
+        }
+        unsafe { cursor_update_focus() };
     }
 
     pub fn set_grab_context(&mut self, id: ViewId, cursor_x: i32, cursor_y: i32, edges: LabEdge) {

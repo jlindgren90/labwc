@@ -131,7 +131,7 @@ struct ssd_button *attach_ssd_button(enum lab_node_type type,
 	int x, int y, struct view *view);
 
 /* SSD internal */
-void ssd_titlebar_create(struct ssd *ssd);
+void ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer);
 void ssd_titlebar_update(struct ssd *ssd);
 void ssd_titlebar_destroy(struct ssd *ssd);
 

@@ -69,11 +69,7 @@ reload_config_and_theme(void)
 	theme_init(rc.theme_name);
 	desktop_entry_finish();
 	desktop_entry_init();
-
-	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_nth(i);
-		view_reload_ssd(view);
-	}
+	view_reload_ssds();
 
 	cycle_finish(/*switch_focus*/ false);
 	menu_reconfigure();
