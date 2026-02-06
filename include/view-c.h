@@ -66,6 +66,7 @@ void view_notify_title_change(CView *view);
 void view_notify_active(CView *view);
 void view_notify_fullscreen(CView *view);
 void view_notify_inhibits_keybinds(CView *view);
+void view_move_impl(CView *view);
 void view_raise_impl(CView *view);
 _Bool view_focus_impl(CView *view);
 
@@ -76,7 +77,9 @@ void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
-void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
+void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
+void xdg_toplevel_view_enable_fullscreen_bg(CView *view, Rect output_geom);
+void xdg_toplevel_view_disable_fullscreen_bg(CView *view);
 void xdg_toplevel_view_close(CView *view);
 
 ViewId xwayland_view_get_root_id(CView *view);
@@ -87,7 +90,7 @@ void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);
-void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
+void xwayland_view_configure(CView *view, Rect geom, _Bool *commit_move);
 void xwayland_view_offer_focus(CView *view);
 void xwayland_view_close(CView *view);
 

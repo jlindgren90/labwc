@@ -50,7 +50,7 @@ view_notify_active(struct view *view)
 }
 
 void
-view_moved(struct view *view)
+view_move_impl(struct view *view)
 {
 	assert(view);
 	wlr_scene_node_set_position(&view->scene_tree->node,

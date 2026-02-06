@@ -103,8 +103,6 @@ void mappable_disconnect(struct mappable *mappable);
 
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
-void view_moved(struct view *view);
-
 void view_toggle_maximize(struct view *view, enum view_axis axis);
 
 bool view_is_always_on_top(struct view *view);
