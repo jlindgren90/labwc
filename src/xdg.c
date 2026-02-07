@@ -16,7 +16,6 @@
 #include "output.h"
 #include "util.h"
 #include "view.h"
-#include "view-impl-common.h"
 
 #define LAB_XDG_SHELL_VERSION 6
 #define CONFIGURE_TIMEOUT_MS 100
@@ -249,7 +248,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	}
 
 	if (update_required) {
-		view_impl_apply_geometry(view, size.width, size.height);
+		view_commit_size(view->id, size.width, size.height);
 		center_fullscreen_if_needed(view);
 		view_moved(view);
 

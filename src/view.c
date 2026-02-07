@@ -10,7 +10,6 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include "action.h"
 #include "buffer.h"
-#include "common/macros.h"
 #include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
@@ -72,58 +71,6 @@ view_moved(struct view *view)
 		view->st->current.x, view->st->current.y);
 	ssd_update_geometry(view->ssd);
 	cursor_update_focus();
-}
-
-static void
-substitute_nonzero(int *a, int *b)
-{
-	if (!(*a)) {
-		*a = *b;
-	} else if (!(*b)) {
-		*b = *a;
-	}
-}
-
-static int
-round_to_increment(int val, int base, int inc)
-{
-	if (base < 0 || inc <= 0) {
-		return val;
-	}
-	return base + (val - base + inc / 2) / inc * inc;
-}
-
-void
-view_adjust_size(struct view *view, int *w, int *h)
-{
-	assert(view);
-	struct view_size_hints hints = view_get_size_hints(view->id);
-
-	/*
-	 * "If a base size is not provided, the minimum size is to be
-	 * used in its place and vice versa." (ICCCM 4.1.2.3)
-	 */
-	substitute_nonzero(&hints.min_width, &hints.base_width);
-	substitute_nonzero(&hints.min_height, &hints.base_height);
-
-	/*
-	 * Snap width/height to requested size increments (if any).
-	 * Typically, terminal emulators use these to make sure that the
-	 * terminal is resized to a width/height evenly divisible by the
-	 * cell (character) size.
-	 */
-	*w = round_to_increment(*w, hints.base_width, hints.width_inc);
-	*h = round_to_increment(*h, hints.base_height, hints.height_inc);
-
-	/* If a minimum width/height was not set, then use default */
-	if (hints.min_width < 1) {
-		hints.min_width = LAB_MIN_VIEW_WIDTH;
-	}
-	if (hints.min_height < 1) {
-		hints.min_height = LAB_MIN_VIEW_HEIGHT;
-	}
-	*w = MAX(*w, hints.min_width);
-	*h = MAX(*h, hints.min_height);
 }
 
 void

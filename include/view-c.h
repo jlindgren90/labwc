@@ -95,6 +95,7 @@ void cursor_update_focus(void);
 // from labwc.h
 void interactive_cancel(CView *view);
 _Bool interactive_move_is_active(CView *view);
+_Bool interactive_resize_is_active(CView *view, LabEdge edge);
 
 // from output.h
 Output *output_nearest_to(int lx, int ly);

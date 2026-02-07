@@ -40,6 +40,21 @@ impl From<&ViewState> for ForeignToplevelState {
     }
 }
 
+fn substitute_nonzero(a: &mut i32, b: &mut i32) {
+    if *a == 0 {
+        *a = *b;
+    } else if *b == 0 {
+        *b = *a;
+    }
+}
+
+fn round_to_increment(val: i32, base: i32, inc: i32) -> i32 {
+    if base < 0 || inc <= 0 {
+        return val;
+    }
+    return base + (val - base + inc / 2) / inc * inc;
+}
+
 fn nearest_output_to_geom(geom: Rect) -> *mut Output {
     return unsafe { output_nearest_to(geom.x + geom.width / 2, geom.y + geom.height / 2) };
 }
@@ -93,12 +108,32 @@ impl View {
         }
     }
 
-    pub fn get_size_hints(&self) -> ViewSizeHints {
+    fn get_size_hints(&self) -> ViewSizeHints {
         if self.is_xwayland {
             unsafe { xwayland_view_get_size_hints(self.c_ptr) }
         } else {
             unsafe { xdg_toplevel_view_get_size_hints(self.c_ptr) }
         }
+    }
+
+    pub fn adjust_size(&self, width: &mut i32, height: &mut i32) {
+        let mut hints = self.get_size_hints();
+        // "If a base size is not provided, the minimum size is to be
+        // used in its place and vice versa." (ICCCM 4.1.2.3)
+        substitute_nonzero(&mut hints.min_width, &mut hints.base_width);
+        substitute_nonzero(&mut hints.min_height, &mut hints.base_height);
+        // Snap width/height to requested size increments (if any)
+        *width = round_to_increment(*width, hints.base_width, hints.width_inc);
+        *height = round_to_increment(*height, hints.base_height, hints.height_inc);
+        // If minimum width/height was not set, then use default
+        if hints.min_width < 1 {
+            hints.min_width = MIN_WIDTH;
+        }
+        if hints.min_height < 1 {
+            hints.min_height = MIN_HEIGHT;
+        }
+        *width = max(*width, hints.min_width);
+        *height = max(*height, hints.min_height);
     }
 
     pub fn has_strut_partial(&self) -> bool {
@@ -328,6 +363,33 @@ impl View {
             self.saved_geom = Rect::default();
             self.lost_output = false;
         }
+    }
+
+    pub fn commit_size(&mut self, width: i32, height: i32) {
+        let cur = self.state.current;
+        let pend = self.state.pending;
+        // Anchor right edge if resizing via left edge
+        // (or if recently resizing, detected via heuristic)
+        let resizing_left = unsafe { interactive_resize_is_active(self.c_ptr, LAB_EDGE_LEFT) };
+        let x = if resizing_left || (cur.x != pend.x && cur.x + cur.width == pend.x + pend.width) {
+            pend.x + pend.width - width
+        } else {
+            pend.x
+        };
+        // Anchor bottom edge if resizing via top edge
+        // (or if recently resizing, detected via heuristic)
+        let resizing_top = unsafe { interactive_resize_is_active(self.c_ptr, LAB_EDGE_TOP) };
+        let y = if resizing_top || (cur.y != pend.y && cur.y + cur.height == pend.y + pend.height) {
+            pend.y + pend.height - height
+        } else {
+            pend.y
+        };
+        self.state.current = Rect {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+        };
     }
 
     pub fn set_initial_geom(&mut self, rel_to: Option<&Rect>, keep_position: bool) {

@@ -17,7 +17,6 @@ labwc_sources = files(
   'session-lock.c',
   'theme.c',
   'view.c',
-  'view-impl-common.c',
   'xdg.c',
   'xdg-popup.c',
 )

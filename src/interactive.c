@@ -285,3 +285,11 @@ interactive_move_is_active(struct view *view)
 	return (g_server.input_mode == LAB_INPUT_STATE_MOVE
 		&& g_server.grabbed_view == view);
 }
+
+bool
+interactive_resize_is_active(struct view *view, enum lab_edge edge)
+{
+	return (g_server.input_mode == LAB_INPUT_STATE_RESIZE
+		&& g_server.grabbed_view == view
+		&& (g_server.resize_edges & edge) != 0);
+}

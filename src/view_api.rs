@@ -52,10 +52,10 @@ pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_get_size_hints(id: ViewId) -> ViewSizeHints {
-    let views = views();
-    let view = views.get_view(id);
-    return view.map_or(ViewSizeHints::default(), View::get_size_hints);
+pub extern "C" fn view_adjust_size(id: ViewId, width: &mut i32, height: &mut i32) {
+    if let Some(view) = views().get_view(id) {
+        view.adjust_size(width, height);
+    }
 }
 
 #[unsafe(no_mangle)]
@@ -145,6 +145,13 @@ pub extern "C" fn view_set_pending_geom(id: ViewId, geom: Rect) {
 pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.move_resize(geom);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_commit_size(id: ViewId, width: i32, height: i32) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.commit_size(width, height);
     }
 }
 
