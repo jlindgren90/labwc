@@ -144,6 +144,35 @@ impl Views {
         }
     }
 
+    // Used for xdg-shell views after requesting client size via 0x0 configure.
+    // Called from commit handler and overwrites pending geometry directly.
+    pub fn set_late_client_size(
+        &mut self,
+        id: ViewId,
+        width: i32,
+        height: i32,
+        cursor_x: i32,
+        cursor_y: i32,
+    ) {
+        if let Some(view) = self.by_id.get_mut(&id)
+            && view.get_state().floating()
+        {
+            let mut geom = view.get_state().pending;
+            (geom.width, geom.height) = (width, height);
+            if id == self.moving_id {
+                self.grab.adjust_move_origin(width, height);
+                (geom.x, geom.y) = self.grab.compute_move_position(cursor_x, cursor_y);
+            } else {
+                view.compute_default_geom(
+                    &mut geom, /* rel_to */ None, /* keep_position */ false,
+                );
+                // Ignore size adjustments (keep client size)
+                (geom.width, geom.height) = (width, height);
+            }
+            view.set_pending_geom(geom);
+        }
+    }
+
     fn update_top_layer_visibility(&self) {
         unsafe { top_layer_show_all() };
         let mut outputs_seen = HashSet::new();
@@ -331,19 +360,6 @@ impl Views {
             return true;
         }
         return false;
-    }
-
-    pub fn get_moving(&self) -> *mut CView {
-        let moving = self.by_id.get(&self.moving_id);
-        return moving.map_or(null_mut(), View::get_c_ptr);
-    }
-
-    pub fn adjust_move_origin(&mut self, width: i32, height: i32) {
-        self.grab.adjust_move_origin(width, height);
-    }
-
-    pub fn compute_move_position(&self, cursor_x: i32, cursor_y: i32) -> (i32, i32) {
-        self.grab.compute_move_position(cursor_x, cursor_y)
     }
 
     pub fn continue_move(&mut self, cursor_x: i32, cursor_y: i32) {

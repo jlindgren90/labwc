@@ -69,32 +69,6 @@ set_fullscreen_from_request(struct view *view,
 	view_fullscreen(view->id, requested->fullscreen);
 }
 
-static void
-do_late_positioning(struct view *view, int width, int height)
-{
-	if (!view_is_floating(view->st)) {
-		return;
-	}
-	struct wlr_box geom = {
-		.x = view->st->pending.x,
-		.y = view->st->pending.y,
-		.width = width,
-		.height = height
-	};
-	if (view == view_get_moving()) {
-		/* Reposition the view while anchoring it to cursor */
-		view_adjust_move_origin(geom.width, geom.height);
-		view_compute_move_position(g_seat.cursor->x, g_seat.cursor->y,
-			&geom.x, &geom.y);
-	} else {
-		view_compute_default_geom(view->id, &geom);
-		/* Ignore size adjustments (keep client size) */
-		geom.width = width;
-		geom.height = height;
-	}
-	view_set_pending_geom(view->id, geom);
-}
-
 void
 xdg_toplevel_view_disable_fullscreen_bg(struct view *view)
 {
@@ -180,7 +154,8 @@ handle_commit(struct wl_listener *listener, void *data)
 	 * the window.
 	 */
 	if (wlr_box_empty(&view->st->pending) && !wlr_box_empty(&size)) {
-		do_late_positioning(view, size.width, size.height);
+		view_set_late_client_size(view->id, size.width, size.height,
+			g_seat.cursor->x, g_seat.cursor->y);
 		update_required = true;
 	}
 
