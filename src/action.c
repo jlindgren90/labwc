@@ -480,7 +480,7 @@ view_for_action(struct view *activator, struct action *action, struct cursor_con
 		return ctx->view;
 	}
 	default:
-		return server.active_view;
+		return view_get_active();
 	}
 }
 
