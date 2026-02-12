@@ -92,9 +92,10 @@ handle_unmap(struct wl_listener *listener, void *data)
 
 	cursor_update_focus();
 
+	struct view *active_view = view_get_active();
 	if (g_seat.wlr_seat->keyboard_state.focused_surface == xsurface->surface
-			&& server.active_view) {
-		seat_focus_surface(view_get_surface(server.active_view));
+			&& active_view) {
+		seat_focus_surface(view_get_surface(active_view));
 	}
 }
 

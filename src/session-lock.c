@@ -10,6 +10,7 @@
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
+#include "view.h"
 
 struct session_lock_output {
 	struct wlr_scene_tree *tree;

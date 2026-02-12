@@ -158,15 +158,6 @@ view_adjust_size(struct view *view, int *w, int *h)
 	*h = MAX(*h, hints.min_height);
 }
 
-static void
-view_append_children(struct view *view, struct wl_array *children)
-{
-	assert(view);
-	if (view->impl->append_children) {
-		view->impl->append_children(view, children);
-	}
-}
-
 void
 view_notify_minimize(struct view *view, bool minimized)
 {
@@ -178,7 +169,8 @@ view_notify_minimize(struct view *view, bool minimized)
 	 */
 	if (minimized) {
 		// Check if active view was minimized (even by a sibling)
-		if (server.active_view && server.active_view->st->minimized) {
+		struct view *active_view = view_get_active();
+		if (active_view && active_view->st->minimized) {
 			desktop_focus_topmost_view();
 		}
 	} else {
@@ -241,8 +233,7 @@ static void
 decorate(struct view *view)
 {
 	if (!view->ssd) {
-		view->ssd = ssd_create(view,
-			view == server.active_view);
+		view->ssd = ssd_create(view, view->st->active);
 	}
 }
 
@@ -334,41 +325,6 @@ view_raise_impl(struct view *view)
 	if (view->xwayland_surface) {
 		xwayland_flush();
 	}
-}
-
-bool
-view_is_modal_dialog(struct view *view)
-{
-	assert(view);
-	assert(view->impl->is_modal_dialog);
-	return view->impl->is_modal_dialog(view);
-}
-
-struct view *
-view_get_modal_dialog(struct view *view)
-{
-	assert(view);
-	/* check view itself first */
-	if (view_is_modal_dialog(view)) {
-		return view;
-	}
-
-	/* check sibling views */
-	struct view *dialog = NULL;
-	struct view *root = view_get_root(view->id);
-	struct wl_array children;
-	struct view **child;
-
-	wl_array_init(&children);
-	view_append_children(root, &children);
-	wl_array_for_each(child, &children) {
-		if (view_is_modal_dialog(*child)) {
-			dialog = *child;
-			break;
-		}
-	}
-	wl_array_release(&children);
-	return dialog;
 }
 
 bool
@@ -497,10 +453,6 @@ view_destroy(struct view *view)
 	 */
 	if (server.grabbed_view == view) {
 		interactive_cancel(view);
-	}
-
-	if (server.active_view == view) {
-		server.active_view = NULL;
 	}
 
 	/* TODO: call this on map/unmap instead */

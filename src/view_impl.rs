@@ -4,6 +4,7 @@ use crate::bindings::*;
 
 pub trait ViewImpl {
     fn get_root_id(&self) -> ViewId;
+    fn is_modal_dialog(&self) -> bool;
     fn set_active(&self, active: bool);
     fn set_fullscreen(&self, fullscreen: bool);
     fn set_maximized(&self, maximized: ViewAxis);
@@ -27,6 +28,10 @@ impl XView {
 impl ViewImpl for XView {
     fn get_root_id(&self) -> ViewId {
         unsafe { xwayland_view_get_root_id(self.c_ptr) }
+    }
+
+    fn is_modal_dialog(&self) -> bool {
+        unsafe { xwayland_view_is_modal_dialog(self.c_ptr) }
     }
 
     fn set_active(&self, active: bool) {
@@ -77,6 +82,10 @@ impl XdgView {
 impl ViewImpl for XdgView {
     fn get_root_id(&self) -> ViewId {
         unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
+    }
+
+    fn is_modal_dialog(&self) -> bool {
+        unsafe { xdg_toplevel_view_is_modal_dialog(self.c_ptr) }
     }
 
     fn set_active(&self, active: bool) {

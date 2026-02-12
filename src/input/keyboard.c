@@ -182,13 +182,14 @@ static struct keybind *
 match_keybinding_for_sym(uint32_t modifiers,
 		xkb_keysym_t sym, xkb_keycode_t xkb_keycode)
 {
+	struct view *active_view = view_get_active();
 	struct keybind *keybind;
 	wl_list_for_each(keybind, &rc.keybinds, link) {
 		if (modifiers ^ keybind->modifiers) {
 			continue;
 		}
 		if (!(keybind->override_inhibition)) {
-			if (view_inhibits_actions(server.active_view, &keybind->actions)) {
+			if (view_inhibits_actions(active_view, &keybind->actions)) {
 				continue;
 			}
 		}
