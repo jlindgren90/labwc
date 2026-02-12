@@ -16,7 +16,6 @@
 #include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
-#include "output.h"
 #include "scaled-buffer/scaled-icon-buffer.h"
 #include "session-lock.h"
 #include "ssd.h"
@@ -57,16 +56,6 @@ view_get_surface(struct view *view)
 		return view->xwayland_surface->surface;
 	}
 	return NULL;
-}
-
-struct view *
-view_get_root(struct view *view)
-{
-	assert(view);
-	if (view->impl->get_root) {
-		return view->impl->get_root(view);
-	}
-	return view;
 }
 
 void
@@ -168,26 +157,6 @@ view_adjust_size(struct view *view, int *w, int *h)
 }
 
 static void
-_minimize(struct view *view, bool minimized, bool *need_refocus)
-{
-	assert(view);
-	if (view->st->minimized == minimized) {
-		return;
-	}
-
-	view_set_minimized(view->id, minimized);
-	view_update_visibility(view);
-
-	/*
-	 * Need to focus a different view when:
-	 *   - minimizing the active view
-	 *   - unminimizing any mapped view
-	 */
-	*need_refocus |=
-		(minimized ? (view == g_server.active_view) : view->st->mapped);
-}
-
-static void
 view_append_children(struct view *view, struct wl_array *children)
 {
 	assert(view);
@@ -196,57 +165,22 @@ view_append_children(struct view *view, struct wl_array *children)
 	}
 }
 
-static void
-minimize_sub_views(struct view *view, bool minimized, bool *need_refocus)
-{
-	struct view **child;
-	struct wl_array children;
-
-	wl_array_init(&children);
-	view_append_children(view, &children);
-	wl_array_for_each(child, &children) {
-		_minimize(*child, minimized, need_refocus);
-		minimize_sub_views(*child, minimized, need_refocus);
-	}
-	wl_array_release(&children);
-}
-
-/*
- * Minimize the whole view-hierarchy from top to bottom regardless of which one
- * in the hierarchy requested the minimize. For example, if an 'About' or
- * 'Open File' dialog is minimized, its toplevel is minimized also. And vice
- * versa.
- */
 void
-view_minimize(struct view *view, bool minimized)
+view_notify_minimize(struct view *view, bool minimized)
 {
 	assert(view);
-	bool need_refocus = false;
-
-	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
-		wlr_log(WLR_ERROR, "not minimizing window while window switching");
-		return;
-	}
-
-	/*
-	 * Minimize the root window first because some xwayland clients send a
-	 * request-unmap to sub-windows at this point (for example gimp and its
-	 * 'open file' dialog), so it saves trying to unmap them twice
-	 */
-	struct view *root = view_get_root(view);
-	_minimize(root, minimized, &need_refocus);
-	minimize_sub_views(root, minimized, &need_refocus);
 
 	/*
 	 * Update focus only at the end to avoid repeated focus changes.
 	 * desktop_focus_view() will raise all sibling views together.
 	 */
-	if (need_refocus) {
-		if (minimized) {
+	if (minimized) {
+		// Check if active view was minimized (even by a sibling)
+		if (g_server.active_view && g_server.active_view->st->minimized) {
 			desktop_focus_topmost_view();
-		} else {
-			desktop_focus_view(view, /* raise */ true);
 		}
+	} else {
+		desktop_focus_view(view, /* raise */ true);
 	}
 }
 
@@ -415,11 +349,11 @@ view_move_to_front(struct view *view)
 	 * raise it in front of its sub-view).
 	 */
 	struct view *front = wl_container_of(g_server.views.next, front, link);
-	if (view == front || view == view_get_root(front)) {
+	if (view == front || view == view_get_root(front->id)) {
 		return;
 	}
 
-	struct view *root = view_get_root(view);
+	struct view *root = view_get_root(view->id);
 	assert(root);
 
 	move_to_front(root);
@@ -452,7 +386,7 @@ view_get_modal_dialog(struct view *view)
 
 	/* check sibling views */
 	struct view *dialog = NULL;
-	struct view *root = view_get_root(view);
+	struct view *root = view_get_root(view->id);
 	struct wl_array children;
 	struct view **child;
 
@@ -525,25 +459,9 @@ view_inhibits_actions(struct view *view, struct wl_list *actions)
 
 /* Used in both (un)map and (un)minimize */
 void
-view_update_visibility(struct view *view)
+view_set_visible(struct view *view, bool visible)
 {
-	bool visible = view->st->mapped && !view->st->minimized;
-	if (visible == view->scene_tree->node.enabled) {
-		return;
-	}
-
 	wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
-
-	/*
-	 * Show top layer when a fullscreen view is hidden.
-	 * Hide it if a fullscreen view is shown (or uncovered).
-	 */
-	desktop_update_top_layer_visibility();
-
-	/* Update usable area to account for XWayland "struts" (panels) */
-	if (view_has_strut_partial(view)) {
-		output_update_all_usable_areas(false);
-	}
 
 	/* View might have been unmapped/minimized during move/resize */
 	if (!visible) {
