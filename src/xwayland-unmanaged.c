@@ -112,8 +112,9 @@ focus_next_surface(struct wlr_xwayland_surface *xsurface)
 	 * If modifying this logic, please test for regressions with
 	 * menus/tooltips in JetBrains CLion or similar.
 	 */
-	if (g_server.active_view) {
-		seat_focus_surface(view_get_surface(g_server.active_view));
+	struct view *active_view = view_get_active();
+	if (active_view) {
+		seat_focus_surface(view_get_surface(active_view));
 	}
 }
 

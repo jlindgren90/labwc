@@ -567,28 +567,7 @@ xdg_toplevel_view_get_root_id(struct view *view)
 	return root_view->id;
 }
 
-static void
-xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
-{
-	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(self);
-
-	for (int i = 0, n = view_count(); i < n; i++) {
-		struct view *view = view_nth(i);
-		if (view == self) {
-			continue;
-		}
-		if (!view->xdg_surface || !view->st->mapped) {
-			continue;
-		}
-		if (top_parent_of(view) != toplevel) {
-			continue;
-		}
-		struct view **child = wl_array_add(children, sizeof(*child));
-		*child = view;
-	}
-}
-
-static bool
+bool
 xdg_toplevel_view_is_modal_dialog(struct view *view)
 {
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
@@ -697,8 +676,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 
 static const struct view_impl xdg_toplevel_view_impl = {
 	.close = xdg_toplevel_view_close,
-	.append_children = xdg_toplevel_view_append_children,
-	.is_modal_dialog = xdg_toplevel_view_is_modal_dialog,
 	.get_size_hints = xdg_toplevel_view_get_size_hints,
 };
 

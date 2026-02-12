@@ -64,6 +64,7 @@ void view_raise_impl(CView *view);
 void view_notify_raise(CView *view);
 
 ViewId xdg_toplevel_view_get_root_id(CView *view);
+_Bool xdg_toplevel_view_is_modal_dialog(CView *view);
 void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
@@ -71,6 +72,7 @@ void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 
 ViewId xwayland_view_get_root_id(CView *view);
+_Bool xwayland_view_is_modal_dialog(CView *view);
 void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);

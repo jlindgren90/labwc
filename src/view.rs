@@ -74,6 +74,14 @@ impl View {
         }
     }
 
+    pub fn is_modal_dialog(&self) -> bool {
+        if self.is_xwayland {
+            unsafe { xwayland_view_is_modal_dialog(self.c_ptr) }
+        } else {
+            unsafe { xdg_toplevel_view_is_modal_dialog(self.c_ptr) }
+        }
+    }
+
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.app_id != app_id {
             self.app_id = app_id;

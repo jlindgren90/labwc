@@ -510,15 +510,7 @@ handle_focus_change(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (view != g_server.active_view) {
-		if (g_server.active_view) {
-			view_set_active(g_server.active_view->id, false);
-		}
-		if (view) {
-			view_set_active(view->id, true);
-		}
-		g_server.active_view = view;
-	}
+	view_set_active(view ? view->id : 0 /* none */);
 }
 
 void
@@ -757,8 +749,11 @@ seat_focus_override_begin(enum input_mode input_mode,
 void
 seat_focus_override_end(bool restore_focus)
 {
-	g_server.input_mode = LAB_INPUT_STATE_PASSTHROUGH;
-
+	/*
+	 * Give focus back to the previously focused surface.
+	 * Do this *before* resetting input_mode to avoid calling
+	 * view_set_active() unnecessarily.
+	 */
 	if (g_seat.focus_override.surface) {
 		if (restore_focus) {
 			seat_focus(g_seat.focus_override.surface,
@@ -768,6 +763,8 @@ seat_focus_override_end(bool restore_focus)
 		wl_list_remove(&g_seat.focus_override.surface_destroy.link);
 		g_seat.focus_override.surface = NULL;
 	}
+
+	g_server.input_mode = LAB_INPUT_STATE_PASSTHROUGH;
 
 	if (restore_focus) {
 		cursor_update_focus();

@@ -48,8 +48,6 @@ struct view_size_hints {
 
 struct view_impl {
 	void (*close)(struct view *view);
-	void (*append_children)(struct view *self, struct wl_array *children);
-	bool (*is_modal_dialog)(struct view *self);
 	struct view_size_hints (*get_size_hints)(struct view *self);
 	/* returns true if view reserves space at screen edge */
 	bool (*has_strut_partial)(struct view *self);
@@ -148,15 +146,6 @@ void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
-
-bool view_is_modal_dialog(struct view *view);
-
-/**
- * view_get_modal_dialog() - returns any modal dialog found among this
- * view's children or siblings (or possibly this view itself). Applies
- * only to xwayland views and always returns NULL for xdg-shell views.
- */
-struct view *view_get_modal_dialog(struct view *view);
 
 /**
  * view_has_strut_partial() - returns true for views that reserve space
