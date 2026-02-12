@@ -3,6 +3,7 @@
 use crate::bindings::*;
 
 pub trait ViewImpl {
+    fn get_root_id(&self) -> ViewId;
     fn set_active(&self, active: bool);
     fn set_fullscreen(&self, fullscreen: bool);
     fn set_maximized(&self, maximized: ViewAxis);
@@ -24,6 +25,10 @@ impl XView {
 }
 
 impl ViewImpl for XView {
+    fn get_root_id(&self) -> ViewId {
+        unsafe { xwayland_view_get_root_id(self.c_ptr) }
+    }
+
     fn set_active(&self, active: bool) {
         unsafe { xwayland_view_set_active(self.c_ptr, active) };
     }
@@ -70,6 +75,10 @@ impl XdgView {
 }
 
 impl ViewImpl for XdgView {
+    fn get_root_id(&self) -> ViewId {
+        unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
+    }
+
     fn set_active(&self, active: bool) {
         unsafe { xdg_toplevel_view_set_active(self.c_ptr, active) };
     }

@@ -62,7 +62,7 @@ desktop_focus_view_internal(struct view *view, bool raise)
 		 * Unminimizing will map the view which triggers a call to this
 		 * function again (with raise=true).
 		 */
-		view_minimize(view, false);
+		view_minimize(view->id, false);
 		return;
 	}
 

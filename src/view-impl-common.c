@@ -7,8 +7,6 @@
 void
 view_notify_map(struct view *view)
 {
-	view_update_visibility(view);
-
 	/* Leave minimized, if minimized before map */
 	if (!view->st->minimized) {
 		desktop_focus_view(view, /* raise */ true);
@@ -21,8 +19,6 @@ view_notify_map(struct view *view)
 void
 view_notify_unmap(struct view *view)
 {
-	view_update_visibility(view);
-
 	/*
 	 * When exiting an xwayland application with multiple views
 	 * mapped, a race condition can occur: after the topmost view
