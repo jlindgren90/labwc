@@ -740,28 +740,7 @@ xwayland_view_get_root_id(struct view *view)
 	return root_view->id;
 }
 
-static void
-xwayland_view_append_children(struct view *self, struct wl_array *children)
-{
-	struct wlr_xwayland_surface *surface = xwayland_surface_from_view(self);
-
-	for (int i = 0, n = view_count(); i < n; i++) {
-		struct view *view = view_nth(i);
-		if (view == self) {
-			continue;
-		}
-		if (!view->xwayland_surface || !view->st->mapped) {
-			continue;
-		}
-		if (top_parent_of(view) != surface) {
-			continue;
-		}
-		struct view **child = wl_array_add(children, sizeof(*child));
-		*child = view;
-	}
-}
-
-static bool
+bool
 xwayland_view_is_modal_dialog(struct view *self)
 {
 	return xwayland_surface_from_view(self)->modal;
@@ -782,8 +761,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 
 static const struct view_impl xwayland_view_impl = {
 	.close = xwayland_view_close,
-	.append_children = xwayland_view_append_children,
-	.is_modal_dialog = xwayland_view_is_modal_dialog,
 	.get_size_hints = xwayland_view_get_size_hints,
 	.has_strut_partial = xwayland_view_has_strut_partial,
 };

@@ -9,6 +9,7 @@
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
+#include "view.h"
 
 struct session_lock_output {
 	struct wlr_scene_tree *tree;
@@ -323,7 +324,7 @@ handle_new_session_lock(struct wl_listener *listener, void *data)
 	assert(wl_list_empty(&manager->lock_outputs));
 
 	/* Remember the focused view to restore it on unlock */
-	manager->last_active_view = g_server.active_view;
+	manager->last_active_view = view_get_active();
 	seat_focus_surface(NULL);
 
 	struct output *output;

@@ -51,6 +51,12 @@ pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_get_modal_dialog(id: ViewId) -> *mut CView {
+    let views = views();
+    return views.get_c_ptr(views.get_modal_dialog(id).unwrap_or(0));
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_app_id(cstring(app_id));
@@ -83,10 +89,13 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_set_active(id: ViewId, active: bool) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_active(active);
-    }
+pub extern "C" fn view_get_active() -> *mut CView {
+    views().get_active()
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_set_active(id: ViewId) {
+    views_mut().set_active(id);
 }
 
 #[unsafe(no_mangle)]

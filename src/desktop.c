@@ -78,7 +78,7 @@ desktop_focus_view(struct view *view, bool raise)
 	 * the dialog instead. It does not need to be raised separately
 	 * since view_raise() raises all sibling views together.
 	 */
-	struct view *dialog = view_get_modal_dialog(view);
+	struct view *dialog = view_get_modal_dialog(view->id);
 	set_or_offer_focus(dialog ? dialog : view);
 }
 

@@ -10,6 +10,7 @@ pub struct Views {
     by_id: BTreeMap<ViewId, View>, // in creation order
     max_used_id: ViewId,
     order: Vec<ViewId>, // from back to front
+    active_id: ViewId,
     foreign_toplevel_clients: Vec<*mut WlResource>,
 }
 
@@ -51,6 +52,27 @@ impl Views {
         self.by_id.get(&id).map_or(0, View::get_root_id)
     }
 
+    pub fn get_modal_dialog(&self, id: ViewId) -> Option<ViewId> {
+        if let Some(view) = self.by_id.get(&id) {
+            // Check if view itself is a modal dialog
+            if view.get_state().mapped && view.is_modal_dialog() {
+                return Some(id);
+            }
+            // Check child/sibling views (in reverse stacking order)
+            let root = view.get_root_id();
+            for &i in self.order.iter().rev().filter(|&&i| i != id && i != root) {
+                if let Some(v) = self.by_id.get(&i)
+                    && v.get_state().mapped
+                    && v.get_root_id() == root
+                    && v.is_modal_dialog()
+                {
+                    return Some(i);
+                }
+            }
+        }
+        return None;
+    }
+
     // Returns CView pointer to pass to view_notify_map()
     pub fn map_common(&mut self, id: ViewId, focus_mode: ViewFocusMode) -> *mut CView {
         if let Some(view) = self.by_id.get_mut(&id) {
@@ -79,6 +101,24 @@ impl Views {
             }
         }
         return null_mut();
+    }
+
+    pub fn get_active(&self) -> *mut CView {
+        let active = self.by_id.get(&self.active_id);
+        return active.map_or(null_mut(), View::get_c_ptr);
+    }
+
+    pub fn set_active(&mut self, id: ViewId) {
+        if id != self.active_id {
+            let prev_id = self.active_id;
+            self.active_id = id;
+            if let Some(prev) = self.by_id.get_mut(&prev_id) {
+                prev.set_active(false);
+            }
+            if let Some(view) = self.by_id.get_mut(&id) {
+                view.set_active(true);
+            }
+        }
     }
 
     pub fn adjust_for_layout_change(&mut self) {
