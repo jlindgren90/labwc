@@ -48,8 +48,6 @@ struct view_size_hints {
 
 struct view_impl {
 	void (*close)(struct view *view);
-	struct view *(*get_parent)(struct view *self);
-	struct view *(*get_root)(struct view *self);
 	void (*append_children)(struct view *self, struct wl_array *children);
 	bool (*is_modal_dialog)(struct view *self);
 	struct view_size_hints (*get_size_hints)(struct view *self);
@@ -137,8 +135,6 @@ struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
 struct wlr_surface *view_get_surface(struct view *view);
 
-struct view *view_get_root(struct view *view);
-
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
@@ -146,7 +142,6 @@ void view_close(struct view *view);
 
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
-void view_minimize(struct view *view, bool minimized);
 
 void view_toggle_maximize(struct view *view, enum view_axis axis);
 
@@ -183,8 +178,6 @@ void view_set_icon(struct view *view, struct wl_array *buffers);
 
 struct view_size_hints view_get_size_hints(struct view *view);
 void view_adjust_size(struct view *view, int *w, int *h);
-
-void view_update_visibility(struct view *view);
 
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);

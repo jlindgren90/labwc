@@ -570,7 +570,7 @@ run_action(struct view *view, struct action *action,
 		break;
 	case ACTION_TYPE_ICONIFY:
 		if (view) {
-			view_minimize(view, true);
+			view_minimize(view->id, true);
 		}
 		break;
 	case ACTION_TYPE_MOVE:
