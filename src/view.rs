@@ -65,8 +65,20 @@ impl View {
         return view;
     }
 
+    pub fn get_c_ptr(&self) -> *mut CView {
+        self.c_ptr
+    }
+
     pub fn get_state(&self) -> &ViewState {
         &self.state
+    }
+
+    pub fn get_root_id(&self) -> ViewId {
+        if self.is_xwayland {
+            unsafe { xwayland_view_get_root_id(self.c_ptr) }
+        } else {
+            unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
+        }
     }
 
     pub fn set_app_id(&mut self, app_id: CString) {
@@ -93,21 +105,25 @@ impl View {
         }
     }
 
-    // Returns CView pointer to pass to view_notify_map()
-    pub fn set_mapped(&mut self, focus_mode: ViewFocusMode) -> *mut CView {
+    pub fn set_mapped(&mut self, focus_mode: ViewFocusMode, was_shown: &mut bool) {
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.focus_mode = focus_mode;
-        return self.c_ptr;
+        if !self.state.minimized {
+            unsafe { view_set_visible(self.c_ptr, true) };
+            *was_shown = true;
+        }
     }
 
-    // Returns CView pointer to pass to view_notify_unmap()
-    pub fn set_unmapped(&mut self) -> *mut CView {
+    pub fn set_unmapped(&mut self, was_hidden: &mut bool) {
         self.state.mapped = false;
+        if !self.state.minimized {
+            unsafe { view_set_visible(self.c_ptr, false) };
+            *was_hidden = true;
+        }
         for resource in self.foreign_toplevels.drain(..) {
             resource.close();
         }
-        return self.c_ptr;
     }
 
     pub fn set_active(&mut self, active: bool) {
@@ -156,13 +172,17 @@ impl View {
         }
     }
 
-    pub fn set_minimized(&mut self, minimized: bool) {
+    pub fn set_minimized(&mut self, minimized: bool, visibility_changed: &mut bool) {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
             if self.is_xwayland {
                 unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
             }
             self.send_foreign_toplevel_state();
+            if self.state.mapped {
+                unsafe { view_set_visible(self.c_ptr, !minimized) };
+                *visibility_changed = true;
+            }
         }
     }
 

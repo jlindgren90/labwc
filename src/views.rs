@@ -32,17 +32,28 @@ impl Views {
         self.by_id.get_mut(&id)
     }
 
+    pub fn get_c_ptr(&self, id: ViewId) -> *mut CView {
+        self.by_id.get(&id).map_or(null_mut(), View::get_c_ptr)
+    }
+
+    pub fn get_root_of(&self, id: ViewId) -> ViewId {
+        self.by_id.get(&id).map_or(0, View::get_root_id)
+    }
+
     // Returns CView pointer to pass to view_notify_map()
     pub fn map_common(&mut self, id: ViewId, focus_mode: ViewFocusMode) -> *mut CView {
         if let Some(view) = self.by_id.get_mut(&id) {
-            let view_ptr = view.set_mapped(focus_mode);
+            let mut was_shown = false;
+            view.set_mapped(focus_mode, &mut was_shown);
             // Only focusable views should be shown in taskbars etc.
             if view.get_state().focusable() {
                 for &client in &self.foreign_toplevel_clients {
                     view.add_foreign_toplevel(client);
                 }
             }
-            return view_ptr;
+            if was_shown {
+                return view.get_c_ptr();
+            }
         }
         return null_mut();
     }
@@ -50,7 +61,11 @@ impl Views {
     // Returns CView pointer to pass to view_notify_unmap()
     pub fn unmap_common(&mut self, id: ViewId) -> *mut CView {
         if let Some(view) = self.by_id.get_mut(&id) {
-            return view.set_unmapped();
+            let mut was_hidden = false;
+            view.set_unmapped(&mut was_hidden);
+            if was_hidden {
+                return view.get_c_ptr();
+            }
         }
         return null_mut();
     }
@@ -59,6 +74,25 @@ impl Views {
         for v in self.by_id.values_mut() {
             v.adjust_for_layout_change();
         }
+    }
+
+    // Returns CView pointer to pass to view_notify_minimize()
+    pub fn minimize(&mut self, id: ViewId, minimized: bool) -> *mut CView {
+        if let Some(view) = self.by_id.get(&id)
+            && view.get_state().minimized != minimized
+        {
+            // Minimize/unminimize all related views together
+            let view_ptr = view.get_c_ptr();
+            let root = view.get_root_id();
+            let mut visibility_changed = false;
+            for v in self.by_id.values_mut().filter(|v| v.get_root_id() == root) {
+                v.set_minimized(minimized, &mut visibility_changed);
+            }
+            if visibility_changed {
+                return view_ptr;
+            }
+        }
+        return null_mut();
     }
 
     pub fn add_foreign_toplevel_client(&mut self, client: *mut WlResource) {

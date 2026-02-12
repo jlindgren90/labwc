@@ -173,7 +173,7 @@ init_cycle(void)
 {
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
-		if (!view_is_focusable(view->st) || view != view_get_root(view)) {
+		if (!view_is_focusable(view->st) || view != view_get_root(view->id)) {
 			continue;
 		}
 		wl_list_append(&g_server.cycle.views, &view->cycle_link);

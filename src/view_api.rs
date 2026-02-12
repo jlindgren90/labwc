@@ -35,6 +35,12 @@ pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
+    let views = views();
+    return views.get_c_ptr(views.get_root_of(id));
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_app_id(cstring(app_id));
@@ -53,6 +59,7 @@ pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
     let view_ptr = views_mut().map_common(id, focus_mode);
     if !view_ptr.is_null() {
         unsafe { view_notify_map(view_ptr) };
+        unsafe { desktop_update_top_layer_visibility() };
     }
 }
 
@@ -61,6 +68,7 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
     let view_ptr = views_mut().unmap_common(id);
     if !view_ptr.is_null() {
         unsafe { view_notify_unmap(view_ptr) };
+        unsafe { desktop_update_top_layer_visibility() };
     }
 }
 
@@ -75,13 +83,6 @@ pub extern "C" fn view_set_active(id: ViewId, active: bool) {
 pub extern "C" fn view_set_maximized(id: ViewId, maximized: ViewAxis) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_maximized(maximized);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_minimized(id: ViewId, minimized: bool) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_minimized(minimized);
     }
 }
 
@@ -187,6 +188,15 @@ pub extern "C" fn view_tile(id: ViewId, edge: LabEdge) {
             view.maximize(VIEW_AXIS_NONE);
         }
         view.tile(edge);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
+    let view_ptr = views_mut().minimize(id, minimized);
+    if !view_ptr.is_null() {
+        unsafe { view_notify_minimize(view_ptr, minimized) };
+        unsafe { desktop_update_top_layer_visibility() };
     }
 }
 

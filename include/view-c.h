@@ -50,19 +50,23 @@ typedef struct ViewState {
 } ViewState;
 
 _Bool view_has_strut_partial(CView *view);
+void view_set_visible(CView *view, _Bool visible);
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
 void view_notify_unmap(CView *view);
 void view_notify_active(CView *view);
 void view_notify_fullscreen(CView *view);
+void view_notify_minimize(CView *view, _Bool minimized);
 
+ViewId xdg_toplevel_view_get_root_id(CView *view);
 void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 
+ViewId xwayland_view_get_root_id(CView *view);
 void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);

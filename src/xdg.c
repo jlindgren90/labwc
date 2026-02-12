@@ -435,7 +435,7 @@ static void
 handle_request_minimize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_minimize);
-	view_minimize(view, xdg_toplevel_from_view(view)->requested.minimized);
+	view_minimize(view->id, xdg_toplevel_from_view(view)->requested.minimized);
 }
 
 static void
@@ -592,11 +592,12 @@ top_parent_of(struct view *view)
 }
 
 /* Return the most senior parent (=root) view */
-static struct view *
-xdg_toplevel_view_get_root(struct view *view)
+ViewId
+xdg_toplevel_view_get_root_id(struct view *view)
 {
 	struct wlr_xdg_toplevel *root = top_parent_of(view);
-	return (struct view *)root->base->data;
+	struct view *root_view = root->base->data;
+	return root_view->id;
 }
 
 static void
@@ -776,8 +777,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 
 static const struct view_impl xdg_toplevel_view_impl = {
 	.close = xdg_toplevel_view_close,
-	.get_parent = xdg_toplevel_view_get_parent,
-	.get_root = xdg_toplevel_view_get_root,
 	.append_children = xdg_toplevel_view_append_children,
 	.is_modal_dialog = xdg_toplevel_view_is_modal_dialog,
 	.get_size_hints = xdg_toplevel_view_get_size_hints,
