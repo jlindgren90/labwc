@@ -568,7 +568,7 @@ run_action(struct view *view, struct action *action, struct cursor_context *ctx)
 		break;
 	case ACTION_TYPE_FOCUS:
 		if (view) {
-			desktop_focus_view(view, /*raise*/ false);
+			view_focus(view->id, /*raise*/ false);
 		}
 		break;
 	case ACTION_TYPE_ICONIFY:

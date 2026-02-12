@@ -20,67 +20,6 @@
 #include <wlr/xwayland.h>
 #endif
 
-static void
-set_or_offer_focus(struct view *view)
-{
-	switch (view->st->focus_mode) {
-	case VIEW_FOCUS_MODE_ALWAYS:
-		if (view->surface != g_seat.seat->keyboard_state.focused_surface) {
-			seat_focus_surface(view->surface);
-		}
-		break;
-	case VIEW_FOCUS_MODE_LIKELY:
-	case VIEW_FOCUS_MODE_UNLIKELY:
-		view_offer_focus(view->id);
-		break;
-	case VIEW_FOCUS_MODE_NEVER:
-		break;
-	}
-}
-
-void
-desktop_focus_view(struct view *view, bool raise)
-{
-	assert(view);
-	/*
-	 * Guard against views with no mapped surfaces when handling
-	 * 'request_activate' and 'request_minimize'.
-	 */
-	if (!view->surface) {
-		return;
-	}
-
-	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
-		wlr_log(WLR_DEBUG, "not focusing window while window switching");
-		return;
-	}
-
-	if (view->st->minimized) {
-		/*
-		 * Unminimizing will map the view which triggers a call to this
-		 * function again (with raise=true).
-		 */
-		view_minimize(view->id, false);
-		return;
-	}
-
-	if (!view->st->mapped) {
-		return;
-	}
-
-	if (raise) {
-		view_raise(view->id);
-	}
-
-	/*
-	 * If any child/sibling of the view is a modal dialog, focus
-	 * the dialog instead. It does not need to be raised separately
-	 * since view_raise() raises all sibling views together.
-	 */
-	struct view *dialog = view_get_modal_dialog(view->id);
-	set_or_offer_focus(dialog ? dialog : view);
-}
-
 /* TODO: focus layer-shell surfaces also? */
 void
 desktop_focus_view_or_surface(struct view *view, struct wlr_surface *surface,
@@ -88,7 +27,7 @@ desktop_focus_view_or_surface(struct view *view, struct wlr_surface *surface,
 {
 	assert(view || surface);
 	if (view) {
-		desktop_focus_view(view, raise);
+		view_focus(view->id, raise);
 #if HAVE_XWAYLAND
 	} else {
 		struct wlr_xwayland_surface *xsurface =
@@ -97,41 +36,6 @@ desktop_focus_view_or_surface(struct view *view, struct wlr_surface *surface,
 			seat_focus_surface(surface);
 		}
 #endif
-	}
-}
-
-static struct view *
-desktop_topmost_focusable_view(void)
-{
-	struct view *view;
-	struct wl_list *node_list;
-	struct wlr_scene_node *node;
-	node_list = &g_server.view_tree->children;
-	wl_list_for_each_reverse(node, node_list, link) {
-		if (!node->data) {
-			/* We found some non-view, most likely the region overlay */
-			continue;
-		}
-		view = node_view_from_node(node);
-		if (view_is_focusable(view->st) && !view->st->minimized) {
-			return view;
-		}
-	}
-	return NULL;
-}
-
-void
-desktop_focus_topmost_view(void)
-{
-	struct view *view = desktop_topmost_focusable_view();
-	if (view) {
-		desktop_focus_view(view, /*raise*/ true);
-	} else {
-		/*
-		 * Defocus previous focused surface/view if no longer
-		 * focusable (e.g. unmapped or on a different workspace).
-		 */
-		seat_focus_surface(NULL);
 	}
 }
 

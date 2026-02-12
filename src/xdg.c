@@ -823,7 +823,7 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 	 */
 
 	wlr_log(WLR_DEBUG, "Activating surface");
-	desktop_focus_view(view, /*raise*/ true);
+	view_focus(view->id, /*raise*/ true);
 }
 
 /*

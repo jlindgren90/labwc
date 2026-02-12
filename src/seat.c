@@ -518,9 +518,15 @@ handle_new_virtual_keyboard(struct wl_listener *listener, void *data)
 	seat_add_device(input);
 }
 
+static bool no_focus_notify = false;
+
 static void
 handle_focus_change(struct wl_listener *listener, void *data)
 {
+	if (no_focus_notify) {
+		return;
+	}
+
 	struct wlr_seat_keyboard_focus_change_event *event = data;
 	struct wlr_surface *surface = event->new_surface;
 	struct view *view = surface ? view_from_wlr_surface(surface) : NULL;
@@ -723,6 +729,14 @@ seat_focus_surface(struct wlr_surface *surface)
 }
 
 void
+seat_focus_surface_no_notify(struct wlr_surface *surface)
+{
+	no_focus_notify = true;
+	seat_focus_surface(surface);
+	no_focus_notify = false;
+}
+
+void
 seat_focus_lock_surface(struct wlr_surface *surface)
 {
 	seat_focus(surface, /*replace_exclusive_layer*/ true,
@@ -734,7 +748,7 @@ seat_set_focus_layer(struct wlr_layer_surface_v1 *layer)
 {
 	if (!layer) {
 		g_seat.focused_layer = NULL;
-		desktop_focus_topmost_view();
+		view_focus_topmost();
 		return;
 	}
 	seat_focus(layer->surface, /*replace_exclusive_layer*/ true,

@@ -52,7 +52,7 @@ impl Views {
         self.by_id.get(&id).map_or(0, View::get_root_id)
     }
 
-    pub fn get_modal_dialog(&self, id: ViewId) -> Option<ViewId> {
+    fn get_modal_dialog(&self, id: ViewId) -> Option<ViewId> {
         if let Some(view) = self.by_id.get(&id) {
             // Check if view itself is a modal dialog
             if view.get_state().mapped && view.is_modal_dialog() {
@@ -73,8 +73,7 @@ impl Views {
         return None;
     }
 
-    // Returns CView pointer to pass to view_notify_map()
-    pub fn map_common(&mut self, id: ViewId, focus_mode: ViewFocusMode) -> *mut CView {
+    pub fn map_common(&mut self, id: ViewId, focus_mode: ViewFocusMode) {
         if let Some(view) = self.by_id.get_mut(&id) {
             let mut was_shown = false;
             view.set_mapped(focus_mode, &mut was_shown);
@@ -85,31 +84,33 @@ impl Views {
                 }
             }
             if was_shown {
-                let view_ptr = view.get_c_ptr();
                 self.update_top_layer_visibility();
-                return view_ptr;
+                self.focus(id, /* raise */ true);
             }
         }
-        return null_mut();
     }
 
-    // Returns CView pointer to pass to view_notify_unmap()
-    pub fn unmap_common(&mut self, id: ViewId) -> *mut CView {
+    pub fn unmap_common(&mut self, id: ViewId) {
         if let Some(view) = self.by_id.get_mut(&id) {
             let mut was_hidden = false;
             view.set_unmapped(&mut was_hidden);
             if was_hidden {
-                let view_ptr = view.get_c_ptr();
                 self.update_top_layer_visibility();
-                return view_ptr;
+                if !self.is_active_visible() {
+                    self.focus_topmost();
+                }
             }
         }
-        return null_mut();
     }
 
     pub fn get_active(&self) -> *mut CView {
         let active = self.by_id.get(&self.active_id);
         return active.map_or(null_mut(), View::get_c_ptr);
+    }
+
+    pub fn is_active_visible(&self) -> bool {
+        let active = self.by_id.get(&self.active_id);
+        return active.map_or(false, |a| a.get_state().visible());
     }
 
     pub fn set_active(&mut self, id: ViewId) {
@@ -162,24 +163,28 @@ impl Views {
         return view_ptr;
     }
 
-    // Returns CView pointer to pass to view_notify_minimize()
-    pub fn minimize(&mut self, id: ViewId, minimized: bool) -> *mut CView {
+    // Returns true if visibility of any view changed
+    pub fn minimize(&mut self, id: ViewId, minimized: bool) -> bool {
+        let mut visibility_changed = false;
         if let Some(view) = self.by_id.get(&id)
             && view.get_state().minimized != minimized
         {
             // Minimize/unminimize all related views together
-            let view_ptr = view.get_c_ptr();
             let root = view.get_root_id();
-            let mut visibility_changed = false;
             for v in self.by_id.values_mut().filter(|v| v.get_root_id() == root) {
                 v.set_minimized(minimized, &mut visibility_changed);
             }
-            if visibility_changed {
-                self.update_top_layer_visibility();
-                return view_ptr;
-            }
         }
-        return null_mut();
+        if visibility_changed {
+            if !minimized {
+                self.focus(id, /* raise */ true);
+            } else if !self.is_active_visible() {
+                self.focus_topmost();
+            }
+            // Might be redundant after raise, but be sure
+            self.update_top_layer_visibility();
+        }
+        return visibility_changed;
     }
 
     pub fn raise(&mut self, id: ViewId) {
@@ -213,6 +218,34 @@ impl Views {
         self.order.append(&mut ids_to_raise);
         self.update_top_layer_visibility();
         unsafe { cursor_update_focus() };
+    }
+
+    pub fn focus(&mut self, id: ViewId, raise: bool) {
+        // Focus a modal dialog rather than its parent view
+        let id_to_focus = self.get_modal_dialog(id).unwrap_or(id);
+        if raise {
+            self.raise(id_to_focus);
+        }
+        if let Some(view) = self.by_id.get_mut(&id_to_focus)
+            && view.focus()
+        {
+            self.set_active(id_to_focus);
+        }
+    }
+
+    pub fn focus_topmost(&mut self) {
+        for &i in self.order.iter().rev() {
+            if let Some(state) = self.by_id.get(&i).map(View::get_state)
+                && state.focusable()
+                && !state.minimized
+            {
+                self.focus(i, /* raise */ true);
+                return;
+            }
+        }
+        if unsafe { view_focus_impl(null_mut()) } {
+            self.set_active(0);
+        }
     }
 
     pub fn add_foreign_toplevel_client(&mut self, client: *mut WlResource) {

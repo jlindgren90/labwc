@@ -290,39 +290,17 @@ void xdg_shell_finish(void);
  */
 
 /**
- * desktop_focus_view() - do multiple things to make a view "active" and
- * ready to use:
- *  - unminimize
- *  - switch to the workspace it's on
- *  - give input (keyboard) focus
- *  - optionally raise above other views
- *
- * It's okay to call this function even if the view isn't mapped or the
- * session is locked; it will simply do nothing.
- */
-void desktop_focus_view(struct view *view, bool raise);
-
-/**
  * desktop_focus_view_or_surface() - like desktop_focus_view() but can
  * also focus other (e.g. xwayland-unmanaged) surfaces
  */
 void desktop_focus_view_or_surface(struct view *view,
 	struct wlr_surface *surface, bool raise);
 
-/**
- * desktop_focus_topmost_view() - focus the topmost view on the current
- * workspace, skipping views that claim not to want focus (those can
- * still be focused by explicit request, e.g. by clicking in them).
- *
- * This function is typically called when the focused view is hidden
- * (closes, is minimized, etc.) to focus the "next" view underneath.
- */
-void desktop_focus_topmost_view(void);
-
 void seat_init(void);
 void seat_finish(void);
 void seat_reconfigure(void);
 void seat_focus_surface(struct wlr_surface *surface);
+void seat_focus_surface_no_notify(struct wlr_surface *surface);
 
 void seat_pointer_end_grab(struct wlr_surface *surface);
 
