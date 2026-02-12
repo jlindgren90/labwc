@@ -27,7 +27,8 @@ view_notify_unmap(struct view *view)
 	 * remains NULL). To avoid being left with no active view at
 	 * all, check for that case also.
 	 */
-	if (view == g_server.active_view || !g_server.active_view) {
+	struct view *active_view = view_get_active();
+	if (view == active_view || !active_view) {
 		desktop_focus_topmost_view();
 	}
 }
