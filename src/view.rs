@@ -80,6 +80,10 @@ impl View {
         self.v.get_root_id()
     }
 
+    pub fn is_modal_dialog(&self) -> bool {
+        self.v.is_modal_dialog()
+    }
+
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
