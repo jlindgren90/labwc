@@ -47,7 +47,7 @@ toplevel_handle_set_minimized(struct wl_client *client,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		view_minimize(view, true);
+		view_minimize(view->id, true);
 	}
 }
 
@@ -57,7 +57,7 @@ toplevel_handle_unset_minimized(struct wl_client *client,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		view_minimize(view, false);
+		view_minimize(view->id, false);
 	}
 }
 

@@ -176,7 +176,7 @@ init_cycle(void)
 {
 	struct view *view;
 	wl_list_for_each(view, &server.views, link) {
-		if (!view_is_focusable(view->st) || view != view_get_root(view)) {
+		if (!view_is_focusable(view->st) || view != view_get_root(view->id)) {
 			continue;
 		}
 		wl_list_append(&server.cycle.views, &view->cycle_link);
