@@ -156,26 +156,6 @@ view_adjust_size(struct view *view, int *w, int *h)
 }
 
 void
-view_notify_minimize(struct view *view, bool minimized)
-{
-	assert(view);
-
-	/*
-	 * Update focus only at the end to avoid repeated focus changes.
-	 * desktop_focus_view() will raise all sibling views together.
-	 */
-	if (minimized) {
-		// Check if active view was minimized (even by a sibling)
-		struct view *active_view = view_get_active();
-		if (active_view && active_view->st->minimized) {
-			desktop_focus_topmost_view();
-		}
-	} else {
-		desktop_focus_view(view, /* raise */ true);
-	}
-}
-
-void
 view_toggle_maximize(struct view *view, enum view_axis axis)
 {
 	assert(view);
@@ -301,6 +281,18 @@ void
 view_raise_impl(struct view *view)
 {
 	wlr_scene_node_raise_to_top(&view->scene_tree->node);
+}
+
+bool
+view_focus_impl(struct view *view)
+{
+	struct wlr_surface *surface = view ? view_get_surface(view) : NULL;
+
+	if (g_seat.wlr_seat->keyboard_state.focused_surface != surface) {
+		seat_focus_surface_no_notify(surface);
+	}
+
+	return g_seat.wlr_seat->keyboard_state.focused_surface == surface;
 }
 
 bool

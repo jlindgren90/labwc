@@ -52,12 +52,6 @@ pub extern "C" fn view_get_root(id: ViewId) -> *mut CView {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_get_modal_dialog(id: ViewId) -> *mut CView {
-    let views = views();
-    return views.get_c_ptr(views.get_modal_dialog(id).unwrap_or(0));
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_app_id(cstring(app_id));
@@ -73,18 +67,12 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
-    let view_ptr = views_mut().map_common(id, focus_mode);
-    if !view_ptr.is_null() {
-        unsafe { view_notify_map(view_ptr) };
-    }
+    views_mut().map_common(id, focus_mode);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_unmap_common(id: ViewId) {
-    let view_ptr = views_mut().unmap_common(id);
-    if !view_ptr.is_null() {
-        unsafe { view_notify_unmap(view_ptr) };
-    }
+    views_mut().unmap_common(id);
 }
 
 #[unsafe(no_mangle)]
@@ -221,10 +209,7 @@ pub extern "C" fn view_tile(id: ViewId, edge: LabEdge) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
-    let view_ptr = views_mut().minimize(id, minimized);
-    if !view_ptr.is_null() {
-        unsafe { view_notify_minimize(view_ptr, minimized) };
-    }
+    views_mut().minimize(id, minimized);
 }
 
 #[unsafe(no_mangle)]
@@ -233,10 +218,22 @@ pub extern "C" fn view_raise(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_offer_focus(id: ViewId) {
-    if let Some(view) = views().get_view(id) {
-        view.offer_focus();
+pub extern "C" fn view_focus(id: ViewId, raise: bool) {
+    let mut views = views_mut();
+    // Unminimizing also focuses (and raises) the view
+    if !views.minimize(id, false) {
+        views.focus(id, raise);
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_focus_topmost() {
+    views_mut().focus_topmost();
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_refocus_active() {
+    views().refocus_active();
 }
 
 #[unsafe(no_mangle)]

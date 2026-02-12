@@ -54,13 +54,11 @@ _Bool view_has_strut_partial(CView *view);
 void view_set_visible(CView *view, _Bool visible);
 void view_notify_app_id_change(CView *view);
 void view_notify_title_change(CView *view);
-void view_notify_map(CView *view);
-void view_notify_unmap(CView *view);
 void view_notify_active(CView *view);
 void view_notify_ssd_enabled(CView *view);
 void view_notify_fullscreen(CView *view);
-void view_notify_minimize(CView *view, _Bool minimized);
 void view_raise_impl(CView *view);
+_Bool view_focus_impl(CView *view);
 
 ViewId xdg_toplevel_view_get_root_id(CView *view);
 _Bool xdg_toplevel_view_is_modal_dialog(CView *view);

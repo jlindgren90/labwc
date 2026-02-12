@@ -16,71 +16,6 @@
 #include "ssd.h"
 #include "view.h"
 
-static void
-set_or_offer_focus(struct view *view)
-{
-	struct wlr_surface *surface = view_get_surface(view);
-
-	switch (view->st->focus_mode) {
-	case VIEW_FOCUS_MODE_ALWAYS:
-		if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
-			seat_focus_surface(surface);
-		}
-		break;
-	case VIEW_FOCUS_MODE_LIKELY:
-	case VIEW_FOCUS_MODE_UNLIKELY:
-		if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
-			view_offer_focus(view->id);
-		}
-		break;
-	case VIEW_FOCUS_MODE_NEVER:
-		break;
-	}
-}
-
-void
-desktop_focus_view(struct view *view, bool raise)
-{
-	assert(view);
-	/*
-	 * Guard against views with no mapped surfaces when handling
-	 * 'request_activate' and 'request_minimize'.
-	 */
-	if (!view->st->mapped) {
-		return;
-	}
-
-	if (g_server.input_mode == LAB_INPUT_STATE_CYCLE) {
-		wlr_log(WLR_DEBUG, "not focusing window while window switching");
-		return;
-	}
-
-	if (view->st->minimized) {
-		/*
-		 * Unminimizing will map the view which triggers a call to this
-		 * function again (with raise=true).
-		 */
-		view_minimize(view->id, false);
-		return;
-	}
-
-	if (!view->st->mapped) {
-		return;
-	}
-
-	if (raise) {
-		view_raise(view->id);
-	}
-
-	/*
-	 * If any child/sibling of the view is a modal dialog, focus
-	 * the dialog instead. It does not need to be raised separately
-	 * since view_raise() raises all sibling views together.
-	 */
-	struct view *dialog = view_get_modal_dialog(view->id);
-	set_or_offer_focus(dialog ? dialog : view);
-}
-
 /* TODO: focus layer-shell surfaces also? */
 void
 desktop_focus_view_or_surface(struct view *view,
@@ -88,40 +23,13 @@ desktop_focus_view_or_surface(struct view *view,
 {
 	assert(view || surface);
 	if (view) {
-		desktop_focus_view(view, raise);
+		view_focus(view->id, raise);
 	} else {
 		struct wlr_xwayland_surface *xsurface =
 			wlr_xwayland_surface_try_from_wlr_surface(surface);
 		if (xsurface && wlr_xwayland_surface_override_redirect_wants_focus(xsurface)) {
 			seat_focus_surface(surface);
 		}
-	}
-}
-
-static struct view *
-desktop_topmost_focusable_view(void)
-{
-	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_nth(i);
-		if (view_is_focusable(view->st) && !view->st->minimized) {
-			return view;
-		}
-	}
-	return NULL;
-}
-
-void
-desktop_focus_topmost_view(void)
-{
-	struct view *view = desktop_topmost_focusable_view();
-	if (view) {
-		desktop_focus_view(view, /*raise*/ true);
-	} else {
-		/*
-		 * Defocus previous focused surface/view if no longer
-		 * focusable (e.g. unmapped or on a different workspace).
-		 */
-		seat_focus_surface(NULL);
 	}
 }
 

@@ -279,7 +279,7 @@ handle_lock_unlock(struct wl_listener *listener, void *data)
 	session_lock_destroy(manager);
 	manager->locked = false;
 
-	desktop_focus_topmost_view();
+	view_focus_topmost();
 	cursor_update_focus();
 }
 

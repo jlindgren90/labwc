@@ -4,35 +4,6 @@
 #include "labwc.h"
 #include "view.h"
 
-void
-view_notify_map(struct view *view)
-{
-	/* Leave minimized, if minimized before map */
-	if (!view->st->minimized) {
-		desktop_focus_view(view, /* raise */ true);
-	}
-
-	wlr_log(WLR_DEBUG, "[map] identifier=%s, title=%s", view->st->app_id,
-		view->st->title);
-}
-
-void
-view_notify_unmap(struct view *view)
-{
-	/*
-	 * When exiting an xwayland application with multiple views
-	 * mapped, a race condition can occur: after the topmost view
-	 * is unmapped, the next view under it is offered focus, but is
-	 * also unmapped before accepting focus (so g_server.active_view
-	 * remains NULL). To avoid being left with no active view at
-	 * all, check for that case also.
-	 */
-	struct view *active_view = view_get_active();
-	if (view == active_view || !active_view) {
-		desktop_focus_topmost_view();
-	}
-}
-
 static bool
 resizing_edge(struct view *view, enum lab_edge edge)
 {

@@ -413,10 +413,19 @@ impl View {
         unsafe { view_raise_impl(self.c_ptr) };
     }
 
-    pub fn offer_focus(&self) {
-        if self.is_xwayland {
-            unsafe { xwayland_view_offer_focus(self.c_ptr) };
+    // Returns true if focus was (immediately) changed
+    pub fn focus(&self) -> bool {
+        if self.state.mapped {
+            if self.state.focus_mode == VIEW_FOCUS_MODE_ALWAYS {
+                return unsafe { view_focus_impl(self.c_ptr) };
+            } else if self.is_xwayland
+                && (self.state.focus_mode == VIEW_FOCUS_MODE_UNLIKELY
+                    || self.state.focus_mode == VIEW_FOCUS_MODE_LIKELY)
+            {
+                unsafe { xwayland_view_offer_focus(self.c_ptr) };
+            }
         }
+        return false;
     }
 
     pub fn add_foreign_toplevel(&mut self, client: *mut WlResource) {

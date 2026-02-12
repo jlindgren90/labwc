@@ -95,27 +95,8 @@ focus_next_surface(struct wlr_xwayland_surface *xsurface)
 	 * Unmanaged surfaces do not clear the active view when mapped.
 	 * Therefore, we can simply give the focus back to the active
 	 * view when the last unmanaged surface is unmapped.
-	 *
-	 * Also note that resetting the focus here is only on the
-	 * compositor side. On the xwayland server side, focus is never
-	 * given to unmanaged surfaces to begin with - keyboard grabs
-	 * are used instead.
-	 *
-	 * In the case of Globally Active input windows, calling
-	 * view_offer_focus() at this point is both unnecessary and
-	 * insufficient, since it doesn't update the seat focus
-	 * immediately and ultimately results in a loss of focus.
-	 *
-	 * For the above reasons, we avoid calling desktop_focus_view()
-	 * here and instead call seat_focus_surface() directly.
-	 *
-	 * If modifying this logic, please test for regressions with
-	 * menus/tooltips in JetBrains CLion or similar.
 	 */
-	struct view *active_view = view_get_active();
-	if (active_view) {
-		seat_focus_surface(view_get_surface(active_view));
-	}
+	view_refocus_active();
 }
 
 static void
