@@ -401,7 +401,7 @@ show_menu(struct view *view, struct cursor_context *ctx, const char *menu_name,
 	if (!at_cursor && view) {
 		struct wlr_box extent = ssd_max_extents(view);
 		x = extent.x;
-		y = view->current.y;
+		y = view->st->current.y;
 		/* Push the client menu underneath the button */
 		if (is_client_menu && node_type_contains(
 				LAB_NODE_BUTTON, ctx->type)) {

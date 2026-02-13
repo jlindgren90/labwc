@@ -43,6 +43,9 @@ typedef struct ViewState {
 	ViewAxis maximized;
 	LabEdge tiled;
 	_Bool minimized;
+	Rect current;      // current displayed geometry
+	Rect pending;      // expected geometry after any pending move/resize
+	Rect natural_geom; // un-{maximized/fullscreen/tiled} geometry
 } ViewState;
 
 void view_notify_app_id_change(CView *view);
@@ -50,16 +53,19 @@ void view_notify_title_change(CView *view);
 void view_notify_map(CView *view);
 void view_notify_unmap(CView *view);
 void view_notify_active(CView *view);
+void view_notify_move_resize(CView *view);
 
 void xdg_toplevel_view_set_active(CView *view, _Bool active);
 void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
+void xdg_toplevel_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 
 void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);
+void xwayland_view_configure(CView *view, Rect geom, Rect *pending, Rect *current);
 void xwayland_view_offer_focus(CView *view);
 
 #endif // LABWC_VIEW_C_H

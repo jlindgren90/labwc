@@ -10,6 +10,7 @@
 #include "common/edge.h"
 #include "config.h"
 
+#define Rect struct wlr_box
 #include "view-c.h"
 #include "view_api.h"
 
@@ -52,7 +53,6 @@ struct view_size_hints {
 };
 
 struct view_impl {
-	void (*configure)(struct view *view, struct wlr_box geo);
 	void (*close)(struct view *view);
 	struct view *(*get_parent)(struct view *self);
 	struct view *(*get_root)(struct view *self);
@@ -98,25 +98,6 @@ struct view {
 	bool ssd_enabled;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
 
-	/*
-	 * Geometry of the wlr_surface contained within the view, as
-	 * currently displayed. Should be kept in sync with the
-	 * scene-graph at all times.
-	 */
-	struct wlr_box current;
-	/*
-	 * Expected geometry after any pending move/resize requests
-	 * have been processed. Should match current geometry when no
-	 * move/resize requests are pending.
-	 */
-	struct wlr_box pending;
-	/*
-	 * Saved geometry which will be restored when the view returns
-	 * to normal/floating state after being maximized/fullscreen/
-	 * tiled. Values are undefined/out-of-date when the view is not
-	 * maximized/fullscreen/tiled.
-	 */
-	struct wlr_box natural_geometry;
 	/*
 	 * Whenever an output layout change triggers a view relocation, the
 	 * last pending position will be saved so the view may be restored
@@ -204,22 +185,12 @@ bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 void view_set_output(struct view *view, struct output *output);
 void view_close(struct view *view);
 
-/**
- * view_move_resize - resize and move view
- * @view: view to be resized and moved
- * @geo: the new geometry
- * NOTE: Only use this when the view actually changes width and/or height
- * otherwise the serials might cause a delay in moving xdg-shell clients.
- * For move only, use view_move()
- */
-void view_move_resize(struct view *view, struct wlr_box geo);
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
 bool view_compute_centered_position(struct view *view,
 	const struct wlr_box *ref, int w, int h, int *x, int *y);
 struct wlr_box view_get_fallback_natural_geometry(struct view *view);
-void view_store_natural_geometry(struct view *view);
 
 /**
  * view_apply_natural_geometry - adjust view->natural_geometry if it doesn't
