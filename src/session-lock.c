@@ -278,13 +278,7 @@ handle_lock_unlock(struct wl_listener *listener, void *data)
 	session_lock_destroy(manager);
 	manager->locked = false;
 
-	if (manager->last_active_view) {
-		desktop_focus_view(manager->last_active_view, /* raise */ false);
-	} else {
-		desktop_focus_topmost_view();
-	}
-	manager->last_active_view = NULL;
-
+	desktop_focus_topmost_view();
 	cursor_update_focus();
 }
 
@@ -324,8 +318,6 @@ handle_new_session_lock(struct wl_listener *listener, void *data)
 	}
 	assert(wl_list_empty(&manager->lock_outputs));
 
-	/* Remember the focused view to restore it on unlock */
-	manager->last_active_view = g_server.active_view;
 	seat_focus_surface(NULL);
 
 	struct output *output;

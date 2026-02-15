@@ -1400,10 +1400,6 @@ view_destroy(struct view *view)
 		g_server.active_view = NULL;
 	}
 
-	if (g_server.session_lock_manager->last_active_view == view) {
-		g_server.session_lock_manager->last_active_view = NULL;
-	}
-
 	/* TODO: call this on map/unmap instead */
 	cycle_reinitialize();
 
