@@ -12,5 +12,6 @@ mod util;
 mod view;
 mod view_api;
 mod view_geom;
+mod view_grab;
 mod view_impl;
 mod views;
