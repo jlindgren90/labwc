@@ -5,6 +5,7 @@
 #include <stdbool.h>
 #include <sys/types.h>
 #include <wayland-util.h>
+#include "rs-types.h"
 
 struct view;
 struct server;
@@ -42,7 +43,7 @@ bool actions_contain_toggle_keybinds(struct wl_list *action_list);
  * direction of resize or the position of the window menu button for ShowMenu
  * action.
  */
-void actions_run(struct view *activator, struct wl_list *actions, struct cursor_context *ctx);
+void actions_run(ViewId activator, struct wl_list *actions, struct cursor_context *ctx);
 
 void action_free(struct action *action);
 void action_list_free(struct wl_list *action_list);
