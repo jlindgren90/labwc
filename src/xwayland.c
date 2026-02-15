@@ -242,7 +242,7 @@ handle_request_move(struct wl_listener *listener, void *data)
 	 * Note: interactive_begin() checks that view == server.grabbed_view.
 	 */
 	struct view *view = wl_container_of(listener, view, request_move);
-	interactive_begin(view, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
+	interactive_begin(view->id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 }
 
 static void
@@ -260,7 +260,7 @@ handle_request_resize(struct wl_listener *listener, void *data)
 	 */
 	struct wlr_xwayland_resize_event *event = data;
 	struct view *view = wl_container_of(listener, view, request_resize);
-	interactive_begin(view, LAB_INPUT_STATE_RESIZE, event->edges);
+	interactive_begin(view->id, LAB_INPUT_STATE_RESIZE, event->edges);
 }
 
 static void
@@ -753,7 +753,7 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	view->scene_tree = lab_wlr_scene_tree_create(server.view_tree);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 	node_descriptor_create(&view->scene_tree->node,
-		LAB_NODE_VIEW, view, /*data*/ NULL);
+		LAB_NODE_VIEW, view->id, /*data*/ NULL);
 
 	CONNECT_SIGNAL(xsurface, view, destroy);
 	CONNECT_SIGNAL(xsurface, view, request_minimize);
