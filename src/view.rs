@@ -97,10 +97,6 @@ impl View {
         return view;
     }
 
-    pub fn get_c_ptr(&self) -> *mut CView {
-        self.c_ptr
-    }
-
     pub fn get_state(&self) -> &ViewState {
         &self.state
     }
@@ -369,6 +365,12 @@ impl View {
         };
         self.d.in_layout_change = false;
         return ul;
+    }
+
+    pub fn adjust_usable_area(&self, output: *mut Output) {
+        if self.state.mapped {
+            self.v.adjust_usable_area(output);
+        }
     }
 
     fn update_ssd(&mut self) -> UpdateLevel {
