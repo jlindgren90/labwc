@@ -309,7 +309,7 @@ handle_request_move(struct wl_listener *listener, void *data)
 	 * Note: interactive_begin() checks that view == g_server.grabbed_view.
 	 */
 	struct view *view = wl_container_of(listener, view, request_move);
-	interactive_begin(view, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
+	interactive_begin(view->id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 }
 
 static void
@@ -327,7 +327,7 @@ handle_request_resize(struct wl_listener *listener, void *data)
 	 */
 	struct wlr_xdg_toplevel_resize_event *event = data;
 	struct view *view = wl_container_of(listener, view, request_resize);
-	interactive_begin(view, LAB_INPUT_STATE_RESIZE, event->edges);
+	interactive_begin(view->id, LAB_INPUT_STATE_RESIZE, event->edges);
 }
 
 static void
@@ -381,7 +381,7 @@ handle_request_show_window_menu(struct wl_listener *listener, void *data)
 
 	struct menu *menu = menu_get_by_id("client-menu");
 	assert(menu);
-	menu->triggered_by_view = view;
+	menu->triggered_by_view = view->id;
 
 	struct wlr_cursor *cursor = g_seat.cursor;
 	menu_open_root(menu, cursor->x, cursor->y);
@@ -681,7 +681,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 		view->scene_tree, xdg_surface->surface);
 
 	node_descriptor_create(&view->scene_tree->node,
-		LAB_NODE_VIEW, view, /*data*/ NULL);
+		LAB_NODE_VIEW, view->id, /*data*/ NULL);
 
 	/*
 	 * xdg_toplevel_decoration and kde_server_decoration use this

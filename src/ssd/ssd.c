@@ -57,16 +57,18 @@ ssd_get_margin(const ViewState *view_st)
 }
 
 struct wlr_box
-ssd_max_extents(struct view *view)
+ssd_max_extents(const ViewState *view_st)
 {
-	assert(view);
-	struct border border = ssd_get_margin(view->st);
+	if (!view_st) {
+		return (struct wlr_box){0};
+	}
+	struct border border = ssd_get_margin(view_st);
 
 	return (struct wlr_box){
-		.x = view->st->current.x - border.left,
-		.y = view->st->current.y - border.top,
-		.width = view->st->current.width + border.left + border.right,
-		.height = view->st->current.height + border.top + border.bottom,
+		.x = view_st->current.x - border.left,
+		.y = view_st->current.y - border.top,
+		.width = view_st->current.width + border.left + border.right,
+		.height = view_st->current.height + border.top + border.bottom,
 	};
 }
 
@@ -80,13 +82,13 @@ ssd_max_extents(struct view *view)
  * bounds, so check the cursor against the view here.
  */
 enum lab_node_type
-ssd_get_resizing_type(struct view *view, struct wlr_cursor *cursor)
+ssd_get_resizing_type(const ViewState *view_st, struct wlr_cursor *cursor)
 {
-	if (!view || !cursor || !view->st->ssd_enabled || view->st->fullscreen) {
+	if (!view_st || !cursor || !view_st->ssd_enabled || view_st->fullscreen) {
 		return LAB_NODE_NONE;
 	}
 
-	struct wlr_box view_box = view->st->current;
+	struct wlr_box view_box = view_st->current;
 
 	/* Consider the titlebar part of the view */
 	int titlebar_height = g_theme.titlebar_height;
@@ -140,7 +142,7 @@ ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
 	 * detect cursor hovering on borders and extents.
 	 */
 	node_descriptor_create(&ssd->tree->node,
-		LAB_NODE_SSD_ROOT, view, /*data*/ NULL);
+		LAB_NODE_SSD_ROOT, view->id, /*data*/ NULL);
 
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
 	ssd->titlebar.height = g_theme.titlebar_height;
@@ -195,7 +197,7 @@ ssd_destroy(struct ssd *ssd)
 	/* Maybe reset hover view */
 	struct view *view = ssd->view;
 	if (g_server.hovered_button && node_view_from_node(
-			g_server.hovered_button->node) == view) {
+			g_server.hovered_button->node) == view->id) {
 		g_server.hovered_button = NULL;
 	}
 

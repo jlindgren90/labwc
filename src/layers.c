@@ -534,7 +534,7 @@ create_popup(struct wlr_xdg_popup *wlr_popup,
 	die_if_null(popup->scene_tree);
 
 	node_descriptor_create(&popup->scene_tree->node,
-		LAB_NODE_LAYER_POPUP, /*view*/ NULL, popup);
+		LAB_NODE_LAYER_POPUP, /* view_id */ 0, popup);
 
 	popup->destroy.notify = handle_popup_destroy;
 	wl_signal_add(&wlr_popup->events.destroy, &popup->destroy);
@@ -658,7 +658,7 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 	die_if_null(surface->scene_layer_surface);
 
 	node_descriptor_create(&surface->scene_layer_surface->tree->node,
-		LAB_NODE_LAYER_SURFACE, /*view*/ NULL, surface);
+		LAB_NODE_LAYER_SURFACE, /* view_id */ 0, surface);
 
 	surface->scene_layer_surface->layer_surface = layer_surface;
 

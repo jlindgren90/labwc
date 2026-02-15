@@ -122,7 +122,7 @@ cycle_osd_classic_init(struct cycle_osd_output *osd_output)
 		item->base.cycle_idx = i;
 		item->base.tree = wlr_scene_tree_create(osd_output->items_tree);
 		node_descriptor_create(&item->base.tree->node,
-			LAB_NODE_CYCLE_OSD_ITEM, NULL, item);
+			LAB_NODE_CYCLE_OSD_ITEM, /* view_id */ 0, item);
 		/*
 		 *    OSD border
 		 * +---------------------------------+

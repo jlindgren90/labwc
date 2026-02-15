@@ -92,7 +92,7 @@ pub extern "C" fn view_toggle_always_on_top(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_get_active() -> *mut CView {
+pub extern "C" fn view_get_active() -> ViewId {
     views().get_active()
 }
 

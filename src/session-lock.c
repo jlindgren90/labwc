@@ -142,7 +142,7 @@ handle_new_surface(struct wl_listener *listener, void *data)
 	die_if_null(surface_tree);
 
 	node_descriptor_create(&surface_tree->node,
-		LAB_NODE_SESSION_LOCK_SURFACE, /*view*/ NULL, /*data*/ NULL);
+		LAB_NODE_SESSION_LOCK_SURFACE, /* view_id */ 0, /*data*/ NULL);
 
 	lock_output->surface_destroy.notify = handle_surface_destroy;
 	wl_signal_add(&lock_surface->events.destroy, &lock_output->surface_destroy);

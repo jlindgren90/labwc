@@ -30,7 +30,7 @@ ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
 	node_descriptor_create(&ssd->titlebar.tree->node,
-		LAB_NODE_TITLEBAR, view, /*data*/ NULL);
+		LAB_NODE_TITLEBAR, view->id, /*data*/ NULL);
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -66,7 +66,7 @@ ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 			g_theme.window[active].titlebar_pattern);
 		assert(subtree->title);
 		node_descriptor_create(&subtree->title->scene_buffer->node,
-			LAB_NODE_TITLE, view, /*data*/ NULL);
+			LAB_NODE_TITLE, view->id, /*data*/ NULL);
 
 		/* Buttons */
 		int x = g_theme.window_titlebar_padding_width;

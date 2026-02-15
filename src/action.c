@@ -375,9 +375,8 @@ action_list_free(struct wl_list *action_list)
 }
 
 static void
-show_menu(struct view *view, struct cursor_context *ctx,
-		const char *menu_name, bool at_cursor,
-		const char *pos_x, const char *pos_y)
+show_menu(ViewId view_id, struct cursor_context *ctx, const char *menu_name,
+		bool at_cursor, const char *pos_x, const char *pos_y)
 {
 	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH
 			&& g_server.input_mode != LAB_INPUT_STATE_MENU) {
@@ -393,16 +392,17 @@ show_menu(struct view *view, struct cursor_context *ctx,
 	int x = g_seat.cursor->x;
 	int y = g_seat.cursor->y;
 
+	const ViewState *view_st = view_get_state(view_id);
 	/* The client menu needs an active client */
 	bool is_client_menu = !strcasecmp(menu_name, "client-menu");
-	if (is_client_menu && !view) {
+	if (is_client_menu && !view_st) {
 		return;
 	}
 	/* Place menu in the view corner if desired (and menu is not root-menu) */
-	if (!at_cursor && view) {
-		struct wlr_box extent = ssd_max_extents(view);
+	if (!at_cursor && view_st) {
+		struct wlr_box extent = ssd_max_extents(view_st);
 		x = extent.x;
-		y = view->st->current.y;
+		y = view_st->current.y;
 		/* Push the client menu underneath the button */
 		if (is_client_menu && node_type_contains(
 				LAB_NODE_BUTTON, ctx->type)) {
@@ -458,12 +458,12 @@ show_menu(struct view *view, struct cursor_context *ctx,
 	}
 
 	/* Replaced by next show_menu() or cleaned on view_destroy() */
-	menu->triggered_by_view = view;
+	menu->triggered_by_view = view_id;
 	menu_open_root(menu, x, y);
 }
 
-static struct view *
-view_for_action(struct view *activator, struct action *action, struct cursor_context *ctx)
+static ViewId
+view_for_action(ViewId activator, struct action *action, struct cursor_context *ctx)
 {
 	/* View is explicitly specified for mousebinds */
 	if (activator) {
@@ -476,7 +476,7 @@ view_for_action(struct view *activator, struct action *action, struct cursor_con
 	case ACTION_TYPE_MOVE:
 	case ACTION_TYPE_RESIZE: {
 		*ctx = get_cursor_context();
-		return ctx->view;
+		return ctx->view_id;
 	}
 	default:
 		return view_get_active();
@@ -484,14 +484,11 @@ view_for_action(struct view *activator, struct action *action, struct cursor_con
 }
 
 static void
-run_action(struct view *view, struct action *action,
-	struct cursor_context *ctx)
+run_action(ViewId view_id, struct action *action, struct cursor_context *ctx)
 {
 	switch (action->type) {
 	case ACTION_TYPE_CLOSE:
-		if (view) {
-			view_close(view->id);
-		}
+		view_close(view_id);
 		break;
 	case ACTION_TYPE_EXECUTE: {
 		struct buf cmd = BUF_INIT;
@@ -504,13 +501,12 @@ run_action(struct view *view, struct action *action,
 	case ACTION_TYPE_EXIT:
 		wl_display_terminate(g_server.wl_display);
 		break;
-	case ACTION_TYPE_SNAP_TO_EDGE:
-		if (view) {
-			/* Config parsing makes sure that direction is a valid direction */
-			enum lab_edge edge = action_get_int(action, "direction", 0);
-			view_tile(view->id, edge);
-		}
+	case ACTION_TYPE_SNAP_TO_EDGE: {
+		/* Config parsing makes sure that direction is a valid direction */
+		enum lab_edge edge = action_get_int(action, "direction", 0);
+		view_tile(view_id, edge);
 		break;
+	}
 	case ACTION_TYPE_NEXT_WINDOW:
 	case ACTION_TYPE_PREVIOUS_WINDOW: {
 		enum lab_cycle_dir dir = (action->type == ACTION_TYPE_NEXT_WINDOW) ?
@@ -526,99 +522,86 @@ run_action(struct view *view, struct action *action,
 		kill(getpid(), SIGHUP);
 		break;
 	case ACTION_TYPE_SHOW_MENU:
-		show_menu(view, ctx,
-			action_get_str(action, "menu", NULL),
+		show_menu(view_id, ctx, action_get_str(action, "menu", NULL),
 			action_get_bool(action, "atCursor", true),
 			action_get_str(action, "x.position", NULL),
 			action_get_str(action, "y.position", NULL));
 		break;
-	case ACTION_TYPE_TOGGLE_MAXIMIZE:
-		if (view) {
+	case ACTION_TYPE_TOGGLE_MAXIMIZE: {
+		enum view_axis axis =
+			action_get_int(action, "direction", VIEW_AXIS_BOTH);
+		view_toggle_maximize(view_id, axis);
+		break;
+	}
+	case ACTION_TYPE_MAXIMIZE: {
+		enum view_axis axis =
+			action_get_int(action, "direction", VIEW_AXIS_BOTH);
+		view_maximize(view_id, axis);
+		break;
+	}
+	case ACTION_TYPE_UNMAXIMIZE: {
+		const ViewState *view_st = view_get_state(view_id);
+		if (view_st) {
 			enum view_axis axis = action_get_int(action,
 				"direction", VIEW_AXIS_BOTH);
-			view_toggle_maximize(view, axis);
+			view_maximize(view_id, view_st->maximized & ~axis);
 		}
 		break;
-	case ACTION_TYPE_MAXIMIZE:
-		if (view) {
-			enum view_axis axis = action_get_int(action,
-				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view->id, axis);
-		}
-		break;
-	case ACTION_TYPE_UNMAXIMIZE:
-		if (view) {
-			enum view_axis axis = action_get_int(action,
-				"direction", VIEW_AXIS_BOTH);
-			view_maximize(view->id, view->st->maximized & ~axis);
-		}
-		break;
+	}
 	case ACTION_TYPE_TOGGLE_FULLSCREEN:
-		if (view) {
-			view_toggle_fullscreen(view);
-		}
+		view_toggle_fullscreen(view_id);
 		break;
 	case ACTION_TYPE_TOGGLE_ALWAYS_ON_TOP:
-		if (view) {
-			view_toggle_always_on_top(view->id);
-		}
+		view_toggle_always_on_top(view_id);
 		break;
 	case ACTION_TYPE_FOCUS:
-		if (view) {
-			view_focus(view->id, /*raise*/ false);
-		}
+		view_focus(view_id, /*raise*/ false);
 		break;
 	case ACTION_TYPE_ICONIFY:
-		if (view) {
-			view_minimize(view->id, true);
-		}
+		view_minimize(view_id, true);
 		break;
 	case ACTION_TYPE_MOVE:
-		if (view) {
-			/*
-			 * If triggered by mousebind, grab context was already
-			 * set by button press handling. For keybind-triggered
-			 * Move, set it now from current cursor position.
-			 */
-			if (view != g_seat.pressed.ctx.view) {
-				interactive_set_grab_context(ctx);
-			}
-			interactive_begin(view, LAB_INPUT_STATE_MOVE,
-				LAB_EDGE_NONE);
+		/*
+		 * If triggered by mousebind, grab context was already
+		 * set by button press handling. For keybind-triggered
+		 * Move, set it now from current cursor position.
+		 */
+		if (view_id != g_seat.pressed.ctx.view_id) {
+			interactive_set_grab_context(ctx);
 		}
+		interactive_begin(view_id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 		break;
 	case ACTION_TYPE_RAISE:
-		if (view) {
-			view_raise(view->id);
+		view_raise(view_id);
+		break;
+	case ACTION_TYPE_RESIZE: {
+		/*
+		 * If a direction was specified in the config, honour it.
+		 * Otherwise, fall back to determining the resize edges from
+		 * the current cursor position (existing behaviour).
+		 */
+		enum lab_edge resize_edges =
+			action_get_int(action, "direction", LAB_EDGE_NONE);
+		/*
+		 * If triggered by mousebind, grab context was already
+		 * set by button press handling. For keybind-triggered
+		 * Resize, set it now from current cursor position.
+		 */
+		if (view_id != g_seat.pressed.ctx.view_id) {
+			interactive_set_grab_context(ctx);
+		}
+		interactive_begin(view_id, LAB_INPUT_STATE_RESIZE,
+			resize_edges);
+		break;
+	}
+	case ACTION_TYPE_TOGGLE_KEYBINDS: {
+		const ViewState *view_st = view_get_state(view_id);
+		if (view_st) {
+			view_set_inhibits_keybinds(view_id,
+				!view_st->inhibits_keybinds);
 		}
 		break;
-	case ACTION_TYPE_RESIZE:
-		if (view) {
-			/*
-			 * If a direction was specified in the config, honour it.
-			 * Otherwise, fall back to determining the resize edges from
-			 * the current cursor position (existing behaviour).
-			 */
-			enum lab_edge resize_edges =
-				action_get_int(action, "direction", LAB_EDGE_NONE);
-			/*
-			 * If triggered by mousebind, grab context was already
-			 * set by button press handling. For keybind-triggered
-			 * Resize, set it now from current cursor position.
-			 */
-			if (view != g_seat.pressed.ctx.view) {
-				interactive_set_grab_context(ctx);
-			}
-			interactive_begin(view, LAB_INPUT_STATE_RESIZE,
-				resize_edges);
-		}
-		break;
-	case ACTION_TYPE_TOGGLE_KEYBINDS:
-		if (view) {
-			view_set_inhibits_keybinds(view->id,
-				!view->st->inhibits_keybinds);
-		}
-		break;
+	}
 	case ACTION_TYPE_INVALID:
 		wlr_log(WLR_ERROR, "Not executing unknown action");
 		break;
@@ -635,7 +618,7 @@ run_action(struct view *view, struct action *action,
 }
 
 void
-actions_run(struct view *activator, struct wl_list *actions, struct cursor_context *cursor_ctx)
+actions_run(ViewId activator, struct wl_list *actions, struct cursor_context *cursor_ctx)
 {
 	if (!actions) {
 		wlr_log(WLR_ERROR, "empty actions");
@@ -667,8 +650,8 @@ actions_run(struct view *activator, struct wl_list *actions, struct cursor_conte
 		 * Refetch view because it may have been changed due to the
 		 * previous action
 		 */
-		struct view *view = view_for_action(activator, action, &ctx);
+		ViewId view_id = view_for_action(activator, action, &ctx);
 
-		run_action(view, action, &ctx);
+		run_action(view_id, action, &ctx);
 	}
 }

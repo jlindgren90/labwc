@@ -4,7 +4,6 @@
 #include <assert.h>
 #include <libxml/parser.h>
 #include <signal.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>
@@ -29,7 +28,6 @@
 #include "scaled-buffer/scaled-font-buffer.h"
 #include "theme.h"
 #include "translate.h"
-#include "view.h"
 
 #define PIPEMENU_MAX_BUF_SIZE 1048576  /* 1 MiB */
 #define PIPEMENU_TIMEOUT_IN_MS 4000    /* 4 seconds */
@@ -209,7 +207,7 @@ item_create_scene(struct menuitem *menuitem, int *item_y)
 	/* Menu item root node */
 	menuitem->tree = wlr_scene_tree_create(menu->scene_tree);
 	node_descriptor_create(&menuitem->tree->node, LAB_NODE_MENUITEM,
-		/*view*/ NULL, menuitem);
+		/* view_id */ 0, menuitem);
 
 	/* Create scenes for unselected/selected states */
 	menuitem->normal_tree = item_create_scene_for_state(menuitem,
@@ -257,7 +255,7 @@ separator_create_scene(struct menuitem *menuitem, int *item_y)
 	/* Menu item root node */
 	menuitem->tree = wlr_scene_tree_create(menu->scene_tree);
 	node_descriptor_create(&menuitem->tree->node, LAB_NODE_MENUITEM,
-		/*view*/ NULL, menuitem);
+		/* view_id */ 0, menuitem);
 
 	/* Tree to hold background and line buffer */
 	menuitem->normal_tree = wlr_scene_tree_create(menuitem->tree);
@@ -304,7 +302,7 @@ title_create_scene(struct menuitem *menuitem, int *item_y)
 	/* Menu item root node */
 	menuitem->tree = wlr_scene_tree_create(menu->scene_tree);
 	node_descriptor_create(&menuitem->tree->node, LAB_NODE_MENUITEM,
-		/*view*/ NULL, menuitem);
+		/* view_id */ 0, menuitem);
 
 	/* Tree to hold background and text buffer */
 	menuitem->normal_tree = wlr_scene_tree_create(menuitem->tree);
@@ -857,11 +855,11 @@ menu_finish(void)
 }
 
 void
-menu_on_view_destroy(struct view *view)
+menu_on_view_destroy(ViewId view_id)
 {
 	/* If the view being destroy has an open window menu, then close it */
 	if (g_server.menu_current
-			&& g_server.menu_current->triggered_by_view == view) {
+			&& g_server.menu_current->triggered_by_view == view_id) {
 		menu_close_root();
 	}
 }

@@ -230,7 +230,7 @@ void xdg_shell_finish(void);
  * desktop_focus_view_or_surface() - like desktop_focus_view() but can
  * also focus other (e.g. xwayland-unmanaged) surfaces
  */
-void desktop_focus_view_or_surface(struct view *view,
+void desktop_focus_view_or_surface(ViewId view_id,
 	struct wlr_surface *surface, bool raise);
 
 void seat_init(void);
@@ -266,7 +266,7 @@ void seat_focus_override_begin(enum input_mode input_mode,
 void seat_focus_override_end(bool restore_focus);
 
 void interactive_set_grab_context(struct cursor_context *ctx);
-void interactive_begin(struct view *view, enum input_mode mode,
+void interactive_begin(ViewId view_id, enum input_mode mode,
 	enum lab_edge edges);
 
 void server_init(void);

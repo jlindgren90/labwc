@@ -12,21 +12,17 @@
 void
 interactive_set_grab_context(struct cursor_context *ctx)
 {
-	if (!ctx->view) {
-		return;
-	}
-	if (g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
+	if (!ctx->view_id || g_server.input_mode != LAB_INPUT_STATE_PASSTHROUGH) {
 		return;
 	}
 
-	view_set_grab_context(ctx->view->id, g_seat.cursor->x, g_seat.cursor->y,
+	view_set_grab_context(ctx->view_id, g_seat.cursor->x, g_seat.cursor->y,
 		cursor_get_resize_edges(g_seat.cursor, ctx));
 }
 
 void
-interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
+interactive_begin(ViewId view_id, enum input_mode mode, enum lab_edge edges)
 {
-	assert(view);
 	/*
 	 * This function sets up an interactive move or resize operation, where
 	 * the compositor stops propagating pointer events to clients and
@@ -40,13 +36,13 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 
 	switch (mode) {
 	case LAB_INPUT_STATE_MOVE:
-		if (!view_start_move(view->id)) {
+		if (!view_start_move(view_id)) {
 			return;
 		}
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
 	case LAB_INPUT_STATE_RESIZE: {
-		if (!view_start_resize(view->id, edges)) {
+		if (!view_start_resize(view_id, edges)) {
 			return;
 		}
 		cursor_shape = cursor_get_from_edge(view_get_resize_edges());

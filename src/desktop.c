@@ -18,12 +18,12 @@
 
 /* TODO: focus layer-shell surfaces also? */
 void
-desktop_focus_view_or_surface(struct view *view,
+desktop_focus_view_or_surface(ViewId view_id,
 		struct wlr_surface *surface, bool raise)
 {
-	assert(view || surface);
-	if (view) {
-		view_focus(view->id, raise);
+	assert(view_id || surface);
+	if (view_id) {
+		view_focus(view_id, raise);
 	} else {
 		struct wlr_xwayland_surface *xsurface =
 			wlr_xwayland_surface_try_from_wlr_surface(surface);
@@ -109,7 +109,7 @@ get_cursor_context(void)
 			switch (desc->type) {
 			case LAB_NODE_VIEW:
 			case LAB_NODE_XDG_POPUP:
-				ret.view = desc->view;
+				ret.view_id = desc->view_id;
 				if (ret.surface) {
 					ret.type = LAB_NODE_CLIENT;
 				} else {
@@ -141,12 +141,12 @@ get_cursor_context(void)
 			case LAB_NODE_TITLEBAR:
 				/* Always return the top scene node for ssd parts */
 				ret.node = node;
-				ret.view = desc->view;
+				ret.view_id = desc->view_id;
 				/*
 				 * A node_descriptor attached to a ssd part
 				 * must have an associated view.
 				 */
-				assert(ret.view);
+				assert(ret.view_id);
 
 				/*
 				 * When cursor is on the ssd border or extents,
@@ -160,7 +160,8 @@ get_cursor_context(void)
 				 * types, which are mapped to mouse contexts
 				 * like Left and TLCorner.
 				 */
-				ret.type = ssd_get_resizing_type(ret.view, cursor);
+				ret.type = ssd_get_resizing_type(
+					view_get_state(ret.view_id), cursor);
 				if (ret.type == LAB_NODE_NONE) {
 					/*
 					 * If cursor is not on border/extents,

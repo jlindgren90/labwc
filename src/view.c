@@ -61,21 +61,25 @@ view_move_impl(struct view *view)
 }
 
 void
-view_toggle_maximize(struct view *view, enum view_axis axis)
+view_toggle_maximize(ViewId view_id, enum view_axis axis)
 {
-	assert(view);
+	const ViewState *view_st = view_get_state(view_id);
+	if (!view_st) {
+		return;
+	}
+
 	switch (axis) {
 	case VIEW_AXIS_HORIZONTAL:
 	case VIEW_AXIS_VERTICAL:
 		/* Toggle one axis (XOR) */
-		view_maximize(view->id, view->st->maximized ^ axis);
+		view_maximize(view_id, view_st->maximized ^ axis);
 		break;
 	case VIEW_AXIS_BOTH:
 		/*
 		 * Maximize in both directions if unmaximized or partially
 		 * maximized, otherwise unmaximize.
 		 */
-		view_maximize(view->id, (view->st->maximized == VIEW_AXIS_BOTH)
+		view_maximize(view_id, (view_st->maximized == VIEW_AXIS_BOTH)
 			? VIEW_AXIS_NONE : VIEW_AXIS_BOTH);
 		break;
 	default:
@@ -84,11 +88,12 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 }
 
 void
-view_toggle_fullscreen(struct view *view)
+view_toggle_fullscreen(ViewId view_id)
 {
-	assert(view);
-
-	view_fullscreen(view->id, !view->st->fullscreen);
+	const ViewState *view_st = view_get_state(view_id);
+	if (view_st) {
+		view_fullscreen(view_id, !view_st->fullscreen);
+	}
 }
 
 enum view_axis
@@ -127,9 +132,10 @@ view_focus_impl(struct view *view)
 }
 
 bool
-view_inhibits_actions(struct view *view, struct wl_list *actions)
+view_inhibits_actions(ViewId view_id, struct wl_list *actions)
 {
-	return view && view->st->inhibits_keybinds
+	const ViewState *view_st = view_get_state(view_id);
+	return view_st && view_st->inhibits_keybinds
 		&& !actions_contain_toggle_keybinds(actions);
 }
 
@@ -163,11 +169,9 @@ view_destroy(struct view *view)
 	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->destroy.link);
 
-	cursor_on_view_destroy(view);
-
 	/* Must come before destroying view->scene_tree */
 	view_destroy_ssd(view->id);
-	menu_on_view_destroy(view);
+	menu_on_view_destroy(view->id);
 
 	/*
 	 * Destroy the view's scene tree. View methods assume this is non-NULL,

@@ -110,9 +110,8 @@ impl Views {
         }
     }
 
-    pub fn get_active(&self) -> *mut CView {
-        let active = self.by_id.get(&self.active_id);
-        return active.map_or(null_mut(), View::get_c_ptr);
+    pub fn get_active(&self) -> ViewId {
+        self.active_id
     }
 
     pub fn is_active_visible(&self) -> bool {
