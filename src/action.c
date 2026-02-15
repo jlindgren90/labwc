@@ -30,7 +30,6 @@
 #include "theme.h"
 #include "translate.h"
 #include "view.h"
-#include "workspaces.h"
 
 enum action_arg_type {
 	LAB_ACTION_ARG_STR = 0,
@@ -90,7 +89,6 @@ struct action_arg_list {
 	X(TOGGLE_DECORATIONS, "ToggleDecorations") \
 	X(TOGGLE_ALWAYS_ON_TOP, "ToggleAlwaysOnTop") \
 	X(TOGGLE_ALWAYS_ON_BOTTOM, "ToggleAlwaysOnBottom") \
-	X(TOGGLE_OMNIPRESENT, "ToggleOmnipresent") \
 	X(FOCUS, "Focus") \
 	X(UNFOCUS, "Unfocus") \
 	X(ICONIFY, "Iconify") \
@@ -103,8 +101,6 @@ struct action_arg_list {
 	X(RESIZETO, "ResizeTo") \
 	X(MOVETO_CURSOR, "MoveToCursor") \
 	X(MOVE_RELATIVE, "MoveRelative") \
-	X(SEND_TO_DESKTOP, "SendToDesktop") \
-	X(GO_TO_DESKTOP, "GoToDesktop") \
 	X(TOGGLE_SNAP_TO_REGION, "ToggleSnapToRegion") \
 	X(SNAP_TO_REGION, "SnapToRegion") \
 	X(UNSNAP, "UnSnap") \
@@ -331,17 +327,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 		break;
 	case ACTION_TYPE_NEXT_WINDOW:
 	case ACTION_TYPE_PREVIOUS_WINDOW:
-		if (!strcasecmp(argument, "workspace")) {
-			if (!strcasecmp(content, "all")) {
-				action_arg_add_int(action, argument, CYCLE_WORKSPACE_ALL);
-			} else if (!strcasecmp(content, "current")) {
-				action_arg_add_int(action, argument, CYCLE_WORKSPACE_CURRENT);
-			} else {
-				wlr_log(WLR_ERROR, "Invalid argument for action %s: '%s' (%s)",
-					action_names[action->type], argument, content);
-			}
-			goto cleanup;
-		}
 		if (!strcasecmp(argument, "output")) {
 			if (!strcasecmp(content, "all")) {
 				action_arg_add_int(action, argument, CYCLE_OUTPUT_ALL);
@@ -446,27 +431,6 @@ action_arg_from_xml_node(struct action *action, const char *nodename, const char
 	case ACTION_TYPE_RESIZETO:
 		if (!strcmp(argument, "width") || !strcmp(argument, "height")) {
 			action_arg_add_int(action, argument, atoi(content));
-			goto cleanup;
-		}
-		break;
-	case ACTION_TYPE_SEND_TO_DESKTOP:
-		if (!strcmp(argument, "follow")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
-			goto cleanup;
-		}
-		/* Falls through to GoToDesktop */
-	case ACTION_TYPE_GO_TO_DESKTOP:
-		if (!strcmp(argument, "to")) {
-			action_arg_add_str(action, argument, content);
-			goto cleanup;
-		}
-		if (!strcmp(argument, "wrap")) {
-			action_arg_add_bool(action, argument, parse_bool(content, true));
-			goto cleanup;
-		}
-		if (!strcmp(argument, "toggle")) {
-			action_arg_add_bool(
-				action, argument, parse_bool(content, false));
 			goto cleanup;
 		}
 		break;
@@ -633,10 +597,6 @@ action_is_valid(struct action *action)
 		break;
 	case ACTION_TYPE_SHOW_MENU:
 		arg_name = "menu";
-		break;
-	case ACTION_TYPE_GO_TO_DESKTOP:
-	case ACTION_TYPE_SEND_TO_DESKTOP:
-		arg_name = "to";
 		break;
 	case ACTION_TYPE_TOGGLE_SNAP_TO_REGION:
 	case ACTION_TYPE_SNAP_TO_REGION:
@@ -1123,8 +1083,6 @@ run_action(struct view *view, struct action *action,
 		enum lab_cycle_dir dir = (action->type == ACTION_TYPE_NEXT_WINDOW) ?
 			LAB_CYCLE_DIR_FORWARD : LAB_CYCLE_DIR_BACKWARD;
 		struct cycle_filter filter = {
-			.workspace = action_get_int(action, "workspace",
-				rc.window_switcher.workspace_filter),
 			.output = action_get_int(action, "output",
 				CYCLE_OUTPUT_ALL),
 			.app_id = action_get_int(action, "identifier",
@@ -1195,11 +1153,6 @@ run_action(struct view *view, struct action *action,
 	case ACTION_TYPE_TOGGLE_ALWAYS_ON_BOTTOM:
 		if (view) {
 			view_toggle_always_on_bottom(view);
-		}
-		break;
-	case ACTION_TYPE_TOGGLE_OMNIPRESENT:
-		if (view) {
-			view_toggle_visible_on_all_workspaces(view);
 		}
 		break;
 	case ACTION_TYPE_FOCUS:
@@ -1313,47 +1266,6 @@ run_action(struct view *view, struct action *action,
 				LAB_PLACE_CURSOR);
 		}
 		break;
-	case ACTION_TYPE_SEND_TO_DESKTOP:
-		if (!view) {
-			break;
-		}
-		/* Falls through to GoToDesktop */
-	case ACTION_TYPE_GO_TO_DESKTOP: {
-		bool follow = true;
-		bool wrap = action_get_bool(action, "wrap", true);
-		const char *to = action_get_str(action, "to", NULL);
-		/*
-		 * `to` is always != NULL here because otherwise we would have
-		 * removed the action during the initial parsing step as it is
-		 * a required argument for both SendToDesktop and GoToDesktop.
-		 */
-		struct workspace *target_workspace = workspaces_find(
-			server.workspaces.current, to, wrap);
-		if (action->type == ACTION_TYPE_GO_TO_DESKTOP) {
-			bool toggle = action_get_bool(action, "toggle", false);
-			if (target_workspace == server.workspaces.current
-				&& toggle) {
-				target_workspace = server.workspaces.last;
-			}
-		}
-		if (!target_workspace) {
-			break;
-		}
-		if (action->type == ACTION_TYPE_SEND_TO_DESKTOP) {
-			view_move_to_workspace(view, target_workspace);
-			follow = action_get_bool(action, "follow", true);
-
-			/* Ensure that the focus is not on another desktop */
-			if (!follow && server.active_view == view) {
-				desktop_focus_topmost_view();
-			}
-		}
-		if (follow) {
-			workspaces_switch_to(target_workspace,
-				/*update_focus*/ true);
-		}
-		break;
-	}
 	case ACTION_TYPE_MOVE_TO_OUTPUT: {
 		if (!view) {
 			break;

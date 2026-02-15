@@ -19,7 +19,6 @@
 #include "menu/menu.h"
 #include "session-lock.h"
 #include "view.h"
-#include "workspaces.h"
 
 #if WLR_HAS_SESSION
 	#include <wlr/backend/session.h>
@@ -147,8 +146,7 @@ handle_modifiers(struct wl_listener *listener, void *data)
 
 	bool cycling = server.input_mode == LAB_INPUT_STATE_CYCLE;
 
-	if ((cycling || g_seat.workspace_osd_shown_by_modifier)
-			&& !keyboard_get_all_modifiers()) {
+	if (cycling && !keyboard_get_all_modifiers()) {
 		if (cycling) {
 			if (key_state_nr_bound_keys()) {
 				should_cancel_cycling_on_next_key_release = true;
@@ -156,9 +154,6 @@ handle_modifiers(struct wl_listener *listener, void *data)
 				should_cancel_cycling_on_next_key_release = false;
 				cycle_finish(/*switch_focus*/ true);
 			}
-		}
-		if (g_seat.workspace_osd_shown_by_modifier) {
-			workspaces_osd_hide();
 		}
 	}
 
