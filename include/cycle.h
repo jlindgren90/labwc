@@ -27,8 +27,6 @@ enum cycle_osd_field_content {
 	LAB_FIELD_DESKTOP_ENTRY_NAME,
 	LAB_FIELD_TITLE,
 	LAB_FIELD_TITLE_SHORT,
-	LAB_FIELD_WORKSPACE,
-	LAB_FIELD_WORKSPACE_SHORT,
 	LAB_FIELD_WIN_STATE,
 	LAB_FIELD_WIN_STATE_ALL,
 	LAB_FIELD_OUTPUT,
@@ -46,7 +44,6 @@ struct cycle_osd_field {
 };
 
 struct cycle_filter {
-	enum cycle_workspace_filter workspace;
 	enum cycle_output_filter output;
 	enum cycle_app_id_filter app_id;
 };

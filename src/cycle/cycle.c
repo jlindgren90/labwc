@@ -327,9 +327,6 @@ init_cycle(struct cycle_filter filter)
 	enum lab_view_criteria criteria =
 		LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER
 		| LAB_VIEW_CRITERIA_NO_DIALOG;
-	if (filter.workspace == CYCLE_WORKSPACE_CURRENT) {
-		criteria |= LAB_VIEW_CRITERIA_CURRENT_WORKSPACE;
-	}
 
 	uint64_t cycle_outputs =
 		get_outputs_by_filter(filter.output);
