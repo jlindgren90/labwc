@@ -93,7 +93,6 @@ impl Views {
             if was_shown {
                 self.focus(id, /* raise */ true, /* force_restack */ true);
             }
-            unsafe { cursor_update_focus() };
         }
     }
 
@@ -207,7 +206,6 @@ impl Views {
             // Entering/leaving fullscreen ends any interactive move/resize
             self.reset_grab_for(Some(id));
             self.update_top_layer_visibility();
-            unsafe { cursor_update_focus() };
         }
     }
 
@@ -299,7 +297,6 @@ impl Views {
             }
         }
         self.update_top_layer_visibility();
-        unsafe { cursor_update_focus() };
     }
 
     pub fn set_always_on_top(&mut self, id: ViewId, always_on_top: bool) {
@@ -365,7 +362,6 @@ impl Views {
         for view in self.by_id.values_mut() {
             view.reload_ssd();
         }
-        unsafe { cursor_update_focus() };
     }
 
     pub fn set_grab_context(&mut self, id: ViewId, cursor_x: i32, cursor_y: i32, edges: LabEdge) {

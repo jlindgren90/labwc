@@ -65,11 +65,13 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_map_common(id: ViewId, focus_mode: ViewFocusMode) {
     views_mut().map_common(id, focus_mode);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_unmap_common(id: ViewId) {
     views_mut().unmap_common(id);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -111,6 +113,7 @@ pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.move_resize(geom);
     }
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -118,11 +121,13 @@ pub extern "C" fn view_commit_move(id: ViewId, x: i32, y: i32) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.commit_move(x, y);
     }
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
     views_mut().commit_geom(id, width, height);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -130,6 +135,7 @@ pub extern "C" fn view_adjust_initial_geom(id: ViewId, keep_position: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.adjust_initial_geom(keep_position);
     }
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -156,6 +162,7 @@ pub extern "C" fn view_commit_resize_timeout(id: ViewId) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.commit_resize_timeout();
     }
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -168,6 +175,7 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
 #[unsafe(no_mangle)]
 pub extern "C" fn views_adjust_for_layout_change() {
     views_mut().adjust_for_layout_change();
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -175,6 +183,7 @@ pub extern "C" fn view_enable_ssd(id: ViewId, enabled: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.enable_ssd(enabled);
     }
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -187,31 +196,35 @@ pub extern "C" fn view_destroy_ssd(id: ViewId) {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
     views_mut().fullscreen(id, fullscreen);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
     views_mut().maximize(id, axis);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_tile(id: ViewId, edge: LabEdge) {
-    let mut views = views_mut();
     if edge != LAB_EDGE_NONE {
         // Unmaximize, otherwise tiling will have no effect
-        views.maximize(id, VIEW_AXIS_NONE);
+        views_mut().maximize(id, VIEW_AXIS_NONE);
     }
-    views.tile(id, edge);
+    views_mut().tile(id, edge);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
     views_mut().minimize(id, minimized);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_raise(id: ViewId) {
     views_mut().raise(id, /* force_restack */ false);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -220,11 +233,13 @@ pub extern "C" fn view_focus(id: ViewId, raise: bool) {
     if !views_mut().minimize(id, false) {
         views_mut().focus(id, raise, /* force_restack */ false);
     }
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_focus_topmost() {
     views_mut().focus_topmost();
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -299,6 +314,7 @@ pub extern "C" fn view_update_icon(id: ViewId) {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_reload_ssds() {
     views_mut().reload_ssds();
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -314,6 +330,7 @@ pub extern "C" fn view_start_move(id: ViewId) -> bool {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_continue_move(cursor_x: i32, cursor_y: i32) {
     views_mut().continue_move(cursor_x, cursor_y);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
@@ -329,18 +346,20 @@ pub extern "C" fn view_get_resize_edges() -> LabEdge {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_continue_resize(cursor_x: i32, cursor_y: i32) {
     views_mut().continue_resize(cursor_x, cursor_y);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_finish_grab(cursor_x: i32, cursor_y: i32) {
-    let mut views = views_mut();
-    views.snap_to_edge(cursor_x, cursor_y);
-    views.reset_grab_for(None);
+    views_mut().snap_to_edge(cursor_x, cursor_y);
+    views_mut().reset_grab_for(None);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_reset_grab() {
     views_mut().reset_grab_for(None);
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]

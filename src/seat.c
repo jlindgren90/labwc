@@ -779,8 +779,4 @@ seat_focus_override_end(bool restore_focus)
 	}
 
 	g_server.input_mode = LAB_INPUT_STATE_PASSTHROUGH;
-
-	if (restore_focus) {
-		cursor_update_focus();
-	}
 }

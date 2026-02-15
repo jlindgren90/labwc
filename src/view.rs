@@ -280,7 +280,6 @@ impl View {
         }
         unsafe { view_move_impl(self.c_ptr) };
         self.ssd.update_geom();
-        unsafe { cursor_update_focus() };
     }
 
     pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
@@ -428,7 +427,6 @@ impl View {
             }
             if self.state.mapped {
                 self.update_ssd();
-                unsafe { cursor_update_focus() };
             }
         }
     }
