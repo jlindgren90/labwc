@@ -1395,10 +1395,6 @@ view_destroy(struct view *view)
 		server.active_view = NULL;
 	}
 
-	if (server.session_lock_manager->last_active_view == view) {
-		server.session_lock_manager->last_active_view = NULL;
-	}
-
 	/* TODO: call this on map/unmap instead */
 	cycle_reinitialize();
 
