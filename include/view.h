@@ -168,7 +168,6 @@ struct view {
 	 */
 	uint64_t outputs;
 
-	struct workspace *workspace;
 	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
@@ -189,7 +188,6 @@ struct view {
 	bool tearing_hint;
 	enum lab_tristate force_tearing;
 	enum view_layer layer;
-	bool visible_on_all_workspaces;
 	enum lab_edge tiled;
 	enum lab_edge edges_visible;
 	bool inhibits_keybinds; /* also inhibits mousebinds */
@@ -299,10 +297,8 @@ struct view_query {
 	enum view_axis maximized;
 	enum lab_tristate iconified;
 	enum lab_tristate focused;
-	enum lab_tristate omnipresent;
 	enum lab_edge tiled;
 	char *tiled_region;
-	char *desktop;
 	enum lab_ssd_mode decoration;
 	char *monitor;
 };
@@ -553,12 +549,10 @@ void view_toggle_decorations(struct view *view);
 void view_set_layer(struct view *view, enum view_layer layer);
 void view_toggle_always_on_top(struct view *view);
 void view_toggle_always_on_bottom(struct view *view);
-void view_toggle_visible_on_all_workspaces(struct view *view);
 
 bool view_is_tiled(struct view *view);
 bool view_is_tiled_and_notify_tiled(struct view *view);
 bool view_is_floating(struct view *view);
-void view_move_to_workspace(struct view *view, struct workspace *workspace);
 bool view_titlebar_visible(struct view *view);
 void view_set_ssd_mode(struct view *view, enum lab_ssd_mode mode);
 void view_set_decorations(struct view *view, enum lab_ssd_mode mode, bool force_ssd);
