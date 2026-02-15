@@ -98,6 +98,7 @@ ssd_titlebar_create(struct ssd *ssd)
 
 	update_visible_buttons(ssd);
 
+	ssd_update_icon(ssd);
 	ssd_update_title(ssd);
 
 	if (maximized) {
@@ -379,6 +380,26 @@ ssd_update_title(struct ssd *ssd)
 		xstrdup_replace(state->text, view->title);
 	}
 	ssd_update_title_positions(ssd, offset_left, offset_right);
+}
+
+void
+ssd_update_icon(struct ssd *ssd)
+{
+	if (!ssd) {
+		return;
+	}
+
+	struct lab_data_buffer *buffer = view_get_icon_buffer(ssd->view);
+	enum ssd_active_state active;
+	FOR_EACH_ACTIVE_STATE(active) {
+		struct ssd_titlebar_subtree *subtree =
+			&ssd->titlebar.subtrees[active];
+		if (subtree->button_left->window_icon) {
+			wlr_scene_buffer_set_buffer(
+				subtree->button_left->window_icon,
+				buffer ? &buffer->base : NULL);
+		}
+	}
 }
 
 void

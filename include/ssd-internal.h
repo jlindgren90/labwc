@@ -127,7 +127,7 @@ struct ssd_button {
 	 */
 	struct scaled_img_buffer *img_buffers[LAB_BS_ALL + 1];
 
-	struct scaled_icon_buffer *window_icon;
+	struct wlr_scene_buffer *window_icon;
 };
 
 struct wlr_buffer;

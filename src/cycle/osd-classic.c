@@ -4,6 +4,7 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
+#include "buffer.h"
 #include "common/font.h"
 #include "common/lab-scene-rect.h"
 #include "common/list.h"
@@ -34,12 +35,15 @@ create_fields_scene(struct view *view,
 	// icon
 	{
 		int field_width = field_widths_sum * 5 / 100;
-		int icon_size = MIN(field_width, switcher_theme->item_icon_size);
+		int icon_size = MIN(field_width, g_theme.window_icon_size);
 
-		struct scaled_icon_buffer *icon_buffer =
-			scaled_icon_buffer_create(parent, icon_size, icon_size);
-		scaled_icon_buffer_set_view(icon_buffer, view);
-		wlr_scene_node_set_position(&icon_buffer->scene_buffer->node,
+		struct wlr_scene_buffer *scene_buffer =
+			wlr_scene_buffer_create(parent, NULL);
+		wlr_scene_buffer_set_dest_size(scene_buffer, icon_size, icon_size);
+		struct lab_data_buffer *buffer = view_get_icon_buffer(view);
+		wlr_scene_buffer_set_buffer(scene_buffer,
+			buffer ? &buffer->base : NULL);
+		wlr_scene_node_set_position(&scene_buffer->node,
 			x, y + (switcher_theme->item_height - icon_size) / 2);
 
 		x += field_width + switcher_theme->item_padding_x;

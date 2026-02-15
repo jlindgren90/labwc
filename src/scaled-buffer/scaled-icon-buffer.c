@@ -1,29 +1,23 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#define _POSIX_C_SOURCE 200809L
 #include "scaled-buffer/scaled-icon-buffer.h"
-#include <assert.h>
-#include <string.h>
 #include <wlr/util/log.h>
 #include "buffer.h"
-#include "common/mem.h"
-#include "common/string-helpers.h"
 #include "config.h"
 #include "config/rcxml.h"
 #include "desktop-entry.h"
 #include "img/img.h"
-#include "scaled-buffer/scaled-buffer.h"
 #include "view.h"
 
 #if HAVE_LIBSFDO
 
 static struct lab_data_buffer *
-choose_best_icon_buffer(struct scaled_icon_buffer *self, int icon_size, double scale)
+choose_best_icon_buffer(struct view *view, int icon_size, double scale)
 {
 	int best_dist = -INT_MAX;
 	struct lab_data_buffer *best_buffer = NULL;
 
 	struct lab_data_buffer **buffer;
-	wl_array_for_each(buffer, &self->view_icon_buffers) {
+	wl_array_for_each(buffer, &view->icon.buffers) {
 		int curr_dist = (*buffer)->base.width - (int)(icon_size * scale);
 		bool curr_is_better;
 		if ((curr_dist < 0 && best_dist > 0)
@@ -42,9 +36,10 @@ choose_best_icon_buffer(struct scaled_icon_buffer *self, int icon_size, double s
 }
 
 static struct lab_data_buffer *
-img_to_buffer(struct lab_img *img, int width, int height, double scale)
+img_to_buffer(struct lab_img *img, int icon_size, double scale)
 {
-	struct lab_data_buffer *buffer = lab_img_render(img, width, height, scale);
+	struct lab_data_buffer *buffer =
+		lab_img_render(img, icon_size, icon_size, scale);
 	lab_img_destroy(img);
 	return buffer;
 }
@@ -54,12 +49,13 @@ img_to_buffer(struct lab_img *img, int width, int height, double scale)
  * X11 apps can provide icon buffers via _NET_WM_ICON property.
  */
 static struct lab_data_buffer *
-load_client_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
+load_client_icon(struct view *view, int icon_size, double scale)
 {
-	struct lab_data_buffer *buffer = choose_best_icon_buffer(self, icon_size, scale);
+	struct lab_data_buffer *buffer =
+		choose_best_icon_buffer(view, icon_size, scale);
 	if (buffer) {
 		wlr_log(WLR_DEBUG, "loaded icon from client buffer");
-		return buffer_resize(buffer, self->width, self->height, scale);
+		return buffer_resize(buffer, icon_size, icon_size, scale);
 	}
 
 	return NULL;
@@ -71,12 +67,13 @@ load_client_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
  * based on the icon theme specified in rc.xml.
  */
 static struct lab_data_buffer *
-load_server_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
+load_server_icon(struct view *view, int icon_size, double scale)
 {
-	struct lab_img *img = desktop_entry_load_icon_from_app_id(self->view_app_id, icon_size, scale);
+	struct lab_img *img = desktop_entry_load_icon_from_app_id(
+		view->app_id, icon_size, scale);
 	if (img) {
 		wlr_log(WLR_DEBUG, "loaded icon by app_id");
-		return img_to_buffer(img, self->width, self->height, scale);
+		return img_to_buffer(img, icon_size, scale);
 	}
 
 	return NULL;
@@ -84,183 +81,29 @@ load_server_icon(struct scaled_icon_buffer *self, int icon_size, double scale)
 
 #endif /* HAVE_LIBSFDO */
 
-static struct lab_data_buffer *
-_create_buffer(struct scaled_buffer *scaled_buffer, double scale)
+struct lab_data_buffer *
+scaled_icon_buffer_load(struct view *view, int icon_size)
 {
 #if HAVE_LIBSFDO
-	struct scaled_icon_buffer *self = scaled_buffer->data;
-	int icon_size = MIN(self->width, self->height);
+	double scale = 1.0; /* FIXME */
 	struct lab_img *img = NULL;
 	struct lab_data_buffer *buffer = NULL;
 
 	/* window icon */
-	buffer = load_client_icon(self, icon_size, scale);
+	buffer = load_client_icon(view, icon_size, scale);
 	if (buffer) {
 		return buffer;
 	}
-	buffer = load_server_icon(self, icon_size, scale);
+	buffer = load_server_icon(view, icon_size, scale);
 	if (buffer) {
 		return buffer;
 	}
 	/* If both client and server icons are unavailable, use the fallback icon */
-	img = desktop_entry_load_icon(rc.fallback_app_icon_name,
-		icon_size, scale);
+	img = desktop_entry_load_icon(rc.fallback_app_icon_name, icon_size, scale);
 	if (img) {
 		wlr_log(WLR_DEBUG, "loaded fallback icon");
-		return img_to_buffer(img, self->width, self->height, scale);
+		return img_to_buffer(img, icon_size, scale);
 	}
 #endif /* HAVE_LIBSFDO */
 	return NULL;
-}
-
-static void
-set_icon_buffers(struct scaled_icon_buffer *self, struct wl_array *buffers)
-{
-	struct lab_data_buffer **icon_buffer;
-	wl_array_for_each(icon_buffer, &self->view_icon_buffers) {
-		wlr_buffer_unlock(&(*icon_buffer)->base);
-	}
-	wl_array_release(&self->view_icon_buffers);
-	wl_array_init(&self->view_icon_buffers);
-
-	if (!buffers) {
-		return;
-	}
-
-	wl_array_for_each(icon_buffer, buffers) {
-		wlr_buffer_lock(&(*icon_buffer)->base);
-	}
-	wl_array_copy(&self->view_icon_buffers, buffers);
-}
-
-static void
-_destroy(struct scaled_buffer *scaled_buffer)
-{
-	struct scaled_icon_buffer *self = scaled_buffer->data;
-	if (self->view) {
-		wl_list_remove(&self->on_view.set_icon.link);
-		wl_list_remove(&self->on_view.new_app_id.link);
-		wl_list_remove(&self->on_view.destroy.link);
-	}
-	free(self->view_app_id);
-	set_icon_buffers(self, NULL);
-	free(self);
-}
-
-static bool
-icon_buffers_equal(struct wl_array *a, struct wl_array *b)
-{
-	if (a->size != b->size) {
-		return false;
-	}
-	return a->size == 0 || !memcmp(a->data, b->data, a->size);
-}
-
-static bool
-_equal(struct scaled_buffer *scaled_buffer_a,
-	struct scaled_buffer *scaled_buffer_b)
-{
-	struct scaled_icon_buffer *a = scaled_buffer_a->data;
-	struct scaled_icon_buffer *b = scaled_buffer_b->data;
-
-	return str_equal(a->view_app_id, b->view_app_id)
-		&& icon_buffers_equal(&a->view_icon_buffers, &b->view_icon_buffers)
-		&& a->width == b->width
-		&& a->height == b->height;
-}
-
-static struct scaled_buffer_impl impl = {
-	.create_buffer = _create_buffer,
-	.destroy = _destroy,
-	.equal = _equal,
-};
-
-struct scaled_icon_buffer *
-scaled_icon_buffer_create(struct wlr_scene_tree *parent, int width, int height)
-{
-	assert(parent);
-	assert(width >= 0 && height >= 0);
-
-	struct scaled_buffer *scaled_buffer = scaled_buffer_create(
-		parent, &impl, /* drop_buffer */ true);
-	struct scaled_icon_buffer *self = znew(*self);
-	self->scaled_buffer = scaled_buffer;
-	self->scene_buffer = scaled_buffer->scene_buffer;
-	self->width = width;
-	self->height = height;
-
-	scaled_buffer->data = self;
-
-	return self;
-}
-
-static void
-handle_view_set_icon(struct wl_listener *listener, void *data)
-{
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.set_icon);
-
-	if (icon_buffers_equal(&self->view_icon_buffers,
-			&self->view->icon.buffers)) {
-		return;
-	}
-
-	set_icon_buffers(self, &self->view->icon.buffers);
-	scaled_buffer_request_update(self->scaled_buffer,
-		self->width, self->height);
-}
-
-static void
-handle_view_new_app_id(struct wl_listener *listener, void *data)
-{
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.new_app_id);
-
-	const char *app_id = self->view->app_id;
-	if (str_equal(app_id, self->view_app_id)) {
-		return;
-	}
-
-	xstrdup_replace(self->view_app_id, app_id);
-	scaled_buffer_request_update(self->scaled_buffer,
-		self->width, self->height);
-}
-
-static void
-handle_view_destroy(struct wl_listener *listener, void *data)
-{
-	struct scaled_icon_buffer *self =
-		wl_container_of(listener, self, on_view.destroy);
-	wl_list_remove(&self->on_view.destroy.link);
-	wl_list_remove(&self->on_view.set_icon.link);
-	wl_list_remove(&self->on_view.new_app_id.link);
-	self->view = NULL;
-}
-
-void
-scaled_icon_buffer_set_view(struct scaled_icon_buffer *self, struct view *view)
-{
-	assert(view);
-	if (self->view == view) {
-		return;
-	}
-
-	if (self->view) {
-		wl_list_remove(&self->on_view.set_icon.link);
-		wl_list_remove(&self->on_view.new_app_id.link);
-		wl_list_remove(&self->on_view.destroy.link);
-	}
-	self->view = view;
-
-	self->on_view.set_icon.notify = handle_view_set_icon;
-	wl_signal_add(&view->events.set_icon, &self->on_view.set_icon);
-
-	self->on_view.new_app_id.notify = handle_view_new_app_id;
-	wl_signal_add(&view->events.new_app_id, &self->on_view.new_app_id);
-
-	self->on_view.destroy.notify = handle_view_destroy;
-	wl_signal_add(&view->events.destroy, &self->on_view.destroy);
-
-	handle_view_set_icon(&self->on_view.set_icon, NULL);
-	handle_view_new_app_id(&self->on_view.new_app_id, NULL);
 }

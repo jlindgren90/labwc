@@ -5,7 +5,6 @@
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "node.h"
-#include "scaled-buffer/scaled-icon-buffer.h"
 #include "scaled-buffer/scaled-img-buffer.h"
 #include "ssd-internal.h"
 
@@ -33,23 +32,16 @@ attach_ssd_button(enum lab_node_type type, struct wlr_scene_tree *parent,
 	/* Icons */
 	int button_width = g_theme.window_button_width;
 	int button_height = g_theme.window_button_height;
-	/*
-	 * Ensure a small amount of horizontal padding within the button
-	 * area (2px on each side with the default 26px button width).
-	 * A new theme setting could be added to configure this. Using
-	 * an existing setting (padding.width or window.button.spacing)
-	 * was considered, but these settings have distinct purposes
-	 * already and are zero by default.
-	 */
-	int icon_padding = button_width / 10;
 
 	if (type == LAB_NODE_BUTTON_WINDOW_ICON) {
-		struct scaled_icon_buffer *icon_buffer =
-			scaled_icon_buffer_create(root, button_width - 2 * icon_padding, button_height);
-		assert(icon_buffer);
-		struct wlr_scene_node *icon_node = &icon_buffer->scene_buffer->node;
-		scaled_icon_buffer_set_view(icon_buffer, view);
-		wlr_scene_node_set_position(icon_node, icon_padding, 0);
+		struct wlr_scene_buffer *icon_buffer =
+			wlr_scene_buffer_create(root, NULL);
+		int icon_size = g_theme.window_icon_size;
+		wlr_scene_buffer_set_dest_size(icon_buffer,
+			icon_size, icon_size);
+		wlr_scene_node_set_position(&icon_buffer->node,
+			(button_width - icon_size) / 2,
+			(button_height - icon_size) / 2);
 		button->window_icon = icon_buffer;
 	} else {
 		for (uint8_t state_set = LAB_BS_DEFAULT;
