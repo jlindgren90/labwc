@@ -5,6 +5,7 @@
 #include <wayland-server-protocol.h>
 #include "common/edge.h"
 #include "common/node-type.h"
+#include "rs-types.h"
 
 struct view;
 struct seat;
@@ -31,7 +32,7 @@ enum lab_cursors {
 };
 
 struct cursor_context {
-	struct view *view;
+	ViewId view_id;
 	struct wlr_scene_node *node;
 	struct wlr_surface *surface;
 	enum lab_node_type type;
@@ -76,8 +77,6 @@ void cursor_set(enum lab_cursors cursor);
  */
 void cursor_context_save(struct cursor_context_saved *saved_ctx,
 	const struct cursor_context *ctx);
-
-void cursor_on_view_destroy(struct view *view);
 
 /**
  * cursor_get_resize_edges - calculate resize edge based on cursor position
