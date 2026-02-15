@@ -389,7 +389,7 @@ edges_find_neighbors(struct border *nearest_edges, struct view *view,
 	edges_for_target_geometry(&target_edges, view, target);
 
 	struct view *v;
-	for_each_view(v, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(v, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
 		if (v == view || v->minimized || !output_is_usable(v->output)) {
 			continue;
 		}

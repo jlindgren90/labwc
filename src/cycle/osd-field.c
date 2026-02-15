@@ -6,11 +6,10 @@
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "cycle.h"
-#include "view.h"
-#include "workspaces.h"
-#include "labwc.h"
 #include "desktop-entry.h"
+#include "labwc.h"
 #include "output.h"
+#include "view.h"
 
 /* includes '%', terminating 's' and NULL byte, 8 is enough for %-9999s */
 #define LAB_FIELD_SINGLE_FMT_MAX_LEN 8
@@ -89,22 +88,6 @@ field_set_type_short(struct buf *buf, struct view *view, const char *format)
 {
 	/* custom type conversion-specifier: b (backend) */
 	buf_add(buf, get_type(view, /*short_form*/ true));
-}
-
-static void
-field_set_workspace(struct buf *buf, struct view *view, const char *format)
-{
-	/* custom type conversion-specifier: W */
-	buf_add(buf, view->workspace->name);
-}
-
-static void
-field_set_workspace_short(struct buf *buf, struct view *view, const char *format)
-{
-	/* custom type conversion-specifier: w */
-	if (wl_list_length(&rc.workspace_config.workspaces) > 1) {
-		buf_add(buf, view->workspace->name);
-	}
 }
 
 static void
@@ -197,8 +180,6 @@ static const struct field_converter field_converter[LAB_FIELD_COUNT] = {
 	[LAB_FIELD_IDENTIFIER]         = { 'I', field_set_identifier },
 	[LAB_FIELD_TRIMMED_IDENTIFIER] = { 'i', field_set_identifier_trimmed },
 	[LAB_FIELD_DESKTOP_ENTRY_NAME] = { 'n', field_set_desktop_entry_name},
-	[LAB_FIELD_WORKSPACE]          = { 'W', field_set_workspace },
-	[LAB_FIELD_WORKSPACE_SHORT]    = { 'w', field_set_workspace_short },
 	[LAB_FIELD_OUTPUT]             = { 'O', field_set_output },
 	[LAB_FIELD_OUTPUT_SHORT]       = { 'o', field_set_output_short },
 	[LAB_FIELD_TITLE]              = { 'T', field_set_title },
@@ -307,8 +288,6 @@ cycle_osd_field_arg_from_xml_node(struct cycle_osd_field *field,
 			field->content = LAB_FIELD_DESKTOP_ENTRY_NAME;
 		} else if (!strcmp(content, "title")) {
 			field->content = LAB_FIELD_TITLE;
-		} else if (!strcmp(content, "workspace")) {
-			field->content = LAB_FIELD_WORKSPACE;
 		} else if (!strcmp(content, "state")) {
 			field->content = LAB_FIELD_WIN_STATE;
 		} else if (!strcmp(content, "output")) {

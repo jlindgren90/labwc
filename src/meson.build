@@ -28,7 +28,6 @@ labwc_sources = files(
   'view.c',
   'view-impl-common.c',
   'window-rules.c',
-  'workspaces.c',
   'xdg.c',
   'xdg-popup.c',
 )
@@ -54,6 +53,5 @@ subdir('foreign-toplevel')
 subdir('img')
 subdir('input')
 subdir('menu')
-subdir('protocols')
 subdir('scaled-buffer')
 subdir('ssd')

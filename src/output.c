@@ -18,9 +18,9 @@
 #include <wlr/types/wlr_output.h>
 #include <wlr/types/wlr_output_management_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
+#include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_xcursor_manager.h>
 #include <wlr/types/wlr_xdg_output_v1.h>
-#include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
 #include "common/macros.h"
 #include "common/mem.h"
@@ -31,8 +31,6 @@
 #include "node.h"
 #include "output-state.h"
 #include "output-virtual.h"
-#include "protocols/cosmic-workspaces.h"
-#include "protocols/ext-workspace.h"
 #include "regions.h"
 #include "session-lock.h"
 #include "view.h"
@@ -169,10 +167,6 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	wlr_scene_node_destroy(&output->layer_popup_tree->node);
 	wlr_scene_node_destroy(&output->cycle_osd_tree->node);
 	wlr_scene_node_destroy(&output->session_lock_tree->node);
-	if (output->workspace_osd) {
-		wlr_scene_node_destroy(&output->workspace_osd->node);
-		output->workspace_osd = NULL;
-	}
 
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
@@ -264,11 +258,6 @@ add_output_to_layout(struct output *output)
 		wlr_scene_output_layout_add_output(g_server.scene_layout,
 			layout_output, output->scene_output);
 	}
-
-	lab_cosmic_workspace_group_output_enter(
-		g_server.workspaces.cosmic_group, output->wlr_output);
-	lab_ext_workspace_group_output_enter(
-		g_server.workspaces.ext_group, output->wlr_output);
 
 	/* (Re-)create regions from config */
 	regions_reconfigure_output(output);
@@ -708,11 +697,6 @@ output_config_apply(struct wlr_output_configuration_v1 *config)
 			}
 		} else if (was_in_layout) {
 			regions_evacuate_output(output);
-
-			lab_cosmic_workspace_group_output_leave(
-				g_server.workspaces.cosmic_group, output->wlr_output);
-			lab_ext_workspace_group_output_leave(
-				g_server.workspaces.ext_group, output->wlr_output);
 
 			/*
 			 * At time of writing, wlr_output_layout_remove()
