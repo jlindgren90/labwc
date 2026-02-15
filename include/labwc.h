@@ -49,8 +49,6 @@ struct seat {
 		struct wl_listener surface_destroy;
 	} focus_override;
 
-	struct wlr_pointer_constraint_v1 *current_constraint;
-
 	/* if set, views cannot receive focus */
 	struct wlr_layer_surface_v1 *focused_layer;
 
@@ -99,8 +97,6 @@ struct seat {
 	struct wl_listener request_set_shape;
 	struct wl_listener request_set_selection;
 	struct wl_listener request_set_primary_selection;
-
-	struct wl_listener constraint_commit;
 };
 
 struct server {
@@ -226,8 +222,6 @@ struct server {
 	struct wl_listener output_power_manager_set_mode;
 
 	struct wlr_relative_pointer_manager_v1 *relative_pointer_manager;
-	struct wlr_pointer_constraints_v1 *constraints;
-	struct wl_listener new_constraint;
 
 	struct wlr_input_method_manager_v2 *input_method_manager;
 	struct wlr_text_input_manager_v3 *text_input_manager;
@@ -373,9 +367,5 @@ bool edge_from_cursor(struct output **dest_output,
 void server_init(void);
 void server_start(void);
 void server_finish(void);
-
-void create_constraint(struct wl_listener *listener, void *data);
-void constrain_cursor(struct wlr_pointer_constraint_v1
-	*constraint);
 
 #endif /* LABWC_H */
