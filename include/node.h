@@ -4,12 +4,13 @@
 
 #include <wayland-server-core.h>
 #include "common/node-type.h"
+#include "rs-types.h"
 
 struct wlr_scene_node;
 
 struct node_descriptor {
 	enum lab_node_type type;
-	struct view *view;
+	ViewId view_id;
 	void *data;
 	struct wl_listener destroy;
 };
@@ -31,13 +32,13 @@ struct node_descriptor {
  *   - LAB_NODE_BUTTON_*       struct ssd_button
  */
 void node_descriptor_create(struct wlr_scene_node *scene_node,
-	enum lab_node_type type, struct view *view, void *data);
+	enum lab_node_type type, ViewId view_id, void *data);
 
 /**
  * node_view_from_node - return view struct from node
  * @wlr_scene_node: wlr_scene_node from which to return data
  */
-struct view *node_view_from_node(struct wlr_scene_node *wlr_scene_node);
+ViewId node_view_from_node(struct wlr_scene_node *wlr_scene_node);
 
 /**
  * node_lab_surface_from_node - return lab_layer_surface struct from node
