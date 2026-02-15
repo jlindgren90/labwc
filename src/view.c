@@ -60,17 +60,6 @@ view_notify_active(struct view *view)
 }
 
 void
-view_move(struct view *view, int x, int y)
-{
-	assert(view);
-	view_move_resize(view->id, (struct wlr_box){
-		.x = x, .y = y,
-		.width = view->st->pending.width,
-		.height = view->st->pending.height
-	});
-}
-
-void
 view_moved(struct view *view)
 {
 	assert(view);
@@ -263,11 +252,6 @@ void
 view_set_visible(struct view *view, bool visible)
 {
 	wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
-
-	/* View might have been unmapped/minimized during move/resize */
-	if (!visible) {
-		interactive_cancel(view);
-	}
 }
 
 void
@@ -294,14 +278,6 @@ view_destroy(struct view *view)
 	wl_list_remove(&view->destroy.link);
 
 	cursor_on_view_destroy(view);
-
-	/*
-	 * This check is (in theory) redundant since interactive_cancel()
-	 * is called at unmap. Leaving it here just to be sure.
-	 */
-	if (g_server.grabbed_view == view) {
-		interactive_cancel(view);
-	}
 
 	undecorate(view);
 	menu_on_view_destroy(view);

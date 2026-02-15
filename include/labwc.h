@@ -143,12 +143,6 @@ struct server {
 
 	/* cursor interactive */
 	enum input_mode input_mode;
-	struct view *grabbed_view;
-	/* Cursor position when interactive move/resize is requested */
-	double grab_x, grab_y;
-	/* View geometry when interactive move/resize is requested */
-	struct wlr_box grab_box;
-	enum lab_edge resize_edges;
 
 	struct ssd_button *hovered_button;
 
@@ -272,32 +266,9 @@ void seat_focus_override_begin(enum input_mode input_mode,
  */
 void seat_focus_override_end(bool restore_focus);
 
-/**
- * interactive_anchor_to_cursor() - repositions the geometry to remain
- * underneath the cursor when its size changes during interactive move.
- * This function also resizes g_server.grab_box and repositions it to remain
- * underneath g_server.grab_{x,y}.
- *
- * geo->{width,height} are provided by the caller.
- * geo->{x,y} are computed by this function.
- */
-void interactive_anchor_to_cursor(struct wlr_box *geo);
-
 void interactive_set_grab_context(struct cursor_context *ctx);
 void interactive_begin(struct view *view, enum input_mode mode,
 	enum lab_edge edges);
-void interactive_finish(struct view *view);
-void interactive_cancel(struct view *view);
-
-/**
- * Returns the edge to snap a window to.
- * For example, if the output-relative cursor position (x,y) fulfills
- * x <= (<snapping><cornerRange>) and y <= (<snapping><range>),
- * then edge1=LAB_EDGE_TOP and edge2=LAB_EDGE_LEFT.
- * The value of (edge1|edge2) can be passed to view_snap_to_edge().
- */
-bool edge_from_cursor(struct output **dest_output,
-	enum lab_edge *edge1, enum lab_edge *edge2);
 
 void server_init(void);
 void server_start(void);

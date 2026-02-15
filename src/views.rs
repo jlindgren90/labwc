@@ -2,6 +2,7 @@
 //
 use crate::bindings::*;
 use crate::view::*;
+use crate::view_grab::*;
 use std::collections::{BTreeMap, HashSet};
 use std::ptr::null_mut;
 
@@ -12,6 +13,10 @@ pub struct Views {
     order: Vec<ViewId>, // from back to front
     active_id: ViewId,
     foreign_toplevel_clients: Vec<*mut WlResource>,
+    grabbed_id: ViewId, // set at mouse button press
+    moving_id: ViewId,  // set once cursor actually moves
+    resizing_id: ViewId,
+    grab: ViewGrab,
     cycle_list: Vec<ViewId>, // TODO: move elsewhere?
 }
 
@@ -97,6 +102,7 @@ impl Views {
             view.set_unmapped(&mut was_hidden);
             if was_hidden {
                 self.update_top_layer_visibility();
+                self.reset_grab_for(Some(id));
                 if !self.is_active_visible() {
                     self.focus_topmost();
                 }
@@ -124,6 +130,16 @@ impl Views {
             if let Some(view) = self.by_id.get_mut(&id) {
                 view.set_active(true);
             }
+        }
+    }
+
+    pub fn commit_size(&mut self, id: ViewId, width: i32, height: i32) {
+        let mut resize_edges = LAB_EDGE_NONE;
+        if id == self.resizing_id {
+            resize_edges = self.grab.get_resize_edges();
+        }
+        if let Some(view) = self.by_id.get_mut(&id) {
+            view.commit_size(width, height, resize_edges);
         }
     }
 
@@ -159,9 +175,31 @@ impl Views {
         };
         let view_ptr = view.fullscreen(fullscreen);
         if !view_ptr.is_null() {
+            // Entering/leaving fullscreen ends any interactive move/resize
+            self.reset_grab_for(Some(id));
             self.update_top_layer_visibility();
         }
         return view_ptr;
+    }
+
+    pub fn maximize(&mut self, id: ViewId, axis: ViewAxis) {
+        if let Some(view) = self.by_id.get_mut(&id)
+            && view.get_state().maximized != axis
+        {
+            view.maximize(axis, id == self.moving_id);
+            // Maximizing/unmaximizing ends any interactive move/resize
+            self.reset_grab_for(Some(id));
+        }
+    }
+
+    pub fn tile(&mut self, id: ViewId, edge: LabEdge) {
+        if let Some(view) = self.by_id.get_mut(&id)
+            && view.get_state().tiled != edge
+        {
+            view.tile(edge, id == self.moving_id);
+            // Tiling/untiling ends any interactive move/resize
+            self.reset_grab_for(Some(id));
+        }
     }
 
     // Returns true if visibility of any view changed
@@ -172,8 +210,16 @@ impl Views {
         {
             // Minimize/unminimize all related views together
             let root = view.get_root_id();
-            for v in self.by_id.values_mut().filter(|v| v.get_root_id() == root) {
-                v.set_minimized(minimized, &mut visibility_changed);
+            let mut reset_grab = false;
+            for (&i, v) in &mut self.by_id {
+                if v.get_root_id() == root {
+                    v.set_minimized(minimized, &mut visibility_changed);
+                    reset_grab |= i == self.grabbed_id;
+                }
+            }
+            // Minimize ends any interactive move/resize
+            if reset_grab {
+                self.reset_grab_for(None);
             }
         }
         if visibility_changed {
@@ -269,6 +315,104 @@ impl Views {
 
     pub fn remove_foreign_toplevel_client(&mut self, client: *mut WlResource) {
         self.foreign_toplevel_clients.retain(|&c| c != client);
+    }
+
+    pub fn set_grab_context(&mut self, id: ViewId, cursor_x: i32, cursor_y: i32, edges: LabEdge) {
+        if self.grabbed_id == 0
+            && let Some(view) = self.by_id.get_mut(&id)
+        {
+            self.grabbed_id = id;
+            self.grab.set_context(view, cursor_x, cursor_y, edges);
+        }
+    }
+
+    pub fn start_move(&mut self, id: ViewId) -> bool {
+        if id == self.grabbed_id
+            && let Some(view) = self.by_id.get_mut(&id)
+            && self.grab.start_move(view)
+        {
+            self.moving_id = id;
+            return true;
+        }
+        return false;
+    }
+
+    pub fn get_moving(&self) -> *mut CView {
+        let moving = self.by_id.get(&self.moving_id);
+        return moving.map_or(null_mut(), View::get_c_ptr);
+    }
+
+    pub fn adjust_move_origin(&mut self, width: i32, height: i32) {
+        self.grab.adjust_move_origin(width, height);
+    }
+
+    pub fn compute_move_position(&self, cursor_x: i32, cursor_y: i32) -> (i32, i32) {
+        self.grab.compute_move_position(cursor_x, cursor_y)
+    }
+
+    pub fn continue_move(&mut self, cursor_x: i32, cursor_y: i32) {
+        if let Some(view) = self.by_id.get_mut(&self.moving_id) {
+            self.grab.continue_move(view, cursor_x, cursor_y);
+        }
+    }
+
+    pub fn start_resize(&mut self, id: ViewId, edges: LabEdge) -> bool {
+        if id == self.grabbed_id
+            && let Some(view) = self.by_id.get_mut(&id)
+            && self.grab.start_resize(view, edges)
+        {
+            self.resizing_id = id;
+            return true;
+        }
+        return false;
+    }
+
+    pub fn get_resize_edges(&self) -> LabEdge {
+        self.grab.get_resize_edges()
+    }
+
+    pub fn continue_resize(&mut self, cursor_x: i32, cursor_y: i32) {
+        if let Some(view) = self.by_id.get_mut(&self.resizing_id) {
+            self.grab.continue_resize(view, cursor_x, cursor_y);
+        }
+    }
+
+    pub fn snap_to_edge(&mut self, cursor_x: i32, cursor_y: i32) {
+        if let Some(view) = self.by_id.get_mut(&self.moving_id)
+            && view.get_state().floating()
+        {
+            let (output, edges) = get_snap_target(cursor_x, cursor_y);
+            if edges != LAB_EDGE_NONE {
+                view.set_output(output);
+                if edges == LAB_EDGE_TOP {
+                    view.maximize(VIEW_AXIS_BOTH, /* is_moving */ true);
+                } else if edges == LAB_EDGE_BOTTOM {
+                    // Minimize but restore position from start of drag
+                    // (or natural geometry if view was maximized/tiled)
+                    view.move_resize(view.get_state().natural_geom);
+                    self.minimize(self.moving_id, true);
+                } else {
+                    view.tile(edges, /* is_moving */ true);
+                }
+            }
+        }
+    }
+
+    // Resets grab for any view if id is None
+    pub fn reset_grab_for(&mut self, id: Option<ViewId>) {
+        if id == Some(self.grabbed_id) || id.is_none() {
+            // Focus was only overridden if move/resize was actually started
+            // FIXME: seat_focus_override_begin() is still called from C code
+            if self.moving_id != 0 || self.resizing_id != 0 {
+                unsafe {
+                    seat_focus_override_end(/* restore_focus */ true)
+                };
+            }
+            self.grabbed_id = 0;
+            self.moving_id = 0;
+            self.resizing_id = 0;
+            self.grab = ViewGrab::default();
+        }
     }
 
     pub fn build_cycle_list(&mut self) {

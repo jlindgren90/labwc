@@ -97,7 +97,6 @@ struct wlr_surface *view_get_surface(struct view *view);
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
-void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 
 void view_toggle_maximize(struct view *view, enum view_axis axis);

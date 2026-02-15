@@ -267,8 +267,7 @@ impl View {
         }
     }
 
-    pub fn commit_size(&mut self, width: i32, height: i32) {
-        let resize_edges = unsafe { interactive_resize_get_edges(self.c_ptr) };
+    pub fn commit_size(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
         let (x, y) = compute_display_position(
             self.state.current,
             self.state.pending,
@@ -385,9 +384,7 @@ impl View {
         if self.state.fullscreen == fullscreen {
             return null_mut();
         }
-        // Fullscreening ends any interactive move/resize
         if fullscreen {
-            unsafe { interactive_cancel(self.c_ptr) };
             self.store_natural_geom();
         }
         self.set_fullscreen(fullscreen);
@@ -399,15 +396,12 @@ impl View {
         return self.c_ptr;
     }
 
-    pub fn maximize(&mut self, axis: ViewAxis) {
+    pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) {
         if self.state.maximized == axis {
             return;
         }
         // In snap-to-maximize case, natural geometry was already stored
-        let store_natural_geometry = unsafe { !interactive_move_is_active(self.c_ptr) };
-        // Maximizing/unmaximizing ends any interactive move/resize
-        unsafe { interactive_cancel(self.c_ptr) };
-        if store_natural_geometry {
+        if !is_moving {
             self.store_natural_geom();
         }
         // Corner case: if unmaximizing one axis but natural geometry is
@@ -426,17 +420,12 @@ impl View {
         }
     }
 
-    pub fn tile(&mut self, edge: LabEdge) {
+    pub fn tile(&mut self, edge: LabEdge, is_moving: bool) {
         if self.state.tiled == edge {
             return;
         }
         // In snap-to-tile case, natural geometry was already stored
-        let store_natural_geometry = unsafe { !interactive_move_is_active(self.c_ptr) };
-        // Tiling ends any interactive move/resize
-        if edge != LAB_EDGE_NONE {
-            unsafe { interactive_cancel(self.c_ptr) };
-        }
-        if store_natural_geometry {
+        if !is_moving {
             self.store_natural_geom();
         }
         self.set_tiled(edge);
