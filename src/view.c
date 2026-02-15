@@ -32,7 +32,6 @@
 #include "theme.h"
 #include "window-rules.h"
 #include "wlr/util/log.h"
-#include "workspaces.h"
 
 #if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
@@ -94,7 +93,6 @@ view_query_free(struct view_query *query)
 	zfree(query->sandbox_engine);
 	zfree(query->sandbox_app_id);
 	zfree(query->tiled_region);
-	zfree(query->desktop);
 	zfree(query->monitor);
 	zfree(query);
 }
@@ -180,10 +178,6 @@ view_matches_query(struct view *view, struct view_query *query)
 		return false;
 	}
 
-	if (!query_tristate_match(query->omnipresent, view->visible_on_all_workspaces)) {
-		return false;
-	}
-
 	if (query->tiled == LAB_EDGE_ANY) {
 		if (!view->tiled) {
 			return false;
@@ -198,25 +192,6 @@ view_matches_query(struct view *view, struct view_query *query)
 		view->tiled_region ? view->tiled_region->name : NULL;
 	if (!query_str_match(query->tiled_region, tiled_region)) {
 		return false;
-	}
-
-	if (query->desktop) {
-		const char *view_workspace = view->workspace->name;
-		struct workspace *current = g_server.workspaces.current;
-
-		if (!strcasecmp(query->desktop, "other")) {
-			/* "other" means the view is NOT on the current desktop */
-			if (!strcasecmp(view_workspace, current->name)) {
-				return false;
-			}
-		} else {
-			// TODO: perhaps wrap "left" and "right" workspaces
-			struct workspace *target =
-				workspaces_find(current, query->desktop, /* wrap */ false);
-			if (!target || strcasecmp(view_workspace, target->name)) {
-				return false;
-			}
-		}
 	}
 
 	if (query->decoration != LAB_SSD_MODE_INVALID
@@ -267,11 +242,6 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 	if (!view_is_focusable(view)) {
 		return false;
 	}
-	if (criteria & LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
-		if (view->workspace != g_server.workspaces.current) {
-			return false;
-		}
-	}
 	if (criteria & LAB_VIEW_CRITERIA_FULLSCREEN) {
 		if (!view->fullscreen) {
 			return false;
@@ -294,11 +264,6 @@ matches_criteria(struct view *view, enum lab_view_criteria criteria)
 	}
 	if (criteria & LAB_VIEW_CRITERIA_NO_SKIP_WINDOW_SWITCHER) {
 		if (window_rules_get_property(view, "skipWindowSwitcher") == LAB_PROP_TRUE) {
-			return false;
-		}
-	}
-	if (criteria & LAB_VIEW_CRITERIA_NO_OMNIPRESENT) {
-		if (view->visible_on_all_workspaces) {
 			return false;
 		}
 	}
@@ -1014,8 +979,7 @@ view_compute_cascaded_position(struct view *view, struct wlr_box *geom)
 
 		/* Iterate over views from top to bottom */
 		struct view *other_view;
-		for_each_view(other_view, &g_server.views,
-				LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+		for_each_view(other_view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
 			struct wlr_box other = ssd_max_extents(other_view);
 			if (other_view == view
 					|| view->minimized
@@ -1543,7 +1507,7 @@ view_set_layer(struct view *view, enum view_layer layer)
 	assert(view);
 	view->layer = layer;
 	wlr_scene_node_reparent(&view->scene_tree->node,
-		view->workspace->view_trees[layer]);
+		g_server.view_trees[layer]);
 }
 
 void
@@ -1565,26 +1529,6 @@ view_toggle_always_on_bottom(struct view *view)
 		view_set_layer(view, VIEW_LAYER_NORMAL);
 	} else {
 		view_set_layer(view, VIEW_LAYER_ALWAYS_ON_BOTTOM);
-	}
-}
-
-void
-view_toggle_visible_on_all_workspaces(struct view *view)
-{
-	assert(view);
-	view->visible_on_all_workspaces = !view->visible_on_all_workspaces;
-	ssd_update_geometry(view->ssd);
-}
-
-void
-view_move_to_workspace(struct view *view, struct workspace *workspace)
-{
-	assert(view);
-	assert(workspace);
-	if (view->workspace != workspace) {
-		view->workspace = workspace;
-		wlr_scene_node_reparent(&view->scene_tree->node,
-			workspace->view_trees[view->layer]);
 	}
 }
 

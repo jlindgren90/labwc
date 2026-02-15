@@ -30,13 +30,10 @@
 #include "config/tablet-tool.h"
 #include "config/touch.h"
 #include "cycle.h"
-#include "labwc.h"
 #include "regions.h"
 #include "ssd.h"
-#include "translate.h"
 #include "view.h"
 #include "window-rules.h"
-#include "workspaces.h"
 
 /* for backward compatibility of <mouse><scrollFactor> */
 static double mouse_scroll_factor = -1;
@@ -145,8 +142,6 @@ fill_section(const char *content, enum lab_node_type *buttons, int *count,
 			type = LAB_NODE_BUTTON_CLOSE;
 		} else if (!strcmp(identifier, "shade")) {
 			type = LAB_NODE_BUTTON_SHADE;
-		} else if (!strcmp(identifier, "desk")) {
-			type = LAB_NODE_BUTTON_OMNIPRESENT;
 		} else {
 			wlr_log(WLR_ERROR, "invalid titleLayout identifier '%s'",
 				identifier);
@@ -430,15 +425,11 @@ fill_action_query(struct action *action, xmlNode *node, struct view_query *query
 			query->iconified = parse_tristate(content);
 		} else if (!strcasecmp(key, "focused")) {
 			query->focused = parse_tristate(content);
-		} else if (!strcasecmp(key, "omnipresent")) {
-			query->omnipresent = parse_tristate(content);
 		} else if (!strcasecmp(key, "tiled")) {
 			query->tiled = lab_edge_parse(content,
 				/*tiled*/ true, /*any*/ true);
 		} else if (!strcasecmp(key, "tiled_region")) {
 			xstrdup_replace(query->tiled_region, content);
-		} else if (!strcasecmp(key, "desktop")) {
-			xstrdup_replace(query->desktop, content);
 		} else if (!strcasecmp(key, "decoration")) {
 			query->decoration = ssd_mode_parse(content);
 		} else if (!strcasecmp(key, "monitor")) {
@@ -1068,8 +1059,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		load_default_key_bindings();
 	} else if (!strcmp(nodename, "default.mouse")) {
 		load_default_mouse_bindings();
-	} else if (!strcasecmp(nodename, "prefix.desktops")) {
-		xstrdup_replace(rc.workspace_config.prefix, content);
 	} else if (!strcasecmp(nodename, "thumbnailLabelFormat.osd.windowSwitcher")) {
 		xstrdup_replace(rc.window_switcher.osd.thumbnail_label_format, content);
 
@@ -1268,17 +1257,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &rc.window_switcher.preview);
 	} else if (!strcasecmp(nodename, "outlines.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.outlines);
-	} else if (!strcasecmp(nodename, "allWorkspaces.windowSwitcher")) {
-		int ret = parse_bool(content, -1);
-		if (ret < 0) {
-			wlr_log(WLR_ERROR, "Invalid value for <windowSwitcher"
-				" allWorkspaces=\"\">: '%s'", content);
-		} else {
-			rc.window_switcher.workspace_filter = ret ?
-				CYCLE_WORKSPACE_ALL : CYCLE_WORKSPACE_CURRENT;
-		}
-		wlr_log(WLR_ERROR, "<windowSwitcher allWorkspaces=\"\" /> is deprecated."
-			" Use <action name=\"NextWindow\" workspace=\"\"> instead.");
 	} else if (!strcasecmp(nodename, "unshade.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.unshade);
 
@@ -1308,16 +1286,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		wlr_log(WLR_ERROR, "<cycleViewOutlines> is deprecated."
 			" Use <windowSwitcher outlines=\"\" />");
 
-	} else if (!strcasecmp(nodename, "name.names.desktops")) {
-		struct workspace_config *conf = znew(*conf);
-		conf->name = xstrdup(content);
-		wl_list_append(&rc.workspace_config.workspaces, &conf->link);
-	} else if (!strcasecmp(nodename, "popupTime.desktops")) {
-		rc.workspace_config.popuptime = atoi(content);
-	} else if (!strcasecmp(nodename, "initial.desktops")) {
-		xstrdup_replace(rc.workspace_config.initial_workspace_name, content);
-	} else if (!strcasecmp(nodename, "number.desktops")) {
-		rc.workspace_config.min_nr_workspaces = MAX(1, atoi(content));
 	} else if (!strcasecmp(nodename, "popupShow.resize")) {
 		if (!strcasecmp(content, "Always")) {
 			rc.resize_indicator = LAB_RESIZE_INDICATOR_ALWAYS;
@@ -1425,7 +1393,6 @@ rcxml_init(void)
 		wl_list_init(&rc.keybinds);
 		wl_list_init(&rc.mousebinds);
 		wl_list_init(&rc.libinput_categories);
-		wl_list_init(&rc.workspace_config.workspaces);
 		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.osd.fields);
 		wl_list_init(&rc.window_rules);
@@ -1499,16 +1466,12 @@ rcxml_init(void)
 	rc.window_switcher.preview = true;
 	rc.window_switcher.outlines = true;
 	rc.window_switcher.unshade = true;
-	rc.window_switcher.workspace_filter = CYCLE_WORKSPACE_CURRENT;
 	rc.window_switcher.order = WINDOW_SWITCHER_ORDER_FOCUS;
 
 	rc.resize_indicator = LAB_RESIZE_INDICATOR_NEVER;
 	rc.resize_draw_contents = true;
 	rc.resize_corner_range = -1;
 	rc.resize_minimum_area = 8;
-
-	rc.workspace_config.popuptime = INT_MIN;
-	rc.workspace_config.min_nr_workspaces = 1;
 
 	rc.menu_ignore_button_release_period = 250;
 	rc.menu_show_icons = true;
@@ -1777,28 +1740,6 @@ post_processing(void)
 		}
 	}
 
-	int nr_workspaces = wl_list_length(&rc.workspace_config.workspaces);
-	if (nr_workspaces < rc.workspace_config.min_nr_workspaces) {
-		if (!rc.workspace_config.prefix) {
-			rc.workspace_config.prefix = xstrdup(_("Workspace"));
-		}
-
-		struct buf b = BUF_INIT;
-		for (int i = nr_workspaces; i < rc.workspace_config.min_nr_workspaces; i++) {
-			struct workspace_config *conf = znew(*conf);
-			if (!string_null_or_empty(rc.workspace_config.prefix)) {
-				buf_add_fmt(&b, "%s ", rc.workspace_config.prefix);
-			}
-			buf_add_fmt(&b, "%d", i + 1);
-			conf->name = xstrdup(b.data);
-			wl_list_append(&rc.workspace_config.workspaces, &conf->link);
-			buf_clear(&b);
-		}
-		buf_reset(&b);
-	}
-	if (rc.workspace_config.popuptime == INT_MIN) {
-		rc.workspace_config.popuptime = 1000;
-	}
 	if (!wl_list_length(&rc.window_switcher.osd.fields)) {
 		wlr_log(WLR_INFO, "load default window switcher fields");
 		load_default_window_switcher_fields();
@@ -1967,8 +1908,6 @@ rcxml_finish(void)
 	zfree(rc.theme_name);
 	zfree(rc.icon_theme_name);
 	zfree(rc.fallback_app_icon_name);
-	zfree(rc.workspace_config.prefix);
-	zfree(rc.workspace_config.initial_workspace_name);
 	zfree(rc.tablet.output_name);
 	zfree(rc.window_switcher.osd.thumbnail_label_format);
 
@@ -2008,13 +1947,6 @@ rcxml_finish(void)
 		wl_list_remove(&l->link);
 		zfree(l->name);
 		zfree(l);
-	}
-
-	struct workspace_config *w, *w_tmp;
-	wl_list_for_each_safe(w, w_tmp, &rc.workspace_config.workspaces, link) {
-		wl_list_remove(&w->link);
-		zfree(w->name);
-		zfree(w);
 	}
 
 	regions_destroy(&rc.regions, /* check_active */ false);

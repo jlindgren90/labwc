@@ -16,7 +16,6 @@
 #include "output.h"
 #include "ssd.h"
 #include "view.h"
-#include "workspaces.h"
 
 #if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
@@ -93,14 +92,6 @@ desktop_focus_view(struct view *view, bool raise)
 		return;
 	}
 
-	/*
-	 * Switch workspace if necessary to make the view visible
-	 * (unnecessary for omnipresent views).
-	 */
-	if (!view->visible_on_all_workspaces) {
-		workspaces_switch_to(view->workspace, /*update_focus*/ false);
-	}
-
 	if (raise) {
 		view_move_to_front(view);
 	}
@@ -137,8 +128,7 @@ static struct view *
 desktop_topmost_focusable_view(void)
 {
 	struct view *view;
-	for_each_view(view, &g_server.views,
-			LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
 		if (!view->minimized) {
 			return view;
 		}
@@ -169,7 +159,7 @@ desktop_focus_output(struct output *output)
 		return;
 	}
 	struct view *view;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
 		if (view->outputs & output->id_bit) {
 			desktop_focus_view(view, /*raise*/ false);
 			wlr_cursor_warp(g_seat.cursor, NULL,
@@ -209,7 +199,7 @@ desktop_update_top_layer_visibility(void)
 	 * any views above it
 	 */
 	uint64_t outputs_covered = 0;
-	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
 		if (view->minimized) {
 			continue;
 		}

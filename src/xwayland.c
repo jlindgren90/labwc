@@ -22,7 +22,6 @@
 #include "view.h"
 #include "view-impl-common.h"
 #include "window-rules.h"
-#include "workspaces.h"
 
 static void set_surface(struct view *view, struct wlr_surface *surface);
 static void handle_map(struct wl_listener *listener, void *data);
@@ -996,9 +995,8 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	xwayland_view->xwayland_surface = xsurface;
 	xsurface->data = view;
 
-	view->workspace = g_server.workspaces.current;
-	view->scene_tree = wlr_scene_tree_create(
-		view->workspace->view_trees[VIEW_LAYER_NORMAL]);
+	view->scene_tree =
+		wlr_scene_tree_create(g_server.view_trees[VIEW_LAYER_NORMAL]);
 	node_descriptor_create(&view->scene_tree->node,
 		LAB_NODE_VIEW, view, /*data*/ NULL);
 

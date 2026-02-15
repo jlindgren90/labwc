@@ -31,7 +31,6 @@ struct menuitem {
 	struct wlr_scene_tree *tree;
 	struct wlr_scene_tree *normal_tree;
 	struct wlr_scene_tree *selected_tree;
-	struct view *client_list_view;  /* used by internal client-list */
 	struct wl_list link; /* menu.menuitems */
 };
 

@@ -66,7 +66,6 @@
 #include "ssd.h"
 #include "theme.h"
 #include "view.h"
-#include "workspaces.h"
 #include "xwayland.h"
 
 #define LAB_EXT_DATA_CONTROL_VERSION 1
@@ -104,7 +103,6 @@ reload_config_and_theme(void)
 	regions_reconfigure();
 	resize_indicator_reconfigure();
 	kde_server_decoration_update_default();
-	workspaces_reconfigure();
 }
 
 static int
@@ -579,15 +577,19 @@ server_init(void)
 	 * | output->layer_tree[0]              | background layer surfaces (e.g. swaybg)
 	 */
 
-	g_server.workspace_tree = wlr_scene_tree_create(&g_server.scene->tree);
+	g_server.view_trees[VIEW_LAYER_ALWAYS_ON_BOTTOM] =
+		wlr_scene_tree_create(&g_server.scene->tree);
+	g_server.view_trees[VIEW_LAYER_NORMAL] =
+		wlr_scene_tree_create(&g_server.scene->tree);
+	g_server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
+		wlr_scene_tree_create(&g_server.scene->tree);
+
 	g_server.xdg_popup_tree = wlr_scene_tree_create(&g_server.scene->tree);
 #if HAVE_XWAYLAND
 	g_server.unmanaged_tree = wlr_scene_tree_create(&g_server.scene->tree);
 #endif
 	g_server.menu_tree = wlr_scene_tree_create(&g_server.scene->tree);
 	g_server.cycle_preview_tree = wlr_scene_tree_create(&g_server.scene->tree);
-
-	workspaces_init();
 
 	output_init();
 
@@ -789,7 +791,6 @@ server_finish(void)
 	wl_list_remove(&g_server.renderer_lost.link);
 	wlr_renderer_destroy(g_server.renderer);
 
-	workspaces_destroy();
 	wlr_scene_node_destroy(&g_server.scene->tree.node);
 
 	wl_display_destroy(g_server.wl_display);

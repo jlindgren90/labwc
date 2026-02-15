@@ -31,7 +31,6 @@
 #include "theme.h"
 #include "translate.h"
 #include "view.h"
-#include "workspaces.h"
 
 #define PIPEMENU_MAX_BUF_SIZE 1048576  /* 1 MiB */
 #define PIPEMENU_TIMEOUT_IN_MS 4000    /* 4 seconds */
@@ -190,18 +189,12 @@ item_create_scene_for_state(struct menuitem *item, float *text_color,
 	wlr_scene_rect_create(tree, bg_width, g_theme.menu_item_height, bg_color);
 
 	/* Create icon */
-	bool show_app_icon = !strcmp(item->parent->id, "client-list-combined-menu")
-				&& item->client_list_view;
-	if (item->icon_name || show_app_icon) {
+	if (item->icon_name) {
 		struct scaled_icon_buffer *icon_buffer = scaled_icon_buffer_create(
 			tree, icon_size, icon_size);
 		if (item->icon_name) {
 			/* icon set via <menu icon="..."> */
 			scaled_icon_buffer_set_icon_name(icon_buffer, item->icon_name);
-		} else if (show_app_icon) {
-			/* app icon in client-list-combined-menu */
-			scaled_icon_buffer_set_view(icon_buffer,
-				item->client_list_view);
 		}
 		wlr_scene_node_set_position(&icon_buffer->scene_buffer->node,
 			g_theme.menu_items_padding_x, g_theme.menu_items_padding_y);
@@ -766,137 +759,12 @@ menu_reposition(struct menu *menu, struct wlr_box anchor_rect)
 	menu->align_left = (box.x < anchor_rect.x);
 }
 
-static void
-menu_hide_submenu(const char *id)
-{
-	struct menu *menu, *hide_menu;
-	hide_menu = menu_get_by_id(id);
-	if (!hide_menu) {
-		return;
-	}
-	wl_list_for_each(menu, &g_server.menus, link) {
-		struct menuitem *item, *next;
-		wl_list_for_each_safe(item, next, &menu->menuitems, link) {
-			if (item->submenu == hide_menu) {
-				item_destroy(item);
-			}
-		}
-	}
-}
-
 static struct action *
 item_add_action(struct menuitem *item, const char *action_name)
 {
 	struct action *action = action_create(action_name);
 	wl_list_append(&item->actions, &action->link);
 	return action;
-}
-
-/*
- * This is client-send-to-menu
- * an internal menu similar to root-menu and client-menu
- *
- * This will look at workspaces and produce a menu
- * with the workspace names that can be used with
- * SendToDesktop, left/right options are included.
- */
-static void
-update_client_send_to_menu(void)
-{
-	struct menu *menu = menu_get_by_id("client-send-to-menu");
-	assert(menu);
-
-	reset_menu(menu);
-
-	struct workspace *workspace;
-
-	/*
-	 * <action name="SendToDesktop"><follow> is true by default so
-	 * GoToDesktop will be called as part of the action.
-	 */
-	struct buf buf = BUF_INIT;
-	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
-		if (workspace == g_server.workspaces.current) {
-			buf_add_fmt(&buf, ">%s<", workspace->name);
-		} else {
-			buf_add(&buf, workspace->name);
-		}
-		struct menuitem *item = item_create(menu, buf.data,
-			NULL, /*show arrow*/ false);
-
-		struct action *action = item_add_action(item, "SendToDesktop");
-		action_arg_add_str(action, "to", workspace->name);
-
-		buf_clear(&buf);
-	}
-	buf_reset(&buf);
-
-	separator_create(menu, "");
-	struct menuitem *item = item_create(menu,
-		_("Always on Visible Workspace"), NULL, false);
-	item_add_action(item, "ToggleOmnipresent");
-
-	menu_create_scene(menu);
-}
-
-/*
- * This is client-list-combined-menu an internal menu similar to root-menu and
- * client-menu.
- *
- * This will look at workspaces and produce a menu with the workspace name as a
- * separator label and the titles of the view, if any, below each workspace
- * name. Active view is indicated by "*" preceding title.
- */
-static void
-update_client_list_combined_menu(void)
-{
-	struct menu *menu = menu_get_by_id("client-list-combined-menu");
-	assert(menu);
-
-	reset_menu(menu);
-
-	struct menuitem *item;
-	struct workspace *workspace;
-	struct view *view;
-	struct buf buffer = BUF_INIT;
-
-	wl_list_for_each(workspace, &g_server.workspaces.all, link) {
-		buf_add_fmt(&buffer, workspace == g_server.workspaces.current ? ">%s<" : "%s",
-				workspace->name);
-		separator_create(menu, buffer.data);
-		buf_clear(&buffer);
-
-		wl_list_for_each(view, &g_server.views, link) {
-			if (view->workspace == workspace) {
-				if (!view->foreign_toplevel
-						|| string_null_or_empty(view->title)) {
-					continue;
-				}
-
-				if (view == g_server.active_view) {
-					buf_add(&buffer, "*");
-				}
-				if (view->minimized) {
-					buf_add_fmt(&buffer, "(%s)", view->title);
-				} else {
-					buf_add(&buffer, view->title);
-				}
-				item = item_create(menu, buffer.data, NULL,
-					/*show arrow*/ false);
-				item->client_list_view = view;
-				item_add_action(item, "Focus");
-				item_add_action(item, "Raise");
-				buf_clear(&buffer);
-				menu->has_icons = true;
-			}
-		}
-		item = item_create(menu, _("Go there..."), NULL,
-			/*show arrow*/ false);
-		struct action *action = item_add_action(item, "GoToDesktop");
-		action_arg_add_str(action, "to", workspace->name);
-	}
-	buf_reset(&buffer);
-	menu_create_scene(menu);
 }
 
 static void
@@ -944,16 +812,8 @@ init_windowmenu(void)
 		item = item_create(menu, _("Always on Top"), NULL, false);
 		item_add_action(item, "ToggleAlwaysOnTop");
 
-		/* Workspace sub-menu */
-		item = item_create(menu, _("Workspace"), NULL, true);
-		item->submenu = menu_get_by_id("client-send-to-menu");
-
 		item = item_create(menu, _("Close"), NULL, false);
 		item_add_action(item, "Close");
-	}
-
-	if (wl_list_length(&rc.workspace_config.workspaces) == 1) {
-		menu_hide_submenu("workspaces");
 	}
 }
 
@@ -961,10 +821,6 @@ void
 menu_init(void)
 {
 	wl_list_init(&g_server.menus);
-
-	/* Just create placeholder. Contents will be created when launched */
-	menu_create(NULL, "client-list-combined-menu", _("Windows"));
-	menu_create(NULL, "client-send-to-menu", _("Workspace"));
 
 	parse_xml("menu.xml");
 	init_rootmenu();
@@ -1053,24 +909,6 @@ menu_on_view_destroy(struct view *view)
 			&& g_server.menu_current->triggered_by_view == view) {
 		menu_close_root();
 	}
-
-	/*
-	 * TODO: Instead of just setting client_list_view to NULL and deleting
-	 * the actions (as below), consider destroying the item and somehow
-	 * updating the menu and its selection state.
-	 */
-
-	/* Also nullify the destroyed view in client-list-combined-menu */
-	struct menu *menu = menu_get_by_id("client-list-combined-menu");
-	if (menu) {
-		struct menuitem *item;
-		wl_list_for_each(item, &menu->menuitems, link) {
-			if (item->client_list_view == view) {
-				item->client_list_view = NULL;
-				action_list_free(&item->actions);
-			}
-		}
-	}
 }
 
 /* Sets selection (or clears selection if passing NULL) */
@@ -1152,12 +990,6 @@ menu_close(struct menu *menu)
 static void
 open_menu(struct menu *menu, struct wlr_box anchor_rect)
 {
-	if (!strcmp(menu->id, "client-list-combined-menu")) {
-		update_client_list_combined_menu();
-	} else if (!strcmp(menu->id, "client-send-to-menu")) {
-		update_client_send_to_menu();
-	}
-
 	if (!menu->scene_tree) {
 		menu_create_scene(menu);
 		assert(menu->scene_tree);
@@ -1426,15 +1258,7 @@ menu_execute_item(struct menuitem *item)
 	 * menu_close() and destroy_pipemenus() which we have to handle
 	 * before/after action_run() respectively.
 	 */
-	if (!strcmp(item->parent->id, "client-list-combined-menu")
-			&& item->client_list_view) {
-		if (item->client_list_view->shaded) {
-			view_set_shade(item->client_list_view, false);
-		}
-		actions_run(item->client_list_view, &item->actions, NULL);
-	} else {
-		actions_run(item->parent->triggered_by_view, &item->actions, NULL);
-	}
+	actions_run(item->parent->triggered_by_view, &item->actions, NULL);
 
 	reset_pipemenus();
 	return true;

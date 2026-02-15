@@ -18,8 +18,6 @@ node_type_parse(const char *context)
 		return LAB_NODE_BUTTON_WINDOW_ICON;
 	} else if (!strcasecmp(context, "Shade")) {
 		return LAB_NODE_BUTTON_SHADE;
-	} else if (!strcasecmp(context, "AllDesktops")) {
-		return LAB_NODE_BUTTON_OMNIPRESENT;
 	} else if (!strcasecmp(context, "Titlebar")) {
 		return LAB_NODE_TITLEBAR;
 	} else if (!strcasecmp(context, "Title")) {

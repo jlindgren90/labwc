@@ -57,11 +57,6 @@ struct usable_area_override {
 	struct wl_list link; /* struct rcxml.usable_area_overrides */
 };
 
-struct workspace_config {
-	struct wl_list link; /* struct rcxml.workspace_config.workspaces */
-	char *name;
-};
-
 struct rcxml {
 	/* from command line */
 	char *config_dir;
@@ -167,14 +162,6 @@ struct rcxml {
 	int resize_corner_range;
 	int resize_minimum_area;
 
-	struct {
-		int popuptime;
-		int min_nr_workspaces;
-		char *initial_workspace_name;
-		char *prefix;
-		struct wl_list workspaces;  /* struct workspace_config.link */
-	} workspace_config;
-
 	/* Regions */
 	struct wl_list regions;  /* struct region.link */
 
@@ -184,7 +171,6 @@ struct rcxml {
 		bool outlines;
 		bool unshade;
 		enum window_switcher_order order;
-		enum cycle_workspace_filter workspace_filter; /* deprecated */
 		struct {
 			bool show;
 			enum cycle_osd_style style;

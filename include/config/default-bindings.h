@@ -287,11 +287,6 @@ static struct mouse_combos {
 		.event = "Click",
 		.action = "ToggleShade",
 	}, {
-		.context = "AllDesktops",
-		.button = "Left",
-		.event = "Click",
-		.action = "ToggleOmnipresent",
-	}, {
 		.context = "Maximize",
 		.button = "Right",
 		.event = "Click",
@@ -387,24 +382,6 @@ static struct mouse_combos {
 		.attributes[0] = {
 			.name = "menu",
 			.value = "root-menu",
-		},
-	}, {
-		.context = "Root",
-		.button = "Up",
-		.event = "Scroll",
-		.action = "GoToDesktop",
-		.attributes[0] = {
-			.name = "to",
-			.value = "left",
-		},
-	}, {
-		.context = "Root",
-		.button = "Down",
-		.event = "Scroll",
-		.action = "GoToDesktop",
-		.attributes[0] = {
-			.name = "to",
-			.value = "right",
 		},
 	}, {
 		.context = "Client",

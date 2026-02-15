@@ -306,16 +306,6 @@ load_buttons(void)
 		.type = LAB_NODE_BUTTON_SHADE,
 		.state_set = LAB_BS_TOGGLED,
 	}, {
-		.name = "desk",
-		.fallback_button = (const char[]){ 0x33, 0x33, 0x00, 0x00, 0x33, 0x33 },
-		.type = LAB_NODE_BUTTON_OMNIPRESENT,
-		.state_set = 0,
-	}, {
-		.name = "desk_toggled",
-		.fallback_button = (const char[]){ 0x00, 0x1e, 0x1a, 0x16, 0x1e, 0x00 },
-		.type = LAB_NODE_BUTTON_OMNIPRESENT,
-		.state_set = LAB_BS_TOGGLED,
-	}, {
 		.name = "close",
 		.fallback_button = (const char[]){ 0x33, 0x3f, 0x1e, 0x1e, 0x3f, 0x33 },
 		.type = LAB_NODE_BUTTON_CLOSE,
@@ -350,17 +340,6 @@ load_buttons(void)
 		.name = "shade_toggled_hover",
 		.alt_name = "shade_hover_toggled",
 		.type = LAB_NODE_BUTTON_SHADE,
-		.state_set = LAB_BS_TOGGLED | LAB_BS_HOVERED,
-		/* no fallback (non-hover variant is used instead) */
-	}, {
-		.name = "desk_hover",
-		/* no fallback (non-hover variant is used instead) */
-		.type = LAB_NODE_BUTTON_OMNIPRESENT,
-		.state_set = LAB_BS_HOVERED,
-	}, {
-		.name = "desk_toggled_hover",
-		.alt_name = "desk_hover_toggled",
-		.type = LAB_NODE_BUTTON_OMNIPRESENT,
 		.state_set = LAB_BS_TOGGLED | LAB_BS_HOVERED,
 		/* no fallback (non-hover variant is used instead) */
 	}, {
@@ -624,10 +603,6 @@ theme_builtin(void)
 	zero_array(g_theme.osd_window_switcher_preview_border_color);
 	g_theme.osd_window_switcher_preview_border_color[0][0] = FLT_MIN;
 
-	g_theme.osd_workspace_switcher_boxes_width = 20;
-	g_theme.osd_workspace_switcher_boxes_height = 20;
-	g_theme.osd_workspace_switcher_boxes_border_width = 2;
-
 	/* inherit settings in post_processing() if not set elsewhere */
 	g_theme.osd_bg_color[0] = FLT_MIN;
 	g_theme.osd_border_width = INT_MIN;
@@ -832,10 +807,6 @@ entry(const char *key, const char *value)
 		parse_color(value, g_theme.window[SSD_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_SHADE]);
 	}
-	if (match_glob(key, "window.active.button.desk.unpressed.image.color")) {
-		parse_color(value, g_theme.window[SSD_ACTIVE]
-			.button_colors[LAB_NODE_BUTTON_OMNIPRESENT]);
-	}
 	if (match_glob(key, "window.active.button.close.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_ACTIVE]
 			.button_colors[LAB_NODE_BUTTON_CLOSE]);
@@ -857,10 +828,6 @@ entry(const char *key, const char *value)
 	if (match_glob(key, "window.inactive.button.shade.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_INACTIVE]
 			.button_colors[LAB_NODE_BUTTON_SHADE]);
-	}
-	if (match_glob(key, "window.inactive.button.desk.unpressed.image.color")) {
-		parse_color(value, g_theme.window[SSD_INACTIVE]
-			.button_colors[LAB_NODE_BUTTON_OMNIPRESENT]);
 	}
 	if (match_glob(key, "window.inactive.button.close.unpressed.image.color")) {
 		parse_color(value, g_theme.window[SSD_INACTIVE]
@@ -1056,21 +1023,6 @@ entry(const char *key, const char *value)
 	}
 	if (match_glob(key, "osd.window-switcher.preview.border.color")) {
 		parse_hexstrs(value, g_theme.osd_window_switcher_preview_border_color);
-	}
-	if (match_glob(key, "osd.workspace-switcher.boxes.width")) {
-		g_theme.osd_workspace_switcher_boxes_width =
-			get_int_if_positive(
-				value, "osd.workspace-switcher.boxes.width");
-	}
-	if (match_glob(key, "osd.workspace-switcher.boxes.height")) {
-		g_theme.osd_workspace_switcher_boxes_height =
-			get_int_if_positive(
-				value, "osd.workspace-switcher.boxes.height");
-	}
-	if (match_glob(key, "osd.workspace-switcher.boxes.border.width")) {
-		g_theme.osd_workspace_switcher_boxes_border_width =
-			get_int_if_positive(
-				value, "osd.workspace-switcher.boxes.border.width");
 	}
 	if (match_glob(key, "osd.label.text.color")) {
 		parse_color(value, g_theme.osd_label_text_color);
@@ -1776,12 +1728,6 @@ post_processing(void)
 	if (switcher_thumb_theme->item_active_bg_color[0] == FLT_MIN) {
 		blend_color_with_bg(switcher_thumb_theme->item_active_bg_color,
 			g_theme.osd_label_text_color, 0.15, g_theme.osd_bg_color);
-	}
-	if (g_theme.osd_workspace_switcher_boxes_width == 0) {
-		g_theme.osd_workspace_switcher_boxes_height = 0;
-	}
-	if (g_theme.osd_workspace_switcher_boxes_height == 0) {
-		g_theme.osd_workspace_switcher_boxes_width = 0;
 	}
 	if (switcher_classic_theme->width_is_percent) {
 		switcher_classic_theme->width =
