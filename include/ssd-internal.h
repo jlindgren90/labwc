@@ -63,7 +63,6 @@ struct ssd {
 	struct {
 		/* Button icons need to be swapped on shade or omnipresent toggles */
 		bool was_shaded;
-		bool was_omnipresent;
 
 		/*
 		 * Corners need to be (un)rounded and borders need be shown/hidden

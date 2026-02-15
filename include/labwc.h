@@ -55,10 +55,6 @@ struct seat {
 
 	struct wlr_pointer_constraint_v1 *current_constraint;
 
-	/* Used to hide the workspace OSD after switching workspaces */
-	struct wl_event_source *workspace_osd_timer;
-	bool workspace_osd_shown_by_modifier;
-
 	/* if set, views cannot receive focus */
 	struct wlr_layer_surface_v1 *focused_layer;
 
@@ -222,7 +218,7 @@ struct server {
 	struct ssd_button *hovered_button;
 
 	/* Tree for all non-layer xdg/xwayland-shell surfaces */
-	struct wlr_scene_tree *workspace_tree;
+	struct wlr_scene_tree *view_trees[3];
 
 	/*
 	 * Popups need to be rendered above always-on-top views, so we reparent
@@ -236,21 +232,6 @@ struct server {
 	struct wlr_scene_tree *cycle_preview_tree;
 	/* Tree for built in menu */
 	struct wlr_scene_tree *menu_tree;
-
-	/* Workspaces */
-	struct {
-		struct wl_list all;  /* struct workspace.link */
-		struct workspace *current;
-		struct workspace *last;
-		struct wlr_ext_workspace_manager_v1 *ext_manager;
-		struct wlr_ext_workspace_group_handle_v1 *ext_group;
-		struct {
-			struct wl_listener layout_output_added;
-		} on;
-		struct {
-			struct wl_listener commit;
-		} on_ext_manager;
-	} workspaces;
 
 	struct wl_list outputs;
 	struct wl_listener new_output;
