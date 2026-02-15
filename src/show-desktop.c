@@ -25,7 +25,7 @@ show(void)
 
 	/* Build array first as minimize changes server.views */
 	struct view *view;
-	for_each_view(view, &server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, &server.views, LAB_VIEW_CRITERIA_NONE) {
 		if (view->minimized) {
 			continue;
 		}
@@ -45,7 +45,7 @@ restore(void)
 	wl_array_init(&views);
 
 	struct view *view;
-	for_each_view(view, &server.views, LAB_VIEW_CRITERIA_CURRENT_WORKSPACE) {
+	for_each_view(view, &server.views, LAB_VIEW_CRITERIA_NONE) {
 		if (view->was_minimized_by_show_desktop_action) {
 			array_add(&views, view);
 		}

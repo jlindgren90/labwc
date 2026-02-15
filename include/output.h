@@ -16,7 +16,6 @@ struct output {
 	struct wlr_scene_tree *layer_popup_tree;
 	struct wlr_scene_tree *cycle_osd_tree;
 	struct wlr_scene_tree *session_lock_tree;
-	struct wlr_scene_buffer *workspace_osd;
 
 	/* In output-relative scene coordinates */
 	struct wlr_box usable_area;
