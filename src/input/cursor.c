@@ -27,7 +27,6 @@
 #include "labwc.h"
 #include "layers.h"
 #include "menu/menu.h"
-#include "resistance.h"
 #include "ssd.h"
 #include "view.h"
 #include "xwayland.h"
@@ -209,81 +208,6 @@ handle_request_set_primary_selection(struct wl_listener *listener, void *data)
 	struct wlr_seat_request_set_primary_selection_event *event = data;
 	wlr_seat_set_primary_selection(g_seat.wlr_seat, event->source,
 		event->serial);
-}
-
-static void
-process_cursor_move(void)
-{
-	struct view *view = g_server.grabbed_view;
-
-	int x = g_server.grab_box.x + (g_seat.cursor->x - g_server.grab_x);
-	int y = g_server.grab_box.y + (g_seat.cursor->y - g_server.grab_y);
-
-	/* Apply resistance for maximized/tiled view */
-	bool needs_untile = resistance_unsnap_apply(view, &x, &y);
-	if (needs_untile) {
-		/*
-		 * When the view needs to be un-tiled, resize it to natural
-		 * geometry while anchoring it to cursor. If the natural
-		 * geometry is unknown (possible with xdg-shell views), then
-		 * we set a size of 0x0 here and determine the correct geometry
-		 * later. See do_late_positioning() in xdg.c.
-		 */
-		struct wlr_box new_geo = {
-			.width = view->st->natural_geom.width,
-			.height = view->st->natural_geom.height,
-		};
-		interactive_anchor_to_cursor(&new_geo);
-		view_set_maximized(view->id, VIEW_AXIS_NONE);
-		view_set_tiled(view->id, LAB_EDGE_NONE);
-		view_move_resize(view->id, new_geo);
-		x = new_geo.x;
-		y = new_geo.y;
-	}
-
-	view_move(view, x, y);
-}
-
-static void
-process_cursor_resize(void)
-{
-	double dx = g_seat.cursor->x - g_server.grab_x;
-	double dy = g_seat.cursor->y - g_server.grab_y;
-
-	struct view *view = g_server.grabbed_view;
-	struct wlr_box new_view_geo = view->st->current;
-
-	if (g_server.resize_edges & LAB_EDGE_TOP) {
-		/* Shift y to anchor bottom edge when resizing top */
-		new_view_geo.y = g_server.grab_box.y + dy;
-		new_view_geo.height = g_server.grab_box.height - dy;
-	} else if (g_server.resize_edges & LAB_EDGE_BOTTOM) {
-		new_view_geo.height = g_server.grab_box.height + dy;
-	}
-
-	if (g_server.resize_edges & LAB_EDGE_LEFT) {
-		/* Shift x to anchor right edge when resizing left */
-		new_view_geo.x = g_server.grab_box.x + dx;
-		new_view_geo.width = g_server.grab_box.width - dx;
-	} else if (g_server.resize_edges & LAB_EDGE_RIGHT) {
-		new_view_geo.width = g_server.grab_box.width + dx;
-	}
-
-	view_adjust_size(view->id, &new_view_geo.width, &new_view_geo.height);
-
-	if (g_server.resize_edges & LAB_EDGE_TOP) {
-		/* After size adjustments, make sure to anchor bottom edge */
-		new_view_geo.y = g_server.grab_box.y +
-			g_server.grab_box.height - new_view_geo.height;
-	}
-
-	if (g_server.resize_edges & LAB_EDGE_LEFT) {
-		/* After size adjustments, make sure to anchor bottom right */
-		new_view_geo.x = g_server.grab_box.x +
-			g_server.grab_box.width - new_view_geo.width;
-	}
-
-	view_move_resize(view->id, new_view_geo);
 }
 
 void
@@ -509,10 +433,10 @@ cursor_process_motion(double *sx, double *sy)
 {
 	/* If the mode is non-passthrough, delegate to those functions. */
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
-		process_cursor_move();
+		view_continue_move(g_seat.cursor->x, g_seat.cursor->y);
 		return false;
 	} else if (g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
-		process_cursor_resize();
+		view_continue_resize(g_seat.cursor->x, g_seat.cursor->y);
 		return false;
 	}
 
@@ -922,11 +846,11 @@ cursor_finish_button_release(uint32_t button)
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE
 			|| g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
 		/* Exit interactive move/resize mode */
-		interactive_finish(g_server.grabbed_view);
+		view_finish_grab(g_seat.cursor->x, g_seat.cursor->y);
 		return true;
-	} else if (g_server.grabbed_view) {
+	} else {
 		/* Button was released without starting move/resize */
-		interactive_cancel(g_server.grabbed_view);
+		view_reset_grab();
 	}
 
 	return false;
