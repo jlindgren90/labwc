@@ -45,8 +45,8 @@ void ssd_update_hovered_button(WlrSceneNode *node);
  * Returns a part type that represents a mouse context like "Top", "Left" and
  * "TRCorner" when the cursor is on the window border or resizing handle.
  */
-enum lab_node_type ssd_get_resizing_type(CView *view, WlrCursor *cursor);
+enum lab_node_type ssd_get_resizing_type(const ViewState *view_st, WlrCursor *cursor);
 
-struct wlr_box ssd_max_extents(CView *view);
+struct wlr_box ssd_max_extents(const ViewState *view_st);
 
 #endif /* LABWC_SSD_H */

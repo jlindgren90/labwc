@@ -174,13 +174,13 @@ static struct keybind *
 match_keybinding_for_sym(uint32_t modifiers,
 		xkb_keysym_t sym, xkb_keycode_t xkb_keycode)
 {
-	struct view *active_view = view_get_active();
+	ViewId active_id = view_get_active();
 	struct keybind *keybind;
 	wl_list_for_each(keybind, &rc.keybinds, link) {
 		if (modifiers ^ keybind->modifiers) {
 			continue;
 		}
-		if (view_inhibits_actions(active_view, &keybind->actions)) {
+		if (view_inhibits_actions(active_id, &keybind->actions)) {
 			continue;
 		}
 		if (sym == XKB_KEY_NoSymbol) {
@@ -480,7 +480,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 				cur_keybind = NULL;
 				return LAB_KEY_HANDLED_TRUE;
 			}
-			actions_run(NULL, &cur_keybind->actions, NULL);
+			actions_run(/* view_id */ 0, &cur_keybind->actions, NULL);
 			return LAB_KEY_HANDLED_TRUE;
 		} else {
 			return handle_key_release(event->keycode);
@@ -523,7 +523,7 @@ handle_compositor_keybindings(struct keyboard *keyboard,
 		 */
 		key_state_store_pressed_key_as_bound(event->keycode);
 		if (!cur_keybind->on_release) {
-			actions_run(NULL, &cur_keybind->actions, NULL);
+			actions_run(/* view_id */ 0, &cur_keybind->actions, NULL);
 		}
 		return LAB_KEY_HANDLED_TRUE;
 	}

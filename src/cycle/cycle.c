@@ -12,7 +12,6 @@
 #include "node.h"
 #include "output.h"
 #include "scaled-buffer/scaled-font-buffer.h"
-#include "ssd.h"
 #include "view.h"
 
 static bool init_cycle(void);
@@ -44,8 +43,7 @@ cycle_begin(enum lab_cycle_dir direction)
 	assert(len > 0);
 
 	if (direction == LAB_CYCLE_DIR_FORWARD) {
-		struct view *active = view_get_active();
-		if (len > 1 && active && cycle_list_nth(0) == active->id) {
+		if (len > 1 && cycle_list_nth(0) == view_get_active()) {
 			g_server.cycle.current_idx = 1;
 		} else {
 			g_server.cycle.current_idx = 0;
