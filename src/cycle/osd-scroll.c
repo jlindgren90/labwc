@@ -2,9 +2,8 @@
 #include <assert.h>
 #include <wlr/types/wlr_scene.h>
 #include "common/lab-scene-rect.h"
-#include "labwc.h"
 #include "cycle.h"
-#include "output.h"
+#include "labwc.h"
 
 void
 cycle_osd_scroll_init(struct cycle_osd_output *osd_output, struct wlr_box bar_area,

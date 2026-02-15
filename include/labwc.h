@@ -147,7 +147,6 @@ struct server {
 
 	/* front to back order */
 	struct wl_list views;
-	uint64_t next_view_creation_id;
 	struct wl_list unmanaged_surfaces;
 
 	struct wlr_scene *scene;
@@ -191,7 +190,6 @@ struct server {
 	/* Tree for unmanaged xsurfaces without initialized view (usually popups) */
 	struct wlr_scene_tree *unmanaged_tree;
 #endif
-	struct wlr_scene_tree *cycle_preview_tree;
 	/* Tree for built in menu */
 	struct wlr_scene_tree *menu_tree;
 
