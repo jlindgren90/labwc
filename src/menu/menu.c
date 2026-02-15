@@ -29,7 +29,6 @@
 #include "node.h"
 #include "output.h"
 #include "scaled-buffer/scaled-font-buffer.h"
-#include "scaled-buffer/scaled-icon-buffer.h"
 #include "theme.h"
 #include "translate.h"
 #include "view.h"
