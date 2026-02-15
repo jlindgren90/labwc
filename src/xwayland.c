@@ -986,7 +986,6 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	CONNECT_SIGNAL(xsurface, xwayland_view, focus_in);
 
 	wl_list_insert(&server.views, &view->link);
-	view->creation_id = server.next_view_creation_id++;
 
 	if (xsurface->surface) {
 		handle_associate(&xwayland_view->associate, NULL);
