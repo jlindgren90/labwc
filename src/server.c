@@ -584,7 +584,6 @@ server_init(void)
 	server.unmanaged_tree = lab_wlr_scene_tree_create(&server.scene->tree);
 #endif
 	server.menu_tree = lab_wlr_scene_tree_create(&server.scene->tree);
-	server.cycle_preview_tree = lab_wlr_scene_tree_create(&server.scene->tree);
 
 	output_init();
 
