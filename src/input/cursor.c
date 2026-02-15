@@ -18,7 +18,6 @@
 #include <wlr/util/region.h>
 #include "action.h"
 #include "common/macros.h"
-#include "common/mem.h"
 #include "config/mousebind.h"
 #include "config/rcxml.h"
 #include "cycle.h"
@@ -28,7 +27,6 @@
 #include "labwc.h"
 #include "layers.h"
 #include "menu/menu.h"
-#include "output.h"
 #include "resistance.h"
 #include "ssd.h"
 #include "view.h"
@@ -214,7 +212,7 @@ handle_request_set_primary_selection(struct wl_listener *listener, void *data)
 }
 
 static void
-process_cursor_move(uint32_t time)
+process_cursor_move(void)
 {
 	struct view *view = g_server.grabbed_view;
 
@@ -247,31 +245,8 @@ process_cursor_move(uint32_t time)
 }
 
 static void
-process_cursor_resize(uint32_t time)
+process_cursor_resize(void)
 {
-	/* Rate-limit resize events respecting monitor refresh rate */
-	static uint32_t last_resize_time = 0;
-	static struct view *last_resize_view = NULL;
-
-	assert(g_server.grabbed_view);
-	if (g_server.grabbed_view == last_resize_view) {
-		int32_t refresh = 0;
-		if (output_is_usable(last_resize_view->output)) {
-			refresh = last_resize_view->output->wlr_output->refresh;
-		}
-		/* Limit to 250Hz if refresh rate is not available */
-		if (refresh <= 0) {
-			refresh = 250000;
-		}
-		/* Not caring overflow, but it won't be observable */
-		if (time - last_resize_time < 1000000 / (uint32_t)refresh) {
-			return;
-		}
-	}
-
-	last_resize_time = time;
-	last_resize_view = g_server.grabbed_view;
-
 	double dx = g_seat.cursor->x - g_server.grab_x;
 	double dy = g_seat.cursor->y - g_server.grab_y;
 
@@ -534,14 +509,14 @@ cursor_get_resize_edges(struct wlr_cursor *cursor, struct cursor_context *ctx)
 }
 
 bool
-cursor_process_motion(uint32_t time, double *sx, double *sy)
+cursor_process_motion(double *sx, double *sy)
 {
 	/* If the mode is non-passthrough, delegate to those functions. */
 	if (g_server.input_mode == LAB_INPUT_STATE_MOVE) {
-		process_cursor_move(time);
+		process_cursor_move();
 		return false;
 	} else if (g_server.input_mode == LAB_INPUT_STATE_RESIZE) {
-		process_cursor_resize(time);
+		process_cursor_resize();
 		return false;
 	}
 
@@ -624,7 +599,7 @@ preprocess_cursor_motion(struct wlr_pointer *pointer,
 	 */
 	wlr_cursor_move(g_seat.cursor, &pointer->base, dx, dy);
 	double sx, sy;
-	bool notify = cursor_process_motion(time_msec, &sx, &sy);
+	bool notify = cursor_process_motion(&sx, &sy);
 	if (notify) {
 		wlr_seat_pointer_notify_motion(g_seat.wlr_seat, time_msec, sx, sy);
 	}
@@ -1190,7 +1165,7 @@ cursor_emulate_move(struct wlr_input_device *device,
 
 	wlr_cursor_move(g_seat.cursor, device, dx, dy);
 	double sx, sy;
-	bool notify = cursor_process_motion(time_msec, &sx, &sy);
+	bool notify = cursor_process_motion(&sx, &sy);
 	if (notify) {
 		wlr_seat_pointer_notify_motion(g_seat.wlr_seat, time_msec, sx, sy);
 	}

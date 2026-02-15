@@ -128,7 +128,7 @@ void cursor_update_image(void);
  * should be notified. Parameters sx, sy holds the surface coordinates
  * in that case.
  */
-bool cursor_process_motion(uint32_t time, double *sx, double *sy);
+bool cursor_process_motion(double *sx, double *sy);
 
 /**
  * Processes cursor button press. The return value indicates if a client
