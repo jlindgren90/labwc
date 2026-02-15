@@ -112,20 +112,6 @@ struct rcxml {
 	int resize_corner_range;
 	int resize_minimum_area;
 
-	/* Window Switcher */
-	struct {
-		bool preview;
-		bool outlines;
-		enum window_switcher_order order;
-		struct {
-			bool show;
-			enum cycle_osd_style style;
-			enum cycle_output_filter output_filter;
-			char *thumbnail_label_format;
-			struct wl_list fields;  /* struct cycle_osd_field.link */
-		} osd;
-	} window_switcher;
-
 	struct wl_list window_rules; /* struct window_rule.link */
 
 	/* Menu */
