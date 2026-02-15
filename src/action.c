@@ -19,7 +19,6 @@
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "cycle.h"
-#include "debug.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "magnifier.h"
@@ -72,7 +71,6 @@ struct action_arg_list {
 	X(NONE, "None") \
 	X(CLOSE, "Close") \
 	X(KILL, "Kill") \
-	X(DEBUG, "Debug") \
 	X(EXECUTE, "Execute") \
 	X(EXIT, "Exit") \
 	X(MOVE_TO_EDGE, "MoveToEdge") \
@@ -1067,9 +1065,6 @@ run_action(struct view *view, struct action *action,
 				kill(pid, SIGTERM);
 			}
 		}
-		break;
-	case ACTION_TYPE_DEBUG:
-		debug_dump_scene();
 		break;
 	case ACTION_TYPE_EXECUTE: {
 		struct buf cmd = BUF_INIT;
