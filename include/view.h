@@ -83,11 +83,11 @@ struct view {
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
-bool view_inhibits_actions(struct view *view, struct wl_list *actions);
+bool view_inhibits_actions(ViewId view_id, struct wl_list *actions);
 
-void view_toggle_maximize(struct view *view, enum view_axis axis);
+void view_toggle_maximize(ViewId view_id, enum view_axis axis);
 
-void view_toggle_fullscreen(struct view *view);
+void view_toggle_fullscreen(ViewId view_id);
 
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);

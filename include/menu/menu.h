@@ -3,6 +3,7 @@
 #define LABWC_MENU_H
 
 #include <wayland-server.h>
+#include "rs-types.h"
 
 /* forward declare arguments */
 struct view;
@@ -57,7 +58,7 @@ struct menu {
 	bool align_left;
 
 	/* Used to match a window-menu to the view that triggered it. */
-	struct view *triggered_by_view;  /* may be NULL */
+	ViewId triggered_by_view; /* may be zero */
 	struct wl_list link; /* server.menus */
 };
 
@@ -83,7 +84,7 @@ bool menu_call_selected_actions(void);
 
 void menu_init(void);
 void menu_finish(void);
-void menu_on_view_destroy(struct view *view);
+void menu_on_view_destroy(ViewId view_id);
 
 /**
  * menu_get_by_id - get menu by id

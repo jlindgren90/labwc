@@ -309,17 +309,6 @@ cursor_context_save(struct cursor_context_saved *saved_ctx,
 	}
 }
 
-void
-cursor_on_view_destroy(struct view *view)
-{
-	if (g_seat.pressed.ctx.view == view) {
-		clear_cursor_context(&g_seat.pressed);
-	}
-	if (g_seat.last_cursor_ctx.ctx.view == view) {
-		clear_cursor_context(&g_seat.last_cursor_ctx);
-	}
-}
-
 static bool
 update_pressed_surface(const struct cursor_context *ctx)
 {
@@ -419,9 +408,10 @@ cursor_update_common(const struct cursor_context *ctx,
 enum lab_edge
 cursor_get_resize_edges(struct wlr_cursor *cursor, const struct cursor_context *ctx)
 {
+	const ViewState *view_st = view_get_state(ctx->view_id);
 	enum lab_edge resize_edges = node_type_to_edges(ctx->type);
-	if (ctx->view && !resize_edges) {
-		struct wlr_box box = ctx->view->st->current;
+	if (view_st && !resize_edges) {
+		struct wlr_box box = view_st->current;
 		resize_edges |=
 			(int)cursor->x < box.x + box.width / 2 ?
 				LAB_EDGE_LEFT : LAB_EDGE_RIGHT;
@@ -460,7 +450,8 @@ cursor_process_motion(double *sx, double *sy)
 	struct mousebind *mousebind;
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ctx.type == LAB_NODE_CLIENT
-				&& view_inhibits_actions(ctx.view, &mousebind->actions)) {
+				&& view_inhibits_actions(ctx.view_id,
+					&mousebind->actions)) {
 			continue;
 		}
 		if (mousebind->mouse_event == MOUSE_ACTION_DRAG
@@ -471,7 +462,7 @@ cursor_process_motion(double *sx, double *sy)
 			 * moving/resizing the wrong view
 			 */
 			mousebind->pressed_in_context = false;
-			actions_run(g_seat.pressed.ctx.view,
+			actions_run(g_seat.pressed.ctx.view_id,
 				&mousebind->actions, &g_seat.pressed.ctx);
 		}
 	}
@@ -586,7 +577,8 @@ process_release_mousebinding(struct cursor_context *ctx, uint32_t button)
 
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ctx->type == LAB_NODE_CLIENT
-				&& view_inhibits_actions(ctx->view, &mousebind->actions)) {
+				&& view_inhibits_actions(ctx->view_id,
+					&mousebind->actions)) {
 			continue;
 		}
 		if (node_type_contains(mousebind->context, ctx->type)
@@ -603,7 +595,7 @@ process_release_mousebinding(struct cursor_context *ctx, uint32_t button)
 			default:
 				continue;
 			}
-			actions_run(ctx->view, &mousebind->actions, ctx);
+			actions_run(ctx->view_id, &mousebind->actions, ctx);
 		}
 	}
 }
@@ -614,7 +606,7 @@ is_double_click(long double_click_speed, uint32_t button,
 {
 	static enum lab_node_type last_type;
 	static uint32_t last_button;
-	static struct view *last_view;
+	static ViewId last_view_id;
 	static struct timespec last_click;
 	struct timespec now;
 
@@ -622,10 +614,10 @@ is_double_click(long double_click_speed, uint32_t button,
 	long ms = (now.tv_sec - last_click.tv_sec) * 1000 +
 		(now.tv_nsec - last_click.tv_nsec) / 1000000;
 	last_click = now;
-	if (last_button != button || last_view != ctx->view
+	if (last_button != button || last_view_id != ctx->view_id
 			|| last_type != ctx->type) {
 		last_button = button;
-		last_view = ctx->view;
+		last_view_id = ctx->view_id;
 		last_type = ctx->type;
 		return false;
 	}
@@ -635,7 +627,7 @@ is_double_click(long double_click_speed, uint32_t button,
 		 * double-click
 		 */
 		last_button = 0;
-		last_view = NULL;
+		last_view_id = 0;
 		last_type = LAB_NODE_NONE;
 		return true;
 	}
@@ -657,7 +649,8 @@ process_press_mousebinding(struct cursor_context *ctx,
 
 	wl_list_for_each(mousebind, &rc.mousebinds, link) {
 		if (ctx->type == LAB_NODE_CLIENT
-				&& view_inhibits_actions(ctx->view, &mousebind->actions)) {
+				&& view_inhibits_actions(ctx->view_id,
+					&mousebind->actions)) {
 			continue;
 		}
 		if (node_type_contains(mousebind->context, ctx->type)
@@ -692,7 +685,7 @@ process_press_mousebinding(struct cursor_context *ctx,
 			}
 			consumed_by_frame_context |= mousebind->context == LAB_NODE_FRAME;
 			consumed_by_frame_context |= mousebind->context == LAB_NODE_ALL;
-			actions_run(ctx->view, &mousebind->actions, ctx);
+			actions_run(ctx->view_id, &mousebind->actions, ctx);
 		}
 	}
 	return consumed_by_frame_context;
@@ -727,7 +720,7 @@ cursor_process_button_press(uint32_t button, uint32_t time_msec)
 	/* Used on next button release to check if it can close menu or select menu item */
 	press_msec = time_msec;
 
-	if (ctx.view || ctx.surface) {
+	if (ctx.view_id || ctx.surface) {
 		/* Store cursor context for later action processing */
 		cursor_context_save(&g_seat.pressed, &ctx);
 		interactive_set_grab_context(&ctx);
@@ -755,7 +748,7 @@ cursor_process_button_press(uint32_t button, uint32_t time_msec)
 			layer_try_set_focus(layer);
 		}
 	} else if (ctx.type == LAB_NODE_UNMANAGED) {
-		desktop_focus_view_or_surface(NULL, ctx.surface,
+		desktop_focus_view_or_surface(/* view_id */ 0, ctx.surface,
 			/*raise*/ false);
 	}
 
@@ -974,7 +967,8 @@ process_cursor_axis(enum wl_pointer_axis orientation,
 		struct mousebind *mousebind;
 		wl_list_for_each(mousebind, &rc.mousebinds, link) {
 			if (ctx.type == LAB_NODE_CLIENT
-					&& view_inhibits_actions(ctx.view, &mousebind->actions)) {
+					&& view_inhibits_actions(ctx.view_id,
+						&mousebind->actions)) {
 				continue;
 			}
 			if (node_type_contains(mousebind->context, ctx.type)
@@ -988,7 +982,8 @@ process_cursor_axis(enum wl_pointer_axis orientation,
 				 * on touchpads or hi-res mice doesn't exceed the threshold
 				 */
 				if (info.run_action) {
-					actions_run(ctx.view, &mousebind->actions, &ctx);
+					actions_run(ctx.view_id,
+						&mousebind->actions, &ctx);
 				}
 			}
 		}

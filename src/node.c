@@ -21,23 +21,23 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 
 void
 node_descriptor_create(struct wlr_scene_node *scene_node,
-		enum lab_node_type type, struct view *view, void *data)
+		enum lab_node_type type, ViewId view_id, void *data)
 {
 	struct node_descriptor *node_descriptor = znew(*node_descriptor);
 	node_descriptor->type = type;
-	node_descriptor->view = view;
+	node_descriptor->view_id = view_id;
 	node_descriptor->data = data;
 	node_descriptor->destroy.notify = handle_node_destroy;
 	wl_signal_add(&scene_node->events.destroy, &node_descriptor->destroy);
 	scene_node->data = node_descriptor;
 }
 
-struct view *
+ViewId
 node_view_from_node(struct wlr_scene_node *wlr_scene_node)
 {
 	assert(wlr_scene_node->data);
 	struct node_descriptor *node_descriptor = wlr_scene_node->data;
-	return node_descriptor->view;
+	return node_descriptor->view_id;
 }
 
 struct lab_layer_surface *
