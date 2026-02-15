@@ -40,10 +40,6 @@ void xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped);
 void xwayland_server_init(struct wlr_compositor *compositor);
 void xwayland_server_finish(void);
 
-void xwayland_adjust_usable_area(struct view *view,
-	struct wlr_output_layout *layout, struct wlr_output *output,
-	struct wlr_box *usable);
-
 void xwayland_update_workarea(void);
 
 void xwayland_reset_cursor(void);

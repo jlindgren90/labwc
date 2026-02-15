@@ -43,18 +43,6 @@ impl Views {
         self.by_id.get_mut(&id)
     }
 
-    pub fn get_c_ptr(&self, id: ViewId) -> *mut CView {
-        self.by_id.get(&id).map_or(null_mut(), View::get_c_ptr)
-    }
-
-    pub fn count(&self) -> usize {
-        self.order.len()
-    }
-
-    pub fn get_nth(&self, n: usize) -> *mut CView {
-        self.get_c_ptr(*self.order.get(n).unwrap_or(&0))
-    }
-
     fn get_root_of(&self, id: ViewId) -> ViewId {
         self.by_id.get(&id).map_or(0, View::get_root_id)
     }
@@ -173,6 +161,14 @@ impl Views {
         }
     }
 
+    pub fn on_output_destroy(&mut self, output: *mut Output) {
+        for v in self.by_id.values_mut() {
+            if v.get_state().output == output {
+                v.set_output(null_mut());
+            }
+        }
+    }
+
     fn update_top_layer_visibility(&self) {
         unsafe { top_layer_show_all() };
         let mut outputs_seen = HashSet::new();
@@ -196,6 +192,12 @@ impl Views {
             v.adjust_for_layout_change();
         }
         self.update_top_layer_visibility();
+    }
+
+    pub fn adjust_usable_area(&self, output: *mut Output) {
+        for v in self.by_id.values() {
+            v.adjust_usable_area(output);
+        }
     }
 
     pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) {

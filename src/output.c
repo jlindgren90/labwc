@@ -119,12 +119,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	wlr_scene_node_destroy(&output->cycle_osd_tree->node);
 	wlr_scene_node_destroy(&output->session_lock_tree->node);
 
-	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_nth(i);
-		if (view->st->output == output) {
-			view_set_output(view->id, NULL);
-		}
-	}
+	views_on_output_destroy(output);
 
 	wlr_output_state_finish(&output->pending);
 
@@ -952,15 +947,7 @@ update_usable_area(struct output *output)
 {
 	struct wlr_box old = output->usable_area;
 	layers_arrange(output);
-
-	for (int i = view_count() - 1; i >= 0; i--) {
-		struct view *view = view_nth(i);
-		if (view->st->mapped && view->xwayland_surface) {
-			xwayland_adjust_usable_area(view,
-				g_server.output_layout,
-				output->wlr_output, &output->usable_area);
-		}
-	}
+	views_adjust_usable_area(output);
 
 	return !wlr_box_equal(&old, &output->usable_area);
 }

@@ -407,6 +407,12 @@ impl View {
         self.in_layout_change = false;
     }
 
+    pub fn adjust_usable_area(&self, output: *mut Output) {
+        if self.is_xwayland && self.state.mapped {
+            unsafe { xwayland_view_adjust_usable_area(self.c_ptr, output) };
+        }
+    }
+
     fn update_ssd(&mut self) {
         if self.state.ssd_enabled && !self.state.fullscreen {
             let icon_buffer = self.get_icon_buffer();

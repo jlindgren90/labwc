@@ -916,13 +916,10 @@ intervals_overlap(int start_a, int end_a, int start_b, int end_b)
  * area of the output based on _NET_WM_STRUT_PARTIAL property.
  */
 void
-xwayland_adjust_usable_area(struct view *view, struct wlr_output_layout *layout,
-		struct wlr_output *output, struct wlr_box *usable)
+xwayland_view_adjust_usable_area(struct view *view, struct output *output)
 {
 	assert(view);
-	assert(layout);
 	assert(output);
-	assert(usable);
 
 	if (!view->xwayland_surface) {
 		return;
@@ -936,9 +933,9 @@ xwayland_adjust_usable_area(struct view *view, struct wlr_output_layout *layout,
 
 	/* these are layout coordinates */
 	struct wlr_box lb = { 0 };
-	wlr_output_layout_get_box(layout, NULL, &lb);
+	wlr_output_layout_get_box(g_server.output_layout, NULL, &lb);
 	struct wlr_box ob = { 0 };
-	wlr_output_layout_get_box(layout, output, &ob);
+	wlr_output_layout_get_box(g_server.output_layout, output->wlr_output, &ob);
 
 	/*
 	 * strut->right/bottom are offsets from the lower right corner
@@ -951,11 +948,12 @@ xwayland_adjust_usable_area(struct view *view, struct wlr_output_layout *layout,
 	double strut_bottom = (lb.y + lb.height) - strut->bottom;
 
 	/* convert layout to output coordinates */
-	wlr_output_layout_output_coords(layout, output,
-		&strut_left, &strut_top);
-	wlr_output_layout_output_coords(layout, output,
-		&strut_right, &strut_bottom);
+	wlr_output_layout_output_coords(g_server.output_layout,
+		output->wlr_output, &strut_left, &strut_top);
+	wlr_output_layout_output_coords(g_server.output_layout,
+		output->wlr_output, &strut_right, &strut_bottom);
 
+	struct wlr_box *usable = &output->usable_area;
 	/* deal with right/bottom rather than width/height */
 	int usable_right = usable->x + usable->width;
 	int usable_bottom = usable->y + usable->height;

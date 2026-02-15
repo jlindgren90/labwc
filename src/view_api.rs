@@ -26,16 +26,6 @@ pub extern "C" fn view_remove(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_count() -> usize {
-    views().count()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_nth(n: usize) -> *mut CView {
-    views().get_nth(n)
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
     views().get_view(id).map_or(null(), |v| v.get_state())
 }
@@ -89,6 +79,11 @@ pub extern "C" fn view_toggle_always_on_top(id: ViewId) {
         return;
     }
     view_set_always_on_top(id, !always_on_top);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn views_adjust_usable_area(output: *mut Output) {
+    views().adjust_usable_area(output);
 }
 
 #[unsafe(no_mangle)]
@@ -170,6 +165,11 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_output(output);
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn views_on_output_destroy(output: *mut Output) {
+    views_mut().on_output_destroy(output);
 }
 
 #[unsafe(no_mangle)]

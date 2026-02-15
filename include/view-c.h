@@ -83,6 +83,7 @@ ViewId xwayland_view_get_root_id(CView *view);
 _Bool xwayland_view_is_modal_dialog(CView *view);
 ViewSizeHints xwayland_view_get_size_hints(CView *view);
 _Bool xwayland_view_has_strut_partial(CView *view);
+void xwayland_view_adjust_usable_area(CView *view, Output *output);
 void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);
