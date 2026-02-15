@@ -19,7 +19,6 @@
 #include "common/string-helpers.h"
 #include "config/rcxml.h"
 #include "cycle.h"
-#include "debug.h"
 #include "input/keyboard.h"
 #include "labwc.h"
 #include "magnifier.h"
@@ -73,7 +72,6 @@ enum action_type {
 	ACTION_TYPE_NONE,
 	ACTION_TYPE_CLOSE,
 	ACTION_TYPE_KILL,
-	ACTION_TYPE_DEBUG,
 	ACTION_TYPE_EXECUTE,
 	ACTION_TYPE_EXIT,
 	ACTION_TYPE_MOVE_TO_EDGE,
@@ -142,7 +140,6 @@ const char *action_names[] = {
 	"None",
 	"Close",
 	"Kill",
-	"Debug",
 	"Execute",
 	"Exit",
 	"MoveToEdge",
@@ -1101,9 +1098,6 @@ run_action(struct view *view, struct action *action,
 				kill(pid, SIGTERM);
 			}
 		}
-		break;
-	case ACTION_TYPE_DEBUG:
-		debug_dump_scene();
 		break;
 	case ACTION_TYPE_EXECUTE: {
 		struct buf cmd = BUF_INIT;
