@@ -22,7 +22,6 @@
 #include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
-#include <wlr/types/wlr_pointer_constraints_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
 #include <wlr/types/wlr_primary_selection_v1.h>
 #include <wlr/types/wlr_relative_pointer_v1.h>
@@ -640,14 +639,8 @@ server_init(void)
 
 	idle_manager_create(g_server.wl_display);
 
-	g_server.relative_pointer_manager = wlr_relative_pointer_manager_v1_create(
-		g_server.wl_display);
-	g_server.constraints = wlr_pointer_constraints_v1_create(
-		g_server.wl_display);
-
-	g_server.new_constraint.notify = create_constraint;
-	wl_signal_add(&g_server.constraints->events.new_constraint,
-		&g_server.new_constraint);
+	g_server.relative_pointer_manager =
+		wlr_relative_pointer_manager_v1_create(g_server.wl_display);
 
 	g_server.foreign_toplevel_manager =
 		wlr_foreign_toplevel_manager_v1_create(g_server.wl_display);
@@ -745,7 +738,6 @@ server_finish(void)
 	layers_finish();
 	kde_server_decoration_finish();
 	xdg_server_decoration_finish();
-	wl_list_remove(&g_server.new_constraint.link);
 	wl_list_remove(&g_server.output_power_manager_set_mode.link);
 	if (g_server.drm_lease_request.notify) {
 		wl_list_remove(&g_server.drm_lease_request.link);
