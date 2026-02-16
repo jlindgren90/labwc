@@ -43,11 +43,13 @@ impl From<&ViewState> for ForeignToplevelState {
 
 #[derive(Default)]
 pub struct View {
+    id: ViewId,
     c_ptr: *mut CView,
     is_xwayland: bool,
     app_id: CString,
     title: CString,
     state: Box<ViewState>,
+    fullscreen_bg: *mut WlrSceneRect, // child of scene_tree
     ssd: Ssd,
     foreign_toplevels: Vec<ForeignToplevel>,
     icon_surfaces: Vec<CairoSurfacePtr>,
@@ -58,14 +60,18 @@ pub struct View {
 }
 
 impl View {
-    pub fn new(c_ptr: *mut CView, is_xwayland: bool) -> Self {
-        let mut view = View {
-            c_ptr: c_ptr,
-            is_xwayland: is_xwayland,
-            ..View::default()
-        };
+    pub fn new(id: ViewId, c_ptr: *mut CView, is_xwayland: bool) -> Self {
+        let mut view = View::default();
+        view.id = id;
+        view.c_ptr = c_ptr;
+        view.is_xwayland = is_xwayland;
         view.state.app_id = view.app_id.as_ptr(); // for C interop
         view.state.title = view.title.as_ptr(); // for C interop
+        view.state.scene_tree = unsafe { view_scene_tree_create(id) };
+        if !is_xwayland {
+            view.state.surface_tree =
+                unsafe { view_surface_tree_create(c_ptr, view.state.scene_tree) };
+        }
         return view;
     }
 
@@ -138,18 +144,26 @@ impl View {
         self.state.ever_mapped = true;
         self.state.focus_mode = focus_mode;
         if !self.state.minimized {
-            unsafe { view_set_visible(self.c_ptr, true) };
+            unsafe { view_scene_tree_set_visible(self.state.scene_tree, true) };
             *was_shown = true;
         }
         // Create SSD at map (if needed)
         self.update_ssd();
+        if self.is_xwayland {
+            self.state.surface_tree =
+                unsafe { view_surface_tree_create(self.c_ptr, self.state.scene_tree) };
+        }
     }
 
     pub fn set_unmapped(&mut self, was_hidden: &mut bool) {
         self.state.mapped = false;
         if !self.state.minimized {
-            unsafe { view_set_visible(self.c_ptr, false) };
+            unsafe { view_scene_tree_set_visible(self.state.scene_tree, false) };
             *was_hidden = true;
+        }
+        if self.is_xwayland {
+            unsafe { view_scene_tree_destroy(self.state.surface_tree) };
+            self.state.surface_tree = null_mut();
         }
         for resource in self.foreign_toplevels.drain(..) {
             resource.close();
@@ -176,6 +190,7 @@ impl View {
                 unsafe { xwayland_view_set_fullscreen(self.c_ptr, fullscreen) };
             } else {
                 unsafe { xdg_toplevel_view_set_fullscreen(self.c_ptr, fullscreen) };
+                self.disable_fullscreen_bg();
             }
             self.send_foreign_toplevel_state();
         }
@@ -211,7 +226,7 @@ impl View {
             }
             self.send_foreign_toplevel_state();
             if self.state.mapped {
-                unsafe { view_set_visible(self.c_ptr, !minimized) };
+                unsafe { view_scene_tree_set_visible(self.state.scene_tree, !minimized) };
                 *visibility_changed = true;
             }
         }
@@ -253,7 +268,7 @@ impl View {
     fn center_fullscreen(&mut self) {
         let output_geom = unsafe { output_layout_coords(self.state.output) };
         if rect_empty(output_geom) {
-            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+            self.disable_fullscreen_bg();
             return;
         }
         self.state.current = rect_center(
@@ -265,9 +280,23 @@ impl View {
         if self.state.current.width < output_geom.width
             || self.state.current.width < output_geom.height
         {
-            unsafe { xdg_toplevel_view_enable_fullscreen_bg(self.c_ptr, output_geom) };
+            if self.fullscreen_bg.is_null() {
+                self.fullscreen_bg = unsafe { view_fullscreen_bg_create(self.state.scene_tree) };
+            }
+            let rel_geom = Rect {
+                x: output_geom.x - self.state.current.x,
+                y: output_geom.y - self.state.current.y,
+                ..output_geom
+            };
+            unsafe { view_fullscreen_bg_show_at(self.fullscreen_bg, rel_geom) };
         } else {
-            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+            self.disable_fullscreen_bg();
+        }
+    }
+
+    fn disable_fullscreen_bg(&self) {
+        if !self.fullscreen_bg.is_null() {
+            unsafe { view_fullscreen_bg_hide(self.fullscreen_bg) };
         }
     }
 
@@ -278,7 +307,13 @@ impl View {
         if self.state.fullscreen && !self.is_xwayland {
             self.center_fullscreen();
         }
-        unsafe { view_move_impl(self.c_ptr) };
+        unsafe {
+            view_scene_tree_move(
+                self.state.scene_tree,
+                self.state.current.x,
+                self.state.current.y,
+            )
+        };
         self.ssd.update_geom(&*self.state);
     }
 
@@ -416,7 +451,7 @@ impl View {
     fn update_ssd(&mut self) {
         if self.state.ssd_enabled && !self.state.fullscreen {
             let icon_buffer = self.get_icon_buffer();
-            self.ssd.create(self.c_ptr, icon_buffer);
+            self.ssd.create(self.id, &*self.state, icon_buffer);
         } else {
             self.ssd.destroy();
         }
@@ -435,10 +470,6 @@ impl View {
                 self.update_ssd();
             }
         }
-    }
-
-    pub fn destroy_ssd(&mut self) {
-        self.ssd.destroy();
     }
 
     // Returns true if mapped and state changed
@@ -503,7 +534,7 @@ impl View {
     }
 
     pub fn raise(&self) {
-        unsafe { view_raise_impl(self.c_ptr) };
+        unsafe { view_scene_tree_raise(self.state.scene_tree) };
     }
 
     // Returns true if focus was (immediately) changed
@@ -605,5 +636,12 @@ impl View {
         if self.state.mapped {
             self.update_ssd();
         }
+    }
+}
+
+impl Drop for View {
+    fn drop(&mut self) {
+        self.ssd.destroy(); // must come before view_scene_tree_destroy()
+        unsafe { view_scene_tree_destroy(self.state.scene_tree) };
     }
 }

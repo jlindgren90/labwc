@@ -14,7 +14,6 @@
 #include "config/rcxml.h"
 #include "config/session.h"
 #include "labwc.h"
-#include "node.h"
 #include "output.h"
 #include "view.h"
 
@@ -550,8 +549,6 @@ handle_map_request(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	/* Keep the view invisible until actually mapped */
-	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 	ensure_initial_geometry_and_output(view);
 
 	/*
@@ -605,12 +602,6 @@ handle_map(struct wl_listener *listener, void *data)
 	 */
 	handle_map_request(&view->map_request, NULL);
 
-	if (!view->content_tree) {
-		view->content_tree = wlr_scene_subsurface_tree_create(
-			view->scene_tree, xwayland_surface->surface);
-		die_if_null(view->content_tree);
-	}
-
 	if (!view->st->ever_mapped) {
 		view_adjust_initial_geom(view->id,
 			has_position_hint(xwayland_surface));
@@ -647,17 +638,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 	view_unmap_common(view->id);
 	if (xwayland_view_has_strut_partial(view)) {
 		output_update_all_usable_areas(false);
-	}
-
-	/*
-	 * Destroy the content_tree at unmap. Alternatively, we could
-	 * let wlr_scene manage its lifetime automatically, but this
-	 * approach is symmetrical with handle_map() and avoids any
-	 * concern of a dangling pointer in view->content_tree.
-	 */
-	if (view->content_tree) {
-		wlr_scene_node_destroy(&view->content_tree->node);
-		view->content_tree = NULL;
 	}
 }
 
@@ -723,10 +703,6 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	 */
 	view->xwayland_surface = xsurface;
 	xsurface->data = (void *)view->id;
-
-	view->scene_tree = wlr_scene_tree_create(g_server.view_tree);
-	node_descriptor_create(&view->scene_tree->node,
-		LAB_NODE_VIEW, view->id, /*data*/ NULL);
 
 	CONNECT_SIGNAL(xsurface, view, destroy);
 	CONNECT_SIGNAL(xsurface, view, request_minimize);

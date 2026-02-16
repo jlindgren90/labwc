@@ -11,14 +11,13 @@
 #include "common/mem.h"
 #include "labwc.h"
 #include "menu/menu.h"
-#include "node.h"
 #include "output.h"
 #include "view.h"
 
 #define LAB_XDG_SHELL_VERSION 6
 #define CONFIGURE_TIMEOUT_MS 100
 
-struct wlr_xdg_surface *
+static struct wlr_xdg_surface *
 xdg_surface_from_view(struct view *view)
 {
 	assert(view->xdg_surface);
@@ -60,7 +59,8 @@ handle_new_popup(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, new_popup);
 	struct wlr_xdg_popup *wlr_popup = data;
-	xdg_popup_create(view, wlr_popup, view->scene_tree);
+	xdg_popup_create(view->id, view->xdg_surface, wlr_popup,
+		view->st->scene_tree);
 }
 
 static void
@@ -75,33 +75,6 @@ set_fullscreen_from_request(struct view *view,
 	view_fullscreen(view->id, requested->fullscreen);
 }
 
-void
-xdg_toplevel_view_disable_fullscreen_bg(struct view *view)
-{
-	if (view->fullscreen_bg) {
-		wlr_scene_node_set_enabled(&view->fullscreen_bg->node, false);
-	}
-}
-
-void
-xdg_toplevel_view_enable_fullscreen_bg(struct view *view,
-		struct wlr_box output_geom)
-{
-	if (!view->fullscreen_bg) {
-		const float black[4] = {0, 0, 0, 1};
-		view->fullscreen_bg =
-			wlr_scene_rect_create(view->scene_tree, 0, 0, black);
-		wlr_scene_node_lower_to_bottom(&view->fullscreen_bg->node);
-	}
-
-	wlr_scene_node_set_position(&view->fullscreen_bg->node,
-		output_geom.x - view->st->current.x,
-		output_geom.y - view->st->current.y);
-	wlr_scene_rect_set_size(view->fullscreen_bg,
-		output_geom.width, output_geom.height);
-	wlr_scene_node_set_enabled(&view->fullscreen_bg->node, true);
-}
-
 /* TODO: reorder so this forward declaration isn't needed */
 static void set_pending_configure_serial(struct view *view, uint32_t serial);
 
@@ -112,7 +85,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	struct wlr_xdg_surface *xdg_surface = xdg_surface_from_view(view);
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 
-	wlr_scene_node_set_position(&view->content_tree->node,
+	wlr_scene_node_set_position(&view->st->surface_tree->node,
 		-xdg_surface->geometry.x, -xdg_surface->geometry.y);
 
 	if (xdg_surface->initial_commit) {
@@ -521,10 +494,6 @@ xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
 	if (serial > 0) {
 		set_pending_configure_serial(view, serial);
 	}
-	/* Disable background fill immediately on leaving fullscreen */
-	if (!fullscreen) {
-		xdg_toplevel_view_disable_fullscreen_bg(view);
-	}
 }
 
 void
@@ -666,18 +635,9 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	assert(xdg_surface->role == WLR_XDG_SURFACE_ROLE_TOPLEVEL);
 
 	struct view *view = znew(*view);
-	view_init(view, /* is_xwayland */ false);
-
 	view->xdg_surface = xdg_surface;
 
-	view->scene_tree = wlr_scene_tree_create(g_server.view_tree);
-	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
-
-	view->content_tree = wlr_scene_subsurface_tree_create(
-		view->scene_tree, xdg_surface->surface);
-
-	node_descriptor_create(&view->scene_tree->node,
-		LAB_NODE_VIEW, view->id, /*data*/ NULL);
+	view_init(view, /* is_xwayland */ false);
 
 	xdg_surface->data = (void *)view->id;
 

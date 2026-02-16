@@ -25,7 +25,7 @@ impl Views {
     pub fn add(&mut self, c_ptr: *mut CView, is_xwayland: bool) -> ViewId {
         self.max_used_id += 1;
         let id = self.max_used_id;
-        self.by_id.insert(id, View::new(c_ptr, is_xwayland));
+        self.by_id.insert(id, View::new(id, c_ptr, is_xwayland));
         self.order.push(id);
         return id;
     }

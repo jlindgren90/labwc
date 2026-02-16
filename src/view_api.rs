@@ -187,13 +187,6 @@ pub extern "C" fn view_enable_ssd(id: ViewId, enabled: bool) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_destroy_ssd(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.destroy_ssd();
-    }
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
     views_mut().fullscreen(id, fullscreen);
     unsafe { cursor_update_focus() };

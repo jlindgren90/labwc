@@ -13,6 +13,7 @@
 
 struct output;
 struct wlr_xdg_popup;
+struct wlr_xdg_surface;
 
 enum input_mode {
 	LAB_INPUT_STATE_PASSTHROUGH = 0,
@@ -208,8 +209,8 @@ struct server {
 extern struct seat g_seat;
 extern struct server g_server;
 
-void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup,
-	struct wlr_scene_tree *parent_tree);
+void xdg_popup_create(ViewId view_id, struct wlr_xdg_surface *toplevel,
+	struct wlr_xdg_popup *wlr_popup, struct wlr_scene_tree *parent_tree);
 void xdg_shell_init(void);
 void xdg_shell_finish(void);
 
