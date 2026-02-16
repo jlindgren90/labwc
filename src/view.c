@@ -53,42 +53,6 @@ view_get_surface(struct view *view)
 	return NULL;
 }
 
-void
-view_toggle_maximize(ViewId view_id, enum view_axis axis)
-{
-	const ViewState *view_st = view_get_state(view_id);
-	if (!view_st) {
-		return;
-	}
-
-	switch (axis) {
-	case VIEW_AXIS_HORIZONTAL:
-	case VIEW_AXIS_VERTICAL:
-		/* Toggle one axis (XOR) */
-		view_maximize(view_id, view_st->maximized ^ axis);
-		break;
-	case VIEW_AXIS_BOTH:
-		/*
-		 * Maximize in both directions if unmaximized or partially
-		 * maximized, otherwise unmaximize.
-		 */
-		view_maximize(view_id, (view_st->maximized == VIEW_AXIS_BOTH)
-			? VIEW_AXIS_NONE : VIEW_AXIS_BOTH);
-		break;
-	default:
-		break;
-	}
-}
-
-void
-view_toggle_fullscreen(ViewId view_id)
-{
-	const ViewState *view_st = view_get_state(view_id);
-	if (view_st) {
-		view_fullscreen(view_id, !view_st->fullscreen);
-	}
-}
-
 enum view_axis
 view_axis_parse(const char *direction)
 {

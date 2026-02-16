@@ -193,9 +193,39 @@ pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_toggle_fullscreen(id: ViewId) {
+    let fullscreen;
+    if let Some(view) = views().get_view(id) {
+        fullscreen = view.get_state().fullscreen;
+    } else {
+        return;
+    }
+    view_fullscreen(id, !fullscreen);
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
     views_mut().maximize(id, axis);
     unsafe { cursor_update_focus() };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_toggle_maximize(id: ViewId, axis: ViewAxis) {
+    let maximized;
+    if let Some(view) = views().get_view(id) {
+        maximized = view.get_state().maximized;
+    } else {
+        return;
+    }
+    if axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL {
+        view_maximize(id, maximized ^ axis);
+    } else if axis == VIEW_AXIS_BOTH {
+        if maximized == VIEW_AXIS_BOTH {
+            view_maximize(id, VIEW_AXIS_NONE);
+        } else {
+            view_maximize(id, VIEW_AXIS_BOTH);
+        }
+    }
 }
 
 #[unsafe(no_mangle)]
