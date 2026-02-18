@@ -172,11 +172,6 @@ struct server {
 	/* Tree for all non-layer xdg/xwayland-shell surfaces */
 	struct wlr_scene_tree *view_trees[3];
 
-	/*
-	 * Popups need to be rendered above always-on-top views, so we reparent
-	 * them to this dedicated tree
-	 */
-	struct wlr_scene_tree *xdg_popup_tree;
 #if HAVE_XWAYLAND
 	/* Tree for unmanaged xsurfaces without initialized view (usually popups) */
 	struct wlr_scene_tree *unmanaged_tree;
@@ -243,7 +238,8 @@ struct server {
 extern struct seat g_seat;
 extern struct server g_server;
 
-void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
+void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup,
+	struct wlr_scene_tree *parent_tree);
 void xdg_shell_init(void);
 void xdg_shell_finish(void);
 
