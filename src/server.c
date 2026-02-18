@@ -440,7 +440,6 @@ server_init(void)
 	server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
 		lab_wlr_scene_tree_create(&server.scene->tree);
 
-	server.xdg_popup_tree = lab_wlr_scene_tree_create(&server.scene->tree);
 #if HAVE_XWAYLAND
 	// Creating/setting this is harmless when xwayland support is built-in
 	// but xwayland could not be successfully started.
