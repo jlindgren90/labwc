@@ -67,7 +67,7 @@ handle_new_popup(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, new_popup);
 	struct wlr_xdg_popup *wlr_popup = data;
-	xdg_popup_create(view, wlr_popup);
+	xdg_popup_create(view, wlr_popup, view->scene_tree);
 }
 
 static void
@@ -164,6 +164,9 @@ handle_commit(struct wl_listener *listener, void *data)
 	struct wlr_xdg_surface *xdg_surface = xdg_surface_from_view(view);
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
 	assert(view->surface);
+
+	wlr_scene_node_set_position(&view->content_tree->node,
+		-xdg_surface->geometry.x, -xdg_surface->geometry.y);
 
 	if (xdg_surface->initial_commit) {
 		uint32_t serial =
@@ -842,8 +845,6 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
  * We use the following struct user_data pointers:
  *   - wlr_xdg_surface->data = view
  *     for the wlr_xdg_toplevel_decoration_v1 implementation
- *   - wlr_surface->data = scene_tree
- *     to help the popups find their parent nodes
  */
 static void
 handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
@@ -878,11 +879,9 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 		wlr_scene_tree_create(g_server.view_trees[VIEW_LAYER_NORMAL]);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 
-	struct wlr_scene_tree *tree = wlr_scene_xdg_surface_create(
-		view->scene_tree, xdg_surface);
-	die_if_null(tree);
+	view->content_tree = wlr_scene_subsurface_tree_create(
+		view->scene_tree, xdg_surface->surface);
 
-	view->content_tree = tree;
 	node_descriptor_create(&view->scene_tree->node,
 		LAB_NODE_VIEW, view, /*data*/ NULL);
 
@@ -902,9 +901,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	 */
 	kde_server_decoration_set_view(view, xdg_surface->surface);
 
-	/* In support of xdg popups and IME popup */
 	view->surface = xdg_surface->surface;
-	view->surface->data = tree;
 
 	mappable_connect(&view->mappable, xdg_surface->surface,
 		handle_map, handle_unmap);

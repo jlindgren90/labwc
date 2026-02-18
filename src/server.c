@@ -436,7 +436,6 @@ server_init(void)
 	g_server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
 		wlr_scene_tree_create(&g_server.scene->tree);
 
-	g_server.xdg_popup_tree = wlr_scene_tree_create(&g_server.scene->tree);
 #if HAVE_XWAYLAND
 	g_server.unmanaged_tree = wlr_scene_tree_create(&g_server.scene->tree);
 #endif

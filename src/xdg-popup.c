@@ -20,6 +20,9 @@ struct xdg_popup {
 	struct view *parent_view;
 	struct wlr_xdg_popup *wlr_popup;
 
+	struct wlr_scene_tree *scene_tree;
+	struct wlr_scene_tree *surface_tree;
+
 	struct wl_listener commit;
 	struct wl_listener destroy;
 	struct wl_listener new_popup;
@@ -33,7 +36,7 @@ popup_unconstrain(struct xdg_popup *popup)
 
 	/* Get position of parent toplevel/popup */
 	int parent_lx, parent_ly;
-	struct wlr_scene_tree *parent_tree = popup->wlr_popup->parent->data;
+	struct wlr_scene_tree *parent_tree = popup->scene_tree->node.parent;
 	wlr_scene_node_coords(&parent_tree->node, &parent_lx, &parent_ly);
 
 	/*
@@ -83,11 +86,9 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&popup->destroy.link);
 	wl_list_remove(&popup->new_popup.link);
 	wl_list_remove(&popup->reposition.link);
+	wl_list_remove(&popup->commit.link);
 
-	/* Usually already removed unless there was no commit at all */
-	if (popup->commit.notify) {
-		wl_list_remove(&popup->commit.link);
-	}
+	wlr_scene_node_destroy(&popup->scene_tree->node);
 
 	cursor_update_focus();
 
@@ -98,13 +99,16 @@ static void
 handle_commit(struct wl_listener *listener, void *data)
 {
 	struct xdg_popup *popup = wl_container_of(listener, popup, commit);
+	struct wlr_xdg_surface *xdg_surface = popup->wlr_popup->base;
+
+	wlr_scene_node_set_position(&popup->scene_tree->node,
+		popup->wlr_popup->current.geometry.x,
+		popup->wlr_popup->current.geometry.y);
+	wlr_scene_node_set_position(&popup->surface_tree->node,
+		-xdg_surface->geometry.x, -xdg_surface->geometry.y);
 
 	if (popup->wlr_popup->base->initial_commit) {
 		popup_unconstrain(popup);
-
-		/* Prevent getting called over and over again */
-		wl_list_remove(&popup->commit.link);
-		popup->commit.notify = NULL;
 	}
 }
 
@@ -120,11 +124,12 @@ handle_new_popup(struct wl_listener *listener, void *data)
 {
 	struct xdg_popup *popup = wl_container_of(listener, popup, new_popup);
 	struct wlr_xdg_popup *wlr_popup = data;
-	xdg_popup_create(popup->parent_view, wlr_popup);
+	xdg_popup_create(popup->parent_view, wlr_popup, popup->scene_tree);
 }
 
 void
-xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup)
+xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup,
+		struct wlr_scene_tree *parent_tree)
 {
 	struct wlr_xdg_surface *parent =
 		wlr_xdg_surface_try_from_wlr_surface(wlr_popup->parent);
@@ -142,28 +147,10 @@ xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup)
 	CONNECT_SIGNAL(wlr_popup->base->surface, popup, commit);
 	CONNECT_SIGNAL(wlr_popup, popup, reposition);
 
-	/*
-	 * We must add xdg popups to the scene graph so they get rendered. The
-	 * wlroots scene graph provides a helper for this, but to use it we must
-	 * provide the proper parent scene node of the xdg popup. To enable
-	 * this, we always set the user data field of wlr_surfaces to the
-	 * corresponding scene node.
-	 *
-	 * xdg-popups live in g_server.xdg_popup_tree so that they can be
-	 * rendered above always-on-top windows
-	 */
-	struct wlr_scene_tree *parent_tree = NULL;
-	if (parent->role == WLR_XDG_SURFACE_ROLE_POPUP) {
-		parent_tree = parent->surface->data;
-	} else {
-		parent_tree = g_server.xdg_popup_tree;
-		wlr_scene_node_set_position(&g_server.xdg_popup_tree->node,
-			view->current.x, view->current.y);
-	}
-	wlr_popup->base->surface->data =
-		wlr_scene_xdg_surface_create(parent_tree, wlr_popup->base);
-	die_if_null(wlr_popup->base->surface->data);
+	popup->scene_tree = wlr_scene_tree_create(parent_tree);
+	popup->surface_tree = wlr_scene_subsurface_tree_create(
+		popup->scene_tree, wlr_popup->base->surface);
 
-	node_descriptor_create(wlr_popup->base->surface->data,
+	node_descriptor_create(&popup->scene_tree->node,
 		LAB_NODE_XDG_POPUP, view, /*data*/ NULL);
 }

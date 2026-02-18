@@ -532,9 +532,6 @@ create_popup(struct wlr_xdg_popup *wlr_popup,
 		wlr_scene_xdg_surface_create(parent, wlr_popup->base);
 	die_if_null(popup->scene_tree);
 
-	/* In support of IME popup */
-	wlr_popup->base->surface->data = popup->scene_tree;
-
 	node_descriptor_create(&popup->scene_tree->node,
 		LAB_NODE_LAYER_POPUP, /*view*/ NULL, popup);
 
@@ -658,9 +655,6 @@ handle_new_layer_surface(struct wl_listener *listener, void *data)
 	surface->scene_layer_surface = wlr_scene_layer_surface_v1_create(
 		selected_layer, layer_surface);
 	die_if_null(surface->scene_layer_surface);
-
-	/* In support of IME popup */
-	layer_surface->surface->data = surface->scene_layer_surface->tree;
 
 	node_descriptor_create(&surface->scene_layer_surface->tree->node,
 		LAB_NODE_LAYER_SURFACE, /*view*/ NULL, surface);
