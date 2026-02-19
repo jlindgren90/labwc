@@ -1,100 +1,101 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #include <assert.h>
-#include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include "common/mem.h"
 #include "decorations.h"
-#include "labwc.h"
+#include "server-decoration-protocol.h"
 #include "view.h"
 
-static struct wlr_server_decoration_manager *kde_deco_mgr;
+#define SERVER_DECORATION_MANAGER_VERSION 1
 
-struct kde_deco {
-	struct wlr_server_decoration *wlr_kde_decoration;
-	ViewId view_id;
-	struct wl_listener mode;
-	struct wl_listener destroy;
+static const struct org_kde_kwin_server_decoration_interface kde_deco_impl;
+
+static ViewId
+view_id_from_resource(struct wl_resource *resource)
+{
+	assert(wl_resource_instance_of(resource,
+		&org_kde_kwin_server_decoration_interface, &kde_deco_impl));
+	return (ViewId)wl_resource_get_user_data(resource);
+}
+
+static void
+kde_deco_handle_release(struct wl_client *client, struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static void
+kde_deco_handle_request_mode(struct wl_client *client,
+		struct wl_resource *resource, uint32_t mode)
+{
+	org_kde_kwin_server_decoration_send_mode(resource, mode);
+	view_enable_ssd(view_id_from_resource(resource),
+		mode == ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_SERVER);
+}
+
+static const struct org_kde_kwin_server_decoration_interface kde_deco_impl = {
+	.release = kde_deco_handle_release,
+	.request_mode = kde_deco_handle_request_mode,
 };
 
 static void
-handle_destroy(struct wl_listener *listener, void *data)
+kde_deco_manager_handle_create(struct wl_client *client,
+		struct wl_resource *manager_resource, uint32_t id,
+		struct wl_resource *surface_resource)
 {
-	struct kde_deco *kde_deco = wl_container_of(listener, kde_deco, destroy);
-	wl_list_remove(&kde_deco->destroy.link);
-	wl_list_remove(&kde_deco->mode.link);
-	free(kde_deco);
-}
-
-static void
-handle_mode(struct wl_listener *listener, void *data)
-{
-	struct kde_deco *kde_deco = wl_container_of(listener, kde_deco, mode);
-	if (!kde_deco->view_id) {
+	struct wlr_surface *surface =
+		wlr_surface_from_resource(surface_resource);
+	struct wlr_xdg_surface *xdg_surface =
+		wlr_xdg_surface_try_from_wlr_surface(surface);
+	if (!xdg_surface) {
 		return;
 	}
 
-	view_enable_ssd(kde_deco->view_id,
-		kde_deco->wlr_kde_decoration->mode
-			== WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
+	ViewId view_id = (ViewId)xdg_surface->data;
+
+	int version = wl_resource_get_version(manager_resource);
+	struct wl_resource *resource = wl_resource_create(client,
+		&org_kde_kwin_server_decoration_interface, version, id);
+	die_if_null(resource);
+	wl_resource_set_implementation(resource,
+		&kde_deco_impl, (void *)view_id, NULL);
+
+	org_kde_kwin_server_decoration_send_mode(resource,
+		ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_SERVER);
+	view_enable_ssd(view_id, true);
 }
+
+static const struct org_kde_kwin_server_decoration_manager_interface
+		kde_deco_manager_impl = {
+	.create = kde_deco_manager_handle_create,
+};
 
 static void
-handle_new_server_decoration(struct wl_listener *listener, void *data)
+kde_deco_manager_bind(struct wl_client *client, void *data,
+		uint32_t version, uint32_t id)
 {
-	struct wlr_server_decoration *wlr_deco = data;
-	struct kde_deco *kde_deco = znew(*kde_deco);
-	kde_deco->wlr_kde_decoration = wlr_deco;
+	struct wl_resource *resource = wl_resource_create(client,
+		&org_kde_kwin_server_decoration_manager_interface, version, id);
+	die_if_null(resource);
+	wl_resource_set_implementation(resource, &kde_deco_manager_impl, NULL, NULL);
 
-	if (wlr_deco->surface) {
-		/*
-		 * Depending on the application event flow, the supplied
-		 * wlr_surface may already have been set up as a xdg_surface
-		 * or not (e.g. for GTK4). In the second case, the xdg.c
-		 * new_surface handler will try to set the view via
-		 * kde_server_decoration_set_view().
-		 */
-		struct wlr_xdg_surface *xdg_surface =
-			wlr_xdg_surface_try_from_wlr_surface(wlr_deco->surface);
-		if (xdg_surface && xdg_surface->data) {
-			kde_deco->view_id = (ViewId)xdg_surface->data;
-			handle_mode(&kde_deco->mode, wlr_deco);
-		}
-	}
+	org_kde_kwin_server_decoration_manager_send_default_mode(resource,
+		ORG_KDE_KWIN_SERVER_DECORATION_MANAGER_MODE_SERVER);
+}
 
-	wl_signal_add(&wlr_deco->events.destroy, &kde_deco->destroy);
-	kde_deco->destroy.notify = handle_destroy;
+static struct wl_global *kde_deco_mgr_global;
 
-	wl_signal_add(&wlr_deco->events.mode, &kde_deco->mode);
-	kde_deco->mode.notify = handle_mode;
+void
+kde_deco_manager_init(struct wl_display *display)
+{
+	kde_deco_mgr_global = wl_global_create(display,
+		&org_kde_kwin_server_decoration_manager_interface,
+		SERVER_DECORATION_MANAGER_VERSION, NULL, kde_deco_manager_bind);
+	die_if_null(kde_deco_mgr_global);
 }
 
 void
-kde_server_decoration_update_default(void)
+kde_deco_manager_finish(void)
 {
-	assert(kde_deco_mgr);
-	/* Default to server-side decorations */
-	wlr_server_decoration_manager_set_default_mode(kde_deco_mgr,
-		WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
-}
-
-void
-kde_server_decoration_init(void)
-{
-	assert(!kde_deco_mgr);
-	kde_deco_mgr = wlr_server_decoration_manager_create(g_server.wl_display);
-	if (!kde_deco_mgr) {
-		wlr_log(WLR_ERROR, "unable to create the kde server deco manager");
-		exit(EXIT_FAILURE);
-	}
-
-	kde_server_decoration_update_default();
-
-	wl_signal_add(&kde_deco_mgr->events.new_decoration, &g_server.kde_server_decoration);
-	g_server.kde_server_decoration.notify = handle_new_server_decoration;
-}
-
-void
-kde_server_decoration_finish(void)
-{
-	wl_list_remove(&g_server.kde_server_decoration.link);
+	wl_global_destroy(kde_deco_mgr_global);
 }
