@@ -22,7 +22,6 @@
 #include "view.h"
 #include "view-impl-common.h"
 
-static void set_surface(struct view *view, struct wlr_surface *surface);
 static void handle_map(struct wl_listener *listener, void *data);
 static void handle_unmap(struct wl_listener *listener, void *data);
 
@@ -215,10 +214,10 @@ static void
 handle_commit(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, commit);
-	assert(data && data == view->surface);
 
 	/* Must receive commit signal before accessing surface->current* */
-	struct wlr_surface_state *state = &view->surface->current;
+	struct wlr_surface_state *state =
+		&view->xwayland_surface->surface->current;
 	struct wlr_box *current = &view->current;
 
 	/*
@@ -275,7 +274,9 @@ handle_associate(struct wl_listener *listener, void *data)
 	struct wlr_xwayland_surface *xsurface = view->xwayland_surface;
 	assert(xsurface && xsurface->surface);
 
-	set_surface(view, xsurface->surface);
+	CONNECT_SIGNAL(xsurface->surface, view, commit);
+	CONNECT_SIGNAL(xsurface->surface, view, map);
+	CONNECT_SIGNAL(xsurface->surface, view, unmap);
 
 	/*
 	 * Empirically, the associate event is always seen just after
@@ -317,7 +318,10 @@ static void
 handle_dissociate(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, dissociate);
-	set_surface(view, NULL);
+
+	wl_list_remove(&view->commit.link);
+	wl_list_remove(&view->map.link);
+	wl_list_remove(&view->unmap.link);
 }
 
 static void
@@ -326,8 +330,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	struct view *view = wl_container_of(listener, view, destroy);
 	assert(view->xwayland_surface);
 	assert(view->xwayland_surface->data == view);
-
-	set_surface(view, NULL);
 
 	/*
 	 * Break view <-> xsurface association.  Note that the xsurface
@@ -518,7 +520,10 @@ handle_set_override_redirect(struct wl_listener *listener, void *data)
 
 	bool mapped = xsurface->surface && xsurface->surface->mapped;
 	if (mapped) {
-		handle_unmap(&view->mappable.unmap, NULL);
+		handle_unmap(&view->unmap, NULL);
+	}
+	if (xsurface->surface) {
+		handle_dissociate(&view->dissociate, NULL);
 	}
 	handle_destroy(&view->destroy, xsurface);
 	/* view is invalid after this point */
@@ -584,8 +589,9 @@ static void
 handle_focus_in(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, focus_in);
+	struct wlr_surface *surface = view->xwayland_surface->surface;
 
-	if (!view->surface) {
+	if (!surface) {
 		/*
 		 * It is rare but possible for the focus_in event to be
 		 * received before the map event. This has been seen
@@ -603,8 +609,8 @@ handle_focus_in(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (view->surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
-		seat_focus_surface(view->surface);
+	if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
+		seat_focus_surface(surface);
 	}
 }
 
@@ -624,27 +630,10 @@ check_natural_geometry(struct view *view)
 }
 
 static void
-set_surface(struct view *view, struct wlr_surface *surface)
-{
-	if (view->surface) {
-		/* Disconnect wlr_surface event listeners */
-		mappable_disconnect(&view->mappable);
-		wl_list_remove(&view->commit.link);
-	}
-	view->surface = surface;
-	if (surface) {
-		/* Connect wlr_surface event listeners */
-		mappable_connect(&view->mappable, surface,
-			handle_map, handle_unmap);
-		CONNECT_SIGNAL(surface, view, commit);
-	}
-}
-
-static void
 handle_map(struct wl_listener *listener, void *data)
 {
-	struct view *view = wl_container_of(listener, view, mappable.map);
-	assert(view->surface);
+	struct view *view = wl_container_of(listener, view, map);
+	assert(view->xwayland_surface->surface);
 
 	if (view->mapped) {
 		return;
@@ -654,7 +643,7 @@ handle_map(struct wl_listener *listener, void *data)
 
 	if (!view->content_tree) {
 		view->content_tree = wlr_scene_subsurface_tree_create(
-			view->scene_tree, view->surface);
+			view->scene_tree, view->xwayland_surface->surface);
 		die_if_null(view->content_tree);
 	}
 
@@ -690,7 +679,7 @@ handle_map(struct wl_listener *listener, void *data)
 	 */
 	if (view->focused_before_map) {
 		view->focused_before_map = false;
-		seat_focus_surface(view->surface);
+		seat_focus_surface(view->xwayland_surface->surface);
 	}
 
 	view_impl_map(view);
@@ -700,7 +689,7 @@ handle_map(struct wl_listener *listener, void *data)
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
-	struct view *view = wl_container_of(listener, view, mappable.unmap);
+	struct view *view = wl_container_of(listener, view, unmap);
 	if (!view->mapped) {
 		return;
 	}
@@ -871,7 +860,7 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 		handle_set_icon(&view->set_icon, NULL);
 	}
 	if (mapped) {
-		handle_map(&view->mappable.map, NULL);
+		handle_map(&view->map, NULL);
 	}
 }
 
