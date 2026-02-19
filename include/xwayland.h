@@ -15,10 +15,10 @@ struct xwayland_unmanaged {
 	struct wlr_scene_node *node;
 	struct wl_list link;
 
-	struct mappable mappable;
-
 	struct wl_listener associate;
 	struct wl_listener dissociate;
+	struct wl_listener map;
+	struct wl_listener unmap;
 	struct wl_listener grab_focus;
 	struct wl_listener request_activate;
 	struct wl_listener request_configure;
