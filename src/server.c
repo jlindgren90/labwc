@@ -454,7 +454,7 @@ server_init(void)
 	seat_init();
 	xdg_shell_init();
 	kde_server_decoration_init();
-	xdg_server_decoration_init();
+	xdg_deco_manager_init(g_server.wl_display);
 	foreign_toplevel_manager_init(g_server.wl_display);
 
 	struct wlr_presentation *presentation = wlr_presentation_create(
@@ -563,7 +563,7 @@ server_finish(void)
 	xdg_shell_finish();
 	layers_finish();
 	kde_server_decoration_finish();
-	xdg_server_decoration_finish();
+	xdg_deco_manager_finish();
 	foreign_toplevel_manager_finish();
 	wl_list_remove(&g_server.output_power_manager_set_mode.link);
 	if (g_server.drm_lease_request.notify) {
