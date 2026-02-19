@@ -124,8 +124,6 @@ struct server {
 	struct wl_listener new_xdg_toplevel;
 	struct wl_listener new_layer_surface;
 
-	struct wl_listener kde_server_decoration;
-
 	struct wlr_xwayland *xwayland;
 	struct wl_listener xwayland_server_ready;
 	struct wl_listener xwayland_xwm_ready;
