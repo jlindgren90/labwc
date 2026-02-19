@@ -55,6 +55,18 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	return NULL;
 }
 
+struct wlr_surface *
+view_get_surface(struct view *view)
+{
+	if (view->xdg_surface) {
+		return view->xdg_surface->surface;
+	}
+	if (view->xwayland_surface) {
+		return view->xwayland_surface->surface;
+	}
+	return NULL;
+}
+
 struct view *
 view_get_root(struct view *view)
 {
@@ -79,7 +91,7 @@ bool
 view_is_focusable(struct view *view)
 {
 	assert(view);
-	if (!view->surface) {
+	if (!view->mapped) {
 		return false;
 	}
 
@@ -1266,29 +1278,6 @@ view_inhibits_actions(struct view *view, struct wl_list *actions)
 	return view && view->inhibits_keybinds && !actions_contain_toggle_keybinds(actions);
 }
 
-void
-mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
-		wl_notify_func_t notify_map, wl_notify_func_t notify_unmap)
-{
-	assert(mappable);
-	assert(!mappable->connected);
-	mappable->map.notify = notify_map;
-	wl_signal_add(&surface->events.map, &mappable->map);
-	mappable->unmap.notify = notify_unmap;
-	wl_signal_add(&surface->events.unmap, &mappable->unmap);
-	mappable->connected = true;
-}
-
-void
-mappable_disconnect(struct mappable *mappable)
-{
-	assert(mappable);
-	assert(mappable->connected);
-	wl_list_remove(&mappable->map.link);
-	wl_list_remove(&mappable->unmap.link);
-	mappable->connected = false;
-}
-
 /* Used in both (un)map and (un)minimize */
 void
 view_update_visibility(struct view *view)
@@ -1365,10 +1354,6 @@ void
 view_destroy(struct view *view)
 {
 	assert(view);
-
-	if (view->mappable.connected) {
-		mappable_disconnect(&view->mappable);
-	}
 
 	wl_list_remove(&view->request_move.link);
 	wl_list_remove(&view->request_resize.link);

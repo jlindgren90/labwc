@@ -73,13 +73,6 @@ struct view;
 struct wlr_surface;
 struct foreign_toplevel;
 
-/* Common to struct view and struct xwayland_unmanaged */
-struct mappable {
-	bool connected;
-	struct wl_listener map;
-	struct wl_listener unmap;
-};
-
 /* Basic size hints (subset of XSizeHints from X11) */
 struct view_size_hints {
 	int min_width;
@@ -134,7 +127,6 @@ struct view {
 	 */
 	struct output *output;
 
-	struct wlr_surface *surface;
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
 
@@ -193,10 +185,10 @@ struct view {
 
 	struct ssd *ssd;
 
-	struct mappable mappable;
-
 	struct wl_listener destroy;
 	struct wl_listener commit;
+	struct wl_listener map;
+	struct wl_listener unmap;
 	struct wl_listener request_move;
 	struct wl_listener request_resize;
 	struct wl_listener request_minimize;
@@ -261,6 +253,8 @@ struct view {
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
+struct wlr_surface *view_get_surface(struct view *view);
+
 struct view *view_get_root(struct view *view);
 
 enum view_wants_focus view_wants_focus(struct view *view);
@@ -291,10 +285,6 @@ void view_offer_focus(struct view *view);
 
 struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
 	enum lab_edge edge);
-
-void mappable_connect(struct mappable *mappable, struct wlr_surface *surface,
-	wl_notify_func_t notify_map, wl_notify_func_t notify_unmap);
-void mappable_disconnect(struct mappable *mappable);
 
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);

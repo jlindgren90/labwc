@@ -7,12 +7,9 @@
 #include <wlr/types/wlr_xdg_activation_v1.h>
 #include <wlr/types/wlr_xdg_dialog_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include "buffer.h"
-#include "common/array.h"
 #include "common/box.h"
 #include "common/macros.h"
 #include "common/mem.h"
-#include "config/rcxml.h"
 #include "decorations.h"
 #include "foreign-toplevel/foreign.h"
 #include "labwc.h"
@@ -163,7 +160,6 @@ handle_commit(struct wl_listener *listener, void *data)
 	struct view *view = wl_container_of(listener, view, commit);
 	struct wlr_xdg_surface *xdg_surface = xdg_surface_from_view(view);
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
-	assert(view->surface);
 
 	wlr_scene_node_set_position(&view->content_tree->node,
 		-xdg_surface->geometry.x, -xdg_surface->geometry.y);
@@ -246,8 +242,8 @@ handle_commit(struct wl_listener *listener, void *data)
 		 * surface size, but not the subsurface size (see #2183).
 		 */
 		struct wlr_box extent = {
-			.width = view->surface->current.width,
-			.height = view->surface->current.height,
+			.width = xdg_surface->surface->current.width,
+			.height = xdg_surface->surface->current.height,
 		};
 		if (extent.width == view->pending.width
 				&& extent.height == view->pending.height) {
@@ -415,6 +411,8 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&view->request_show_window_menu.link);
 	wl_list_remove(&view->new_popup.link);
 	wl_list_remove(&view->commit.link);
+	wl_list_remove(&view->map.link);
+	wl_list_remove(&view->unmap.link);
 
 	if (view->pending_configure_timeout) {
 		wl_event_source_remove(view->pending_configure_timeout);
@@ -738,7 +736,7 @@ xdg_toplevel_view_notify_tiled(struct view *view)
 static void
 handle_map(struct wl_listener *listener, void *data)
 {
-	struct view *view = wl_container_of(listener, view, mappable.map);
+	struct view *view = wl_container_of(listener, view, map);
 	if (view->mapped) {
 		return;
 	}
@@ -752,7 +750,7 @@ handle_map(struct wl_listener *listener, void *data)
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
-	struct view *view = wl_container_of(listener, view, mappable.unmap);
+	struct view *view = wl_container_of(listener, view, unmap);
 	if (view->mapped) {
 		view->mapped = false;
 		view_impl_unmap(view);
@@ -901,11 +899,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	 */
 	kde_server_decoration_set_view(view, xdg_surface->surface);
 
-	view->surface = xdg_surface->surface;
-
-	mappable_connect(&view->mappable, xdg_surface->surface,
-		handle_map, handle_unmap);
-
 	struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
 	CONNECT_SIGNAL(toplevel, view, destroy);
 	CONNECT_SIGNAL(toplevel, view, request_move);
@@ -914,7 +907,9 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	CONNECT_SIGNAL(toplevel, view, request_maximize);
 	CONNECT_SIGNAL(toplevel, view, request_fullscreen);
 	CONNECT_SIGNAL(toplevel, view, set_title);
-	CONNECT_SIGNAL(view->surface, view, commit);
+	CONNECT_SIGNAL(xdg_surface->surface, view, commit);
+	CONNECT_SIGNAL(xdg_surface->surface, view, map);
+	CONNECT_SIGNAL(xdg_surface->surface, view, unmap);
 
 	/* Events specific to XDG toplevel views */
 	CONNECT_SIGNAL(toplevel, view, set_app_id);

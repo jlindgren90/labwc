@@ -47,15 +47,17 @@ desktop_arrange_all_views(void)
 static void
 set_or_offer_focus(struct view *view)
 {
+	struct wlr_surface *surface = view_get_surface(view);
+
 	switch (view_wants_focus(view)) {
 	case VIEW_WANTS_FOCUS_ALWAYS:
-		if (view->surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
-			seat_focus_surface(view->surface);
+		if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
+			seat_focus_surface(surface);
 		}
 		break;
 	case VIEW_WANTS_FOCUS_LIKELY:
 	case VIEW_WANTS_FOCUS_UNLIKELY:
-		if (view->surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
+		if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
 			view_offer_focus(view);
 		}
 		break;
@@ -72,7 +74,7 @@ desktop_focus_view(struct view *view, bool raise)
 	 * Guard against views with no mapped surfaces when handling
 	 * 'request_activate' and 'request_minimize'.
 	 */
-	if (!view->surface) {
+	if (!view->mapped) {
 		return;
 	}
 
