@@ -47,7 +47,6 @@
 #include "output.h"
 #include "scaled-buffer/scaled-buffer.h"
 #include "session-lock.h"
-#include "ssd.h"
 #include "theme.h"
 #include "view.h"
 #include "xwayland.h"
@@ -74,7 +73,6 @@ reload_config_and_theme(void)
 	cycle_finish(/*switch_focus*/ false);
 	menu_reconfigure();
 	seat_reconfigure();
-	kde_server_decoration_update_default();
 }
 
 static int
@@ -453,7 +451,7 @@ server_init(void)
 
 	seat_init();
 	xdg_shell_init();
-	kde_server_decoration_init();
+	kde_deco_manager_init(g_server.wl_display);
 	xdg_deco_manager_init(g_server.wl_display);
 	foreign_toplevel_manager_init(g_server.wl_display);
 
@@ -562,7 +560,7 @@ server_finish(void)
 	output_finish();
 	xdg_shell_finish();
 	layers_finish();
-	kde_server_decoration_finish();
+	kde_deco_manager_finish();
 	xdg_deco_manager_finish();
 	foreign_toplevel_manager_finish();
 	wl_list_remove(&g_server.output_power_manager_set_mode.link);
