@@ -1,119 +1,114 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#include <wlr/types/wlr_xdg_decoration_v1.h>
+#include <assert.h>
+#include <wlr/types/wlr_xdg_shell.h>
 #include "common/mem.h"
 #include "decorations.h"
-#include "labwc.h"
 #include "view.h"
+#include "xdg-decoration-unstable-v1-protocol.h"
 
-struct xdg_deco {
-	struct wlr_xdg_toplevel_decoration_v1 *wlr_xdg_decoration;
-	enum wlr_xdg_toplevel_decoration_v1_mode client_mode;
-	ViewId view_id;
-	struct wl_listener destroy;
-	struct wl_listener request_mode;
-	struct wl_listener surface_commit;
+#define DECORATION_MANAGER_VERSION 1
+
+static const struct zxdg_toplevel_decoration_v1_interface xdg_deco_impl;
+
+static ViewId
+view_id_from_resource(struct wl_resource *resource)
+{
+	assert(wl_resource_instance_of(resource,
+		&zxdg_toplevel_decoration_v1_interface, &xdg_deco_impl));
+	return (ViewId)wl_resource_get_user_data(resource);
+}
+
+static void
+xdg_deco_handle_destroy(struct wl_client *client, struct wl_resource *resource)
+{
+	wl_resource_destroy(resource);
+}
+
+static void
+xdg_deco_handle_set_mode(struct wl_client *client, struct wl_resource *resource,
+		enum zxdg_toplevel_decoration_v1_mode mode)
+{
+	view_enable_ssd(view_id_from_resource(resource),
+		mode == ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+	zxdg_toplevel_decoration_v1_send_configure(resource, mode);
+}
+
+static void
+xdg_deco_handle_unset_mode(struct wl_client *client,
+		struct wl_resource *resource)
+{
+	view_enable_ssd(view_id_from_resource(resource), true);
+	zxdg_toplevel_decoration_v1_send_configure(resource,
+		ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+}
+
+static const struct zxdg_toplevel_decoration_v1_interface xdg_deco_impl = {
+	.destroy = xdg_deco_handle_destroy,
+	.set_mode = xdg_deco_handle_set_mode,
+	.unset_mode = xdg_deco_handle_unset_mode,
 };
 
 static void
-xdg_deco_destroy(struct wl_listener *listener, void *data)
+xdg_deco_manager_handle_get_toplevel_decoration(struct wl_client *client,
+		struct wl_resource *manager_resource, uint32_t id,
+		struct wl_resource *toplevel_resource)
 {
-	struct xdg_deco *xdg_deco = wl_container_of(listener, xdg_deco, destroy);
-	wl_list_remove(&xdg_deco->destroy.link);
-	wl_list_remove(&xdg_deco->request_mode.link);
-	if (xdg_deco->surface_commit.notify) {
-		wl_list_remove(&xdg_deco->surface_commit.link);
-		xdg_deco->surface_commit.notify = NULL;
-	}
-	free(xdg_deco);
-}
+	struct wlr_xdg_toplevel *toplevel =
+		wlr_xdg_toplevel_from_resource(toplevel_resource);
 
-static void
-handle_surface_commit(struct wl_listener *listener, void *data)
-{
-	struct xdg_deco *xdg_deco = wl_container_of(listener, xdg_deco, surface_commit);
-	struct wlr_xdg_toplevel_decoration_v1 *deco = xdg_deco->wlr_xdg_decoration;
-
-	if (deco->toplevel->base->initial_commit) {
-		wlr_xdg_toplevel_decoration_v1_set_mode(deco, xdg_deco->client_mode);
-		wl_list_remove(&xdg_deco->surface_commit.link);
-		xdg_deco->surface_commit.notify = NULL;
-	}
-}
-
-static void
-xdg_deco_request_mode(struct wl_listener *listener, void *data)
-{
-	struct xdg_deco *xdg_deco = wl_container_of(listener, xdg_deco, request_mode);
-	enum wlr_xdg_toplevel_decoration_v1_mode client_mode =
-		xdg_deco->wlr_xdg_decoration->requested_mode;
-
-	if (client_mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_NONE) {
-		/* Default to server-side decorations */
-		client_mode = WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
-	}
-
-	/*
-	 * We may get multiple request_mode calls in an uninitialized state.
-	 * Just update the last requested mode and only add the commit
-	 * handler on the first uninitialized state call.
-	 */
-	xdg_deco->client_mode = client_mode;
-
-	if (xdg_deco->wlr_xdg_decoration->toplevel->base->initialized) {
-		wlr_xdg_toplevel_decoration_v1_set_mode(xdg_deco->wlr_xdg_decoration,
-			client_mode);
-	} else if (!xdg_deco->surface_commit.notify) {
-		xdg_deco->surface_commit.notify = handle_surface_commit;
-		wl_signal_add(
-			&xdg_deco->wlr_xdg_decoration->toplevel->base->surface->events.commit,
-			&xdg_deco->surface_commit);
-	}
-	view_enable_ssd(xdg_deco->view_id,
-		client_mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
-}
-
-static void
-xdg_toplevel_decoration(struct wl_listener *listener, void *data)
-{
-	struct wlr_xdg_toplevel_decoration_v1 *wlr_xdg_decoration = data;
-	struct wlr_xdg_surface *xdg_surface = wlr_xdg_decoration->toplevel->base;
-	if (!xdg_surface || !xdg_surface->data) {
-		wlr_log(WLR_ERROR,
-			"Invalid surface supplied for xdg decorations");
+	ViewId view_id = (ViewId)toplevel->base->data;
+	const ViewState *view_st = view_get_state(view_id);
+	if (!view_st) {
 		return;
 	}
 
-	struct xdg_deco *xdg_deco = znew(*xdg_deco);
-	xdg_deco->wlr_xdg_decoration = wlr_xdg_decoration;
-	xdg_deco->view_id = (ViewId)xdg_surface->data;
+	struct wl_resource *resource = wl_resource_create(
+		client, &zxdg_toplevel_decoration_v1_interface,
+		wl_resource_get_version(manager_resource), id);
+	die_if_null(resource);
+	wl_resource_set_implementation(resource, &xdg_deco_impl,
+		(void *)view_id, NULL);
 
-	wl_signal_add(&wlr_xdg_decoration->events.destroy, &xdg_deco->destroy);
-	xdg_deco->destroy.notify = xdg_deco_destroy;
+	view_enable_ssd(view_id, true);
+	zxdg_toplevel_decoration_v1_send_configure(resource,
+		ZXDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
+}
 
-	wl_signal_add(&wlr_xdg_decoration->events.request_mode,
-		&xdg_deco->request_mode);
-	xdg_deco->request_mode.notify = xdg_deco_request_mode;
+static void
+xdg_deco_manager_handle_destroy(struct wl_client *client,
+		struct wl_resource *manager_resource)
+{
+	wl_resource_destroy(manager_resource);
+}
 
-	xdg_deco_request_mode(&xdg_deco->request_mode, wlr_xdg_decoration);
+static const struct zxdg_decoration_manager_v1_interface xdg_deco_manager_impl = {
+	.destroy = xdg_deco_manager_handle_destroy,
+	.get_toplevel_decoration = xdg_deco_manager_handle_get_toplevel_decoration,
+};
+
+static void
+xdg_deco_manager_bind(struct wl_client *client, void *data,
+		uint32_t version, uint32_t id)
+{
+	struct wl_resource *resource = wl_resource_create(client,
+		&zxdg_decoration_manager_v1_interface, version, id);
+	die_if_null(resource);
+	wl_resource_set_implementation(resource, &xdg_deco_manager_impl, NULL, NULL);
+}
+
+static struct wl_global *xdg_deco_mgr_global;
+
+void
+xdg_deco_manager_init(struct wl_display *display)
+{
+	xdg_deco_mgr_global = wl_global_create(
+		display, &zxdg_decoration_manager_v1_interface,
+		DECORATION_MANAGER_VERSION, NULL, xdg_deco_manager_bind);
+	die_if_null(xdg_deco_mgr_global);
 }
 
 void
-xdg_server_decoration_init(void)
+xdg_deco_manager_finish(void)
 {
-	struct wlr_xdg_decoration_manager_v1 *xdg_deco_mgr = NULL;
-	xdg_deco_mgr = wlr_xdg_decoration_manager_v1_create(g_server.wl_display);
-	if (!xdg_deco_mgr) {
-		wlr_log(WLR_ERROR, "unable to create the XDG deco manager");
-		exit(EXIT_FAILURE);
-	}
-
-	wl_signal_add(&xdg_deco_mgr->events.new_toplevel_decoration,
-		&g_server.xdg_toplevel_decoration);
-	g_server.xdg_toplevel_decoration.notify = xdg_toplevel_decoration;
-}
-
-void
-xdg_server_decoration_finish(void)
-{
-	wl_list_remove(&g_server.xdg_toplevel_decoration.link);
+	wl_global_destroy(xdg_deco_mgr_global);
 }
