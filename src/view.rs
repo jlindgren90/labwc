@@ -219,16 +219,6 @@ impl View {
         }
     }
 
-    pub fn set_current_pos(&mut self, x: i32, y: i32) {
-        self.state.current.x = x;
-        self.state.current.y = y;
-    }
-
-    pub fn set_current_size(&mut self, width: i32, height: i32) {
-        self.state.current.width = width;
-        self.state.current.height = height;
-    }
-
     pub fn set_pending_geom(&mut self, geom: Rect) {
         self.state.pending = geom;
     }
@@ -237,25 +227,13 @@ impl View {
         if rect_equals(self.state.pending, geom) {
             return;
         }
+        let mut commit_move = false;
         if self.is_xwayland {
-            unsafe {
-                xwayland_view_configure(
-                    self.c_ptr,
-                    geom,
-                    &mut self.state.pending,
-                    &mut self.state.current,
-                )
-            };
+            unsafe { xwayland_view_configure(self.c_ptr, geom, &mut commit_move) };
         } else {
-            unsafe {
-                xdg_toplevel_view_configure(
-                    self.c_ptr,
-                    geom,
-                    &mut self.state.pending,
-                    &mut self.state.current,
-                )
-            };
+            unsafe { xdg_toplevel_view_configure(self.c_ptr, geom, &mut commit_move) };
         }
+        self.state.pending = geom;
         if self.state.floating() {
             // Moving a floating view also sets the output
             self.state.output = nearest_output_to_geom(self.state.pending);
@@ -265,9 +243,43 @@ impl View {
             self.saved_geom = Rect::default();
             self.lost_output = false;
         }
+        if commit_move {
+            self.commit_move(geom.x, geom.y);
+        }
     }
 
-    pub fn commit_size(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
+    fn center_fullscreen(&mut self) {
+        let output_geom = unsafe { output_layout_coords(self.state.output) };
+        if rect_empty(output_geom) {
+            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+            return;
+        }
+        self.state.current = rect_center(
+            self.state.current.width,
+            self.state.current.height,
+            output_geom,
+        );
+        rect_move_within(&mut self.state.current, output_geom);
+        if self.state.current.width < output_geom.width
+            || self.state.current.width < output_geom.height
+        {
+            unsafe { xdg_toplevel_view_enable_fullscreen_bg(self.c_ptr, output_geom) };
+        } else {
+            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+        }
+    }
+
+    pub fn commit_move(&mut self, x: i32, y: i32) {
+        self.state.current.x = x;
+        self.state.current.y = y;
+        // Only xdg-shell views are centered when fullscreen
+        if self.state.fullscreen && !self.is_xwayland {
+            self.center_fullscreen();
+        }
+        unsafe { view_move_impl(self.c_ptr) };
+    }
+
+    pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
         let (x, y) = compute_display_position(
             self.state.current,
             self.state.pending,
@@ -275,12 +287,9 @@ impl View {
             height,
             resize_edges,
         );
-        self.state.current = Rect {
-            x: x,
-            y: y,
-            width: width,
-            height: height,
-        };
+        self.state.current.width = width;
+        self.state.current.height = height;
+        self.commit_move(x, y);
     }
 
     // Used only for xwayland views

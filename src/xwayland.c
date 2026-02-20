@@ -146,18 +146,17 @@ ensure_initial_geometry_and_output(struct view *view)
 	struct wlr_xwayland_surface *xwayland_surface =
 		xwayland_surface_from_view(view);
 
-	if (wlr_box_empty(&view->st->current)) {
-		view_set_current_pos(view->id, xwayland_surface->x,
-			xwayland_surface->y);
-		view_set_current_size(view->id, xwayland_surface->width,
-			xwayland_surface->height);
-		/*
-		 * If there is no pending move/resize yet, then set
-		 * current values (used in map()).
-		 */
-		if (wlr_box_empty(&view->st->pending)) {
-			view_set_pending_geom(view->id, view->st->current);
-		}
+	/*
+	 * If there is no pending move/resize yet, then use
+	 * geometry from surface (i.e. application)
+	 */
+	if (wlr_box_empty(&view->st->pending)) {
+		view_set_pending_geom(view->id, (struct wlr_box) {
+			.x = xwayland_surface->x,
+			.y = xwayland_surface->y,
+			.width = xwayland_surface->width,
+			.height = xwayland_surface->height
+		});
 	}
 
 	view_set_output(view->id, has_position_hint(xwayland_surface)
@@ -191,8 +190,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	 */
 	if (view->st->current.width != state->width
 			|| view->st->current.height != state->height) {
-		view_commit_size(view->id, state->width, state->height);
-		view_moved(view);
+		view_commit_geom(view->id, state->width, state->height);
 	}
 }
 
@@ -287,10 +285,8 @@ handle_destroy(struct wl_listener *listener, void *data)
 }
 
 void
-xwayland_view_configure(struct view *view, struct wlr_box geo,
-		struct wlr_box *pending, struct wlr_box *current)
+xwayland_view_configure(struct view *view, struct wlr_box geo, bool *commit_move)
 {
-	*pending = geo;
 	wlr_xwayland_surface_configure(xwayland_surface_from_view(view),
 		geo.x, geo.y, geo.width, geo.height);
 
@@ -308,9 +304,7 @@ xwayland_view_configure(struct view *view, struct wlr_box geo,
 	/* If not resizing, process the move immediately */
 	if (is_offscreen || (view->st->current.width == geo.width
 			&& view->st->current.height == geo.height)) {
-		current->x = geo.x;
-		current->y = geo.y;
-		view_moved(view);
+		*commit_move = true;
 	}
 }
 
@@ -623,17 +617,9 @@ handle_map(struct wl_listener *listener, void *data)
 	if (!view->st->ever_mapped) {
 		view_adjust_initial_geom(view->id,
 			has_position_hint(xwayland_surface));
-		/*
-		 * When mapping the view for the first time, visual
-		 * artifacts are reduced if we display it immediately at
-		 * the final intended position/size rather than waiting
-		 * for handle_commit().
-		 */
-		view_set_current_pos(view->id, view->st->pending.x,
+		/* Commit move immediately to reduce flicker */
+		view_commit_move(view->id, view->st->pending.x,
 			view->st->pending.y);
-		view_set_current_size(view->id, view->st->pending.width,
-			view->st->pending.height);
-		view_moved(view);
 	}
 
 	/*

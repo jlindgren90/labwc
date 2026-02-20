@@ -13,7 +13,6 @@
 #include "menu/menu.h"
 #include "node.h"
 #include "output.h"
-#include "util.h"
 #include "view.h"
 
 #define LAB_XDG_SHELL_VERSION 6
@@ -110,39 +109,18 @@ set_initial_commit_size(struct view *view, int width, int height)
 	}
 }
 
-static void
-disable_fullscreen_bg(struct view *view)
+void
+xdg_toplevel_view_disable_fullscreen_bg(struct view *view)
 {
 	if (view->fullscreen_bg) {
 		wlr_scene_node_set_enabled(&view->fullscreen_bg->node, false);
 	}
 }
 
-/*
- * Centers any fullscreen view smaller than the full output size.
- * This should be called immediately before view_moved().
- */
-static void
-center_fullscreen_if_needed(struct view *view)
+void
+xdg_toplevel_view_enable_fullscreen_bg(struct view *view,
+		struct wlr_box output_geom)
 {
-	if (!view->st->fullscreen || !output_is_usable(view->st->output)) {
-		disable_fullscreen_bg(view);
-		return;
-	}
-
-	struct wlr_box output_box = {0};
-	wlr_output_layout_get_box(g_server.output_layout,
-		view->st->output->wlr_output, &output_box);
-	struct wlr_box geom = rect_center(view->st->current.width,
-		view->st->current.height, output_box);
-	rect_move_within(&geom, output_box);
-	view_set_current_pos(view->id, geom.x, geom.y);
-
-	if (geom.width >= output_box.width && geom.width >= output_box.height) {
-		disable_fullscreen_bg(view);
-		return;
-	}
-
 	if (!view->fullscreen_bg) {
 		const float black[4] = {0, 0, 0, 1};
 		view->fullscreen_bg =
@@ -151,9 +129,10 @@ center_fullscreen_if_needed(struct view *view)
 	}
 
 	wlr_scene_node_set_position(&view->fullscreen_bg->node,
-		output_box.x - geom.x, output_box.y - geom.y);
+		output_geom.x - view->st->current.x,
+		output_geom.y - view->st->current.y);
 	wlr_scene_rect_set_size(view->fullscreen_bg,
-		output_box.width, output_box.height);
+		output_geom.width, output_geom.height);
 	wlr_scene_node_set_enabled(&view->fullscreen_bg->node, true);
 }
 
@@ -245,9 +224,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	}
 
 	if (update_required) {
-		view_commit_size(view->id, size.width, size.height);
-		center_fullscreen_if_needed(view);
-		view_moved(view);
+		view_commit_geom(view->id, size.width, size.height);
 
 		/*
 		 * Some views (e.g., terminals that scale as multiples of rows
@@ -326,10 +303,7 @@ handle_configure_timeout(void *data)
 	}
 
 	view_set_pending_geom(view->id, geom);
-	view_set_current_pos(view->id, geom.x, geom.y);
-
-	center_fullscreen_if_needed(view);
-	view_moved(view);
+	view_commit_move(view->id, geom.x, geom.y);
 
 	return 0; /* ignored per wl_event_loop docs */
 }
@@ -488,8 +462,7 @@ handle_set_app_id(struct wl_listener *listener, void *data)
 }
 
 void
-xdg_toplevel_view_configure(struct view *view, struct wlr_box geo,
-		struct wlr_box *pending, struct wlr_box *current)
+xdg_toplevel_view_configure(struct view *view, struct wlr_box geo, bool *commit_move)
 {
 	uint32_t serial = 0;
 
@@ -501,7 +474,8 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo,
 	 * size is the same (and there is no pending configure request)
 	 * then we can just move the view directly.
 	 */
-	if (geo.width != pending->width || geo.height != pending->height) {
+	if (geo.width != view->st->pending.width
+			|| geo.height != view->st->pending.height) {
 		if (toplevel->base->initialized) {
 			serial = wlr_xdg_toplevel_set_size(toplevel, geo.width, geo.height);
 		} else {
@@ -518,13 +492,10 @@ xdg_toplevel_view_configure(struct view *view, struct wlr_box geo,
 		}
 	}
 
-	*pending = geo;
 	if (serial > 0) {
 		set_pending_configure_serial(view, serial);
 	} else if (view->pending_configure_serial == 0) {
-		current->x = geo.x;
-		current->y = geo.y;
-		view_moved(view);
+		*commit_move = true;
 	}
 }
 
@@ -607,7 +578,7 @@ xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
 	}
 	/* Disable background fill immediately on leaving fullscreen */
 	if (!fullscreen) {
-		disable_fullscreen_bg(view);
+		xdg_toplevel_view_disable_fullscreen_bg(view);
 	}
 }
 

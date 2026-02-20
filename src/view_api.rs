@@ -108,20 +108,6 @@ pub extern "C" fn view_compute_default_geom(
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_set_current_pos(id: ViewId, x: i32, y: i32) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_current_pos(x, y);
-    }
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_current_size(id: ViewId, width: i32, height: i32) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_current_size(width, height);
-    }
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_pending_geom(id: ViewId, geom: Rect) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_pending_geom(geom);
@@ -136,8 +122,15 @@ pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_commit_size(id: ViewId, width: i32, height: i32) {
-    views_mut().commit_size(id, width, height);
+pub extern "C" fn view_commit_move(id: ViewId, x: i32, y: i32) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.commit_move(x, y);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
+    views_mut().commit_geom(id, width, height);
 }
 
 #[unsafe(no_mangle)]
