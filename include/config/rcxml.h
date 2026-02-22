@@ -54,11 +54,6 @@ struct rcxml {
 	bool xwayland_persistence;
 	bool primary_selection;
 
-	/* placement */
-	enum lab_placement_policy placement_policy;
-	int placement_cascade_offset_x;
-	int placement_cascade_offset_y;
-
 	/* focus */
 	bool focus_follow_mouse;
 	bool focus_follow_mouse_requires_movement;
