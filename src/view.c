@@ -17,7 +17,7 @@
 #include "session-lock.h"
 #include "xwayland.h"
 
-struct view *
+ViewId
 view_from_wlr_surface(struct wlr_surface *surface)
 {
 	assert(surface);
@@ -29,7 +29,7 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	struct wlr_xdg_surface *xdg_surface =
 		wlr_xdg_surface_try_from_wlr_surface(surface);
 	if (xdg_surface) {
-		return xdg_surface->data;
+		return (ViewId)xdg_surface->data;
 	}
 
 	// Doing this is harmless even in the case that xwayland could not be
@@ -37,10 +37,10 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	struct wlr_xwayland_surface *xsurface =
 		wlr_xwayland_surface_try_from_wlr_surface(surface);
 	if (xsurface) {
-		return xsurface->data;
+		return (ViewId)xsurface->data;
 	}
 
-	return NULL;
+	return 0;
 }
 
 void
