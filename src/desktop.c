@@ -32,7 +32,7 @@ desktop_arrange_all_views(void)
 	 */
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
-		if (!wlr_box_empty(&view->pending)) {
+		if (!wlr_box_empty(&view->st->pending)) {
 			view_adjust_for_layout_change(view);
 		}
 	}

@@ -64,10 +64,10 @@ ssd_max_extents(struct view *view)
 	struct border border = ssd_get_margin(view);
 
 	return (struct wlr_box){
-		.x = view->current.x - border.left,
-		.y = view->current.y - border.top,
-		.width = view->current.width + border.left + border.right,
-		.height = view->current.height + border.top + border.bottom,
+		.x = view->st->current.x - border.left,
+		.y = view->st->current.y - border.top,
+		.width = view->st->current.width + border.left + border.right,
+		.height = view->st->current.height + border.top + border.bottom,
 	};
 }
 
@@ -88,7 +88,7 @@ ssd_get_resizing_type(const struct ssd *ssd, struct wlr_cursor *cursor)
 		return LAB_NODE_NONE;
 	}
 
-	struct wlr_box view_box = view->current;
+	struct wlr_box view_box = view->st->current;
 
 	/* Consider the titlebar part of the view */
 	int titlebar_height = g_theme.titlebar_height;
@@ -155,7 +155,7 @@ ssd_create(struct view *view, bool active)
 	ssd_titlebar_create(ssd);
 	ssd_border_create(ssd);
 	ssd_set_active(ssd, active);
-	ssd->state.geometry = view->current;
+	ssd->state.geometry = view->st->current;
 
 	return ssd;
 }
@@ -171,7 +171,7 @@ ssd_update_geometry(struct ssd *ssd)
 	assert(view);
 
 	struct wlr_box cached = ssd->state.geometry;
-	struct wlr_box current = view->current;
+	struct wlr_box current = view->st->current;
 
 	bool update_area = current.width != cached.width
 		|| current.height != cached.height;

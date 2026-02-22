@@ -144,19 +144,19 @@ top_parent_of(struct view *view)
 static void
 ensure_initial_geometry_and_output(struct view *view)
 {
-	if (wlr_box_empty(&view->current)) {
+	if (wlr_box_empty(&view->st->current)) {
 		struct wlr_xwayland_surface *xwayland_surface =
 			xwayland_surface_from_view(view);
-		view->current.x = xwayland_surface->x;
-		view->current.y = xwayland_surface->y;
-		view->current.width = xwayland_surface->width;
-		view->current.height = xwayland_surface->height;
+		view_set_current_pos(view->id, xwayland_surface->x,
+			xwayland_surface->y);
+		view_set_current_size(view->id, xwayland_surface->width,
+			xwayland_surface->height);
 		/*
 		 * If there is no pending move/resize yet, then set
 		 * current values (used in map()).
 		 */
-		if (wlr_box_empty(&view->pending)) {
-			view->pending = view->current;
+		if (wlr_box_empty(&view->st->pending)) {
+			view_set_pending_geom(view->id, view->st->current);
 		}
 	}
 	if (!output_is_usable(view->output)) {
@@ -183,7 +183,6 @@ handle_commit(struct wl_listener *listener, void *data)
 	/* Must receive commit signal before accessing surface->current* */
 	struct wlr_surface_state *state =
 		&view->xwayland_surface->surface->current;
-	struct wlr_box *current = &view->current;
 
 	/*
 	 * If there is a pending move/resize, wait until the surface
@@ -191,7 +190,8 @@ handle_commit(struct wl_listener *listener, void *data)
 	 * the position and the size of the view at the same time,
 	 * reducing visual glitches.
 	 */
-	if (current->width != state->width || current->height != state->height) {
+	if (view->st->current.width != state->width
+			|| view->st->current.height != state->height) {
 		view_impl_apply_geometry(view, state->width, state->height);
 		view_moved(view);
 	}
@@ -287,10 +287,11 @@ handle_destroy(struct wl_listener *listener, void *data)
 	view_destroy(view);
 }
 
-static void
-xwayland_view_configure(struct view *view, struct wlr_box geo)
+void
+xwayland_view_configure(struct view *view, struct wlr_box geo,
+		struct wlr_box *pending, struct wlr_box *current)
 {
-	view->pending = geo;
+	*pending = geo;
 	wlr_xwayland_surface_configure(xwayland_surface_from_view(view),
 		geo.x, geo.y, geo.width, geo.height);
 
@@ -301,15 +302,15 @@ xwayland_view_configure(struct view *view, struct wlr_box geo)
 	 * (since we wait for a commit event that never occurs). As a
 	 * workaround, move offscreen surfaces immediately.
 	 */
-	bool is_offscreen = !wlr_box_empty(&view->current) &&
-		!wlr_output_layout_intersects(g_server.output_layout, NULL,
-			&view->current);
+	bool is_offscreen = !wlr_box_empty(&view->st->current)
+		&& !wlr_output_layout_intersects(g_server.output_layout, NULL,
+			&view->st->current);
 
 	/* If not resizing, process the move immediately */
-	if (is_offscreen || (view->current.width == geo.width
-			&& view->current.height == geo.height)) {
-		view->current.x = geo.x;
-		view->current.y = geo.y;
+	if (is_offscreen || (view->st->current.width == geo.width
+			&& view->st->current.height == geo.height)) {
+		current->x = geo.x;
+		current->y = geo.y;
 		view_moved(view);
 	}
 }
@@ -325,7 +326,7 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		struct wlr_box box = {.x = event->x, .y = event->y,
 			.width = event->width, .height = event->height};
 		view_adjust_size(view, &box.width, &box.height);
-		xwayland_view_configure(view, box);
+		view_move_resize(view->id, box);
 	} else {
 		/*
 		 * Do not allow clients to request geometry other than
@@ -333,7 +334,9 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		 * views. Ignore the client request and send back a
 		 * ConfigureNotify event with the computed geometry.
 		 */
-		xwayland_view_configure(view, view->pending);
+		const struct wlr_box *pending = &view->st->pending;
+		wlr_xwayland_surface_configure(xwayland_surface_from_view(view),
+			pending->x, pending->y, pending->width, pending->height);
 	}
 }
 
@@ -603,9 +606,10 @@ check_natural_geometry(struct view *view)
 	 * and set a fallback size.
 	 */
 	if (!view_is_floating(view->st)
-			&& (view->natural_geometry.width < LAB_MIN_VIEW_WIDTH
-			|| view->natural_geometry.height < LAB_MIN_VIEW_HEIGHT)) {
-		view->natural_geometry = view_get_fallback_natural_geometry(view);
+			&& (view->st->natural_geom.width < LAB_MIN_VIEW_WIDTH
+			|| view->st->natural_geom.height < LAB_MIN_VIEW_HEIGHT)) {
+		view_set_natural_geom(view->id,
+			view_get_fallback_natural_geometry(view));
 	}
 }
 
@@ -638,11 +642,10 @@ set_initial_position(struct view *view,
 			 * (2) add a variant of ssd_thickness() that
 			 * disregards the current view state.
 			 */
+			struct wlr_box geom = view->st->natural_geom;
 			view_compute_centered_position(view, NULL,
-				view->natural_geometry.width,
-				view->natural_geometry.height,
-				&view->natural_geometry.x,
-				&view->natural_geometry.y);
+				geom.width, geom.height, &geom.x, &geom.y);
+			view_set_natural_geom(view->id, geom);
 		}
 	}
 
@@ -689,7 +692,10 @@ handle_map(struct wl_listener *listener, void *data)
 		 * the final intended position/size rather than waiting
 		 * for handle_commit().
 		 */
-		view->current = view->pending;
+		view_set_current_pos(view->id, view->st->pending.x,
+			view->st->pending.y);
+		view_set_current_size(view->id, view->st->pending.width,
+			view->st->pending.height);
 		view_moved(view);
 	}
 
@@ -798,7 +804,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 }
 
 static const struct view_impl xwayland_view_impl = {
-	.configure = xwayland_view_configure,
 	.close = xwayland_view_close,
 	.get_parent = xwayland_view_get_parent,
 	.get_root = xwayland_view_get_root,

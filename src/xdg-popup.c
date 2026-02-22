@@ -65,8 +65,8 @@ popup_unconstrain(struct xdg_popup *popup)
 
 	/* Geometry of usable area relative to toplevel surface */
 	struct wlr_box output_toplevel_box = {
-		.x = usable.x - (view->current.x - toplevel_dx),
-		.y = usable.y - (view->current.y - toplevel_dy),
+		.x = usable.x - (view->st->current.x - toplevel_dx),
+		.y = usable.y - (view->st->current.y - toplevel_dy),
 		.width = usable.width,
 		.height = usable.height,
 	};

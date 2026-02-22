@@ -122,12 +122,12 @@ view_get_edge_snap_box(struct view *view, struct output *output,
 }
 
 static bool
-view_discover_output(struct view *view, struct wlr_box *geometry)
+view_discover_output(struct view *view, const struct wlr_box *geometry)
 {
 	assert(view);
 
 	if (!geometry) {
-		geometry = &view->current;
+		geometry = &view->st->current;
 	}
 
 	struct output *output =
@@ -176,10 +176,10 @@ void
 view_move(struct view *view, int x, int y)
 {
 	assert(view);
-	view_move_resize(view, (struct wlr_box){
+	view_move_resize(view->id, (struct wlr_box){
 		.x = x, .y = y,
-		.width = view->pending.width,
-		.height = view->pending.height
+		.width = view->st->pending.width,
+		.height = view->st->pending.height
 	});
 }
 
@@ -188,7 +188,7 @@ view_moved(struct view *view)
 {
 	assert(view);
 	wlr_scene_node_set_position(&view->scene_tree->node,
-		view->current.x, view->current.y);
+		view->st->current.x, view->st->current.y);
 	/*
 	 * Only floating views change output when moved. Non-floating
 	 * views (maximized/tiled/fullscreen) are tied to a particular
@@ -204,13 +204,8 @@ view_moved(struct view *view)
 static void save_last_placement(struct view *view);
 
 void
-view_move_resize(struct view *view, struct wlr_box geo)
+view_notify_move_resize(struct view *view)
 {
-	assert(view);
-	if (view->impl->configure) {
-		view->impl->configure(view, geo);
-	}
-
 	/*
 	 * If the move/resize was user-initiated (rather than due to
 	 * output layout change), then update the last placement info.
@@ -474,41 +469,12 @@ view_get_fallback_natural_geometry(struct view *view)
 }
 
 void
-view_store_natural_geometry(struct view *view)
-{
-	assert(view);
-	/*
-	 * Do not overwrite the stored geometry if fullscreen or tiled.
-	 * Maximized views are handled on a per-axis basis (see below).
-	 */
-	if (view->st->fullscreen || view->st->tiled != LAB_EDGE_NONE) {
-		return;
-	}
-
-	/*
-	 * Note that for xdg-shell views that start fullscreen or maximized,
-	 * we end up storing a natural geometry of 0x0. This is intentional.
-	 * When leaving fullscreen or unmaximizing, we pass 0x0 to the
-	 * xdg-toplevel configure event, which means the application should
-	 * choose its own size.
-	 */
-	if (!(view->st->maximized & VIEW_AXIS_HORIZONTAL)) {
-		view->natural_geometry.x = view->pending.x;
-		view->natural_geometry.width = view->pending.width;
-	}
-	if (!(view->st->maximized & VIEW_AXIS_VERTICAL)) {
-		view->natural_geometry.y = view->pending.y;
-		view->natural_geometry.height = view->pending.height;
-	}
-}
-
-void
 view_center(struct view *view, const struct wlr_box *ref)
 {
 	assert(view);
 	int x, y;
-	if (view_compute_centered_position(view, ref, view->pending.width,
-			view->pending.height, &x, &y)) {
+	if (view_compute_centered_position(view, ref, view->st->pending.width,
+			view->st->pending.height, &x, &y)) {
 		view_move(view, x, y);
 	}
 }
@@ -531,24 +497,22 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 		return;
 	}
 
-	if (available_height >= view->pending.height &&
-			available_width >= view->pending.width) {
+	if (available_height >= view->st->pending.height
+			&& available_width >= view->st->pending.width) {
 		return;
 	}
 
-	int width = MIN(view->pending.width, available_width);
-	int height = MIN(view->pending.height, available_height);
+	int width = MIN(view->st->pending.width, available_width);
+	int height = MIN(view->st->pending.height, available_height);
 
 	int right_edge = usable_area.x + usable_area.width;
 	int bottom_edge = usable_area.y + usable_area.height;
 
-	int x =
-		MAX(usable_area.x + margin.left,
-			MIN(view->pending.x, right_edge - width - margin.right));
+	int x = MAX(usable_area.x + margin.left,
+		MIN(view->st->pending.x, right_edge - width - margin.right));
 
-	int y =
-		MAX(usable_area.y + margin.top,
-			MIN(view->pending.y, bottom_edge - height - margin.bottom));
+	int y = MAX(usable_area.y + margin.top,
+		MIN(view->st->pending.y, bottom_edge - height - margin.bottom));
 
 	struct wlr_box box = {
 		.x = x,
@@ -556,7 +520,7 @@ view_constrain_size_to_that_of_usable_area(struct view *view)
 		.width = width,
 		.height = height,
 	};
-	view_move_resize(view, box);
+	view_move_resize(view->id, box);
 }
 
 void
@@ -565,13 +529,13 @@ view_apply_natural_geometry(struct view *view)
 	assert(view);
 	assert(view_is_floating(view->st));
 
-	struct wlr_box geometry = view->natural_geometry;
+	struct wlr_box geometry = view->st->natural_geom;
 	/* Only adjust natural geometry if known (not 0x0) */
 	if (!wlr_box_empty(&geometry)) {
 		adjust_floating_geometry(view, &geometry,
 			/* midpoint_visibility */ false);
 	}
-	view_move_resize(view, geometry);
+	view_move_resize(view->id, geometry);
 }
 
 static void
@@ -581,7 +545,7 @@ view_apply_tiled_geometry(struct view *view)
 	assert(view->st->tiled);
 	assert(output_is_usable(view->output));
 
-	view_move_resize(view,
+	view_move_resize(view->id,
 		view_get_edge_snap_box(view, view->output, view->st->tiled));
 }
 
@@ -595,7 +559,7 @@ view_apply_fullscreen_geometry(struct view *view)
 	struct wlr_box box = { 0 };
 	wlr_output_layout_get_box(g_server.output_layout,
 		view->output->wlr_output, &box);
-	view_move_resize(view, box);
+	view_move_resize(view->id, box);
 }
 
 static void
@@ -614,7 +578,7 @@ view_apply_maximized_geometry(struct view *view)
 	 * on-screen on the output where the view is maximized, then
 	 * center the unmaximized axis.
 	 */
-	struct wlr_box natural = view->natural_geometry;
+	struct wlr_box natural = view->st->natural_geom;
 	if (view->st->maximized != VIEW_AXIS_BOTH
 			&& !rect_intersects(box, natural)) {
 		view_compute_centered_position(view, NULL,
@@ -638,7 +602,7 @@ view_apply_maximized_geometry(struct view *view)
 		box.height = natural.height;
 	}
 
-	view_move_resize(view, box);
+	view_move_resize(view->id, box);
 }
 
 static void
@@ -697,7 +661,7 @@ view_maximize(struct view *view, enum view_axis axis)
 	 * while one axis was maximized.
 	 */
 	if (store_natural_geometry) {
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 	}
 
 	/*
@@ -707,8 +671,9 @@ view_maximize(struct view *view, enum view_axis axis)
 	 * one axis. So in that corner case, set a fallback geometry.
 	 */
 	if ((axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
-			&& wlr_box_empty(&view->natural_geometry)) {
-		view->natural_geometry = view_get_fallback_natural_geometry(view);
+			&& wlr_box_empty(&view->st->natural_geom)) {
+		view_set_natural_geom(view->id,
+			view_get_fallback_natural_geometry(view));
 	}
 
 	view_set_maximized(view->id, axis);
@@ -822,7 +787,7 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 		 * a fullscreen view.
 		 */
 		interactive_cancel(view);
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 	}
 
 	view_set_fullscreen_internal(view->id, fullscreen);
@@ -866,8 +831,8 @@ save_last_placement(struct view *view)
 		xstrdup_replace(view->last_placement.output_name,
 			output->wlr_output->name);
 	}
-	view->last_placement.layout_geo = view->pending;
-	view->last_placement.relative_geo = view->pending;
+	view->last_placement.layout_geo = view->st->pending;
+	view->last_placement.relative_geo = view->st->pending;
 	view->last_placement.relative_geo.x -= output->scene_output->x;
 	view->last_placement.relative_geo.y -= output->scene_output->y;
 }
@@ -921,7 +886,7 @@ view_adjust_for_layout_change(struct view *view)
 		/* Ensure view is on-screen */
 		adjust_floating_geometry(view, &new_geo,
 			/* midpoint_visibility */ true);
-		view_move_resize(view, new_geo);
+		view_move_resize(view->id, new_geo);
 	}
 
 	view->adjusting_for_layout_change = false;
@@ -973,7 +938,7 @@ view_snap_to_edge(struct view *view, enum lab_edge edge)
 		view_maximize(view, VIEW_AXIS_NONE);
 	} else if (store_natural_geometry) {
 		/* store current geometry as new natural_geometry */
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 	}
 	view_set_output(view, output);
 	view_set_tiled(view->id, edge);

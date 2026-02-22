@@ -230,13 +230,13 @@ process_cursor_move(void)
 		 * later. See do_late_positioning() in xdg.c.
 		 */
 		struct wlr_box new_geo = {
-			.width = view->natural_geometry.width,
-			.height = view->natural_geometry.height,
+			.width = view->st->natural_geom.width,
+			.height = view->st->natural_geom.height,
 		};
 		interactive_anchor_to_cursor(&new_geo);
 		view_set_maximized(view->id, VIEW_AXIS_NONE);
 		view_set_tiled(view->id, LAB_EDGE_NONE);
-		view_move_resize(view, new_geo);
+		view_move_resize(view->id, new_geo);
 		x = new_geo.x;
 		y = new_geo.y;
 	}
@@ -251,7 +251,7 @@ process_cursor_resize(void)
 	double dy = g_seat.cursor->y - g_server.grab_y;
 
 	struct view *view = g_server.grabbed_view;
-	struct wlr_box new_view_geo = view->current;
+	struct wlr_box new_view_geo = view->st->current;
 
 	if (g_server.resize_edges & LAB_EDGE_TOP) {
 		/* Shift y to anchor bottom edge when resizing top */
@@ -283,7 +283,7 @@ process_cursor_resize(void)
 			g_server.grab_box.width - new_view_geo.width;
 	}
 
-	view_move_resize(view, new_view_geo);
+	view_move_resize(view->id, new_view_geo);
 }
 
 void
@@ -493,7 +493,7 @@ cursor_get_resize_edges(struct wlr_cursor *cursor, struct cursor_context *ctx)
 {
 	enum lab_edge resize_edges = node_type_to_edges(ctx->type);
 	if (ctx->view && !resize_edges) {
-		struct wlr_box box = ctx->view->current;
+		struct wlr_box box = ctx->view->st->current;
 		resize_edges |=
 			(int)cursor->x < box.x + box.width / 2 ?
 				LAB_EDGE_LEFT : LAB_EDGE_RIGHT;

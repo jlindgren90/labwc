@@ -26,7 +26,7 @@ void
 ssd_titlebar_create(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
@@ -148,7 +148,8 @@ static void
 update_visible_buttons(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	int width = MAX(view->current.width - 2 * g_theme.window_titlebar_padding_width, 0);
+	int width = MAX(view->st->current.width
+		- 2 * g_theme.window_titlebar_padding_width, 0);
 	int button_width = g_theme.window_button_width;
 	int button_spacing = g_theme.window_button_spacing;
 	int button_count_left = 1; // menu/window icon
@@ -194,7 +195,7 @@ void
 ssd_titlebar_update(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 
 	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 
@@ -264,7 +265,7 @@ static void
 ssd_update_title_positions(struct ssd *ssd, int offset_left, int offset_right)
 {
 	struct view *view = ssd->view;
-	int width = view->current.width;
+	int width = view->st->current.width;
 	int title_bg_width = width - offset_left - offset_right;
 
 	enum ssd_active_state active;
@@ -346,7 +347,7 @@ ssd_update_title(struct ssd *ssd)
 
 	int offset_left, offset_right;
 	get_title_offsets(ssd, &offset_left, &offset_right);
-	int title_bg_width = view->current.width - offset_left - offset_right;
+	int title_bg_width = view->st->current.width - offset_left - offset_right;
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
