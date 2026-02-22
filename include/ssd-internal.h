@@ -53,7 +53,7 @@ struct ssd_state_title_width {
  *    +--...
  */
 struct ssd {
-	struct view *view;
+	ViewId view_id;
 	struct wlr_scene_tree *tree;
 
 	/*
@@ -128,15 +128,16 @@ struct wlr_scene_tree;
 /* SSD internal helpers to create various SSD elements */
 struct ssd_button *attach_ssd_button(enum lab_node_type type,
 	struct wlr_scene_tree *parent, struct lab_img *imgs[LAB_BS_ALL + 1],
-	int x, int y, struct view *view);
+	int x, int y, ViewId view_id);
 
 /* SSD internal */
-void ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer);
-void ssd_titlebar_update(struct ssd *ssd);
+void ssd_titlebar_create(struct ssd *ssd, const ViewState *view_st,
+	struct wlr_buffer *icon_buffer);
+void ssd_titlebar_update(struct ssd *ssd, const ViewState *view_st);
 void ssd_titlebar_destroy(struct ssd *ssd);
 
-void ssd_border_create(struct ssd *ssd);
-void ssd_border_update(struct ssd *ssd);
+void ssd_border_create(struct ssd *ssd, const ViewState *view_st);
+void ssd_border_update(struct ssd *ssd, const ViewState *view_st);
 void ssd_border_destroy(struct ssd *ssd);
 
 #endif /* LABWC_SSD_INTERNAL_H */
