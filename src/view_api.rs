@@ -83,20 +83,6 @@ pub extern "C" fn view_set_active(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_compute_default_geom(
-    view_st: &ViewState,
-    geom: &mut Rect,
-    rel_to: Option<&Rect>,
-) {
-    compute_default_geom(
-        view_st,
-        geom,
-        *rel_to.unwrap_or(&Rect::default()),
-        /* keep_position */ false,
-    );
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_pending_geom(id: ViewId, geom: Rect) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_pending_geom(geom);
@@ -126,6 +112,32 @@ pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
 pub extern "C" fn view_adjust_initial_geom(id: ViewId, keep_position: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.adjust_initial_geom(keep_position);
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_set_initial_commit_size(
+    id: ViewId,
+    width: i32,
+    height: i32,
+    rel_to: Option<&Rect>,
+    cursor_x: i32,
+    cursor_y: i32,
+) {
+    views_mut().set_initial_commit_size(
+        id,
+        width,
+        height,
+        *rel_to.unwrap_or(&Rect::default()),
+        cursor_x,
+        cursor_y,
+    );
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_commit_resize_timeout(id: ViewId) {
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.commit_resize_timeout();
     }
 }
 
@@ -281,26 +293,6 @@ pub extern "C" fn view_set_grab_context(id: ViewId, cursor_x: i32, cursor_y: i32
 #[unsafe(no_mangle)]
 pub extern "C" fn view_start_move(id: ViewId) -> bool {
     views_mut().start_move(id)
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_get_moving() -> *mut CView {
-    views().get_moving()
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_adjust_move_origin(width: i32, height: i32) {
-    views_mut().adjust_move_origin(width, height);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_compute_move_position(
-    cursor_x: i32,
-    cursor_y: i32,
-    x: &mut i32,
-    y: &mut i32,
-) {
-    (*x, *y) = views().compute_move_position(cursor_x, cursor_y);
 }
 
 #[unsafe(no_mangle)]

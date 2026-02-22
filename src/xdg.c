@@ -75,40 +75,6 @@ set_fullscreen_from_request(struct view *view,
 	view_fullscreen(view->id, requested->fullscreen);
 }
 
-/* Called from commit handler */
-static void
-set_initial_commit_size(struct view *view, int width, int height)
-{
-	if (!view_is_floating(view->st)) {
-		return;
-	}
-
-	struct wlr_box geom = {
-		.x = view->st->pending.x,
-		.y = view->st->pending.y,
-		.width = width,
-		.height = height
-	};
-
-	if (view == view_get_moving()) {
-		/* Reposition the view while anchoring it to cursor */
-		view_adjust_move_origin(geom.width, geom.height);
-		view_compute_move_position(g_seat.cursor->x, g_seat.cursor->y,
-			&geom.x, &geom.y);
-	} else {
-		struct view *parent = xdg_toplevel_view_get_parent(view);
-		view_compute_default_geom(view->st, &geom,
-			parent ? &parent->st->pending : NULL);
-	}
-
-	/* Update pending geometry directly unless size was changed */
-	if (geom.width == width && geom.height == height) {
-		view_set_pending_geom(view->id, geom);
-	} else {
-		view_move_resize(view->id, geom);
-	}
-}
-
 void
 xdg_toplevel_view_disable_fullscreen_bg(struct view *view)
 {
@@ -205,7 +171,10 @@ handle_commit(struct wl_listener *listener, void *data)
 	 *       geometry isn't known yet
 	 */
 	if (wlr_box_empty(&view->st->pending) && !wlr_box_empty(&size)) {
-		set_initial_commit_size(view, size.width, size.height);
+		struct view *parent = xdg_toplevel_view_get_parent(view);
+		view_set_initial_commit_size(view->id, size.width,
+			size.height, parent ? &parent->st->pending : NULL,
+			g_seat.cursor->x, g_seat.cursor->y);
 		update_required = true;
 	}
 
@@ -278,32 +247,7 @@ handle_configure_timeout(void *data)
 	view->pending_configure_serial = 0;
 	view->pending_configure_timeout = NULL;
 
-	/*
-	 * No need to do anything else if the view is just being slow to
-	 * map - the map handler will take care of the positioning.
-	 */
-	if (!view->st->mapped) {
-		return 0; /* ignored per wl_event_loop docs */
-	}
-
-	/* Apply pending position but reset size to current */
-	struct wlr_box geom = {
-		.x = view->st->pending.x,
-		.y = view->st->pending.y,
-		.width = view->st->current.width,
-		.height = view->st->current.height
-	};
-
-	if (wlr_box_empty(&view->st->pending)) {
-		/* Pending geometry is invalid, set fallback position */
-		struct wlr_box usable =
-			output_usable_area_in_layout_coords(view->st->output);
-		geom.x = usable.x + VIEW_FALLBACK_X;
-		geom.y = usable.y + VIEW_FALLBACK_Y;
-	}
-
-	view_set_pending_geom(view->id, geom);
-	view_commit_move(view->id, geom.x, geom.y);
+	view_commit_resize_timeout(view->id);
 
 	return 0; /* ignored per wl_event_loop docs */
 }

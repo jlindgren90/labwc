@@ -9,6 +9,8 @@ use crate::view_geom::*;
 use std::ffi::CString;
 use std::ptr::null_mut;
 
+const FALLBACK_X: i32 = 100;
+const FALLBACK_Y: i32 = 100;
 const FALLBACK_WIDTH: i32 = 640;
 const FALLBACK_HEIGHT: i32 = 480;
 
@@ -305,6 +307,22 @@ impl View {
             // FIXME: use border widths for floating state here
             compute_default_geom(&*self.state, &mut natural, Rect::default(), keep_position);
             self.state.natural_geom = natural;
+        }
+    }
+
+    // Used only for xdg-shell views
+    pub fn commit_resize_timeout(&mut self) {
+        if self.state.mapped {
+            if rect_empty(self.state.pending) {
+                // Pending geometry is invalid, set fallback position
+                let usable = unsafe { output_usable_area_in_layout_coords(self.state.output) };
+                self.state.pending.x = usable.x + FALLBACK_X;
+                self.state.pending.y = usable.y + FALLBACK_Y;
+            }
+            // Commit pending position but reset size to current
+            self.state.pending.width = self.state.current.width;
+            self.state.pending.height = self.state.current.height;
+            self.commit_move(self.state.pending.x, self.state.pending.y);
         }
     }
 

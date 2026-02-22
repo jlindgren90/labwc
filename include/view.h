@@ -12,14 +12,6 @@
 #include "view-c.h"
 #include "view_api.h"
 
-/*
- * Fallback view geometry used in some cases where a better position
- * and/or size can't be determined. Try to avoid using these except as
- * a last resort.
- */
-#define VIEW_FALLBACK_X 100
-#define VIEW_FALLBACK_Y 100
-
 enum view_layer {
 	VIEW_LAYER_NORMAL = 0,
 	VIEW_LAYER_ALWAYS_ON_TOP,
