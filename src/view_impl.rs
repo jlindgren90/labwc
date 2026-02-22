@@ -8,6 +8,7 @@ pub trait ViewImpl {
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
+    fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn offer_focus(&self);
 }
@@ -41,6 +42,12 @@ impl ViewImpl for XView {
 
     fn set_minimized(&self, minimized: bool) {
         unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
+    }
+
+    fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect) {
+        unsafe {
+            xwayland_view_configure(self.c_ptr, geom, pending, current);
+        }
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
@@ -81,6 +88,12 @@ impl ViewImpl for XdgView {
 
     fn set_minimized(&self, _minimized: bool) {
         // not supported
+    }
+
+    fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect) {
+        unsafe {
+            xdg_toplevel_view_configure(self.c_ptr, geom, pending, current);
+        }
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {

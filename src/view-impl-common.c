@@ -47,8 +47,9 @@ resizing_edge(struct view *view, enum lab_edge edge)
 void
 view_impl_apply_geometry(struct view *view, int w, int h)
 {
-	struct wlr_box *current = &view->current;
-	struct wlr_box *pending = &view->pending;
+	const struct wlr_box *current = &view->st->current;
+	const struct wlr_box *pending = &view->st->pending;
+	int x, y;
 
 	/*
 	 * Anchor right edge if resizing via left edge.
@@ -66,9 +67,9 @@ view_impl_apply_geometry(struct view *view, int w, int h)
 	if (resizing_left_edge || (current->x != pending->x
 			&& current->x + current->width ==
 			pending->x + pending->width)) {
-		current->x = pending->x + pending->width - w;
+		x = pending->x + pending->width - w;
 	} else {
-		current->x = pending->x;
+		x = pending->x;
 	}
 
 	/* Anchor bottom edge if resizing via top edge */
@@ -76,11 +77,11 @@ view_impl_apply_geometry(struct view *view, int w, int h)
 	if (resizing_top_edge || (current->y != pending->y
 			&& current->y + current->height ==
 			pending->y + pending->height)) {
-		current->y = pending->y + pending->height - h;
+		y = pending->y + pending->height - h;
 	} else {
-		current->y = pending->y;
+		y = pending->y;
 	}
 
-	current->width = w;
-	current->height = h;
+	view_set_current_pos(view->id, x, y);
+	view_set_current_size(view->id, w, h);
 }
