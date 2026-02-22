@@ -125,7 +125,7 @@ impl View {
         if self.title != title {
             self.title = title;
             self.state.title = self.title.as_ptr(); // for C interop
-            self.ssd.update_title();
+            self.ssd.update_title(&*self.state);
             for toplevel in &self.foreign_toplevels {
                 toplevel.send_title(&self.title);
                 toplevel.send_done();
@@ -279,7 +279,7 @@ impl View {
             self.center_fullscreen();
         }
         unsafe { view_move_impl(self.c_ptr) };
-        self.ssd.update_geom();
+        self.ssd.update_geom(&*self.state);
     }
 
     pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) {

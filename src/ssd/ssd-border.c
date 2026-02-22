@@ -5,19 +5,15 @@
 #include "buffer.h"
 #include "common/macros.h"
 #include "common/mem.h"
-#include "labwc.h"
 #include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
-#include "view.h"
 
 void
-ssd_border_create(struct ssd *ssd)
+ssd_border_create(struct ssd *ssd, const ViewState *view_st)
 {
 	assert(ssd);
 	assert(!ssd->border.tree);
-
-	struct view *view = ssd->view;
 
 	ssd->border.tree = wlr_scene_tree_create(ssd->tree);
 
@@ -100,41 +96,40 @@ ssd_border_create(struct ssd *ssd)
 	/* Lower textured borders below titlebar for overlap */
 	wlr_scene_node_lower_to_bottom(&ssd->border.tree->node);
 
-	if (view->st->maximized == VIEW_AXIS_BOTH) {
+	if (view_st->maximized == VIEW_AXIS_BOTH) {
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
 	}
 
-	if (view->st->current.width > 0 && view->st->current.height > 0) {
+	if (view_st->current.width > 0 && view_st->current.height > 0) {
 		/*
 		 * The SSD is recreated by a Reconfigure request
 		 * thus we may need to handle squared corners.
 		 */
-		ssd_border_update(ssd);
+		ssd_border_update(ssd, view_st);
 	}
 }
 
 void
-ssd_border_update(struct ssd *ssd)
+ssd_border_update(struct ssd *ssd, const ViewState *view_st)
 {
 	assert(ssd);
 	assert(ssd->border.tree);
 
-	struct view *view = ssd->view;
-	if (view->st->maximized == VIEW_AXIS_BOTH
+	if (view_st->maximized == VIEW_AXIS_BOTH
 			&& ssd->border.tree->node.enabled) {
 		/* Disable borders on maximize */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
 	}
 
-	if (view->st->maximized == VIEW_AXIS_BOTH) {
+	if (view_st->maximized == VIEW_AXIS_BOTH) {
 		return;
 	} else if (!ssd->border.tree->node.enabled) {
 		/* And re-enabled them when unmaximized */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, true);
 	}
 
-	int width = view->st->current.width;
-	int height = view->st->current.height;
+	int width = view_st->current.width;
+	int height = view_st->current.height;
 	int title_h = ssd->titlebar.height;
 	int side_y = -title_h - (BORDER_PX_TOP - 1);
 	int side_height = title_h + height + (BORDER_PX_TOP - 1) + (BORDER_PX_SIDE - 1);

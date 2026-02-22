@@ -16,7 +16,7 @@
 #include "menu/menu.h"
 #include "session-lock.h"
 
-struct view *
+ViewId
 view_from_wlr_surface(struct wlr_surface *surface)
 {
 	assert(surface);
@@ -28,16 +28,16 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	struct wlr_xdg_surface *xdg_surface =
 		wlr_xdg_surface_try_from_wlr_surface(surface);
 	if (xdg_surface) {
-		return xdg_surface->data;
+		return (ViewId)xdg_surface->data;
 	}
 
 	struct wlr_xwayland_surface *xsurface =
 		wlr_xwayland_surface_try_from_wlr_surface(surface);
 	if (xsurface) {
-		return xsurface->data;
+		return (ViewId)xsurface->data;
 	}
 
-	return NULL;
+	return 0;
 }
 
 struct wlr_surface *

@@ -34,11 +34,11 @@ xdg_toplevel_from_view(struct view *view)
 	return xdg_surface->toplevel;
 }
 
-static struct view *
+static ViewId
 xdg_toplevel_view_get_parent(struct view *view)
 {
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
-	return toplevel->parent ? toplevel->parent->base->data : NULL;
+	return toplevel->parent ? (ViewId)toplevel->parent->base->data : 0;
 }
 
 struct view_size_hints
@@ -129,9 +129,10 @@ handle_commit(struct wl_listener *listener, void *data)
 		wlr_xdg_toplevel_set_wm_capabilities(toplevel, wm_caps);
 
 		/* Put view on the same output as its parent if possible */
-		struct view *parent = xdg_toplevel_view_get_parent(view);
-		if (parent && output_is_usable(parent->st->output)) {
-			view_set_output(view->id, parent->st->output);
+		const ViewState *parent_st =
+			view_get_state(xdg_toplevel_view_get_parent(view));
+		if (parent_st && output_is_usable(parent_st->output)) {
+			view_set_output(view->id, parent_st->output);
 		} else {
 			view_set_output(view->id, output_nearest_to_cursor());
 		}
@@ -171,9 +172,10 @@ handle_commit(struct wl_listener *listener, void *data)
 	 *       geometry isn't known yet
 	 */
 	if (wlr_box_empty(&view->st->pending) && !wlr_box_empty(&size)) {
-		struct view *parent = xdg_toplevel_view_get_parent(view);
+		const ViewState *parent_st =
+			view_get_state(xdg_toplevel_view_get_parent(view));
 		view_set_initial_commit_size(view->id, size.width,
-			size.height, parent ? &parent->st->pending : NULL,
+			size.height, parent_st ? &parent_st->pending : NULL,
 			g_seat.cursor->x, g_seat.cursor->y);
 		update_required = true;
 	}
@@ -478,8 +480,7 @@ ViewId
 xdg_toplevel_view_get_root_id(struct view *view)
 {
 	struct wlr_xdg_toplevel *root = top_parent_of(view);
-	struct view *root_view = root->base->data;
-	return root_view->id;
+	return (ViewId)root->base->data;
 }
 
 bool
@@ -628,9 +629,9 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 	if (!xdg_surface) {
 		return;
 	}
-	struct view *view = xdg_surface->data;
 
-	if (!view) {
+	ViewId view_id = (ViewId)xdg_surface->data;
+	if (!view_id) {
 		wlr_log(WLR_INFO, "Not activating surface - no view attached to surface");
 		return;
 	}
@@ -653,14 +654,9 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 	 */
 
 	wlr_log(WLR_DEBUG, "Activating surface");
-	view_focus(view->id, /*raise*/ true);
+	view_focus(view_id, /*raise*/ true);
 }
 
-/*
- * We use the following struct user_data pointers:
- *   - wlr_xdg_surface->data = view
- *     for the wlr_xdg_toplevel_decoration_v1 implementation
- */
 static void
 handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 {
@@ -683,12 +679,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	node_descriptor_create(&view->scene_tree->node,
 		LAB_NODE_VIEW, view->id, /*data*/ NULL);
 
-	/*
-	 * xdg_toplevel_decoration and kde_server_decoration use this
-	 * pointer to connect the view to a decoration object that may
-	 * be created in the future.
-	 */
-	xdg_surface->data = view;
+	xdg_surface->data = (void *)view->id;
 
 	struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
 	CONNECT_SIGNAL(toplevel, view, destroy);

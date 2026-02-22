@@ -134,7 +134,7 @@ ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
 	assert(view);
 	struct ssd *ssd = znew(*ssd);
 
-	ssd->view = view;
+	ssd->view_id = view->id;
 	ssd->tree = wlr_scene_tree_create(view->scene_tree);
 
 	/*
@@ -152,8 +152,8 @@ ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
 	 * TODO: Set the state here instead so the order does not matter
 	 * anymore.
 	 */
-	ssd_titlebar_create(ssd, icon_buffer);
-	ssd_border_create(ssd);
+	ssd_titlebar_create(ssd, view->st, icon_buffer);
+	ssd_border_create(ssd, view->st);
 	ssd_set_active(ssd, view->st->active);
 	ssd->state.geometry = view->st->current;
 
@@ -161,27 +161,24 @@ ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
 }
 
 void
-ssd_update_geometry(struct ssd *ssd)
+ssd_update_geometry(struct ssd *ssd, const ViewState *view_st)
 {
 	if (!ssd) {
 		return;
 	}
 
-	struct view *view = ssd->view;
-	assert(view);
-
 	struct wlr_box cached = ssd->state.geometry;
-	struct wlr_box current = view->st->current;
+	struct wlr_box current = view_st->current;
 
 	bool update_area = current.width != cached.width
 		|| current.height != cached.height;
 
-	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view_st->maximized == VIEW_AXIS_BOTH;
 	bool state_changed = ssd->state.was_maximized != maximized;
 
 	if (update_area || state_changed) {
-		ssd_titlebar_update(ssd);
-		ssd_border_update(ssd);
+		ssd_titlebar_update(ssd, view_st);
+		ssd_border_update(ssd, view_st);
 	}
 
 	ssd->state.geometry = current;
@@ -195,9 +192,8 @@ ssd_destroy(struct ssd *ssd)
 	}
 
 	/* Maybe reset hover view */
-	struct view *view = ssd->view;
 	if (g_server.hovered_button && node_view_from_node(
-			g_server.hovered_button->node) == view->id) {
+			g_server.hovered_button->node) == ssd->view_id) {
 		g_server.hovered_button = NULL;
 	}
 

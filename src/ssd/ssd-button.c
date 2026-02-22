@@ -13,7 +13,7 @@
 struct ssd_button *
 attach_ssd_button(enum lab_node_type type, struct wlr_scene_tree *parent,
 		struct lab_img *imgs[LAB_BS_ALL + 1],
-		int x, int y, struct view *view)
+		int x, int y, ViewId view_id)
 {
 	struct wlr_scene_tree *root = wlr_scene_tree_create(parent);
 	wlr_scene_node_set_position(&root->node, x, y);
@@ -22,7 +22,7 @@ attach_ssd_button(enum lab_node_type type, struct wlr_scene_tree *parent,
 	struct ssd_button *button = znew(*button);
 	button->node = &root->node;
 	button->type = type;
-	node_descriptor_create(&root->node, type, view->id, button);
+	node_descriptor_create(&root->node, type, view_id, button);
 
 	/* Hitbox */
 	float invisible[4] = { 0, 0, 0, 0 };

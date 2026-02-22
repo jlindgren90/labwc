@@ -11,7 +11,7 @@ static struct wlr_server_decoration_manager *kde_deco_mgr;
 
 struct kde_deco {
 	struct wlr_server_decoration *wlr_kde_decoration;
-	struct view *view;
+	ViewId view_id;
 	struct wl_listener mode;
 	struct wl_listener destroy;
 };
@@ -29,11 +29,11 @@ static void
 handle_mode(struct wl_listener *listener, void *data)
 {
 	struct kde_deco *kde_deco = wl_container_of(listener, kde_deco, mode);
-	if (!kde_deco->view) {
+	if (!kde_deco->view_id) {
 		return;
 	}
 
-	view_enable_ssd(kde_deco->view->id,
+	view_enable_ssd(kde_deco->view_id,
 		kde_deco->wlr_kde_decoration->mode
 			== WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 }
@@ -56,7 +56,7 @@ handle_new_server_decoration(struct wl_listener *listener, void *data)
 		struct wlr_xdg_surface *xdg_surface =
 			wlr_xdg_surface_try_from_wlr_surface(wlr_deco->surface);
 		if (xdg_surface && xdg_surface->data) {
-			kde_deco->view = (struct view *)xdg_surface->data;
+			kde_deco->view_id = (ViewId)xdg_surface->data;
 			handle_mode(&kde_deco->mode, wlr_deco);
 		}
 	}

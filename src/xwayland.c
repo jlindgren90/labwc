@@ -255,7 +255,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, destroy);
 	assert(view->xwayland_surface);
-	assert(view->xwayland_surface->data == view);
 
 	/*
 	 * Break view <-> xsurface association.  Note that the xsurface
@@ -687,9 +686,7 @@ xwayland_view_get_root_id(struct view *view)
 	 * believed to be caused by setting override-redirect on the root
 	 * wlr_xwayland_surface making it not be associated with a view anymore.
 	 */
-	struct view *root_view =
-		(root && root->data) ? (struct view *)root->data : view;
-	return root_view->id;
+	return (root && root->data) ? (ViewId)root->data : view->id;
 }
 
 bool
@@ -725,7 +722,7 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	 * and makes it an "unmanaged" surface.
 	 */
 	view->xwayland_surface = xsurface;
-	xsurface->data = view;
+	xsurface->data = (void *)view->id;
 
 	view->scene_tree = wlr_scene_tree_create(g_server.view_tree);
 	node_descriptor_create(&view->scene_tree->node,

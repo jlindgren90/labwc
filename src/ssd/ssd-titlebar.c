@@ -16,21 +16,20 @@
 #include "ssd.h"
 #include "ssd-internal.h"
 #include "theme.h"
-#include "view.h"
 
 static void set_alt_maximize_icon(struct ssd *ssd, bool enable);
-static void update_visible_buttons(struct ssd *ssd);
+static void update_visible_buttons(struct ssd *ssd, const ViewState *view_st);
 
 void
-ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
+ssd_titlebar_create(struct ssd *ssd, const ViewState *view_st,
+		struct wlr_buffer *icon_buffer)
 {
-	struct view *view = ssd->view;
-	int width = view->st->current.width;
-	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
+	int width = view_st->current.width;
+	bool maximized = view_st->maximized == VIEW_AXIS_BOTH;
 
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
 	node_descriptor_create(&ssd->titlebar.tree->node,
-		LAB_NODE_TITLEBAR, view->id, /*data*/ NULL);
+		LAB_NODE_TITLEBAR, ssd->view_id, /*data*/ NULL);
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -66,7 +65,7 @@ ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 			g_theme.window[active].titlebar_pattern);
 		assert(subtree->title);
 		node_descriptor_create(&subtree->title->scene_buffer->node,
-			LAB_NODE_TITLE, view->id, /*data*/ NULL);
+			LAB_NODE_TITLE, ssd->view_id, /*data*/ NULL);
 
 		/* Buttons */
 		int x = g_theme.window_titlebar_padding_width;
@@ -74,8 +73,8 @@ ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 		/* Center vertically within titlebar */
 		int y = (g_theme.titlebar_height - g_theme.window_button_height) / 2;
 
-		subtree->button_left = attach_ssd_button(
-			LAB_NODE_BUTTON_WINDOW_ICON, parent, NULL, x, y, view);
+		subtree->button_left = attach_ssd_button(LAB_NODE_BUTTON_WINDOW_ICON,
+			parent, NULL, x, y, ssd->view_id);
 
 		x = width - g_theme.window_titlebar_padding_width + g_theme.window_button_spacing;
 
@@ -91,14 +90,14 @@ ssd_titlebar_create(struct ssd *ssd, struct wlr_buffer *icon_buffer)
 			struct lab_img **imgs =
 				g_theme.window[active].button_imgs[type];
 			subtree->buttons_right[b] = attach_ssd_button(type,
-				parent, imgs, x, y, view);
+				parent, imgs, x, y, ssd->view_id);
 		}
 	}
 
-	update_visible_buttons(ssd);
+	update_visible_buttons(ssd, view_st);
 
 	ssd_update_icon(ssd, icon_buffer);
-	ssd_update_title(ssd);
+	ssd_update_title(ssd, view_st);
 
 	if (maximized) {
 		set_alt_maximize_icon(ssd, true);
@@ -144,10 +143,9 @@ set_alt_maximize_icon(struct ssd *ssd, bool enable)
  * buttons can be hidden for small windows (e.g. xterm -geometry 1x1).
  */
 static void
-update_visible_buttons(struct ssd *ssd)
+update_visible_buttons(struct ssd *ssd, const ViewState *view_st)
 {
-	struct view *view = ssd->view;
-	int width = MAX(view->st->current.width
+	int width = MAX(view_st->current.width
 		- 2 * g_theme.window_titlebar_padding_width, 0);
 	int button_width = g_theme.window_button_width;
 	int button_spacing = g_theme.window_button_spacing;
@@ -191,12 +189,11 @@ update_visible_buttons(struct ssd *ssd)
 }
 
 void
-ssd_titlebar_update(struct ssd *ssd)
+ssd_titlebar_update(struct ssd *ssd, const ViewState *view_st)
 {
-	struct view *view = ssd->view;
-	int width = view->st->current.width;
+	int width = view_st->current.width;
 
-	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view_st->maximized == VIEW_AXIS_BOTH;
 
 	if (ssd->state.was_maximized != maximized) {
 		set_alt_maximize_icon(ssd, maximized);
@@ -208,7 +205,7 @@ ssd_titlebar_update(struct ssd *ssd)
 	}
 	ssd->state.was_maximized = maximized;
 
-	update_visible_buttons(ssd);
+	update_visible_buttons(ssd, view_st);
 
 	/* Center buttons vertically within titlebar */
 	int y = (g_theme.titlebar_height - g_theme.window_button_height) / 2;
@@ -233,7 +230,7 @@ ssd_titlebar_update(struct ssd *ssd)
 		}
 	}
 
-	ssd_update_title(ssd);
+	ssd_update_title(ssd, view_st);
 }
 
 void
@@ -261,10 +258,10 @@ ssd_titlebar_destroy(struct ssd *ssd)
  */
 
 static void
-ssd_update_title_positions(struct ssd *ssd, int offset_left, int offset_right)
+ssd_update_title_positions(struct ssd *ssd, const ViewState *view_st,
+		int offset_left, int offset_right)
 {
-	struct view *view = ssd->view;
-	int width = view->st->current.width;
+	int width = view_st->current.width;
 	int title_bg_width = width - offset_left - offset_right;
 
 	enum ssd_active_state active;
@@ -329,24 +326,19 @@ get_title_offsets(struct ssd *ssd, int *offset_left, int *offset_right)
 }
 
 void
-ssd_update_title(struct ssd *ssd)
+ssd_update_title(struct ssd *ssd, const ViewState *view_st)
 {
-	if (!ssd) {
-		return;
-	}
-
-	struct view *view = ssd->view;
-	if (string_null_or_empty(view->st->title)) {
+	if (!ssd || string_null_or_empty(view_st->title)) {
 		return;
 	}
 
 	struct ssd_state_title *state = &ssd->state.title;
 	bool title_unchanged =
-		state->text && !strcmp(view->st->title, state->text);
+		state->text && !strcmp(view_st->title, state->text);
 
 	int offset_left, offset_right;
 	get_title_offsets(ssd, &offset_left, &offset_right);
-	int title_bg_width = view->st->current.width - offset_left - offset_right;
+	int title_bg_width = view_st->current.width - offset_left - offset_right;
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -368,7 +360,7 @@ ssd_update_title(struct ssd *ssd)
 		}
 
 		const float bg_color[4] = {0, 0, 0, 0}; /* ignored */
-		scaled_font_buffer_update(subtree->title, view->st->title,
+		scaled_font_buffer_update(subtree->title, view_st->title,
 			title_bg_width, font, text_color, bg_color);
 
 		/* And finally update the cache */
@@ -377,9 +369,9 @@ ssd_update_title(struct ssd *ssd)
 	}
 
 	if (!title_unchanged) {
-		xstrdup_replace(state->text, view->st->title);
+		xstrdup_replace(state->text, view_st->title);
 	}
-	ssd_update_title_positions(ssd, offset_left, offset_right);
+	ssd_update_title_positions(ssd, view_st, offset_left, offset_right);
 }
 
 int

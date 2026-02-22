@@ -202,7 +202,7 @@ xwayland_unmanaged_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	struct xwayland_unmanaged *unmanaged = znew(*unmanaged);
 	unmanaged->xwayland_surface = xsurface;
 	/*
-	 * xsurface->data is presumed to be a (struct view *) if set,
+	 * xsurface->data is presumed to be a ViewId if set,
 	 * so it must be left NULL for an unmanaged surface (it should
 	 * be NULL already at this point).
 	 */

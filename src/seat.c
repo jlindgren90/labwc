@@ -498,13 +498,13 @@ handle_focus_change(struct wl_listener *listener, void *data)
 
 	struct wlr_seat_keyboard_focus_change_event *event = data;
 	struct wlr_surface *surface = event->new_surface;
-	struct view *view = surface ? view_from_wlr_surface(surface) : NULL;
+	ViewId view_id = surface ? view_from_wlr_surface(surface) : 0;
 
 	/*
 	 * Prevent focus switch to non-view surface (e.g. layer-shell
 	 * or xwayland-unmanaged) from updating view state
 	 */
-	if (surface && !view) {
+	if (surface && !view_id) {
 		return;
 	}
 
@@ -516,7 +516,7 @@ handle_focus_change(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	view_set_active(view ? view->id : 0 /* none */);
+	view_set_active(view_id);
 }
 
 void

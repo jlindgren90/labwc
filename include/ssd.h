@@ -31,10 +31,10 @@ typedef struct ViewState ViewState;
 CSsd *ssd_create(CView *view, WlrBuffer *icon_buffer);
 Border ssd_get_margin(const ViewState *view_st);
 void ssd_set_active(CSsd *ssd, _Bool active);
-void ssd_update_title(CSsd *ssd);
+void ssd_update_title(CSsd *ssd, const ViewState *view_st);
 int ssd_get_icon_buffer_size(void);
 void ssd_update_icon(CSsd *ssd, WlrBuffer *icon_buffer);
-void ssd_update_geometry(CSsd *ssd);
+void ssd_update_geometry(CSsd *ssd, const ViewState *view_st);
 void ssd_destroy(CSsd *ssd);
 
 void ssd_update_hovered_button(WlrSceneNode *node);
