@@ -24,15 +24,15 @@ impl Ssd {
         unsafe { ssd_set_active(self.c_ptr, active) };
     }
 
-    pub fn update_geom(&mut self) {
-        unsafe { ssd_update_geometry(self.c_ptr) };
+    pub fn update_geom(&mut self, state: &ViewState) {
+        unsafe { ssd_update_geometry(self.c_ptr, state) };
     }
 
     pub fn update_icon(&mut self, icon_buffer: *mut WlrBuffer) {
         unsafe { ssd_update_icon(self.c_ptr, icon_buffer) };
     }
 
-    pub fn update_title(&mut self) {
-        unsafe { ssd_update_title(self.c_ptr) };
+    pub fn update_title(&mut self, state: &ViewState) {
+        unsafe { ssd_update_title(self.c_ptr, state) };
     }
 }

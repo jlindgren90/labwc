@@ -133,7 +133,7 @@ impl View {
         if self.d.title != title {
             self.d.title = title;
             self.state.title = self.d.title.as_ptr(); // for C interop
-            self.d.ssd.update_title();
+            self.d.ssd.update_title(&*self.state);
             for toplevel in &self.d.foreign_toplevels {
                 toplevel.send_title(&self.d.title);
                 toplevel.send_done();
@@ -250,7 +250,7 @@ impl View {
     pub fn commit_move(&mut self, x: i32, y: i32) -> UpdateLevel {
         (self.state.current.x, self.state.current.y) = self.v.adjust_scene_pos(&self.state, x, y);
         unsafe { view_move_impl(self.c_ptr) };
-        self.d.ssd.update_geom();
+        self.d.ssd.update_geom(&*self.state);
         if self.state.visible() {
             return UpdateLevel::Cursor;
         }

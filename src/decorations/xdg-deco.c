@@ -8,7 +8,7 @@
 struct xdg_deco {
 	struct wlr_xdg_toplevel_decoration_v1 *wlr_xdg_decoration;
 	enum wlr_xdg_toplevel_decoration_v1_mode client_mode;
-	struct view *view;
+	ViewId view_id;
 	struct wl_listener destroy;
 	struct wl_listener request_mode;
 	struct wl_listener surface_commit;
@@ -68,7 +68,7 @@ xdg_deco_request_mode(struct wl_listener *listener, void *data)
 			&xdg_deco->wlr_xdg_decoration->toplevel->base->surface->events.commit,
 			&xdg_deco->surface_commit);
 	}
-	view_enable_ssd(xdg_deco->view->id,
+	view_enable_ssd(xdg_deco->view_id,
 		client_mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 }
 
@@ -85,7 +85,7 @@ xdg_toplevel_decoration(struct wl_listener *listener, void *data)
 
 	struct xdg_deco *xdg_deco = znew(*xdg_deco);
 	xdg_deco->wlr_xdg_decoration = wlr_xdg_decoration;
-	xdg_deco->view = (struct view *)xdg_surface->data;
+	xdg_deco->view_id = (ViewId)xdg_surface->data;
 
 	wl_signal_add(&wlr_xdg_decoration->events.destroy, &xdg_deco->destroy);
 	xdg_deco->destroy.notify = xdg_deco_destroy;

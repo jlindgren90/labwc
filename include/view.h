@@ -77,11 +77,7 @@ struct view {
 	struct wl_listener map_request;
 };
 
-/**
- * view_from_wlr_surface() - returns the view associated with a
- * wlr_surface, or NULL if the surface has no associated view.
- */
-struct view *view_from_wlr_surface(struct wlr_surface *surface);
+ViewId view_from_wlr_surface(struct wlr_surface *surface);
 
 bool view_inhibits_actions(ViewId view_id, struct wl_list *actions);
 
