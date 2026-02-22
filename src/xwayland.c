@@ -277,8 +277,7 @@ ensure_initial_geometry_and_output(struct view *view)
 	view_constrain_size_to_that_of_usable_area(view);
 
 	if (!has_position) {
-		view_place_by_policy(view, /* allow_cursor */ true,
-			rc.placement_policy);
+		view_center(view, NULL);
 	}
 }
 
