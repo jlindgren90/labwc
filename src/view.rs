@@ -2,6 +2,7 @@
 //
 use crate::bindings::*;
 use crate::foreign_toplevel::*;
+use crate::rect::*;
 use crate::view_impl::*;
 use std::ffi::CString;
 
@@ -148,6 +149,49 @@ impl View {
             self.state.minimized = minimized;
             self.v.set_minimized(minimized);
             self.send_foreign_toplevel_state();
+        }
+    }
+
+    pub fn set_current_pos(&mut self, x: i32, y: i32) {
+        self.state.current.x = x;
+        self.state.current.y = y;
+    }
+
+    pub fn set_current_size(&mut self, width: i32, height: i32) {
+        self.state.current.width = width;
+        self.state.current.height = height;
+    }
+
+    pub fn set_pending_geom(&mut self, geom: Rect) {
+        self.state.pending = geom;
+    }
+
+    pub fn move_resize(&mut self, geom: Rect) {
+        if rect_equals(self.state.pending, geom) {
+            return;
+        }
+        self.v
+            .configure(geom, &mut self.state.pending, &mut self.state.current);
+        unsafe { view_notify_move_resize(self.c_ptr) };
+    }
+
+    pub fn set_natural_geom(&mut self, geom: Rect) {
+        self.state.natural_geom = geom;
+    }
+
+    pub fn store_natural_geom(&mut self) {
+        // Don't save natural geometry if fullscreen or tiled
+        if self.state.fullscreen || self.state.tiled != 0 {
+            return;
+        }
+        // If only one axis is maximized, save geometry of the other
+        if self.state.maximized == VIEW_AXIS_NONE || self.state.maximized == VIEW_AXIS_VERTICAL {
+            self.state.natural_geom.x = self.state.pending.x;
+            self.state.natural_geom.width = self.state.pending.width;
+        }
+        if self.state.maximized == VIEW_AXIS_NONE || self.state.maximized == VIEW_AXIS_HORIZONTAL {
+            self.state.natural_geom.y = self.state.pending.y;
+            self.state.natural_geom.height = self.state.pending.height;
         }
     }
 
