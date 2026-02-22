@@ -8,11 +8,9 @@
 #include "labwc.h"
 #include "view.h"
 
-static struct wl_list decorations;
 static struct wlr_server_decoration_manager *kde_deco_mgr;
 
 struct kde_deco {
-	struct wl_list link;  /* decorations */
 	struct wlr_server_decoration *wlr_kde_decoration;
 	struct view *view;
 	struct wl_listener mode;
@@ -25,7 +23,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	struct kde_deco *kde_deco = wl_container_of(listener, kde_deco, destroy);
 	wl_list_remove(&kde_deco->destroy.link);
 	wl_list_remove(&kde_deco->mode.link);
-	wl_list_remove(&kde_deco->link);
 	free(kde_deco);
 }
 
@@ -70,23 +67,6 @@ handle_new_server_decoration(struct wl_listener *listener, void *data)
 
 	wl_signal_add(&wlr_deco->events.mode, &kde_deco->mode);
 	kde_deco->mode.notify = handle_mode;
-
-	wl_list_append(&decorations, &kde_deco->link);
-}
-
-void
-kde_server_decoration_set_view(struct view *view, struct wlr_surface *surface)
-{
-	struct kde_deco *kde_deco;
-	wl_list_for_each(kde_deco, &decorations, link) {
-		if (kde_deco->wlr_kde_decoration->surface == surface) {
-			if (!kde_deco->view) {
-				kde_deco->view = view;
-				handle_mode(&kde_deco->mode, kde_deco->wlr_kde_decoration);
-			}
-			return;
-		}
-	}
 }
 
 void
@@ -108,7 +88,6 @@ kde_server_decoration_init(void)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&decorations);
 	kde_server_decoration_update_default();
 
 	wl_signal_add(&kde_deco_mgr->events.new_decoration, &g_server.kde_server_decoration);
