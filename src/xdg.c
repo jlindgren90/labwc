@@ -134,15 +134,10 @@ set_initial_position(struct view *view)
 		interactive_anchor_to_cursor(&view->pending);
 	} else {
 		struct view *parent = xdg_toplevel_view_get_parent(view);
-		if (parent) {
-			/* Center relative to parent view */
-			view_compute_centered_position(view, &parent->pending,
-				view->pending.width, view->pending.height,
-				&view->pending.x, &view->pending.y);
-		} else {
-			view_compute_position_by_policy(view, &view->pending,
-				/* allow_cursor */ true, rc.placement_policy);
-		}
+		view_compute_centered_position(view,
+			parent ? &parent->pending : NULL,
+			view->pending.width, view->pending.height,
+			&view->pending.x, &view->pending.y);
 	}
 }
 

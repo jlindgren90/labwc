@@ -752,16 +752,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &rc.xwayland_persistence);
 	} else if (!strcasecmp(nodename, "primarySelection.core")) {
 		set_bool(content, &rc.primary_selection);
-
-	} else if (!strcmp(nodename, "policy.placement")) {
-		enum lab_placement_policy policy = view_placement_parse(content);
-		if (policy != LAB_PLACE_INVALID) {
-			rc.placement_policy = policy;
-		}
-	} else if (!strcasecmp(nodename, "x.cascadeOffset.placement")) {
-		rc.placement_cascade_offset_x = atoi(content);
-	} else if (!strcasecmp(nodename, "y.cascadeOffset.placement")) {
-		rc.placement_cascade_offset_y = atoi(content);
 	} else if (!strcmp(nodename, "name.theme")) {
 		xstrdup_replace(rc.theme_name, content);
 	} else if (!strcmp(nodename, "icon.theme")) {
@@ -913,10 +903,6 @@ rcxml_init(void)
 		wl_list_init(&rc.window_rules);
 	}
 	has_run = true;
-
-	rc.placement_policy = LAB_PLACE_CASCADE;
-	rc.placement_cascade_offset_x = 0;
-	rc.placement_cascade_offset_y = 0;
 
 	rc.xdg_shell_server_side_deco = true;
 	rc.hide_maximized_window_titlebar = false;

@@ -728,8 +728,7 @@ set_initial_position(struct view *view,
 		view_constrain_size_to_that_of_usable_area(view);
 
 		if (view_is_floating(view)) {
-			view_place_by_policy(view,
-				/* allow_cursor */ true, rc.placement_policy);
+			view_center(view, NULL);
 		} else {
 			/*
 			 * View is maximized/fullscreen. Place the
@@ -744,8 +743,11 @@ set_initial_position(struct view *view,
 			 * (2) add a variant of ssd_thickness() that
 			 * disregards the current view state.
 			 */
-			view_compute_position_by_policy(view, &view->natural_geometry,
-				/* allow_cursor */ true, rc.placement_policy);
+			view_compute_centered_position(view, NULL,
+				view->natural_geometry.width,
+				view->natural_geometry.height,
+				&view->natural_geometry.x,
+				&view->natural_geometry.y);
 		}
 	}
 

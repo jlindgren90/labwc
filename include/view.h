@@ -483,33 +483,6 @@ void view_apply_natural_geometry(struct view *view);
  */
 void view_center(struct view *view, const struct wlr_box *ref);
 
-/**
- * view_compute_position_by_policy() - compute view placement
- * @view: view to be placed
- * @geom: floating view geometry to update (in/out)
- * @allow_cursor: set to false to ignore center-on-cursor policy
- * @policy: placement policy to apply
- *
- * Computes floating view placement according to configured strategy.
- * Unlike view_place_by_policy(), this function doesn't actually move
- * the view. It returns false if position could not be computed (e.g.
- * if no outputs are connected). In that case, @geom is not modified.
- */
-bool view_compute_position_by_policy(struct view *view, struct wlr_box *geom,
-	bool allow_cursor, enum lab_placement_policy policy);
-
-/**
- * view_place_by_policy - apply placement strategy to view
- * @view: view to be placed
- * @allow_cursor: set to false to ignore center-on-cursor policy
- * @policy: placement policy to apply
- *
- * Places a floating view according to configured placement strategy.
- * Clears any maximized/fullscreen/tiled state and restores natural
- * geometry of the view before positioning.
- */
-void view_place_by_policy(struct view *view, bool allow_cursor,
-	enum lab_placement_policy policy);
 void view_constrain_size_to_that_of_usable_area(struct view *view);
 
 void view_set_maximized(struct view *view, enum view_axis maximized);
@@ -570,7 +543,6 @@ void view_init(struct view *view);
 void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
-enum lab_placement_policy view_placement_parse(const char *policy);
 
 /* xdg.c */
 struct wlr_xdg_surface *xdg_surface_from_view(struct view *view);
