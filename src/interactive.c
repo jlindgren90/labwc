@@ -68,7 +68,7 @@ interactive_set_grab_context(struct cursor_context *ctx)
 	server.grabbed_view = ctx->view;
 	server.grab_x = g_seat.cursor->x;
 	server.grab_y = g_seat.cursor->y;
-	server.grab_box = ctx->view->current;
+	server.grab_box = ctx->view->st->current;
 	server.resize_edges =
 		cursor_get_resize_edges(g_seat.cursor, ctx);
 }
@@ -109,7 +109,7 @@ interactive_begin(struct view *view, enum input_mode mode, enum lab_edge edges)
 		}
 
 		/* Store natural geometry at start of move */
-		view_store_natural_geometry(view);
+		view_store_natural_geom(view->id);
 
 		cursor_shape = LAB_CURSOR_GRAB;
 		break;
