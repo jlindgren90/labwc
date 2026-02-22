@@ -20,14 +20,6 @@ enum lab_motion {
 	LAB_MOTION_RELATIVE,
 };
 
-enum lab_placement_policy {
-	LAB_PLACE_INVALID = 0,
-	LAB_PLACE_CENTER,
-	LAB_PLACE_CURSOR,
-	LAB_PLACE_AUTOMATIC,
-	LAB_PLACE_CASCADE,
-};
-
 enum lab_rotation {
 	LAB_ROTATE_NONE = 0,
 	LAB_ROTATE_90,
