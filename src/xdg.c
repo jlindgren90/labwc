@@ -10,7 +10,6 @@
 #include "common/box.h"
 #include "common/macros.h"
 #include "common/mem.h"
-#include "decorations.h"
 #include "foreign-toplevel/foreign.h"
 #include "labwc.h"
 #include "menu/menu.h"
@@ -224,34 +223,6 @@ handle_commit(struct wl_listener *listener, void *data)
 		view->pending.height = size.height;
 		set_initial_position(view);
 		update_required = true;
-	}
-
-	/*
-	 * Qt applications occasionally fail to call set_window_geometry
-	 * after a configure request, but do correctly update the actual
-	 * surface extent. This results in a mismatch between the window
-	 * decorations (which follow the logical geometry) and the visual
-	 * size of the client area. As a workaround, we try to detect
-	 * this case and ignore the out-of-date window geometry.
-	 */
-	if (size.width != view->pending.width
-			|| size.height != view->pending.height) {
-		/*
-		 * Not using wlr_surface_get_extend() since Thunderbird
-		 * sometimes resizes the window geometry and the toplevel
-		 * surface size, but not the subsurface size (see #2183).
-		 */
-		struct wlr_box extent = {
-			.width = xdg_surface->surface->current.width,
-			.height = xdg_surface->surface->current.height,
-		};
-		if (extent.width == view->pending.width
-				&& extent.height == view->pending.height) {
-			wlr_log(WLR_DEBUG, "window geometry for client (%s) "
-				"appears to be incorrect - ignoring",
-				view->app_id);
-			size = extent; /* Use surface extent instead */
-		}
 	}
 
 	struct wlr_box *current = &view->current;
@@ -859,20 +830,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 
 	view->xdg_surface = xdg_surface;
 
-	/*
-	 * Pick an output for the surface as soon as its created, so that the
-	 * client can be notified about any fractional scale before it is given
-	 * the chance to configure itself (and possibly pick its dimensions).
-	 *
-	 * FIXME: this may be the wrong output since the parent view isn't
-	 * known yet. The correct output will be set at initial commit.
-	 */
-	view_set_output(view, output_nearest_to_cursor());
-	if (output_is_usable(view->output)) {
-		wlr_fractional_scale_v1_notify_scale(xdg_surface->surface,
-			view->output->wlr_output->scale);
-	}
-
 	view->scene_tree =
 		wlr_scene_tree_create(g_server.view_trees[VIEW_LAYER_NORMAL]);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
@@ -889,15 +846,6 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	 * be created in the future.
 	 */
 	xdg_surface->data = view;
-
-	/*
-	 * GTK4 initializes the decorations on the wl_surface before
-	 * converting it into a xdg surface. This call takes care of
-	 * connecting the view to an existing decoration. If there
-	 * is no existing decoration object available for the
-	 * wl_surface, this call is a no-op.
-	 */
-	kde_server_decoration_set_view(view, xdg_surface->surface);
 
 	struct wlr_xdg_toplevel *toplevel = xdg_surface->toplevel;
 	CONNECT_SIGNAL(toplevel, view, destroy);
