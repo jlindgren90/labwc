@@ -124,13 +124,13 @@ show_edge_overlay(struct seat *seat, enum lab_edge edge1, enum lab_edge edge2,
 		if (!seat->overlay.timer) {
 			seat->overlay.timer = wl_event_loop_add_timer(
 				g_server.wl_event_loop,
-				handle_edge_overlay_timeout, seat);
+				handle_edge_overlay_timeout, NULL);
 		}
 		/* Show overlay <snapping><preview><delay>ms later */
 		wl_event_source_timer_update(seat->overlay.timer, delay);
 	} else {
 		/* Show overlay now */
-		handle_edge_overlay_timeout(seat);
+		handle_edge_overlay_timeout(NULL);
 	}
 }
 

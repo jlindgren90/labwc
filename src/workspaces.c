@@ -390,7 +390,7 @@ _osd_show(void)
 		/* Hidden by timer */
 		if (!g_server.seat.workspace_osd_timer) {
 			g_server.seat.workspace_osd_timer = wl_event_loop_add_timer(
-				g_server.wl_event_loop, _osd_handle_timeout, &g_server.seat);
+				g_server.wl_event_loop, _osd_handle_timeout, NULL);
 		}
 		wl_event_source_timer_update(g_server.seat.workspace_osd_timer,
 			rc.workspace_config.popuptime);
@@ -522,7 +522,6 @@ workspaces_switch_to(struct workspace *target, bool update_focus)
 void
 workspaces_osd_hide(struct seat *seat)
 {
-	assert(seat);
 	struct output *output;
 	wl_list_for_each(output, &g_server.outputs, link) {
 		if (!output->workspace_osd) {

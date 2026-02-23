@@ -154,7 +154,7 @@ handle_output_destroy(struct wl_listener *listener, void *data)
 	struct output *output = wl_container_of(listener, output, destroy);
 	struct seat *seat = &g_server.seat;
 	regions_evacuate_output(output);
-	regions_destroy(seat, &output->regions);
+	regions_destroy(&output->regions, /* check_active */ true);
 	if (seat->overlay.active.output == output) {
 		overlay_finish(seat);
 	}

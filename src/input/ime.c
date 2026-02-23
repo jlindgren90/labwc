@@ -43,7 +43,7 @@ static struct wlr_input_method_keyboard_grab_v2 *
 get_keyboard_grab(struct keyboard *keyboard)
 {
 	struct wlr_input_method_v2 *input_method =
-		keyboard->base.seat->input_method_relay->input_method;
+		g_seat.input_method_relay->input_method;
 	if (!input_method || !input_method->keyboard_grab) {
 		return NULL;
 	}
