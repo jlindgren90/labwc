@@ -192,7 +192,6 @@ struct server {
 	uint64_t next_view_creation_id;
 	struct wl_list unmanaged_surfaces;
 
-	struct seat seat;
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
 	bool direct_scanout_enabled;
@@ -320,8 +319,8 @@ struct server {
  * Accessing them indirectly through pointers embedded in every other
  * struct just adds noise to the code.
  */
+extern struct seat g_seat;
 extern struct server g_server;
-#define g_seat g_server.seat
 
 void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
 void xdg_shell_init(void);
