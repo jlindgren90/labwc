@@ -218,6 +218,9 @@ struct theme {
 	int mag_border_width;
 };
 
+/* defined in main.c */
+extern struct theme g_theme;
+
 /**
  * theme_init - read openbox theme and generate button textures
  * @theme: theme data
