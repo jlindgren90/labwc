@@ -59,7 +59,7 @@ void regions_update_geometry(struct output *output);
 void regions_evacuate_output(struct output *output);
 
 /* Free all regions in given wl_list pointer */
-void regions_destroy(struct seat *seat, struct wl_list *regions);
+void regions_destroy(struct wl_list *regions, bool check_active);
 
 /* Get output local region from cursor or name, may be NULL */
 struct region *regions_from_cursor(void);
