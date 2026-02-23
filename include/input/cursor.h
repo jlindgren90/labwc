@@ -38,7 +38,7 @@ struct cursor_context {
 	double sx, sy;
 };
 
-/* Used to persistently store cursor context (e.g. in seat->pressed) */
+/* Used to persistently store cursor context (e.g. in g_seat.pressed) */
 struct cursor_context_saved {
 	struct cursor_context ctx;
 	struct wl_listener view_destroy;
@@ -69,9 +69,9 @@ struct cursor_context get_cursor_context(void);
  * @seat - current seat
  * @cursor - name of cursor, for example LAB_CURSOR_DEFAULT or LAB_CURSOR_GRAB
  */
-void cursor_set(struct seat *seat, enum lab_cursors cursor);
+void cursor_set(enum lab_cursors cursor);
 
-void cursor_set_visible(struct seat *seat, bool visible);
+void cursor_set_visible(bool visible);
 
 /*
  * Safely store a cursor context to saved_ctx. saved_ctx is cleared when either
@@ -82,7 +82,7 @@ void cursor_context_save(struct cursor_context_saved *saved_ctx,
 
 /**
  * cursor_get_resize_edges - calculate resize edge based on cursor position
- * @cursor - the current cursor (usually g_server.seat.cursor)
+ * @cursor - the current cursor (usually g_seat.cursor)
  * @cursor_context - result of get_cursor_context()
  *
  * Calculates the resize edge combination that is most appropriate based
@@ -123,7 +123,7 @@ void cursor_update_focus(void);
  * If the current cursor image was not set by labwc but some client
  * this is a no-op.
  */
-void cursor_update_image(struct seat *seat);
+void cursor_update_image(void);
 
 /**
  * Processes cursor motion. The return value indicates if a client
@@ -136,35 +136,31 @@ bool cursor_process_motion(uint32_t time, double *sx, double *sy);
  * Processes cursor button press. The return value indicates if a client
  * should be notified.
  */
-bool cursor_process_button_press(struct seat *seat, uint32_t button, uint32_t time_msec);
+bool cursor_process_button_press(uint32_t button, uint32_t time_msec);
 
 /**
  * Processes cursor button release. The return value indicates if the client
  * should be notified. Should be followed by cursor_finish_button_release()
  * after notifying a client.
  */
-bool cursor_process_button_release(struct seat *seat, uint32_t button, uint32_t time_msec);
+bool cursor_process_button_release(uint32_t button, uint32_t time_msec);
 
 /**
  * Finishes cursor button release. The return value indicates if an interactive
  * move/resize had been finished. Should be called after notifying a client.
  */
-bool cursor_finish_button_release(struct seat *seat, uint32_t button);
+bool cursor_finish_button_release(uint32_t button);
 
-void cursor_init(struct seat *seat);
-void cursor_reload(struct seat *seat);
-void cursor_emulate_move(struct seat *seat,
-		struct wlr_input_device *device,
+void cursor_init(void);
+void cursor_reload(void);
+void cursor_emulate_move(struct wlr_input_device *device,
 		double dx, double dy, uint32_t time_msec);
-void cursor_emulate_move_absolute(struct seat *seat,
-		struct wlr_input_device *device,
+void cursor_emulate_move_absolute(struct wlr_input_device *device,
 		double x, double y, uint32_t time_msec);
-void cursor_emulate_button(struct seat *seat,
-		uint32_t button, enum wl_pointer_button_state state, uint32_t time_msec);
-void cursor_emulate_axis(struct seat *seat,
-		struct wlr_input_device *device,
+void cursor_emulate_button(uint32_t button, enum wl_pointer_button_state state, uint32_t time_msec);
+void cursor_emulate_axis(struct wlr_input_device *device,
 		enum wl_pointer_axis orientation, double delta, double delta_discrete,
 		enum wl_pointer_axis_source source, uint32_t time_msec);
-void cursor_finish(struct seat *seat);
+void cursor_finish(void);
 
 #endif /* LABWC_CURSOR_H */

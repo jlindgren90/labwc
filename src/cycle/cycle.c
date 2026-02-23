@@ -176,8 +176,7 @@ cycle_begin(enum lab_cycle_dir direction,
 	/* Pre-select the next view in the given direction */
 	g_server.cycle.selected_view = get_next_selected_view(direction);
 
-	seat_focus_override_begin(&g_server.seat,
-		LAB_INPUT_STATE_CYCLE, LAB_CURSOR_DEFAULT);
+	seat_focus_override_begin(LAB_INPUT_STATE_CYCLE, LAB_CURSOR_DEFAULT);
 	update_cycle();
 
 	/* Update cursor, in case it is within the area covered by OSD */
@@ -203,7 +202,7 @@ cycle_finish(bool switch_focus)
 	struct view *selected_view = g_server.cycle.selected_view;
 	destroy_cycle();
 
-	seat_focus_override_end(&g_server.seat, /*restore_focus*/ false);
+	seat_focus_override_end(/*restore_focus*/ false);
 
 	/* Hiding OSD may need a cursor change */
 	cursor_update_focus();

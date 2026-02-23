@@ -329,7 +329,7 @@ handle_input_method_grab_keyboard(struct wl_listener *listener, void *data)
 	struct wlr_input_method_keyboard_grab_v2 *keyboard_grab = data;
 
 	struct wlr_keyboard *active_keyboard =
-		wlr_seat_get_keyboard(relay->seat->wlr_seat);
+		wlr_seat_get_keyboard(g_seat.wlr_seat);
 
 	if (!is_keyboard_emulated_by_input_method(
 			active_keyboard, relay->input_method)) {
@@ -411,7 +411,7 @@ handle_new_input_method(struct wl_listener *listener, void *data)
 	struct input_method_relay *relay =
 		wl_container_of(listener, relay, new_input_method);
 	struct wlr_input_method_v2 *input_method = data;
-	if (relay->seat->wlr_seat != input_method->seat) {
+	if (g_seat.wlr_seat != input_method->seat) {
 		return;
 	}
 
@@ -533,7 +533,7 @@ handle_new_text_input(struct wl_listener *listener, void *data)
 	struct input_method_relay *relay =
 		wl_container_of(listener, relay, new_text_input);
 	struct wlr_text_input_v3 *wlr_text_input = data;
-	if (relay->seat->wlr_seat != wlr_text_input->seat) {
+	if (g_seat.wlr_seat != wlr_text_input->seat) {
 		return;
 	}
 
@@ -573,10 +573,9 @@ handle_focused_surface_destroy(struct wl_listener *listener, void *data)
 }
 
 struct input_method_relay *
-input_method_relay_create(struct seat *seat)
+input_method_relay_create(void)
 {
 	struct input_method_relay *relay = znew(*relay);
-	relay->seat = seat;
 	wl_list_init(&relay->text_inputs);
 	wl_list_init(&relay->popups);
 	relay->popup_tree = wlr_scene_tree_create(&g_server.scene->tree);

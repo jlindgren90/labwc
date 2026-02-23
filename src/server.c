@@ -109,7 +109,7 @@ reload_config_and_theme(void)
 static int
 handle_sighup(int signal, void *data)
 {
-	keyboard_cancel_all_keybind_repeats(&g_server.seat);
+	keyboard_cancel_all_keybind_repeats();
 	session_environment_init();
 	reload_config_and_theme();
 	output_virtual_update_fallback();

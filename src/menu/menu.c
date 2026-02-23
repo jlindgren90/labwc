@@ -1194,8 +1194,7 @@ menu_open_root(struct menu *menu, int x, int y)
 
 	g_server.menu_current = menu;
 	selected_item = NULL;
-	seat_focus_override_begin(&g_server.seat,
-		LAB_INPUT_STATE_MENU, LAB_CURSOR_DEFAULT);
+	seat_focus_override_begin(LAB_INPUT_STATE_MENU, LAB_CURSOR_DEFAULT);
 }
 
 static void
@@ -1422,7 +1421,7 @@ menu_execute_item(struct menuitem *item)
 
 	menu_close(g_server.menu_current);
 	g_server.menu_current = NULL;
-	seat_focus_override_end(&g_server.seat, /*restore_focus*/ true);
+	seat_focus_override_end(/*restore_focus*/ true);
 
 	/*
 	 * We call the actions after closing the menu so that virtual keyboard
@@ -1524,7 +1523,7 @@ menu_close_root(void)
 	menu_close(g_server.menu_current);
 	g_server.menu_current = NULL;
 	reset_pipemenus();
-	seat_focus_override_end(&g_server.seat, /*restore_focus*/ true);
+	seat_focus_override_end(/*restore_focus*/ true);
 }
 
 void
