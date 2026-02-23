@@ -397,6 +397,8 @@ handle_input_method_new_popup_surface(struct wl_listener *listener, void *data)
 
 	popup->tree = wlr_scene_subsurface_tree_create(
 		relay->popup_tree, popup->popup_surface->surface);
+	die_if_null(popup->tree);
+
 	node_descriptor_create(&popup->tree->node, LAB_NODE_IME_POPUP,
 		/*view*/ NULL, /*data*/ NULL);
 
