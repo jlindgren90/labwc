@@ -2017,7 +2017,7 @@ rcxml_finish(void)
 		zfree(w);
 	}
 
-	regions_destroy(NULL, &rc.regions);
+	regions_destroy(&rc.regions, /* check_active */ false);
 
 	clear_window_switcher_fields();
 
