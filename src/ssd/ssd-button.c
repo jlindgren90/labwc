@@ -31,12 +31,12 @@ attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
 
 	/* Hitbox */
 	float invisible[4] = { 0, 0, 0, 0 };
-	wlr_scene_rect_create(root, rc.theme->window_button_width,
-		rc.theme->window_button_height, invisible);
+	wlr_scene_rect_create(root, g_theme.window_button_width,
+		g_theme.window_button_height, invisible);
 
 	/* Icons */
-	int button_width = rc.theme->window_button_width;
-	int button_height = rc.theme->window_button_height;
+	int button_width = g_theme.window_button_width;
+	int button_height = g_theme.window_button_height;
 	/*
 	 * Ensure a small amount of horizontal padding within the button
 	 * area (2px on each side with the default 26px button width).
@@ -62,8 +62,8 @@ attach_ssd_button(struct wl_list *button_parts, enum lab_node_type type,
 				continue;
 			}
 			struct scaled_img_buffer *img_buffer = scaled_img_buffer_create(
-				root, imgs[state_set], rc.theme->window_button_width,
-				rc.theme->window_button_height);
+				root, imgs[state_set], g_theme.window_button_width,
+				g_theme.window_button_height);
 			assert(img_buffer);
 			struct wlr_scene_node *icon_node = &img_buffer->scene_buffer->node;
 			wlr_scene_node_set_enabled(icon_node, false);

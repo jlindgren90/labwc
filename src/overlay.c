@@ -58,7 +58,7 @@ show_region_overlay(struct region *region)
 	g_seat.overlay.active.region = region;
 
 	struct wlr_box geo = view_get_region_snap_box(NULL, region);
-	show_overlay(&rc.theme->snapping_overlay_region, &geo);
+	show_overlay(&g_theme.snapping_overlay_region, &geo);
 }
 
 static struct wlr_box
@@ -78,7 +78,7 @@ handle_edge_overlay_timeout(void *data)
 		&& g_seat.overlay.active.output);
 	struct wlr_box box = get_edge_snap_box(g_seat.overlay.active.edge,
 		g_seat.overlay.active.output);
-	show_overlay(&rc.theme->snapping_overlay_edge, &box);
+	show_overlay(&g_theme.snapping_overlay_edge, &box);
 	return 0;
 }
 
