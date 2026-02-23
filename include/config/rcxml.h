@@ -35,7 +35,6 @@ struct rcxml {
 	enum render_bit_depth target_render_depth;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;
-	uint32_t allowed_interfaces;
 
 	/* theme */
 	char *theme_name;
@@ -96,7 +95,5 @@ void rcxml_finish(void);
  * FIXME: move this function to somewhere else.
  */
 void append_parsed_actions(xmlNode *node, struct wl_list *list);
-
-uint32_t parse_privileged_interface(const char *name);
 
 #endif /* LABWC_RCXML_H */
