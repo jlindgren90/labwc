@@ -142,7 +142,6 @@ has_exclusive_interactivity(struct wlr_scene_layer_surface_v1 *scene)
 static void
 try_to_focus_next_layer_or_toplevel(void)
 {
-	struct seat *seat = &g_server.seat;
 	struct output *output = output_nearest_to_cursor();
 	if (!output_is_usable(output)) {
 		goto no_output;
@@ -170,7 +169,7 @@ try_to_focus_next_layer_or_toplevel(void)
 			}
 			if (has_exclusive_interactivity(scene)) {
 				wlr_log(WLR_DEBUG, "focus next exclusive layer client");
-				seat_set_focus_layer(seat, layer_surface);
+				seat_set_focus_layer(layer_surface);
 				return;
 			}
 		}
@@ -181,18 +180,18 @@ try_to_focus_next_layer_or_toplevel(void)
 	 * one exists on the current workspace.
 	 */
 no_output:
-	if (seat->focused_layer) {
-		seat_set_focus_layer(seat, NULL);
+	if (g_seat.focused_layer) {
+		seat_set_focus_layer(NULL);
 	}
 }
 
 static bool
-focused_layer_has_exclusive_interactivity(struct seat *seat)
+focused_layer_has_exclusive_interactivity(void)
 {
-	if (!seat->focused_layer) {
+	if (!g_seat.focused_layer) {
 		return false;
 	}
-	return seat->focused_layer->current.keyboard_interactive ==
+	return g_seat.focused_layer->current.keyboard_interactive ==
 		ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE;
 }
 
@@ -201,39 +200,39 @@ focused_layer_has_exclusive_interactivity(struct seat *seat)
  * than the layer with current keyboard focus.
  */
 static bool
-has_precedence(struct seat *seat, enum zwlr_layer_shell_v1_layer layer)
+has_precedence(enum zwlr_layer_shell_v1_layer layer)
 {
-	if (!seat->focused_layer) {
+	if (!g_seat.focused_layer) {
 		return true;
 	}
-	if (!focused_layer_has_exclusive_interactivity(seat)) {
+	if (!focused_layer_has_exclusive_interactivity()) {
 		return true;
 	}
-	if (layer >= seat->focused_layer->current.layer) {
+	if (layer >= g_seat.focused_layer->current.layer) {
 		return true;
 	}
 	return false;
 }
 
 void
-layer_try_set_focus(struct seat *seat, struct wlr_layer_surface_v1 *layer_surface)
+layer_try_set_focus(struct wlr_layer_surface_v1 *layer_surface)
 {
 	switch (layer_surface->current.keyboard_interactive) {
 	case ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE:
 		wlr_log(WLR_DEBUG, "interactive-exclusive '%p'", layer_surface);
-		if (has_precedence(seat, layer_surface->current.layer)) {
-			seat_set_focus_layer(seat, layer_surface);
+		if (has_precedence(layer_surface->current.layer)) {
+			seat_set_focus_layer(layer_surface);
 		}
 		break;
 	case ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND:
 		wlr_log(WLR_DEBUG, "interactive-on-demand '%p'", layer_surface);
-		if (!focused_layer_has_exclusive_interactivity(seat)) {
-			seat_set_focus_layer(seat, layer_surface);
+		if (!focused_layer_has_exclusive_interactivity()) {
+			seat_set_focus_layer(layer_surface);
 		}
 		break;
 	case ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_NONE:
 		wlr_log(WLR_DEBUG, "interactive-none '%p'", layer_surface);
-		if (seat->focused_layer == layer_surface) {
+		if (g_seat.focused_layer == layer_surface) {
 			try_to_focus_next_layer_or_toplevel();
 		}
 		break;
@@ -277,8 +276,7 @@ handle_surface_commit(struct wl_listener *listener, void *data)
 		 * cursor-button-press).
 		 */
 		if (is_on_demand(layer_surface)) {
-			struct seat *seat = &g_server.seat;
-			if (seat->focused_layer == layer_surface) {
+			if (g_seat.focused_layer == layer_surface) {
 				/*
 				 * Must be change from EXCLUSIVE to ON_DEMAND,
 				 * so we should give us focus.
@@ -288,8 +286,7 @@ handle_surface_commit(struct wl_listener *listener, void *data)
 			goto out;
 		}
 		/* Handle EXCLUSIVE and NONE requests */
-		struct seat *seat = &g_server.seat;
-		layer_try_set_focus(seat, layer_surface);
+		layer_try_set_focus(layer_surface);
 	}
 out:
 
@@ -310,15 +307,13 @@ handle_node_destroy(struct wl_listener *listener, void *data)
 	struct lab_layer_surface *layer =
 		wl_container_of(listener, layer, node_destroy);
 
-	struct seat *seat = &g_server.seat;
-
 	/*
 	 * If the surface of this node has the current keyboard focus, then we
-	 * have to deal with `seat->focused_layer` to avoid UAF bugs, for
+	 * have to deal with `g_seat.focused_layer` to avoid UAF bugs, for
 	 * example on TTY change. See issue #2863
 	 */
-	if (layer->layer_surface == seat->focused_layer) {
-		seat_set_focus_layer(seat, NULL);
+	if (layer->layer_surface == g_seat.focused_layer) {
+		seat_set_focus_layer(NULL);
 	}
 
 	/*
@@ -372,8 +367,7 @@ handle_unmap(struct wl_listener *listener, void *data)
 	if (layer_surface->output) {
 		output_update_usable_area(layer_surface->output->data);
 	}
-	struct seat *seat = &g_server.seat;
-	if (seat->focused_layer == layer_surface) {
+	if (g_seat.focused_layer == layer_surface) {
 		try_to_focus_next_layer_or_toplevel();
 	}
 	cursor_update_focus();
@@ -422,14 +416,13 @@ handle_map(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	struct seat *seat = &g_server.seat;
-	layer_try_set_focus(seat, layer->scene_layer_surface->layer_surface);
+	layer_try_set_focus(layer->scene_layer_surface->layer_surface);
 }
 
 static bool
-surface_is_focused(struct seat *seat, struct wlr_surface *surface)
+surface_is_focused(struct wlr_surface *surface)
 {
-	return seat->wlr_seat->keyboard_state.focused_surface == surface;
+	return g_seat.wlr_seat->keyboard_state.focused_surface == surface;
 }
 
 static void
@@ -437,7 +430,6 @@ handle_popup_destroy(struct wl_listener *listener, void *data)
 {
 	struct lab_layer_popup *popup =
 		wl_container_of(listener, popup, destroy);
-	struct seat *seat = &g_server.seat;
 
 	struct wlr_xdg_popup *_popup, *tmp;
 	wl_list_for_each_safe(_popup, tmp, &popup->wlr_popup->base->popups, link) {
@@ -454,10 +446,10 @@ handle_popup_destroy(struct wl_listener *listener, void *data)
 	}
 
 	/* TODO: do this on unmap instead? */
-	if (surface_is_focused(seat, popup->wlr_popup->base->surface)) {
+	if (surface_is_focused(popup->wlr_popup->base->surface)) {
 		/* Give focus back to whoever had it before the popup */
 		if (popup->parent_was_focused && popup->wlr_popup->parent) {
-			seat_force_focus_surface(seat, popup->wlr_popup->parent);
+			seat_force_focus_surface(popup->wlr_popup->parent);
 		} else {
 			desktop_focus_topmost_view();
 		}
@@ -527,13 +519,12 @@ handle_popup_commit(struct wl_listener *listener, void *data)
 		popup->commit.notify = NULL;
 
 		/* Force focus when popup was triggered by IPC */
-		struct seat *seat = &g_server.seat;
 		bool requesting_grab = !!popup->wlr_popup->seat;
 		if (requesting_grab) {
-			if (surface_is_focused(seat, popup->wlr_popup->parent)) {
+			if (surface_is_focused(popup->wlr_popup->parent)) {
 				popup->parent_was_focused = true;
 			}
-			seat_force_focus_surface(seat, popup->wlr_popup->base->surface);
+			seat_force_focus_surface(popup->wlr_popup->base->surface);
 		}
 	}
 }
