@@ -313,6 +313,16 @@ struct server {
 	pid_t primary_client_pid;
 };
 
+/*
+ * Globals
+ *
+ * Rationale: these are unlikely to ever have more than one instance
+ * per process, and need to last for the lifetime of the process.
+ * Accessing them indirectly through pointers embedded in every other
+ * struct just adds noise to the code.
+ */
+extern struct server g_server;
+
 void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
 void xdg_shell_init(struct server *server);
 void xdg_shell_finish(struct server *server);
