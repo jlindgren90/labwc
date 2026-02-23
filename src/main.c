@@ -259,9 +259,7 @@ main(int argc, char *argv[])
 	server_init();
 	server_start();
 
-	struct theme *theme = &g_theme;
-	theme_init(theme, rc.theme_name);
-	rc.theme = theme;
+	theme_init(rc.theme_name);
 
 	menu_init();
 
@@ -277,7 +275,7 @@ main(int argc, char *argv[])
 	session_shutdown();
 
 	menu_finish();
-	theme_finish(theme);
+	theme_finish();
 	rcxml_finish();
 	font_finish();
 

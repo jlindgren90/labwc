@@ -87,8 +87,8 @@ reload_config_and_theme(void)
 	scaled_buffer_invalidate_sharing();
 	rcxml_finish();
 	rcxml_read(rc.config_file);
-	theme_finish(rc.theme);
-	theme_init(rc.theme, rc.theme_name);
+	theme_finish();
+	theme_init(rc.theme_name);
 
 #if HAVE_LIBSFDO
 	desktop_entry_finish();
