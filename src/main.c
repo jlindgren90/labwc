@@ -15,6 +15,7 @@
 #include "menu/menu.h"
 
 struct rcxml rc = { 0 };
+struct seat g_seat = { 0 };
 struct server g_server = { 0 };
 
 static const struct option long_options[] = {
