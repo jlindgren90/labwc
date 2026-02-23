@@ -19,7 +19,6 @@
 #include <wlr/types/wlr_ext_image_copy_capture_v1.h>
 #include <wlr/types/wlr_foreign_toplevel_management_v1.h>
 #include <wlr/types/wlr_fractional_scale_v1.h>
-#include <wlr/types/wlr_input_method_v2.h>
 #include <wlr/types/wlr_linux_drm_syncobj_v1.h>
 #include <wlr/types/wlr_output_power_management_v1.h>
 #include <wlr/types/wlr_presentation_time.h>
@@ -27,11 +26,8 @@
 #include <wlr/types/wlr_relative_pointer_v1.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_screencopy_v1.h>
-#include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_single_pixel_buffer_v1.h>
 #include <wlr/types/wlr_subcompositor.h>
-#include <wlr/types/wlr_tablet_v2.h>
-#include <wlr/types/wlr_text_input_v3.h>
 #include <wlr/types/wlr_viewporter.h>
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
@@ -43,7 +39,6 @@
 #endif
 
 #include "action.h"
-#include "common/macros.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
 #include "config/session.h"
@@ -183,97 +178,6 @@ handle_drm_lease_request(struct wl_listener *listener, void *data)
 }
 
 static bool
-protocol_is_privileged(const struct wl_interface *iface)
-{
-	static const char * const rejected[] = {
-		"wp_drm_lease_device_v1",
-		"zwlr_gamma_control_manager_v1",
-		"zwlr_output_manager_v1",
-		"zwlr_output_power_manager_v1",
-		"zwp_input_method_manager_v2",
-		"zwlr_virtual_pointer_manager_v1",
-		"zwp_virtual_keyboard_manager_v1",
-		"zwlr_export_dmabuf_manager_v1",
-		"zwlr_screencopy_manager_v1",
-		"ext_data_control_manager_v1",
-		"zwlr_data_control_manager_v1",
-		"wp_security_context_manager_v1",
-		"ext_idle_notifier_v1",
-		"zcosmic_workspace_manager_v1",
-		"zwlr_foreign_toplevel_manager_v1",
-		"ext_foreign_toplevel_list_v1",
-		"ext_session_lock_manager_v1",
-		"zwlr_layer_shell_v1",
-		"ext_workspace_manager_v1",
-		"ext_image_copy_capture_manager_v1",
-		"ext_output_image_capture_source_manager_v1",
-	};
-	for (size_t i = 0; i < ARRAY_SIZE(rejected); i++) {
-		if (!strcmp(iface->name, rejected[i])) {
-			return true;
-		}
-	}
-	return false;
-}
-
-static bool
-allow_for_sandbox(const struct wlr_security_context_v1_state *security_state,
-		const struct wl_interface *iface)
-{
-	if (!strcmp(iface->name, "security_context_manager_v1")) {
-		return false;
-	}
-
-	/* protocols are split into 3 blocks, from least privileges to highest privileges */
-	static const char * const allowed_protocols[] = {
-		/* absolute base */
-		"wl_shm",
-		"wl_compositor",
-		"wl_subcompositor",
-		"wl_data_device_manager", /* would be great if we could drop this one */
-		"wl_seat",
-		"xdg_wm_base",
-		/* enhanced */
-		"wl_output",
-		"wl_drm",
-		"zwp_linux_dmabuf_v1",
-		"zwp_primary_selection_device_manager_v1",
-		"zwp_text_input_manager_v3",
-		"zwp_pointer_gestures_v1",
-		"wp_cursor_shape_manager_v1",
-		"zwp_relative_pointer_manager_v1",
-		"xdg_activation_v1",
-		"org_kde_kwin_server_decoration_manager",
-		"zxdg_decoration_manager_v1",
-		"wp_presentation",
-		"wp_viewporter",
-		"wp_single_pixel_buffer_manager_v1",
-		"wp_fractional_scale_manager_v1",
-		"wp_tearing_control_manager_v1",
-		"zwp_tablet_manager_v2",
-		"zxdg_importer_v1",
-		"zxdg_importer_v2",
-		"xdg_toplevel_icon_manager_v1",
-		"xdg_dialog_v1",
-		/* plus */
-		"wp_alpha_modifier_v1",
-		"wp_linux_drm_syncobj_manager_v1",
-		"zxdg_exporter_v1",
-		"zxdg_exporter_v2",
-		"zwp_idle_inhibit_manager_v1",
-		"zwp_pointer_constraints_v1",
-		"zxdg_output_manager_v1",
-	};
-
-	for (size_t i = 0; i < ARRAY_SIZE(allowed_protocols); i++) {
-		if (!strcmp(iface->name, allowed_protocols[i])) {
-			return true;
-		}
-	}
-	return false;
-}
-
-static bool
 server_global_filter(const struct wl_client *client, const struct wl_global *global, void *data)
 {
 	const struct wl_interface *iface = wl_global_get_interface(global);
@@ -290,35 +194,6 @@ server_global_filter(const struct wl_client *client, const struct wl_global *glo
 		return false;
 	}
 #endif
-
-	/* Do not allow security_context_manager_v1 to clients with a security context attached */
-	const struct wlr_security_context_v1_state *security_context =
-		wlr_security_context_manager_v1_lookup_client(
-			g_server.security_context_manager_v1, (struct wl_client *)client);
-	if (security_context && global == g_server.security_context_manager_v1->global) {
-		return false;
-	} else if (security_context) {
-		/*
-		 * We are using an allow list for sandboxes to not
-		 * accidentally leak a new privileged protocol.
-		 */
-		bool allow = allow_for_sandbox(security_context, iface);
-		/*
-		 * TODO: The following call is basically useless right now
-		 *       and should be replaced with
-		 *       assert(allow || protocol_is_privileged(iface));
-		 *       This ensures that our lists are in sync with what
-		 *       protocols labwc supports.
-		 */
-		if (!allow && !protocol_is_privileged(iface)) {
-			wlr_log(WLR_ERROR, "Blocking unknown protocol %s", iface->name);
-		} else if (!allow) {
-			wlr_log(WLR_DEBUG, "Blocking %s for security context %s->%s->%s",
-				iface->name, security_context->sandbox_engine,
-				security_context->app_id, security_context->instance_id);
-		}
-		return allow;
-	}
 
 	return true;
 }
@@ -603,10 +478,6 @@ server_init(void)
 	 */
 	wlr_primary_selection_v1_device_manager_create(g_server.wl_display);
 
-	g_server.input_method_manager = wlr_input_method_manager_v2_create(
-		g_server.wl_display);
-	g_server.text_input_manager = wlr_text_input_manager_v3_create(
-		g_server.wl_display);
 	seat_init();
 	xdg_shell_init();
 	kde_server_decoration_init();
@@ -630,8 +501,6 @@ server_init(void)
 	wlr_data_control_manager_v1_create(g_server.wl_display);
 	wlr_ext_data_control_manager_v1_create(g_server.wl_display,
 		LAB_EXT_DATA_CONTROL_VERSION);
-	g_server.security_context_manager_v1 =
-		wlr_security_context_manager_v1_create(g_server.wl_display);
 	wlr_viewporter_create(g_server.wl_display);
 	wlr_single_pixel_buffer_manager_v1_create(g_server.wl_display);
 	wlr_fractional_scale_manager_v1_create(g_server.wl_display,
@@ -670,8 +539,6 @@ server_init(void)
 		handle_output_power_manager_set_mode;
 	wl_signal_add(&g_server.output_power_manager_v1->events.set_mode,
 		&g_server.output_power_manager_set_mode);
-
-	g_server.tablet_manager = wlr_tablet_v2_create(g_server.wl_display);
 
 	layers_init();
 
