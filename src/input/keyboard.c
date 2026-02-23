@@ -678,8 +678,6 @@ keyboard_set_numlock(struct wlr_keyboard *keyboard)
 void
 keyboard_update_layout(struct seat *seat, xkb_layout_index_t layout)
 {
-	assert(seat);
-
 	struct input *input;
 	struct keyboard *keyboard;
 	struct wlr_keyboard *kb = NULL;
