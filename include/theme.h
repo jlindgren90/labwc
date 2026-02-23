@@ -223,12 +223,12 @@ extern struct theme g_theme;
  * @theme_name: theme-name in <theme-dir>/<theme-name>/labwc/themerc
  * Note <theme-dir> is obtained in theme-dir.c
  */
-void theme_init(struct theme *theme, const char *theme_name);
+void theme_init(const char *theme_name);
 
 /**
  * theme_finish - free button textures
  * @theme: theme data
  */
-void theme_finish(struct theme *theme);
+void theme_finish(void);
 
 #endif /* LABWC_THEME_H */

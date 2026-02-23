@@ -16,14 +16,13 @@ ssd_border_create(struct ssd *ssd)
 	assert(!ssd->border.tree);
 
 	struct view *view = ssd->view;
-	struct theme *theme = g_server.theme;
 	int width = view->current.width;
 	int height = view_effective_height(view, /* use_pending */ false);
-	int full_width = width + 2 * theme->border_width;
+	int full_width = width + 2 * g_theme.border_width;
 	int corner_width = ssd_get_corner_width();
 
 	ssd->border.tree = wlr_scene_tree_create(ssd->tree);
-	wlr_scene_node_set_position(&ssd->border.tree->node, -theme->border_width, 0);
+	wlr_scene_node_set_position(&ssd->border.tree->node, -g_theme.border_width, 0);
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
@@ -31,27 +30,27 @@ ssd_border_create(struct ssd *ssd)
 		subtree->tree = wlr_scene_tree_create(ssd->border.tree);
 		struct wlr_scene_tree *parent = subtree->tree;
 		wlr_scene_node_set_enabled(&parent->node, active);
-		float *color = theme->window[active].border_color;
+		float *color = g_theme.window[active].border_color;
 
 		subtree->left = wlr_scene_rect_create(parent,
-			theme->border_width, height, color);
+			g_theme.border_width, height, color);
 		wlr_scene_node_set_position(&subtree->left->node, 0, 0);
 
 		subtree->right = wlr_scene_rect_create(parent,
-			theme->border_width, height, color);
+			g_theme.border_width, height, color);
 		wlr_scene_node_set_position(&subtree->right->node,
-			theme->border_width + width, 0);
+			g_theme.border_width + width, 0);
 
 		subtree->bottom = wlr_scene_rect_create(parent,
-			full_width, theme->border_width, color);
+			full_width, g_theme.border_width, color);
 		wlr_scene_node_set_position(&subtree->bottom->node,
 			0, height);
 
 		subtree->top = wlr_scene_rect_create(parent,
-			MAX(width - 2 * corner_width, 0), theme->border_width, color);
+			MAX(width - 2 * corner_width, 0), g_theme.border_width, color);
 		wlr_scene_node_set_position(&subtree->top->node,
-			theme->border_width + corner_width,
-			-(ssd->titlebar.height + theme->border_width));
+			g_theme.border_width + corner_width,
+			-(ssd->titlebar.height + g_theme.border_width));
 	}
 
 	if (view->maximized == VIEW_AXIS_BOTH) {
@@ -89,11 +88,9 @@ ssd_border_update(struct ssd *ssd)
 		ssd->margin = ssd_thickness(ssd->view);
 	}
 
-	struct theme *theme = g_server.theme;
-
 	int width = view->current.width;
 	int height = view_effective_height(view, /* use_pending */ false);
-	int full_width = width + 2 * theme->border_width;
+	int full_width = width + 2 * g_theme.border_width;
 	int corner_width = ssd_get_corner_width();
 
 	/*
@@ -126,31 +123,31 @@ ssd_border_update(struct ssd *ssd)
 		: MAX(width - 2 * corner_width, 0);
 	int top_x = ssd->titlebar.height <= 0 || ssd->state.was_squared
 		? 0
-		: theme->border_width + corner_width;
+		: g_theme.border_width + corner_width;
 
 	enum ssd_active_state active;
 	FOR_EACH_ACTIVE_STATE(active) {
 		struct ssd_border_subtree *subtree = &ssd->border.subtrees[active];
 
 		wlr_scene_rect_set_size(subtree->left,
-			theme->border_width, side_height);
+			g_theme.border_width, side_height);
 		wlr_scene_node_set_position(&subtree->left->node,
 			0, side_y);
 
 		wlr_scene_rect_set_size(subtree->right,
-			theme->border_width, side_height);
+			g_theme.border_width, side_height);
 		wlr_scene_node_set_position(&subtree->right->node,
-			theme->border_width + width, side_y);
+			g_theme.border_width + width, side_y);
 
 		wlr_scene_rect_set_size(subtree->bottom,
-			full_width, theme->border_width);
+			full_width, g_theme.border_width);
 		wlr_scene_node_set_position(&subtree->bottom->node,
 			0, height);
 
 		wlr_scene_rect_set_size(subtree->top,
-			top_width, theme->border_width);
+			top_width, g_theme.border_width);
 		wlr_scene_node_set_position(&subtree->top->node,
-			top_x, -(ssd->titlebar.height + theme->border_width));
+			top_x, -(ssd->titlebar.height + g_theme.border_width));
 	}
 }
 

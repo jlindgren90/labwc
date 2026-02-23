@@ -41,7 +41,6 @@ box_logical_to_physical(struct wlr_box *box, struct wlr_output *output)
 void
 magnifier_draw(struct output *output, struct wlr_buffer *output_buffer, struct wlr_box *damage)
 {
-	struct theme *theme = g_server.theme;
 	bool fullscreen = (rc.mag_width == -1 || rc.mag_height == -1);
 
 	struct wlr_box output_box = {
@@ -162,7 +161,7 @@ magnifier_draw(struct output *output, struct wlr_buffer *output_buffer, struct w
 	} else {
 		/* Draw borders */
 		int border_width =
-			theme->mag_border_width * output->wlr_output->scale;
+			g_theme.mag_border_width * output->wlr_output->scale;
 		struct wlr_box border_box = {
 			.x = mag_box.x - border_width,
 			.y = mag_box.y - border_width,
@@ -172,10 +171,10 @@ magnifier_draw(struct output *output, struct wlr_buffer *output_buffer, struct w
 		struct wlr_render_rect_options bg_opts = {
 			.box = border_box,
 			.color = (struct wlr_render_color) {
-				.r = theme->mag_border_color[0],
-				.g = theme->mag_border_color[1],
-				.b = theme->mag_border_color[2],
-				.a = theme->mag_border_color[3]
+				.r = g_theme.mag_border_color[0],
+				.g = g_theme.mag_border_color[1],
+				.b = g_theme.mag_border_color[2],
+				.a = g_theme.mag_border_color[3]
 			},
 			.clip = NULL,
 		};
