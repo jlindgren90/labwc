@@ -314,6 +314,7 @@ struct server {
 
 /* defined in main.c */
 extern struct server g_server;
+#define g_seat g_server.seat
 
 void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
 void xdg_shell_init(void);

@@ -81,7 +81,7 @@ regions_reconfigure_output(struct output *output)
 	/* Evacuate views and destroy current regions */
 	if (!wl_list_empty(&output->regions)) {
 		regions_evacuate_output(output);
-		regions_destroy(&g_server.seat, &output->regions);
+		regions_destroy(&output->regions, /* check_active */ true);
 	}
 
 	/* Initialize regions from config */
@@ -157,13 +157,14 @@ regions_evacuate_output(struct output *output)
 }
 
 void
-regions_destroy(struct seat *seat, struct wl_list *regions)
+regions_destroy(struct wl_list *regions, bool check_active)
 {
 	assert(regions);
+	struct seat *seat = &g_seat;
 	struct region *region, *region_tmp;
 	wl_list_for_each_safe(region, region_tmp, regions, link) {
 		wl_list_remove(&region->link);
-		if (seat && seat->overlay.active.region == region) {
+		if (check_active && seat->overlay.active.region == region) {
 			overlay_finish(seat);
 		}
 		zfree(region->name);
