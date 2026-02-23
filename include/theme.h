@@ -213,7 +213,8 @@ struct theme {
 	int mag_border_width;
 };
 
-struct server;
+/* Globals */
+extern struct theme g_theme;
 
 /**
  * theme_init - read openbox theme and generate button textures
