@@ -192,7 +192,6 @@ struct server {
 	uint64_t next_view_creation_id;
 	struct wl_list unmanaged_surfaces;
 
-	struct seat seat;
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
 	bool direct_scanout_enabled;
@@ -311,8 +310,8 @@ struct server {
 };
 
 /* defined in main.c */
+extern struct seat g_seat;
 extern struct server server;
-#define g_seat server.seat
 
 void xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup);
 void xdg_shell_init(void);
