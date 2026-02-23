@@ -118,10 +118,9 @@ static struct cycle_osd_thumbnail_item *
 create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 		struct cycle_osd_output *osd_output)
 {
-	struct theme *theme = g_server.theme;
 	struct window_switcher_thumbnail_theme *switcher_theme =
-		&theme->osd_window_switcher_thumbnail;
-	int padding = theme->border_width + switcher_theme->item_padding;
+		&g_theme.osd_window_switcher_thumbnail;
+	int padding = g_theme.border_width + switcher_theme->item_padding;
 	int title_y = switcher_theme->item_height - padding - switcher_theme->title_height;
 	struct wlr_box thumb_bounds = {
 		.x = padding,
@@ -173,10 +172,10 @@ create_item_scene(struct wlr_scene_tree *parent, struct view *view,
 
 	/* title */
 	item->normal_label = create_label(tree, view,
-		switcher_theme, theme->osd_label_text_color,
-		theme->osd_bg_color, title_y);
+		switcher_theme, g_theme.osd_label_text_color,
+		g_theme.osd_bg_color, title_y);
 	item->active_label = create_label(tree, view,
-		switcher_theme, theme->osd_label_text_color,
+		switcher_theme, g_theme.osd_label_text_color,
 		switcher_theme->item_active_bg_color, title_y);
 
 	/* icon */
@@ -195,13 +194,12 @@ static void
 get_items_geometry(struct output *output, int nr_thumbs,
 		int *nr_cols, int *nr_rows, int *nr_visible_rows)
 {
-	struct theme *theme = g_server.theme;
 	struct window_switcher_thumbnail_theme *switcher_theme =
-		&theme->osd_window_switcher_thumbnail;
+		&g_theme.osd_window_switcher_thumbnail;
 	int output_width, output_height;
 	wlr_output_effective_resolution(output->wlr_output,
 		&output_width, &output_height);
-	int padding = theme->osd_border_width + switcher_theme->padding;
+	int padding = g_theme.osd_border_width + switcher_theme->padding;
 
 	int max_bg_width = switcher_theme->max_width;
 	if (switcher_theme->max_width_is_percent) {
@@ -231,10 +229,9 @@ static void
 cycle_osd_thumbnail_init(struct cycle_osd_output *osd_output)
 {
 	struct output *output = osd_output->output;
-	struct theme *theme = g_server.theme;
 	struct window_switcher_thumbnail_theme *switcher_theme =
-		&theme->osd_window_switcher_thumbnail;
-	int padding = theme->osd_border_width + switcher_theme->padding;
+		&g_theme.osd_window_switcher_thumbnail;
+	int padding = g_theme.osd_border_width + switcher_theme->padding;
 
 	osd_output->tree = wlr_scene_tree_create(output->cycle_osd_tree);
 	osd_output->items_tree = wlr_scene_tree_create(osd_output->tree);
@@ -275,10 +272,10 @@ cycle_osd_thumbnail_init(struct cycle_osd_output *osd_output)
 
 	/* background */
 	struct lab_scene_rect_options bg_opts = {
-		.border_colors = (float *[1]) { theme->osd_border_color },
+		.border_colors = (float *[1]) { g_theme.osd_border_color },
 		.nr_borders = 1,
-		.border_width = theme->osd_border_width,
-		.bg_color = theme->osd_bg_color,
+		.border_width = g_theme.osd_border_width,
+		.bg_color = g_theme.osd_bg_color,
 		.width = items_width + 2 * padding,
 		.height = items_height + 2 * padding,
 	};

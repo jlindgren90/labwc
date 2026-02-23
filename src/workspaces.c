@@ -63,15 +63,13 @@ parse_workspace_index(const char *name)
 static void
 _osd_update(void)
 {
-	struct theme *theme = g_server.theme;
-
 	/* Settings */
 	uint16_t margin = 10;
 	uint16_t padding = 2;
-	uint16_t rect_height = theme->osd_workspace_switcher_boxes_height;
-	uint16_t rect_width = theme->osd_workspace_switcher_boxes_width;
-	bool hide_boxes = theme->osd_workspace_switcher_boxes_width == 0 ||
-		theme->osd_workspace_switcher_boxes_height == 0;
+	uint16_t rect_height = g_theme.osd_workspace_switcher_boxes_height;
+	uint16_t rect_width = g_theme.osd_workspace_switcher_boxes_width;
+	bool hide_boxes = g_theme.osd_workspace_switcher_boxes_width == 0 ||
+		g_theme.osd_workspace_switcher_boxes_height == 0;
 
 	/* Dimensions */
 	size_t workspace_count = wl_list_length(&g_server.workspaces.all);
@@ -98,17 +96,17 @@ _osd_update(void)
 		cairo = cairo_create(buffer->surface);
 
 		/* Background */
-		set_cairo_color(cairo, theme->osd_bg_color);
+		set_cairo_color(cairo, g_theme.osd_bg_color);
 		cairo_rectangle(cairo, 0, 0, width, height);
 		cairo_fill(cairo);
 
 		/* Border */
-		set_cairo_color(cairo, theme->osd_border_color);
+		set_cairo_color(cairo, g_theme.osd_border_color);
 		struct wlr_fbox border_fbox = {
 			.width = width,
 			.height = height,
 		};
-		draw_cairo_border(cairo, border_fbox, theme->osd_border_width);
+		draw_cairo_border(cairo, border_fbox, g_theme.osd_border_width);
 
 		/* Boxes */
 		uint16_t x;
@@ -116,7 +114,7 @@ _osd_update(void)
 			x = (width - marker_width) / 2;
 			wl_list_for_each(workspace, &g_server.workspaces.all, link) {
 				bool active =  workspace == g_server.workspaces.current;
-				set_cairo_color(cairo, g_server.theme->osd_label_text_color);
+				set_cairo_color(cairo, g_theme.osd_label_text_color);
 				struct wlr_fbox fbox = {
 					.x = x,
 					.y = margin,
@@ -124,7 +122,7 @@ _osd_update(void)
 					.height = rect_height,
 				};
 				draw_cairo_border(cairo, fbox,
-					theme->osd_workspace_switcher_boxes_border_width);
+					g_theme.osd_workspace_switcher_boxes_border_width);
 				if (active) {
 					cairo_rectangle(cairo, x, margin,
 						rect_width, rect_height);
@@ -135,7 +133,7 @@ _osd_update(void)
 		}
 
 		/* Text */
-		set_cairo_color(cairo, g_server.theme->osd_label_text_color);
+		set_cairo_color(cairo, g_theme.osd_label_text_color);
 		PangoLayout *layout = pango_cairo_create_layout(cairo);
 		pango_context_set_round_glyph_positions(pango_layout_get_context(layout), false);
 		pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_END);
