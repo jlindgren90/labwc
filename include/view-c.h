@@ -67,6 +67,12 @@ typedef struct ViewScene {
 	WlrSceneTree *surface_tree; // child of scene_tree
 } ViewScene;
 
+typedef struct XSurfaceProps {
+	Rect geom;
+	_Bool position_hint;
+	_Bool decorated;
+} XSurfaceProps;
+
 WlrSceneTree *view_scene_tree_create(ViewId id);
 void view_scene_tree_destroy(WlrSceneTree *scene_tree);
 void view_scene_tree_move(WlrSceneTree *scene_tree, int x, int y);
@@ -95,6 +101,7 @@ WlrSurface *xwayland_view_get_surface(CView *view);
 ViewId xwayland_view_get_root_id(CView *view);
 _Bool xwayland_view_is_modal_dialog(CView *view);
 ViewSizeHints xwayland_view_get_size_hints(CView *view);
+XSurfaceProps xwayland_view_get_surface_props(CView *view);
 _Bool xwayland_view_has_strut_partial(CView *view);
 void xwayland_view_adjust_usable_area(CView *view, Output *output);
 void xwayland_view_set_active(CView *view, _Bool active);

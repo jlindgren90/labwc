@@ -152,8 +152,46 @@ impl View {
         }
     }
 
+    fn get_initial_floating_geom(&mut self, enforce_min: bool) -> Option<Rect> {
+        if !self.state.ever_mapped
+            && self.state.floating()
+            && let Some(props) = self.v.get_surface_props()
+        {
+            // Surface geometry from wlroots is unreliable due to race
+            // between outgoing Configure and incoming ConfigureNotify,
+            // so prefer pending geometry if valid.
+            let mut geom = self.state.pending;
+            if rect_empty(geom) {
+                geom = props.geom;
+            }
+            if enforce_min && (geom.width < MIN_WIDTH || geom.height < MIN_HEIGHT) {
+                geom.width = FALLBACK_WIDTH;
+                geom.height = FALLBACK_HEIGHT;
+            }
+            // Also set initial output and SSD state at this point
+            if props.position_hint {
+                self.state.output = nearest_output_to_geom(geom)
+            } else {
+                self.state.output = unsafe { output_nearest_to_cursor() };
+            }
+            self.state.ssd_enabled = props.decorated;
+            compute_default_geom(
+                &*self.state,
+                &mut geom,
+                Rect::default(),
+                props.position_hint,
+            );
+            return Some(geom);
+        }
+        return None;
+    }
+
     pub fn map(&mut self, was_shown: &mut bool) -> UpdateLevel {
         let mut ul = UpdateLevel::None;
+        // At first map, compute floating geometry from surface
+        if let Some(geom) = self.get_initial_floating_geom(/* enforce_min */ false) {
+            ul |= self.move_resize(geom);
+        }
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.focus_mode = self.v.get_focus_mode();
@@ -162,6 +200,8 @@ impl View {
             *was_shown = true;
             ul |= UpdateLevel::Cursor;
         }
+        // Map at pending position to reduce flicker
+        ul |= self.commit_move(self.state.pending.x, self.state.pending.y);
         self.v.map_scene_surface(&mut self.scene);
         // Create SSD if needed
         ul |= self.update_ssd();
@@ -307,7 +347,7 @@ impl View {
         return self.commit_move(self.state.pending.x, self.state.pending.y);
     }
 
-    pub fn set_fallback_natural_geom(&mut self) {
+    fn set_fallback_natural_geom(&mut self) {
         let mut natural = Rect {
             width: FALLBACK_WIDTH,
             height: FALLBACK_HEIGHT,
@@ -322,14 +362,17 @@ impl View {
         if self.state.fullscreen || self.state.tiled != 0 {
             return;
         }
+        let geom = self
+            .get_initial_floating_geom(/* enforce_min */ true)
+            .unwrap_or(self.state.pending);
         // If only one axis is maximized, save geometry of the other
         if self.state.maximized == VIEW_AXIS_NONE || self.state.maximized == VIEW_AXIS_VERTICAL {
-            self.state.natural_geom.x = self.state.pending.x;
-            self.state.natural_geom.width = self.state.pending.width;
+            self.state.natural_geom.x = geom.x;
+            self.state.natural_geom.width = geom.width;
         }
         if self.state.maximized == VIEW_AXIS_NONE || self.state.maximized == VIEW_AXIS_HORIZONTAL {
-            self.state.natural_geom.y = self.state.pending.y;
-            self.state.natural_geom.height = self.state.pending.height;
+            self.state.natural_geom.y = geom.y;
+            self.state.natural_geom.height = geom.height;
         }
     }
 
