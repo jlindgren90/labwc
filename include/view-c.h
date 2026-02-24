@@ -42,6 +42,12 @@ typedef struct view_size_hints {
 	int base_height;
 } ViewSizeHints;
 
+typedef struct view_surface_geom {
+	Rect geom;
+	_Bool keep_position;
+	_Bool use_ssd;
+} ViewSurfaceGeom;
+
 typedef struct ViewState {
 	const char *app_id;
 	const char *title;
@@ -93,6 +99,7 @@ void xdg_toplevel_view_close(CView *view);
 ViewId xwayland_view_get_root_id(CView *view);
 _Bool xwayland_view_is_modal_dialog(CView *view);
 ViewSizeHints xwayland_view_get_size_hints(CView *view);
+ViewSurfaceGeom xwayland_view_get_surface_geom(CView *view);
 _Bool xwayland_view_has_strut_partial(CView *view);
 void xwayland_view_adjust_usable_area(CView *view, Output *output);
 void xwayland_view_set_active(CView *view, _Bool active);

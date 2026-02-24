@@ -139,37 +139,27 @@ has_position_hint(struct wlr_xwayland_surface *xwayland_surface)
 			| XCB_ICCCM_SIZE_HINT_P_POSITION));
 }
 
-static void
-ensure_initial_geometry_and_output(struct view *view)
-{
-	struct wlr_xwayland_surface *xwayland_surface =
-		xwayland_surface_from_view(view);
-
-	/*
-	 * If there is no pending move/resize yet, then use
-	 * geometry from surface (i.e. application)
-	 */
-	if (wlr_box_empty(&view->st->pending)) {
-		view_set_pending_geom(view->id, (struct wlr_box) {
-			.x = xwayland_surface->x,
-			.y = xwayland_surface->y,
-			.width = xwayland_surface->width,
-			.height = xwayland_surface->height
-		});
-	}
-
-	view_set_output(view->id, has_position_hint(xwayland_surface)
-		? output_nearest_to(
-			view->st->pending.x + view->st->pending.width / 2,
-			view->st->pending.y + view->st->pending.height / 2)
-		: output_nearest_to_cursor());
-}
-
 static bool
 want_deco(struct wlr_xwayland_surface *xwayland_surface)
 {
 	return xwayland_surface->decorations ==
 		WLR_XWAYLAND_SURFACE_DECORATIONS_ALL;
+}
+
+struct view_surface_geom
+xwayland_view_get_surface_geom(struct view *view)
+{
+	struct wlr_xwayland_surface *xwayland_surface =
+		xwayland_surface_from_view(view);
+
+	return (struct view_surface_geom) {
+		.geom.x = xwayland_surface->x,
+		.geom.y = xwayland_surface->y,
+		.geom.width = xwayland_surface->width,
+		.geom.height = xwayland_surface->height,
+		.keep_position = has_position_hint(xwayland_surface),
+		.use_ssd = want_deco(xwayland_surface)
+	};
 }
 
 static void
@@ -358,14 +348,6 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_maximize);
 	struct wlr_xwayland_surface *surf = xwayland_surface_from_view(view);
-	if (!view->st->mapped) {
-		ensure_initial_geometry_and_output(view);
-		/*
-		 * Set decorations early to avoid changing geometry
-		 * after maximize (reduces visual glitches).
-		 */
-		view_enable_ssd(view->id, want_deco(surf));
-	}
 
 	enum view_axis maximize = VIEW_AXIS_NONE;
 	if (surf->maximized_vert) {
@@ -381,11 +363,8 @@ static void
 handle_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_fullscreen);
-	bool fullscreen = xwayland_surface_from_view(view)->fullscreen;
-	if (!view->st->mapped) {
-		ensure_initial_geometry_and_output(view);
-	}
-	view_fullscreen(view->id, fullscreen, /* output */ NULL);
+	view_fullscreen(view->id, xwayland_surface_from_view(view)->fullscreen,
+		/* output */ NULL);
 }
 
 static void
@@ -549,23 +528,12 @@ handle_map_request(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	ensure_initial_geometry_and_output(view);
-
 	/*
 	 * Per the Extended Window Manager Hints (EWMH) spec: "The Window
 	 * Manager SHOULD honor _NET_WM_STATE whenever a withdrawn window
 	 * requests to be mapped."
-	 *
-	 * The following order of operations is intended to reduce the
-	 * number of resize (Configure) events:
-	 *   1. set fullscreen state
-	 *   2. set decorations (depends on fullscreen state)
-	 *   3. set maximized (geometry depends on decorations)
 	 */
 	view_fullscreen(view->id, xsurface->fullscreen, /* output */ NULL);
-	if (!view->st->ever_mapped) {
-		view_enable_ssd(view->id, want_deco(xsurface));
-	}
 	enum view_axis axis = VIEW_AXIS_NONE;
 	if (xsurface->maximized_horz) {
 		axis |= VIEW_AXIS_HORIZONTAL;
@@ -575,11 +543,6 @@ handle_map_request(struct wl_listener *listener, void *data)
 	}
 	view_maximize(view->id, axis);
 	view_set_always_on_top(view->id, xsurface->above);
-	/*
-	 * We could also call set_initial_position() here, but it's not
-	 * really necessary until the view is actually mapped (and at
-	 * that point the output layout is known for sure).
-	 */
 }
 
 static void
@@ -601,14 +564,6 @@ handle_map(struct wl_listener *listener, void *data)
 	 * explicitly (calling it twice is harmless).
 	 */
 	handle_map_request(&view->map_request, NULL);
-
-	if (!view->st->ever_mapped) {
-		view_adjust_initial_geom(view->id,
-			has_position_hint(xwayland_surface));
-		/* Commit move immediately to reduce flicker */
-		view_commit_move(view->id, view->st->pending.x,
-			view->st->pending.y);
-	}
 
 	/*
 	 * If the view was focused (on the xwayland server side) before

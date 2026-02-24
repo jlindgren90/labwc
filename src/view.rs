@@ -14,6 +14,16 @@ const FALLBACK_Y: i32 = 100;
 const FALLBACK_WIDTH: i32 = 640;
 const FALLBACK_HEIGHT: i32 = 480;
 
+impl ViewSurfaceGeom {
+    pub fn get_output(&self) -> *mut Output {
+        if self.keep_position {
+            nearest_output_to_geom(self.geom)
+        } else {
+            unsafe { output_nearest_to_cursor() }
+        }
+    }
+}
+
 impl ViewState {
     pub fn visible(&self) -> bool {
         self.mapped && !self.minimized
@@ -115,6 +125,21 @@ impl View {
         }
     }
 
+    pub fn get_initial_surface_geom(&self) -> Option<ViewSurfaceGeom> {
+        // Only use surface geometry for floating view before first map
+        if self.is_xwayland && self.state.floating() && !self.state.ever_mapped {
+            let mut surface_geom = unsafe { xwayland_view_get_surface_geom(self.c_ptr) };
+            // Prefer any pending geometry, in case configure
+            // has been sent but surface hasn't updated yet
+            if !rect_empty(self.state.pending) {
+                surface_geom.geom = self.state.pending;
+            }
+            return Some(surface_geom);
+        } else {
+            return None;
+        }
+    }
+
     pub fn has_strut_partial(&self) -> bool {
         if self.is_xwayland {
             unsafe { xwayland_view_has_strut_partial(self.c_ptr) }
@@ -148,6 +173,20 @@ impl View {
     }
 
     pub fn set_mapped(&mut self, focus_mode: ViewFocusMode, was_shown: &mut bool) {
+        // At first map, compute floating geometry from surface
+        if let Some(surface_geom) = self.get_initial_surface_geom() {
+            let mut geom = surface_geom.geom;
+            // Also set initial output and SSD state at this point
+            self.state.output = surface_geom.get_output();
+            self.state.ssd_enabled = surface_geom.use_ssd;
+            compute_default_geom(
+                &*self.state,
+                &mut geom,
+                Rect::default(),
+                surface_geom.keep_position,
+            );
+            self.move_resize(geom);
+        }
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.focus_mode = focus_mode;
@@ -155,7 +194,9 @@ impl View {
             unsafe { view_scene_tree_set_visible(self.state.scene_tree, true) };
             *was_shown = true;
         }
-        // Create SSD at map (if needed)
+        // Map at pending position to reduce flicker
+        self.commit_move(self.state.pending.x, self.state.pending.y);
+        // Create SSD if needed
         self.update_ssd();
         if self.is_xwayland {
             self.state.surface_tree =
@@ -338,25 +379,6 @@ impl View {
         self.commit_move(x, y);
     }
 
-    // Used only for xwayland views
-    pub fn adjust_initial_geom(&mut self, keep_position: bool) {
-        if self.state.floating() {
-            let mut geom = self.state.pending;
-            compute_default_geom(&*self.state, &mut geom, Rect::default(), keep_position);
-            self.move_resize(geom);
-        } else {
-            let mut natural = self.state.natural_geom;
-            // A maximized/fullscreen view should have a reasonable natural geometry
-            if natural.width < MIN_WIDTH || natural.height < MIN_HEIGHT {
-                natural.width = FALLBACK_WIDTH;
-                natural.height = FALLBACK_HEIGHT;
-            }
-            // FIXME: use border widths for floating state here
-            compute_default_geom(&*self.state, &mut natural, Rect::default(), keep_position);
-            self.state.natural_geom = natural;
-        }
-    }
-
     // Used only for xdg-shell views
     pub fn commit_resize_timeout(&mut self) {
         if self.state.mapped {
@@ -384,18 +406,40 @@ impl View {
     }
 
     pub fn store_natural_geom(&mut self) {
-        // Don't save natural geometry if fullscreen or tiled
-        if self.state.fullscreen || self.state.tiled != 0 {
+        // Don't save natural geometry if fullscreen, fully maximized, or tiled
+        if self.state.fullscreen
+            || self.state.maximized == VIEW_AXIS_BOTH
+            || self.state.tiled != LAB_EDGE_NONE
+        {
             return;
+        }
+        let mut geom = self.state.pending;
+        // Before first map, compute natural geometry from surface
+        if let Some(surface_geom) = self.get_initial_surface_geom() {
+            geom = surface_geom.geom;
+            // Ensure it's reasonable
+            if geom.width < MIN_WIDTH || geom.height < MIN_HEIGHT {
+                geom.width = FALLBACK_WIDTH;
+                geom.height = FALLBACK_HEIGHT;
+            }
+            // Also set initial output and SSD state at this point
+            self.state.output = surface_geom.get_output();
+            self.state.ssd_enabled = surface_geom.use_ssd;
+            compute_default_geom(
+                &*self.state,
+                &mut geom,
+                Rect::default(),
+                surface_geom.keep_position,
+            );
         }
         // If only one axis is maximized, save geometry of the other
         if self.state.maximized == VIEW_AXIS_NONE || self.state.maximized == VIEW_AXIS_VERTICAL {
-            self.state.natural_geom.x = self.state.pending.x;
-            self.state.natural_geom.width = self.state.pending.width;
+            self.state.natural_geom.x = geom.x;
+            self.state.natural_geom.width = geom.width;
         }
         if self.state.maximized == VIEW_AXIS_NONE || self.state.maximized == VIEW_AXIS_HORIZONTAL {
-            self.state.natural_geom.y = self.state.pending.y;
-            self.state.natural_geom.height = self.state.pending.height;
+            self.state.natural_geom.y = geom.y;
+            self.state.natural_geom.height = geom.height;
         }
     }
 

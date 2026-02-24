@@ -126,14 +126,6 @@ pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_adjust_initial_geom(id: ViewId, keep_position: bool) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.adjust_initial_geom(keep_position);
-    }
-    unsafe { cursor_update_focus() };
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_initial_commit_size(
     id: ViewId,
     width: i32,
@@ -150,13 +142,6 @@ pub extern "C" fn view_commit_resize_timeout(id: ViewId) {
         view.commit_resize_timeout();
     }
     unsafe { cursor_update_focus() };
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_output(output);
-    }
 }
 
 #[unsafe(no_mangle)]
