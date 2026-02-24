@@ -109,21 +109,6 @@ pub extern "C" fn view_set_active(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_compute_default_geom(
-    view_st: &ViewState,
-    geom: &mut Rect,
-    rel_to: Option<&Rect>,
-    keep_position: bool,
-) {
-    compute_default_geom(
-        view_st,
-        geom,
-        *rel_to.unwrap_or(&Rect::default()),
-        keep_position,
-    );
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_pending_geom(id: ViewId, geom: Rect) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_pending_geom(geom);
@@ -157,13 +142,6 @@ pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_fallback_natural_geom();
-    }
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_initial_commit_size(
     id: ViewId,
     width: i32,
@@ -182,13 +160,6 @@ pub extern "C" fn view_commit_resize_timeout(id: ViewId) {
         return;
     };
     do_update(ul);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_output(output);
-    }
 }
 
 #[unsafe(no_mangle)]
