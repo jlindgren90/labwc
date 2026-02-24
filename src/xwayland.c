@@ -144,66 +144,22 @@ want_deco(struct wlr_xwayland_surface *xwayland_surface)
 		WLR_XWAYLAND_SURFACE_DECORATIONS_ALL;
 }
 
-/*
- * FIXME: this almost duplicates view_discover_output(), which however
- * (1) is private to view.c and (2) uses current (not pending) geometry
- */
-static void
-set_output_from_pending_geometry(struct view *view)
+XSurfaceProps
+xwayland_view_get_surface_props(struct view *view)
 {
-	view_set_output(view->id, output_nearest_to(
-		view->st->pending.x + view->st->pending.width / 2,
-		view->st->pending.y + view->st->pending.height / 2));
-}
-
-static void
-ensure_initial_geometry_and_output(struct view *view)
-{
-	if (view->initial_geometry_set) {
-		/* Just make sure we still have an output */
-		if (!output_is_usable(view->st->output)) {
-			set_output_from_pending_geometry(view);
-		}
-		return;
-	}
-	view->initial_geometry_set = true;
-
-	/*
-	 * Note that wlr_xwayland_surface::x/y/width/height is subject
-	 * to race conditions when wlr_xwayland_surface_configure() is
-	 * called multiple times (e.g. due to client configure-requests),
-	 * as newer values can get stomped on by an older ConfigureNotify.
-	 * To avoid the issue, prefer view->pending when not empty.
-	 */
 	struct wlr_xwayland_surface *xsurface = xwayland_surface_from_view(view);
-	if (wlr_box_empty(&view->st->pending)) {
-		view_set_pending_geom(view->id, (struct wlr_box){
-			.x = xsurface->x,
-			.y = xsurface->y,
-			.width = xsurface->width,
-			.height = xsurface->height,
-		});
-	}
 
-	/*
-	 * Also set initial output and decoration mode at this point,
-	 * since they affect the geometry calcs. (The decoration mode
-	 * could still change again before map, so this is best-effort.)
-	 */
 	bool has_position = xsurface->size_hints && (xsurface->size_hints->flags
 		& (XCB_ICCCM_SIZE_HINT_US_POSITION | XCB_ICCCM_SIZE_HINT_P_POSITION));
 
-	if (has_position) {
-		set_output_from_pending_geometry(view);
-	} else {
-		view_set_output(view->id, output_nearest_to_cursor());
-	}
-
-	view_enable_ssd(view->id, want_deco(xsurface));
-
-	struct wlr_box geom = view->st->pending;
-	view_compute_default_geom(view->st, &geom, NULL, has_position);
-	view_move_resize(view->id, geom);
+	return (XSurfaceProps){
+		.geom.x = xsurface->x,
+		.geom.y = xsurface->y,
+		.geom.width = xsurface->width,
+		.geom.height = xsurface->height,
+		.position_hint = has_position,
+		.decorated = want_deco(xsurface)
+	};
 }
 
 static void
@@ -400,9 +356,6 @@ handle_request_maximize(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_maximize);
 	struct wlr_xwayland_surface *surf = xwayland_surface_from_view(view);
-	if (!view->st->mapped) {
-		ensure_initial_geometry_and_output(view);
-	}
 
 	enum view_axis maximize = VIEW_AXIS_NONE;
 	if (surf->maximized_vert) {
@@ -418,11 +371,8 @@ static void
 handle_request_fullscreen(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_fullscreen);
-	bool fullscreen = xwayland_surface_from_view(view)->fullscreen;
-	if (!view->st->mapped) {
-		ensure_initial_geometry_and_output(view);
-	}
-	view_fullscreen(view->id, fullscreen, /* output */ NULL);
+	view_fullscreen(view->id, xwayland_surface_from_view(view)->fullscreen,
+		/* output */ NULL);
 }
 
 static void
@@ -586,23 +536,12 @@ handle_map_request(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	ensure_initial_geometry_and_output(view);
-
 	/*
 	 * Per the Extended Window Manager Hints (EWMH) spec: "The Window
 	 * Manager SHOULD honor _NET_WM_STATE whenever a withdrawn window
 	 * requests to be mapped."
-	 *
-	 * The following order of operations is intended to reduce the
-	 * number of resize (Configure) events:
-	 *   1. set fullscreen state
-	 *   2. set decorations (depends on fullscreen state)
-	 *   3. set maximized (geometry depends on decorations)
 	 */
 	view_fullscreen(view->id, xsurface->fullscreen, /* output */ NULL);
-	if (!view->st->ever_mapped) {
-		view_enable_ssd(view->id, want_deco(xsurface));
-	}
 	enum view_axis axis = VIEW_AXIS_NONE;
 	if (xsurface->maximized_horz) {
 		axis |= VIEW_AXIS_HORIZONTAL;
@@ -612,21 +551,6 @@ handle_map_request(struct wl_listener *listener, void *data)
 	}
 	view_maximize(view->id, axis);
 	view_set_always_on_top(view->id, xsurface->above);
-}
-
-static void
-check_natural_geometry(struct view *view)
-{
-	/*
-	 * Some applications (example: Thonny) don't set a reasonable
-	 * un-maximized size when started maximized. Try to detect this
-	 * and set a fallback size.
-	 */
-	if (!view_is_floating(view->st)
-			&& (view->st->natural_geom.width < LAB_MIN_VIEW_WIDTH
-			|| view->st->natural_geom.height < LAB_MIN_VIEW_HEIGHT)) {
-		view_set_fallback_natural_geom(view->id);
-	}
 }
 
 static void
@@ -646,13 +570,6 @@ handle_map(struct wl_listener *listener, void *data)
 	 * explicitly (calling it twice is harmless).
 	 */
 	handle_map_request(&view->map_request, NULL);
-
-	if (!view->st->ever_mapped) {
-		check_natural_geometry(view);
-		/* Commit move immediately to reduce flicker */
-		view_commit_move(view->id, view->st->pending.x,
-			view->st->pending.y);
-	}
 
 	/*
 	 * If the view was focused (on the xwayland server side) before

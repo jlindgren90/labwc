@@ -12,13 +12,6 @@
 #include "view-c.h"
 #include "view_api.h"
 
-/*
- * Default minimal window size. Clients can explicitly set smaller values via
- * e.g. xdg_toplevel::set_min_size.
- */
-#define LAB_MIN_VIEW_WIDTH 100
-#define LAB_MIN_VIEW_HEIGHT 60
-
 struct wlr_surface;
 
 struct view {
@@ -52,7 +45,6 @@ struct view {
 	/* xwayland view fields */
 	struct wlr_xwayland_surface *xwayland_surface;
 	bool focused_before_map;
-	bool initial_geometry_set;
 
 	/* Events unique to XWayland views */
 	struct wl_listener associate;

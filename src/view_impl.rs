@@ -9,6 +9,7 @@ pub trait ViewImpl {
     fn get_root_id(&self) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
     fn get_size_hints(&self) -> ViewSizeHints;
+    fn get_surface_props(&self) -> Option<XSurfaceProps>;
     fn has_strut_partial(&self) -> bool;
     fn set_active(&self, active: bool);
     fn set_fullscreen(&mut self, fullscreen: bool);
@@ -64,6 +65,10 @@ impl ViewImpl for XView {
 
     fn get_size_hints(&self) -> ViewSizeHints {
         unsafe { xwayland_view_get_size_hints(self.c_ptr) }
+    }
+
+    fn get_surface_props(&self) -> Option<XSurfaceProps> {
+        Some(unsafe { xwayland_view_get_surface_props(self.c_ptr) })
     }
 
     fn has_strut_partial(&self) -> bool {
@@ -180,6 +185,10 @@ impl ViewImpl for XdgView {
 
     fn get_size_hints(&self) -> ViewSizeHints {
         unsafe { xdg_toplevel_view_get_size_hints(self.c_ptr) }
+    }
+
+    fn get_surface_props(&self) -> Option<XSurfaceProps> {
+        None // not supported
     }
 
     fn has_strut_partial(&self) -> bool {
