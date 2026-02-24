@@ -168,18 +168,10 @@ pub extern "C" fn view_set_initial_commit_size(
     id: ViewId,
     width: i32,
     height: i32,
-    rel_to: Option<&Rect>,
     cursor_x: i32,
     cursor_y: i32,
 ) {
-    views_mut().set_initial_commit_size(
-        id,
-        width,
-        height,
-        *rel_to.unwrap_or(&Rect::default()),
-        cursor_x,
-        cursor_y,
-    );
+    views_mut().set_initial_commit_size(id, width, height, cursor_x, cursor_y);
 }
 
 #[unsafe(no_mangle)]
@@ -221,8 +213,8 @@ pub extern "C" fn view_enable_ssd(id: ViewId, enabled: bool) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
-    let ul = views_mut().fullscreen(id, fullscreen);
+pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool, output: *mut Output) {
+    let ul = views_mut().fullscreen(id, fullscreen, output);
     do_update(ul);
 }
 
@@ -234,7 +226,7 @@ pub extern "C" fn view_toggle_fullscreen(id: ViewId) {
     } else {
         return;
     }
-    view_fullscreen(id, !fullscreen);
+    view_fullscreen(id, !fullscreen, /* output */ null_mut());
 }
 
 #[unsafe(no_mangle)]
