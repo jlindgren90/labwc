@@ -79,6 +79,7 @@ WlrSceneRect *view_fullscreen_bg_create(WlrSceneTree *scene_tree);
 void view_fullscreen_bg_show_at(WlrSceneRect *fullscreen_bg, Rect rel_geom);
 void view_fullscreen_bg_hide(WlrSceneRect *fullscreen_bg);
 
+ViewId xdg_toplevel_view_get_parent(CView *view);
 ViewId xdg_toplevel_view_get_root_id(CView *view);
 _Bool xdg_toplevel_view_is_modal_dialog(CView *view);
 ViewSizeHints xdg_toplevel_view_get_size_hints(CView *view);
@@ -107,6 +108,7 @@ void cursor_update_focus(void);
 
 // from output.h
 Output *output_nearest_to(int lx, int ly);
+Output *output_nearest_to_cursor(void);
 _Bool output_is_usable(Output *output);
 Rect output_layout_coords(Output *output);
 Rect output_usable_area_in_layout_coords(Output *output);

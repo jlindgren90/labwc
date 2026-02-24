@@ -136,13 +136,23 @@ impl Views {
         id: ViewId,
         width: i32,
         height: i32,
-        rel_to: Rect,
         cursor_x: i32,
         cursor_y: i32,
     ) {
+        let (output, parent_geom);
+        if let Some(view) = self.by_id.get(&id)
+            && let Some(parent) = self.by_id.get(&view.get_parent())
+        {
+            output = parent.get_state().output;
+            parent_geom = parent.get_state().pending;
+        } else {
+            output = unsafe { output_nearest_to_cursor() };
+            parent_geom = Rect::default();
+        }
         if let Some(view) = self.by_id.get_mut(&id)
             && view.get_state().floating()
         {
+            view.set_output(output);
             let state = view.get_state();
             let mut geom = state.pending;
             (geom.width, geom.height) = (width, height);
@@ -150,7 +160,7 @@ impl Views {
                 self.grab.adjust_move_origin(width, height);
                 (geom.x, geom.y) = self.grab.compute_move_position(cursor_x, cursor_y);
             } else {
-                compute_default_geom(state, &mut geom, rel_to, false);
+                compute_default_geom(state, &mut geom, parent_geom, false);
             }
             // Update pending geometry directly unless size was changed
             if geom.width == width && geom.height == height {
@@ -200,9 +210,9 @@ impl Views {
         }
     }
 
-    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) {
+    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool, output: *mut Output) {
         if let Some(view) = self.by_id.get_mut(&id)
-            && view.fullscreen(fullscreen)
+            && view.fullscreen(fullscreen, output)
         {
             // Entering/leaving fullscreen ends any interactive move/resize
             self.reset_grab_for(Some(id));
@@ -214,7 +224,7 @@ impl Views {
         if let Some(view) = self.by_id.get_mut(&id)
             && view.get_state().maximized != axis
         {
-            view.maximize(axis, id == self.moving_id);
+            view.maximize(axis, id == self.moving_id, null_mut());
             // Maximizing/unmaximizing ends any interactive move/resize
             self.reset_grab_for(Some(id));
         }
@@ -224,7 +234,7 @@ impl Views {
         if let Some(view) = self.by_id.get_mut(&id)
             && view.get_state().tiled != edge
         {
-            view.tile(edge, id == self.moving_id);
+            view.tile(edge, id == self.moving_id, null_mut());
             // Tiling/untiling ends any interactive move/resize
             self.reset_grab_for(Some(id));
         }
@@ -418,16 +428,15 @@ impl Views {
         {
             let (output, edges) = get_snap_target(cursor_x, cursor_y);
             if edges != LAB_EDGE_NONE {
-                view.set_output(output);
                 if edges == LAB_EDGE_TOP {
-                    view.maximize(VIEW_AXIS_BOTH, /* is_moving */ true);
+                    view.maximize(VIEW_AXIS_BOTH, /* is_moving */ true, output);
                 } else if edges == LAB_EDGE_BOTTOM {
                     // Minimize but restore position from start of drag
                     // (or natural geometry if view was maximized/tiled)
                     view.move_resize(view.get_state().natural_geom);
                     self.minimize(self.moving_id, true);
                 } else {
-                    view.tile(edges, /* is_moving */ true);
+                    view.tile(edges, /* is_moving */ true, output);
                 }
             }
         }

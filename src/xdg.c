@@ -33,7 +33,7 @@ xdg_toplevel_from_view(struct view *view)
 	return xdg_surface->toplevel;
 }
 
-static ViewId
+ViewId
 xdg_toplevel_view_get_parent(struct view *view)
 {
 	struct wlr_xdg_toplevel *toplevel = xdg_toplevel_from_view(view);
@@ -67,12 +67,9 @@ static void
 set_fullscreen_from_request(struct view *view,
 		struct wlr_xdg_toplevel_requested *requested)
 {
-	if (!view->st->fullscreen && requested->fullscreen
-			&& requested->fullscreen_output) {
-		view_set_output(view->id,
-			output_from_wlr_output(requested->fullscreen_output));
-	}
-	view_fullscreen(view->id, requested->fullscreen);
+	view_fullscreen(view->id, requested->fullscreen,
+		requested->fullscreen_output ? output_from_wlr_output(
+			requested->fullscreen_output) : NULL);
 }
 
 /* TODO: reorder so this forward declaration isn't needed */
@@ -100,15 +97,6 @@ handle_commit(struct wl_listener *listener, void *data)
 			| WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN
 			| WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE;
 		wlr_xdg_toplevel_set_wm_capabilities(toplevel, wm_caps);
-
-		/* Put view on the same output as its parent if possible */
-		const ViewState *parent_st =
-			view_get_state(xdg_toplevel_view_get_parent(view));
-		if (parent_st && output_is_usable(parent_st->output)) {
-			view_set_output(view->id, parent_st->output);
-		} else {
-			view_set_output(view->id, output_nearest_to_cursor());
-		}
 
 		if (output_is_usable(view->st->output)) {
 			wlr_xdg_toplevel_set_bounds(toplevel,
@@ -145,10 +133,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	 *       geometry isn't known yet
 	 */
 	if (wlr_box_empty(&view->st->pending) && !wlr_box_empty(&size)) {
-		const ViewState *parent_st =
-			view_get_state(xdg_toplevel_view_get_parent(view));
-		view_set_initial_commit_size(view->id, size.width,
-			size.height, parent_st ? &parent_st->pending : NULL,
+		view_set_initial_commit_size(view->id, size.width, size.height,
 			g_seat.cursor->x, g_seat.cursor->y);
 		update_required = true;
 	}

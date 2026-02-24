@@ -83,6 +83,14 @@ impl View {
         &self.state
     }
 
+    pub fn get_parent(&self) -> ViewId {
+        if self.is_xwayland {
+            0 // TODO (but maybe not needed)
+        } else {
+            unsafe { xdg_toplevel_view_get_parent(self.c_ptr) }
+        }
+    }
+
     pub fn get_root_id(&self) -> ViewId {
         if self.is_xwayland {
             unsafe { xwayland_view_get_root_id(self.c_ptr) }
@@ -472,9 +480,18 @@ impl View {
         }
     }
 
+    fn ensure_output(&mut self, output: *mut Output) {
+        if !output.is_null() {
+            self.state.output = output;
+        } else if self.state.output.is_null() {
+            self.state.output = unsafe { output_nearest_to_cursor() };
+        }
+    }
+
     // Returns true if mapped and state changed
-    pub fn fullscreen(&mut self, fullscreen: bool) -> bool {
-        if self.state.fullscreen == fullscreen {
+    pub fn fullscreen(&mut self, fullscreen: bool, output: *mut Output) -> bool {
+        let output_change = fullscreen && !output.is_null() && output != self.state.output;
+        if self.state.fullscreen == fullscreen && !output_change {
             return false;
         }
         if fullscreen {
@@ -484,6 +501,7 @@ impl View {
         if self.state.floating() {
             self.apply_natural_geom();
         } else {
+            self.ensure_output(output);
             self.apply_special_geom();
         }
         if self.state.mapped {
@@ -493,32 +511,37 @@ impl View {
         return false;
     }
 
-    pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) {
-        if self.state.maximized == axis {
+    pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool, output: *mut Output) {
+        let output_change =
+            axis != VIEW_AXIS_NONE && !output.is_null() && output != self.state.output;
+        if self.state.maximized == axis && !output_change {
             return;
         }
         // In snap-to-maximize case, natural geometry was already stored
         if !is_moving {
             self.store_natural_geom();
         }
-        // Corner case: if unmaximizing one axis but natural geometry is
-        // unknown (e.g. for an initially maximized xdg-shell view), we
-        // can't request geometry from the client, so use a fallback
-        if (axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
-            && rect_empty(self.state.natural_geom)
-        {
-            self.set_fallback_natural_geom();
-        }
         self.set_maximized(axis);
         if self.state.floating() {
             self.apply_natural_geom();
         } else {
+            self.ensure_output(output);
+            // Corner case: if unmaximizing one axis but natural geometry
+            // is unknown (e.g. initially maximized xdg-shell view), we
+            // can't request geometry from the client, so use fallback
+            if (axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
+                && rect_empty(self.state.natural_geom)
+            {
+                self.set_fallback_natural_geom();
+            }
             self.apply_special_geom();
         }
     }
 
-    pub fn tile(&mut self, edge: LabEdge, is_moving: bool) {
-        if self.state.tiled == edge {
+    pub fn tile(&mut self, edge: LabEdge, is_moving: bool, output: *mut Output) {
+        let output_change =
+            edge != LAB_EDGE_NONE && !output.is_null() && output != self.state.output;
+        if self.state.tiled == edge && !output_change {
             return;
         }
         // In snap-to-tile case, natural geometry was already stored
@@ -529,6 +552,7 @@ impl View {
         if self.state.floating() {
             self.apply_natural_geom();
         } else {
+            self.ensure_output(output);
             self.apply_special_geom();
         }
     }
