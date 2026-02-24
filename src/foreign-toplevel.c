@@ -52,14 +52,15 @@ static void
 toplevel_handle_set_fullscreen(struct wl_client *client,
 		struct wl_resource *resource, struct wl_resource *output)
 {
-	view_fullscreen(view_id_from_handle(resource), true);
+	// TODO: honor requested output
+	view_fullscreen(view_id_from_handle(resource), true, /* output */ NULL);
 }
 
 static void
 toplevel_handle_unset_fullscreen(struct wl_client *client,
 		struct wl_resource *resource)
 {
-	view_fullscreen(view_id_from_handle(resource), false);
+	view_fullscreen(view_id_from_handle(resource), false, /* output */ NULL);
 }
 
 static void

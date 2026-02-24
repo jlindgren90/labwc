@@ -6,6 +6,7 @@ use std::ptr::null_mut;
 
 pub trait ViewImpl {
     fn get_surface(&self) -> *mut WlrSurface;
+    fn get_parent(&self) -> ViewId;
     fn get_root_id(&self) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
     fn get_size_hints(&self) -> ViewSizeHints;
@@ -47,6 +48,10 @@ impl XView {
 impl ViewImpl for XView {
     fn get_surface(&self) -> *mut WlrSurface {
         unsafe { xwayland_view_get_surface(self.c_ptr) }
+    }
+
+    fn get_parent(&self) -> ViewId {
+        0 // not currently needed
     }
 
     fn get_root_id(&self) -> ViewId {
@@ -155,6 +160,10 @@ impl XdgView {
 impl ViewImpl for XdgView {
     fn get_surface(&self) -> *mut WlrSurface {
         unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
+    }
+
+    fn get_parent(&self) -> ViewId {
+        unsafe { xdg_toplevel_view_get_parent(self.c_ptr) }
     }
 
     fn get_root_id(&self) -> ViewId {
