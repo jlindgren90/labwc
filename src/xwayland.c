@@ -607,61 +607,6 @@ handle_map_request(struct wl_listener *listener, void *data)
 }
 
 static void
-check_natural_geometry(struct view *view)
-{
-	/*
-	 * Some applications (example: Thonny) don't set a reasonable
-	 * un-maximized size when started maximized. Try to detect this
-	 * and set a fallback size.
-	 */
-	if (!view_is_floating(view->st)
-			&& (view->st->natural_geom.width < LAB_MIN_VIEW_WIDTH
-			|| view->st->natural_geom.height < LAB_MIN_VIEW_HEIGHT)) {
-		view_set_natural_geom(view->id,
-			view_get_fallback_natural_geometry(view));
-	}
-}
-
-static void
-set_initial_position(struct view *view,
-		struct wlr_xwayland_surface *xwayland_surface)
-{
-	/* Don't center views with position explicitly specified */
-	if (!has_position_hint(xwayland_surface)) {
-		view_constrain_size_to_that_of_usable_area(view);
-
-		if (view_is_floating(view->st)) {
-			view_center(view, NULL);
-		} else {
-			/*
-			 * View is maximized/fullscreen. Place the
-			 * stored natural geometry without actually
-			 * moving the view.
-			 *
-			 * FIXME: this positioning will be slightly off
-			 * since it uses border widths computed for the
-			 * current (non-floating) state of the view.
-			 * Possible fixes would be (1) adjust the natural
-			 * geometry earlier, while still floating, or
-			 * (2) add a variant of ssd_thickness() that
-			 * disregards the current view state.
-			 */
-			struct wlr_box geom = view->st->natural_geom;
-			view_compute_centered_position(view, NULL,
-				geom.width, geom.height, &geom.x, &geom.y);
-			view_set_natural_geom(view->id, geom);
-		}
-	}
-
-	/*
-	 * Always make sure the view is onscreen and adjusted for any
-	 * layout changes that could have occurred between map_request
-	 * and the actual map event.
-	 */
-	view_adjust_for_layout_change(view);
-}
-
-static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, map);
@@ -688,8 +633,8 @@ handle_map(struct wl_listener *listener, void *data)
 	}
 
 	if (!view->st->ever_mapped) {
-		check_natural_geometry(view);
-		set_initial_position(view, xwayland_surface);
+		view_adjust_initial_geom(view->id,
+			has_position_hint(xwayland_surface));
 		/*
 		 * When mapping the view for the first time, visual
 		 * artifacts are reduced if we display it immediately at

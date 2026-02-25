@@ -168,25 +168,12 @@ void view_close(struct view *view);
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
-bool view_compute_centered_position(struct view *view,
-	const struct wlr_box *ref, int w, int h, int *x, int *y);
-struct wlr_box view_get_fallback_natural_geometry(struct view *view);
 
 /**
  * view_apply_natural_geometry - adjust view->natural_geometry if it doesn't
  * intersect with view->output and then apply it
  */
 void view_apply_natural_geometry(struct view *view);
-
-/**
- * view_center - center view within some region
- * @view: view to be centered
- * @ref: optional reference region (in layout coordinates) to center
- * within; if NULL, view is centered within usable area of its output
- */
-void view_center(struct view *view, const struct wlr_box *ref);
-
-void view_constrain_size_to_that_of_usable_area(struct view *view);
 
 void view_maximize(struct view *view, enum view_axis axis);
 void view_set_fullscreen(struct view *view, bool fullscreen);

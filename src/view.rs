@@ -3,7 +3,11 @@
 use crate::bindings::*;
 use crate::foreign_toplevel::*;
 use crate::rect::*;
+use crate::view_geom::*;
 use std::ffi::CString;
+
+const FALLBACK_WIDTH: i32 = 640;
+const FALLBACK_HEIGHT: i32 = 480;
 
 impl ViewState {
     pub fn focusable(&self) -> bool {
@@ -26,10 +30,6 @@ impl From<&ViewState> for ForeignToplevelState {
             fullscreen: state.fullscreen,
         }
     }
-}
-
-fn nearest_output_to_geom(geom: Rect) -> *mut Output {
-    return unsafe { output_nearest_to(geom.x + geom.width / 2, geom.y + geom.height / 2) };
 }
 
 #[derive(Default)]
@@ -206,8 +206,33 @@ impl View {
         unsafe { view_notify_move_resize(self.c_ptr) };
     }
 
-    pub fn set_natural_geom(&mut self, geom: Rect) {
-        self.state.natural_geom = geom;
+    // Used only for xwayland views
+    pub fn adjust_initial_geom(&mut self, keep_position: bool) {
+        if self.state.floating() {
+            let mut geom = self.state.pending;
+            compute_default_geom(&*self.state, &mut geom, Rect::default(), keep_position);
+            self.move_resize(geom);
+        } else {
+            let mut natural = self.state.natural_geom;
+            // A maximized/fullscreen view should have a reasonable natural geometry
+            if natural.width < MIN_WIDTH || natural.height < MIN_HEIGHT {
+                natural.width = FALLBACK_WIDTH;
+                natural.height = FALLBACK_HEIGHT;
+            }
+            // FIXME: use border widths for floating state here
+            compute_default_geom(&*self.state, &mut natural, Rect::default(), keep_position);
+            self.state.natural_geom = natural;
+        }
+    }
+
+    pub fn set_fallback_natural_geom(&mut self) {
+        let mut natural = Rect {
+            width: FALLBACK_WIDTH,
+            height: FALLBACK_HEIGHT,
+            ..self.state.natural_geom
+        };
+        compute_default_geom(&*self.state, &mut natural, Rect::default(), false);
+        self.state.natural_geom = natural;
     }
 
     pub fn store_natural_geom(&mut self) {

@@ -9,6 +9,7 @@
 
 #include "common/font.h"
 #include "config/types.h"
+#include "rs-types.h"
 
 #define BUTTON_MAP_MAX 16
 

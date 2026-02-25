@@ -12,7 +12,6 @@
 #include <wlr/xwayland.h>
 #include "action.h"
 #include "buffer.h"
-#include "common/border.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
@@ -24,7 +23,6 @@
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
-#include "util.h"
 #include "xwayland.h"
 
 struct view *
@@ -111,7 +109,7 @@ view_get_edge_snap_box(struct view *view, struct output *output,
 	};
 
 	if (view) {
-		struct border margin = ssd_get_margin(view);
+		struct border margin = ssd_get_margin(view->st);
 		dst.x += margin.left;
 		dst.y += margin.top;
 		dst.width -= margin.left + margin.right;
@@ -337,164 +335,6 @@ view_minimize(struct view *view, bool minimized)
 	}
 }
 
-bool
-view_compute_centered_position(struct view *view, const struct wlr_box *ref,
-		int w, int h, int *x, int *y)
-{
-	assert(view);
-	if (w <= 0 || h <= 0) {
-		wlr_log(WLR_ERROR, "view has empty geometry, not centering");
-		return false;
-	}
-	if (!output_is_usable(view->st->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not centering");
-		return false;
-	}
-
-	struct border margin = ssd_get_margin(view);
-	struct wlr_box usable =
-		output_usable_area_in_layout_coords(view->st->output);
-	int width = w + margin.left + margin.right;
-	int height = h + margin.top + margin.bottom;
-
-	/* If reference box is NULL then center to usable area */
-	struct wlr_box centered =
-		rect_center(width, height, ref ? *ref : usable);
-	rect_move_within(&centered, usable);
-
-	*x = centered.x + margin.left;
-	*y = centered.y + margin.top;
-
-	return true;
-}
-
-/* Make sure the passed-in view geometry is visible in view->output */
-static bool
-adjust_floating_geometry(struct view *view, struct wlr_box *geometry,
-		bool midpoint_visibility)
-{
-	assert(view);
-
-	if (!output_is_usable(view->st->output)) {
-		wlr_log(WLR_ERROR, "view has no output, not positioning");
-		return false;
-	}
-
-	/* Avoid moving panels out of their own reserved area ("strut") */
-	if (view_has_strut_partial(view)) {
-		return false;
-	}
-
-	bool adjusted = false;
-	bool onscreen = false;
-	if (wlr_output_layout_intersects(g_server.output_layout,
-			view->st->output->wlr_output, geometry)) {
-		/* Always make sure the titlebar starts within the usable area */
-		struct border margin = ssd_get_margin(view);
-		struct wlr_box usable =
-			output_usable_area_in_layout_coords(view->st->output);
-
-		if (geometry->x < usable.x + margin.left) {
-			geometry->x = usable.x + margin.left;
-			adjusted = true;
-		}
-
-		if (geometry->y < usable.y + margin.top) {
-			geometry->y = usable.y + margin.top;
-			adjusted = true;
-		}
-
-		if (!midpoint_visibility) {
-			/*
-			 * If midpoint visibility is not required, the view is
-			 * on screen if at least one pixel is visible.
-			 */
-			onscreen = true;
-		} else {
-			/* Otherwise, make sure the midpoint is on screen */
-			int mx = geometry->x + geometry->width / 2;
-			int my = geometry->y + geometry->height / 2;
-
-			onscreen = mx <= usable.x + usable.width &&
-				my <= usable.y + usable.height;
-		}
-	}
-
-	if (onscreen) {
-		return adjusted;
-	}
-
-	return view_compute_centered_position(view, NULL, geometry->width,
-		geometry->height, &geometry->x, &geometry->y);
-}
-
-struct wlr_box
-view_get_fallback_natural_geometry(struct view *view)
-{
-	struct wlr_box box = {
-		.width = VIEW_FALLBACK_WIDTH,
-		.height = VIEW_FALLBACK_HEIGHT,
-	};
-	view_compute_centered_position(view, NULL,
-		box.width, box.height, &box.x, &box.y);
-	return box;
-}
-
-void
-view_center(struct view *view, const struct wlr_box *ref)
-{
-	assert(view);
-	int x, y;
-	if (view_compute_centered_position(view, ref, view->st->pending.width,
-			view->st->pending.height, &x, &y)) {
-		view_move(view, x, y);
-	}
-}
-
-void
-view_constrain_size_to_that_of_usable_area(struct view *view)
-{
-	if (!view || !output_is_usable(view->st->output) || view->st->fullscreen) {
-		return;
-	}
-
-	struct wlr_box usable_area =
-		output_usable_area_in_layout_coords(view->st->output);
-	struct border margin = ssd_get_margin(view);
-
-	int available_width = usable_area.width - margin.left - margin.right;
-	int available_height = usable_area.height - margin.top - margin.bottom;
-
-	if (available_width <= 0 || available_height <= 0) {
-		return;
-	}
-
-	if (available_height >= view->st->pending.height
-			&& available_width >= view->st->pending.width) {
-		return;
-	}
-
-	int width = MIN(view->st->pending.width, available_width);
-	int height = MIN(view->st->pending.height, available_height);
-
-	int right_edge = usable_area.x + usable_area.width;
-	int bottom_edge = usable_area.y + usable_area.height;
-
-	int x = MAX(usable_area.x + margin.left,
-		MIN(view->st->pending.x, right_edge - width - margin.right));
-
-	int y = MAX(usable_area.y + margin.top,
-		MIN(view->st->pending.y, bottom_edge - height - margin.bottom));
-
-	struct wlr_box box = {
-		.x = x,
-		.y = y,
-		.width = width,
-		.height = height,
-	};
-	view_move_resize(view->id, box);
-}
-
 void
 view_apply_natural_geometry(struct view *view)
 {
@@ -502,11 +342,7 @@ view_apply_natural_geometry(struct view *view)
 	assert(view_is_floating(view->st));
 
 	struct wlr_box geometry = view->st->natural_geom;
-	/* Only adjust natural geometry if known (not 0x0) */
-	if (!wlr_box_empty(&geometry)) {
-		adjust_floating_geometry(view, &geometry,
-			/* midpoint_visibility */ false);
-	}
+	view_ensure_geom_onscreen(view->st, &geometry);
 	view_move_resize(view->id, geometry);
 }
 
@@ -551,15 +387,12 @@ view_apply_maximized_geometry(struct view *view)
 	 * center the unmaximized axis.
 	 */
 	struct wlr_box natural = view->st->natural_geom;
-	if (view->st->maximized != VIEW_AXIS_BOTH
-			&& !rect_intersects(box, natural)) {
-		view_compute_centered_position(view, NULL,
-			natural.width, natural.height,
-			&natural.x, &natural.y);
+	if (view->st->maximized != VIEW_AXIS_BOTH) {
+		view_ensure_geom_onscreen(view->st, &natural);
 	}
 
 	if (view->st->ssd_enabled) {
-		struct border border = ssd_get_margin(view);
+		struct border border = ssd_get_margin(view->st);
 		box.x += border.left;
 		box.y += border.top;
 		box.width -= border.right + border.left;
@@ -644,8 +477,7 @@ view_maximize(struct view *view, enum view_axis axis)
 	 */
 	if ((axis == VIEW_AXIS_HORIZONTAL || axis == VIEW_AXIS_VERTICAL)
 			&& wlr_box_empty(&view->st->natural_geom)) {
-		view_set_natural_geom(view->id,
-			view_get_fallback_natural_geometry(view));
+		view_set_fallback_natural_geom(view->id);
 	}
 
 	view_set_maximized(view->id, axis);
@@ -854,10 +686,11 @@ view_adjust_for_layout_change(struct view *view)
 
 	if (!view_is_floating(view->st)) {
 		view_apply_special_geometry(view);
+	} else if (view_has_strut_partial(view)) {
+		/* Do not move panels etc. out of their own reserved area */
 	} else {
 		/* Ensure view is on-screen */
-		adjust_floating_geometry(view, &new_geo,
-			/* midpoint_visibility */ true);
+		view_ensure_geom_onscreen(view->st, &new_geo);
 		view_move_resize(view->id, new_geo);
 	}
 

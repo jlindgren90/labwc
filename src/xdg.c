@@ -77,7 +77,7 @@ set_fullscreen_from_request(struct view *view,
 	view_set_fullscreen(view, requested->fullscreen);
 }
 
-/* Called from commit handler and updates view->pending.x/y directly */
+/* Called from commit handler */
 static void
 set_initial_commit_size(struct view *view, int width, int height)
 {
@@ -98,13 +98,16 @@ set_initial_commit_size(struct view *view, int width, int height)
 		interactive_anchor_to_cursor(&geom);
 	} else {
 		struct view *parent = xdg_toplevel_view_get_parent(view);
-		view_compute_centered_position(view,
-			parent ? &parent->st->pending : NULL,
-			geom.width, geom.height, &geom.x, &geom.y);
+		view_compute_default_geom(view->st, &geom,
+			parent ? &parent->st->pending : NULL);
 	}
 
-	view_set_pending_geom(view->id, geom);
-	view_constrain_size_to_that_of_usable_area(view);
+	/* Update pending geometry directly unless size was changed */
+	if (geom.width == width && geom.height == height) {
+		view_set_pending_geom(view->id, geom);
+	} else {
+		view_move_resize(view->id, geom);
+	}
 }
 
 static void

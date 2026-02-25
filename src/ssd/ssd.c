@@ -25,9 +25,8 @@
  * For xdg-shell views with CSD, this margin is zero.
  */
 struct border
-ssd_get_margin(struct view *view)
+ssd_get_margin(const ViewState *view_st)
 {
-	assert(view);
 	/*
 	 * Check preconditions for displaying SSD. Note that this
 	 * needs to work even before ssd_create() has been called.
@@ -39,11 +38,11 @@ ssd_get_margin(struct view *view)
 	 * in border-only deco mode as view->ssd would only be set
 	 * after ssd_create() returns.
 	 */
-	if (!view->st->ssd_enabled || view->st->fullscreen) {
+	if (!view_st || !view_st->ssd_enabled || view_st->fullscreen) {
 		return (struct border){ 0 };
 	}
 
-	if (view->st->maximized == VIEW_AXIS_BOTH) {
+	if (view_st->maximized == VIEW_AXIS_BOTH) {
 		return (struct border){
 			.top = g_theme.titlebar_height,
 		};
@@ -61,7 +60,7 @@ struct wlr_box
 ssd_max_extents(struct view *view)
 {
 	assert(view);
-	struct border border = ssd_get_margin(view);
+	struct border border = ssd_get_margin(view->st);
 
 	return (struct wlr_box){
 		.x = view->st->current.x - border.left,
