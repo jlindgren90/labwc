@@ -131,8 +131,6 @@ struct lab_data_buffer *view_get_icon_buffer(struct view *view);
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, struct wl_array *buffers);
 
-void view_adjust_size(struct view *view, int *w, int *h);
-
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);
 
