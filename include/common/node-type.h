@@ -2,6 +2,7 @@
 #ifndef LABWC_NODE_TYPE_H
 #define LABWC_NODE_TYPE_H
 
+#include <stdbool.h>
 #include "common/edge.h"
 
 /*

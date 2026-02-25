@@ -2,7 +2,8 @@
 #ifndef LABWC_EDGE_H
 #define LABWC_EDGE_H
 
-#include <stdbool.h>
+// Rust likes camelcase types
+#define lab_edge LabEdge
 
 /**
  * Unified/overloaded enum representing edges, corners, and directions.
@@ -30,7 +31,7 @@
  * enum wlr_edges and enum wlr_direction, so that conversion between
  * enums can be done with a simple cast.
  */
-enum lab_edge {
+typedef enum lab_edge {
 	LAB_EDGE_NONE = 0,
 
 	LAB_EDGE_TOP = (1 << 0),    /* or UP */
@@ -38,7 +39,7 @@ enum lab_edge {
 	LAB_EDGE_LEFT = (1 << 2),
 	LAB_EDGE_RIGHT = (1 << 3),
 	LAB_EDGE_CENTER = (1 << 4), /* for window tiling */
-	LAB_EDGE_ANY = (1 << 5), /* for window rules */
+	LAB_EDGE_ANY = (1 << 5),    /* for window rules */
 
 	/* corners or ordinal directions (NW/NE/SW/SE) */
 	LAB_EDGES_TOP_LEFT = (LAB_EDGE_TOP | LAB_EDGE_LEFT),
@@ -51,23 +52,23 @@ enum lab_edge {
 	LAB_EDGES_LEFT_RIGHT = (LAB_EDGE_LEFT | LAB_EDGE_RIGHT),
 
 	/* all 4 edges */
-	LAB_EDGES_ALL = (LAB_EDGE_TOP | LAB_EDGE_BOTTOM |
-			LAB_EDGE_LEFT | LAB_EDGE_RIGHT),
+	LAB_EDGES_ALL = (LAB_EDGE_TOP | LAB_EDGE_BOTTOM
+		| LAB_EDGE_LEFT | LAB_EDGE_RIGHT),
 
 	/* 3-edge combinations (for completeness) */
 	LAB_EDGES_EXCEPT_TOP = (LAB_EDGES_ALL ^ LAB_EDGE_TOP),
 	LAB_EDGES_EXCEPT_BOTTOM = (LAB_EDGES_ALL ^ LAB_EDGE_BOTTOM),
 	LAB_EDGES_EXCEPT_LEFT = (LAB_EDGES_ALL ^ LAB_EDGE_LEFT),
 	LAB_EDGES_EXCEPT_RIGHT = (LAB_EDGES_ALL ^ LAB_EDGE_RIGHT),
-};
+} LabEdge;
 
-enum lab_edge lab_edge_parse(const char *direction, bool tiled, bool any);
+enum lab_edge lab_edge_parse(const char *direction, _Bool tiled, _Bool any);
 
 /**
  * Returns true if edge is TOP, BOTTOM, LEFT, or RIGHT
  * (i.e. one of the four cardinal directions N/S/W/E)
  */
-bool lab_edge_is_cardinal(enum lab_edge edge);
+_Bool lab_edge_is_cardinal(enum lab_edge edge);
 
 /**
  * lab_edge_invert() - select the opposite of a provided edge
