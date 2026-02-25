@@ -8,6 +8,51 @@ pub const MIN_WIDTH: i32 = 100;
 pub const MIN_HEIGHT: i32 = 60;
 pub const MIN_VISIBLE_PX: i32 = 16;
 
+pub fn compute_maximized_geom(state: &ViewState) -> Rect {
+    let usable = unsafe { output_usable_area_in_layout_coords(state.output) };
+    let margin = unsafe { ssd_get_margin(state) };
+    let mut geom = rect_minus_margin(usable, margin);
+    // If one axis (horizontal or vertical) is unmaximized, it should
+    // use the natural geometry (first ensuring it is on-screen)
+    if state.maximized != VIEW_AXIS_BOTH {
+        let mut natural = state.natural_geom;
+        ensure_geom_onscreen(state, &mut natural);
+        if state.maximized == VIEW_AXIS_VERTICAL {
+            geom.x = natural.x;
+            geom.width = natural.width;
+        } else if state.maximized == VIEW_AXIS_HORIZONTAL {
+            geom.y = natural.y;
+            geom.height = natural.height;
+        }
+    }
+    return geom;
+}
+
+pub fn compute_tiled_geom(state: &ViewState) -> Rect {
+    let usable = unsafe { output_usable_area_in_layout_coords(state.output) };
+    let margin = unsafe { ssd_get_margin(state) };
+    let (mut x1, mut x2) = (0, usable.width);
+    let (mut y1, mut y2) = (0, usable.height);
+    if (state.tiled & LAB_EDGE_RIGHT) != 0 {
+        x1 = usable.width / 2;
+    }
+    if (state.tiled & LAB_EDGE_LEFT) != 0 {
+        x2 = usable.width / 2;
+    }
+    if (state.tiled & LAB_EDGE_BOTTOM) != 0 {
+        y1 = usable.height / 2;
+    }
+    if (state.tiled & LAB_EDGE_TOP) != 0 {
+        y2 = usable.height / 2;
+    }
+    return Rect {
+        x: usable.x + x1 + margin.left,
+        y: usable.y + y1 + margin.top,
+        width: x2 - x1 - (margin.left + margin.right),
+        height: y2 - y1 - (margin.top + margin.bottom),
+    };
+}
+
 pub fn ensure_geom_onscreen(state: &ViewState, geom: &mut Rect) {
     if rect_empty(*geom) {
         return;

@@ -157,9 +157,6 @@ struct wlr_surface *view_get_surface(struct view *view);
 
 struct view *view_get_root(struct view *view);
 
-struct wlr_box view_get_edge_snap_box(struct view *view, struct output *output,
-	enum lab_edge edge);
-
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
@@ -168,12 +165,6 @@ void view_close(struct view *view);
 void view_move(struct view *view, int x, int y);
 void view_moved(struct view *view);
 void view_minimize(struct view *view, bool minimized);
-
-/**
- * view_apply_natural_geometry - adjust view->natural_geometry if it doesn't
- * intersect with view->output and then apply it
- */
-void view_apply_natural_geometry(struct view *view);
 
 void view_maximize(struct view *view, enum view_axis axis);
 void view_set_fullscreen(struct view *view, bool fullscreen);

@@ -251,6 +251,28 @@ impl View {
         }
     }
 
+    pub fn apply_natural_geom(&mut self) {
+        let mut natural = self.state.natural_geom;
+        ensure_geom_onscreen(&*self.state, &mut natural);
+        self.move_resize(natural);
+    }
+
+    pub fn apply_special_geom(&mut self) {
+        let geom;
+        if self.state.fullscreen {
+            geom = unsafe { output_layout_coords(self.state.output) };
+        } else if self.state.maximized != VIEW_AXIS_NONE {
+            geom = compute_maximized_geom(&*self.state);
+        } else if self.state.tiled != 0 {
+            geom = compute_tiled_geom(&*self.state);
+        } else {
+            return; // defensive
+        }
+        if !rect_empty(geom) {
+            self.move_resize(geom);
+        }
+    }
+
     pub fn set_output(&mut self, output: *mut Output) {
         self.state.output = output;
     }
