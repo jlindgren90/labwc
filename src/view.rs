@@ -262,6 +262,23 @@ impl View {
         }
     }
 
+    pub fn commit_size(&mut self, width: i32, height: i32) {
+        let resize_edges = unsafe { interactive_resize_get_edges(self.c_ptr) };
+        let (x, y) = compute_display_position(
+            self.state.current,
+            self.state.pending,
+            width,
+            height,
+            resize_edges,
+        );
+        self.state.current = Rect {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+        };
+    }
+
     // Used only for xwayland views
     pub fn adjust_initial_geom(&mut self, keep_position: bool) {
         if self.state.floating() {

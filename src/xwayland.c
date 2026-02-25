@@ -19,7 +19,6 @@
 #include "node.h"
 #include "output.h"
 #include "view.h"
-#include "view-impl-common.h"
 
 static void handle_map(struct wl_listener *listener, void *data);
 static void handle_unmap(struct wl_listener *listener, void *data);
@@ -194,7 +193,7 @@ handle_commit(struct wl_listener *listener, void *data)
 	 */
 	if (view->st->current.width != state->width
 			|| view->st->current.height != state->height) {
-		view_impl_apply_geometry(view, state->width, state->height);
+		view_commit_size(view->id, state->width, state->height);
 		view_moved(view);
 	}
 }
@@ -327,7 +326,7 @@ handle_request_configure(struct wl_listener *listener, void *data)
 		/* Honor client configure requests for floating views */
 		struct wlr_box box = {.x = event->x, .y = event->y,
 			.width = event->width, .height = event->height};
-		view_adjust_size(view, &box.width, &box.height);
+		view_adjust_size(view->id, &box.width, &box.height);
 		view_move_resize(view->id, box);
 	} else {
 		/*

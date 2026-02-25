@@ -13,13 +13,6 @@
 #include "view_api.h"
 
 /*
- * Default minimal window size. Clients can explicitly set smaller values via
- * e.g. xdg_toplevel::set_min_size.
- */
-#define LAB_MIN_VIEW_WIDTH 100
-#define LAB_MIN_VIEW_HEIGHT 60
-
-/*
  * Fallback view geometry used in some cases where a better position
  * and/or size can't be determined. Try to avoid using these except as
  * a last resort.
@@ -130,8 +123,6 @@ struct lab_data_buffer *view_get_icon_buffer(struct view *view);
 
 /* Icon buffers set with this function are dropped later */
 void view_set_icon(struct view *view, struct wl_array *buffers);
-
-void view_adjust_size(struct view *view, int *w, int *h);
 
 void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);

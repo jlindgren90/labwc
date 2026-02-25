@@ -8,6 +8,72 @@ pub const MIN_WIDTH: i32 = 100;
 pub const MIN_HEIGHT: i32 = 60;
 pub const MIN_VISIBLE_PX: i32 = 16;
 
+fn substitute_nonzero(a: i32, b: i32) -> (i32, i32) {
+    if a == 0 {
+        (b, b)
+    } else if b == 0 {
+        (a, a)
+    } else {
+        (a, b)
+    }
+}
+
+fn round_to_increment(val: i32, base: i32, inc: i32) -> i32 {
+    if base < 0 || inc <= 0 {
+        return val;
+    }
+    return base + (val - base + inc / 2) / inc * inc;
+}
+
+pub fn adjust_size_for_hints(hints: &ViewSizeHints, width: &mut i32, height: &mut i32) {
+    // "If a base size is not provided, the minimum size is to be
+    // used in its place and vice versa." (ICCCM 4.1.2.3)
+    let (mut min_width, base_width) = substitute_nonzero(hints.min_width, hints.base_width);
+    let (mut min_height, base_height) = substitute_nonzero(hints.min_height, hints.base_height);
+    // Snap width/height to requested size increments (if any)
+    *width = round_to_increment(*width, base_width, hints.width_inc);
+    *height = round_to_increment(*height, base_height, hints.height_inc);
+    // If minimum width/height was not set, then use default
+    if min_width < 1 {
+        min_width = MIN_WIDTH;
+    }
+    if min_height < 1 {
+        min_height = MIN_HEIGHT;
+    }
+    *width = max(*width, min_width);
+    *height = max(*height, min_height);
+}
+
+pub fn compute_display_position(
+    current: Rect,
+    pending: Rect,
+    width: i32,
+    height: i32,
+    resize_edges: LabEdge,
+) -> (i32, i32) {
+    // Anchor right edge if resizing via left edge
+    // (or if recently resizing, detected via heuristic)
+    let resizing_left = (resize_edges & LAB_EDGE_LEFT) != 0;
+    let x = if resizing_left
+        || (current.x != pending.x && current.x + current.width == pending.x + pending.width)
+    {
+        pending.x + pending.width - width
+    } else {
+        pending.x
+    };
+    // Anchor bottom edge if resizing via top edge
+    // (or if recently resizing, detected via heuristic)
+    let resizing_top = (resize_edges & LAB_EDGE_TOP) != 0;
+    let y = if resizing_top
+        || (current.y != pending.y && current.y + current.height == pending.y + pending.height)
+    {
+        pending.y + pending.height - height
+    } else {
+        pending.y
+    };
+    return (x, y);
+}
+
 pub fn compute_maximized_geom(state: &ViewState) -> Rect {
     let usable = unsafe { output_usable_area_in_layout_coords(state.output) };
     let margin = unsafe { ssd_get_margin(state) };

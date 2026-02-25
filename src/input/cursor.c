@@ -269,7 +269,7 @@ process_cursor_resize(void)
 		new_view_geo.width = g_server.grab_box.width + dx;
 	}
 
-	view_adjust_size(view, &new_view_geo.width, &new_view_geo.height);
+	view_adjust_size(view->id, &new_view_geo.width, &new_view_geo.height);
 
 	if (g_server.resize_edges & LAB_EDGE_TOP) {
 		/* After size adjustments, make sure to anchor bottom edge */
