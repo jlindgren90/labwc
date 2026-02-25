@@ -100,7 +100,7 @@ ssd_border_create(struct ssd *ssd)
 	/* Lower textured borders below titlebar for overlap */
 	wlr_scene_node_lower_to_bottom(&ssd->border.tree->node);
 
-	if (view->maximized == VIEW_AXIS_BOTH) {
+	if (view->st->maximized == VIEW_AXIS_BOTH) {
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
 	}
 
@@ -120,13 +120,13 @@ ssd_border_update(struct ssd *ssd)
 	assert(ssd->border.tree);
 
 	struct view *view = ssd->view;
-	if (view->maximized == VIEW_AXIS_BOTH
+	if (view->st->maximized == VIEW_AXIS_BOTH
 			&& ssd->border.tree->node.enabled) {
 		/* Disable borders on maximize */
 		wlr_scene_node_set_enabled(&ssd->border.tree->node, false);
 	}
 
-	if (view->maximized == VIEW_AXIS_BOTH) {
+	if (view->st->maximized == VIEW_AXIS_BOTH) {
 		return;
 	} else if (!ssd->border.tree->node.enabled) {
 		/* And re-enabled them when unmaximized */

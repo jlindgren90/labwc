@@ -2,7 +2,6 @@
 #include <assert.h>
 #include <wlr/types/wlr_server_decoration.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include "common/list.h"
 #include "common/mem.h"
 #include "decorations.h"
 #include "labwc.h"
@@ -34,7 +33,7 @@ handle_mode(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	view_set_ssd_enabled(kde_deco->view,
+	view_set_ssd_enabled(kde_deco->view->id,
 		kde_deco->wlr_kde_decoration->mode
 			== WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 }

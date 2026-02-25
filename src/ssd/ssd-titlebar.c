@@ -27,7 +27,7 @@ ssd_titlebar_create(struct ssd *ssd)
 {
 	struct view *view = ssd->view;
 	int width = view->current.width;
-	bool maximized = view->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 
 	ssd->titlebar.tree = wlr_scene_tree_create(ssd->tree);
 	node_descriptor_create(&ssd->titlebar.tree->node,
@@ -196,7 +196,7 @@ ssd_titlebar_update(struct ssd *ssd)
 	struct view *view = ssd->view;
 	int width = view->current.width;
 
-	bool maximized = view->maximized == VIEW_AXIS_BOTH;
+	bool maximized = view->st->maximized == VIEW_AXIS_BOTH;
 
 	if (ssd->state.was_maximized != maximized) {
 		set_alt_maximize_icon(ssd, maximized);

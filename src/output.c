@@ -570,7 +570,7 @@ output_update_for_layout_change(void)
 		g_server.max_output_scale = max_scale;
 		struct view *view;
 		wl_list_for_each(view, &g_server.views, link) {
-			if (view->mapped) {
+			if (view->st->mapped) {
 				view_reload_ssd(view);
 			}
 		}
@@ -992,7 +992,7 @@ update_usable_area(struct output *output)
 
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
-		if (view->mapped && view->xwayland_surface) {
+		if (view->st->mapped && view->xwayland_surface) {
 			xwayland_adjust_usable_area(view,
 				g_server.output_layout,
 				output->wlr_output, &output->usable_area);

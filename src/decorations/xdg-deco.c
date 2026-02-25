@@ -68,7 +68,7 @@ xdg_deco_request_mode(struct wl_listener *listener, void *data)
 			&xdg_deco->wlr_xdg_decoration->toplevel->base->surface->events.commit,
 			&xdg_deco->surface_commit);
 	}
-	view_set_ssd_enabled(xdg_deco->view,
+	view_set_ssd_enabled(xdg_deco->view->id,
 		client_mode == WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE);
 }
 

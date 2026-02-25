@@ -70,7 +70,7 @@ static void
 set_fullscreen_from_request(struct view *view,
 		struct wlr_xdg_toplevel_requested *requested)
 {
-	if (!view->fullscreen && requested->fullscreen
+	if (!view->st->fullscreen && requested->fullscreen
 			&& requested->fullscreen_output) {
 		view_set_output(view, output_from_wlr_output(requested->fullscreen_output));
 	}
@@ -81,7 +81,7 @@ set_fullscreen_from_request(struct view *view,
 static void
 set_initial_position(struct view *view)
 {
-	if (!view_is_floating(view)) {
+	if (!view_is_floating(view->st)) {
 		return;
 	}
 
@@ -115,7 +115,7 @@ disable_fullscreen_bg(struct view *view)
 static void
 center_fullscreen_if_needed(struct view *view)
 {
-	if (!view->fullscreen || !output_is_usable(view->output)) {
+	if (!view->st->fullscreen || !output_is_usable(view->output)) {
 		disable_fullscreen_bg(view);
 		return;
 	}
@@ -300,7 +300,7 @@ handle_configure_timeout(void *data)
 	 * No need to do anything else if the view is just being slow to
 	 * map - the map handler will take care of the positioning.
 	 */
-	if (!view->mapped) {
+	if (!view->st->mapped) {
 		return 0; /* ignored per wl_event_loop docs */
 	}
 
@@ -557,7 +557,7 @@ xdg_toplevel_view_close(struct view *view)
 	wlr_xdg_toplevel_send_close(xdg_toplevel_from_view(view));
 }
 
-static void
+void
 xdg_toplevel_view_maximize(struct view *view, enum view_axis maximized)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
@@ -569,12 +569,6 @@ xdg_toplevel_view_maximize(struct view *view, enum view_axis maximized)
 	if (serial > 0) {
 		set_pending_configure_serial(view, serial);
 	}
-}
-
-static void
-xdg_toplevel_view_minimize(struct view *view, bool minimized)
-{
-	/* noop */
 }
 
 static struct wlr_xdg_toplevel *
@@ -605,7 +599,7 @@ xdg_toplevel_view_append_children(struct view *self, struct wl_array *children)
 		if (view == self) {
 			continue;
 		}
-		if (!view->xdg_surface || !view->mapped) {
+		if (!view->xdg_surface || !view->st->mapped) {
 			continue;
 		}
 		if (top_parent_of(view) != toplevel) {
@@ -628,21 +622,21 @@ xdg_toplevel_view_is_modal_dialog(struct view *view)
 	return dialog->modal;
 }
 
-static void
-xdg_toplevel_view_set_activated(struct view *view, bool activated)
+void
+xdg_toplevel_view_set_active(struct view *view, bool active)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
 		wlr_log(WLR_DEBUG, "Prevented activating a non-intialized view");
 		return;
 	}
 	uint32_t serial = wlr_xdg_toplevel_set_activated(
-		xdg_toplevel_from_view(view), activated);
+		xdg_toplevel_from_view(view), active);
 	if (serial > 0) {
 		set_pending_configure_serial(view, serial);
 	}
 }
 
-static void
+void
 xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
@@ -660,7 +654,7 @@ xdg_toplevel_view_set_fullscreen(struct view *view, bool fullscreen)
 	}
 }
 
-static void
+void
 xdg_toplevel_view_notify_tiled(struct view *view)
 {
 	if (!xdg_toplevel_from_view(view)->base->initialized) {
@@ -674,7 +668,7 @@ xdg_toplevel_view_notify_tiled(struct view *view)
 	 * Edge-snapped view are considered tiled on the snapped edge and those
 	 * perpendicular to it.
 	 */
-	switch (view->tiled) {
+	switch (view->st->tiled) {
 	case LAB_EDGE_LEFT:
 		edge = LAB_EDGES_EXCEPT_RIGHT;
 		break;
@@ -691,7 +685,7 @@ xdg_toplevel_view_notify_tiled(struct view *view)
 	case LAB_EDGES_TOP_RIGHT:
 	case LAB_EDGES_BOTTOM_LEFT:
 	case LAB_EDGES_BOTTOM_RIGHT:
-		edge = view->tiled;
+		edge = view->st->tiled;
 		break;
 	/* TODO: LAB_EDGE_CENTER? */
 	default:
@@ -709,34 +703,23 @@ static void
 handle_map(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, map);
-	if (view->mapped) {
-		return;
+	if (!view->st->mapped) {
+		view_map_common(view->id);
 	}
-
-	view->mapped = true;
-
-	view_impl_map(view);
-	view->been_mapped = true;
 }
 
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, unmap);
-	if (view->mapped) {
-		view->mapped = false;
-		view_impl_unmap(view);
+	if (view->st->mapped) {
+		view_unmap_common(view->id);
 	}
 }
 
 static const struct view_impl xdg_toplevel_view_impl = {
 	.configure = xdg_toplevel_view_configure,
 	.close = xdg_toplevel_view_close,
-	.set_activated = xdg_toplevel_view_set_activated,
-	.set_fullscreen = xdg_toplevel_view_set_fullscreen,
-	.notify_tiled = xdg_toplevel_view_notify_tiled,
-	.maximize = xdg_toplevel_view_maximize,
-	.minimize = xdg_toplevel_view_minimize,
 	.get_parent = xdg_toplevel_view_get_parent,
 	.get_root = xdg_toplevel_view_get_root,
 	.append_children = xdg_toplevel_view_append_children,
@@ -827,7 +810,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	struct view *view = znew(*view);
 
 	view->impl = &xdg_toplevel_view_impl;
-	view_init(view);
+	view_init(view, /* is_xwayland */ false);
 
 	view->xdg_surface = xdg_surface;
 
