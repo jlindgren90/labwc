@@ -223,6 +223,23 @@ impl View {
         }
     }
 
+    pub fn commit_size(&mut self, width: i32, height: i32) {
+        let resize_edges = unsafe { interactive_resize_get_edges(self.c_ptr) };
+        let (x, y) = compute_display_position(
+            self.state.current,
+            self.state.pending,
+            width,
+            height,
+            resize_edges,
+        );
+        self.state.current = Rect {
+            x: x,
+            y: y,
+            width: width,
+            height: height,
+        };
+    }
+
     pub fn set_fallback_natural_geom(&mut self) {
         let mut natural = Rect {
             width: FALLBACK_WIDTH,
