@@ -60,6 +60,20 @@ struct view {
 	struct wl_listener set_icon;
 	struct wl_listener focus_in;
 	struct wl_listener map_request;
+
+	/* xwayland-unmanaged fields */
+	struct wlr_scene_node *node;
+	struct wl_list link;
+
+	struct wl_listener grab_focus;
+	struct wl_listener set_geometry;
+
+	/*
+	 * True if the surface has performed a keyboard grab. labwc
+	 * honors keyboard grabs and will give the surface focus when
+	 * it's mapped (which may occur slightly later) and on top.
+	 */
+	bool ever_grabbed_focus;
 };
 
 ViewId view_from_wlr_surface(struct wlr_surface *surface);

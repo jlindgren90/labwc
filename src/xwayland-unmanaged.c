@@ -13,7 +13,7 @@
 static void
 handle_grab_focus(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, grab_focus);
 
 	unmanaged->ever_grabbed_focus = true;
@@ -26,7 +26,7 @@ handle_grab_focus(struct wl_listener *listener, void *data)
 static void
 handle_request_configure(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, request_configure);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	struct wlr_xwayland_surface_configure_event *ev = data;
@@ -40,7 +40,7 @@ handle_request_configure(struct wl_listener *listener, void *data)
 static void
 handle_set_geometry(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, set_geometry);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	if (unmanaged->node) {
@@ -52,7 +52,7 @@ handle_set_geometry(struct wl_listener *listener, void *data)
 static void
 handle_map(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, map);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	assert(!unmanaged->node);
@@ -80,7 +80,7 @@ static void
 focus_next_surface(struct wlr_xwayland_surface *xsurface)
 {
 	/* Try to focus on last created unmanaged xwayland surface */
-	struct xwayland_unmanaged *u;
+	struct view *u;
 	struct wl_list *list = &g_server.unmanaged_surfaces;
 	wl_list_for_each_reverse(u, list, link) {
 		struct wlr_xwayland_surface *prev = u->xwayland_surface;
@@ -102,7 +102,7 @@ focus_next_surface(struct wlr_xwayland_surface *xsurface)
 static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, unmap);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	assert(unmanaged->node);
@@ -128,7 +128,7 @@ handle_unmap(struct wl_listener *listener, void *data)
 static void
 handle_associate(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, associate);
 	struct wlr_surface *surface = unmanaged->xwayland_surface->surface;
 
@@ -139,7 +139,7 @@ handle_associate(struct wl_listener *listener, void *data)
 static void
 handle_dissociate(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, dissociate);
 
 	wl_list_remove(&unmanaged->map.link);
@@ -149,7 +149,7 @@ handle_dissociate(struct wl_listener *listener, void *data)
 static void
 handle_destroy(struct wl_listener *listener, void *data)
 {
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, destroy);
 
 	wl_list_remove(&unmanaged->associate.link);
@@ -166,7 +166,7 @@ static void
 handle_set_override_redirect(struct wl_listener *listener, void *data)
 {
 	wlr_log(WLR_DEBUG, "handle unmanaged override_redirect");
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, set_override_redirect);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 
@@ -186,7 +186,7 @@ static void
 handle_request_activate(struct wl_listener *listener, void *data)
 {
 	wlr_log(WLR_DEBUG, "handle unmanaged request_activate");
-	struct xwayland_unmanaged *unmanaged =
+	struct view *unmanaged =
 		wl_container_of(listener, unmanaged, request_activate);
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	if (!xsurface->surface || !xsurface->surface->mapped) {
@@ -199,7 +199,7 @@ handle_request_activate(struct wl_listener *listener, void *data)
 void
 xwayland_unmanaged_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 {
-	struct xwayland_unmanaged *unmanaged = znew(*unmanaged);
+	struct view *unmanaged = znew(*unmanaged);
 	unmanaged->xwayland_surface = xsurface;
 	/*
 	 * xsurface->data is presumed to be a ViewId if set,
