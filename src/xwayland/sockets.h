@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #ifndef XWAYLAND_SOCKETS_H
 #define XWAYLAND_SOCKETS_H
 

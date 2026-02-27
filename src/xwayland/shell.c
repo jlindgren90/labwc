@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #include "xwayland/shell.h"
 #include <assert.h>
 #include <stdlib.h>

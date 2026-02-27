@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>

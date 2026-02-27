@@ -1,17 +1,15 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #ifndef XWAYLAND_XWM_H
 #define XWAYLAND_XWM_H
 
 #include <wayland-server-core.h>
 #include <wlr/config.h>
 #include <xcb/render.h>
-#include "config.h"
+#include <xcb/xcb_errors.h>
 #include "xwayland/selection.h"
 #include "xwayland/xwayland.h"
-
-#if HAVE_XCB_ERRORS
-#include <xcb/xcb_errors.h>
-#endif
-
 /* This is in xcb/xcb_event.h, but pulling xcb-util just for a constant
  * others redefine anyway is meh
  */
@@ -143,9 +141,7 @@ struct lab_xwm {
 	const xcb_query_extension_reply_t *xfixes;
 	const xcb_query_extension_reply_t *xres;
 	uint32_t xfixes_major_version;
-#if HAVE_XCB_ERRORS
 	xcb_errors_context_t *errors_context;
-#endif
 	unsigned int last_focus_seq;
 
 	struct wl_listener compositor_new_surface;
