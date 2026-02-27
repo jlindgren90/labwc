@@ -3,19 +3,12 @@
 #include "img/img.h"
 #include <assert.h>
 #include "buffer.h"
-#include "config.h"
-#include "common/box.h"
-#include "common/graphic-helpers.h"
-#include "common/macros.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
 #include "img/img-png.h"
-#if HAVE_RSVG
 #include "img/img-svg.h"
-#endif
 #include "img/img-xbm.h"
 #include "img/img-xpm.h"
-#include "labwc.h"
 #include "theme.h"
 
 struct lab_img_data {
@@ -25,9 +18,7 @@ struct lab_img_data {
 
 	/* Handler for the loaded image file */
 	struct lab_data_buffer *buffer; /* for PNG/XBM/XPM image */
-#if HAVE_RSVG
 	RsvgHandle *svg; /* for SVG image */
-#endif
 };
 
 static struct lab_img *
@@ -62,18 +53,11 @@ lab_img_load(enum lab_img_type type, const char *path, float *xbm_color)
 		img_data->buffer = img_xpm_load(path);
 		break;
 	case LAB_IMG_SVG:
-#if HAVE_RSVG
 		img_data->svg = img_svg_load(path);
-#endif
 		break;
 	}
 
-	bool img_is_loaded = (bool)img_data->buffer;
-#if HAVE_RSVG
-	img_is_loaded |= (bool)img_data->svg;
-#endif
-
-	if (img_is_loaded) {
+	if (img_data->buffer || img_data->svg) {
 		return create_img(img_data);
 	} else {
 		free(img_data);
@@ -123,11 +107,9 @@ lab_img_render(struct lab_img *img, int width, int height, double scale)
 	case LAB_IMG_XPM:
 		buffer = buffer_resize(img->data->buffer, width, height, scale);
 		break;
-#if HAVE_RSVG
 	case LAB_IMG_SVG:
 		buffer = img_svg_render(img->data->svg, width, height, scale);
 		break;
-#endif
 	default:
 		break;
 	}
@@ -163,11 +145,9 @@ lab_img_destroy(struct lab_img *img)
 		if (img->data->buffer) {
 			wlr_buffer_drop(&img->data->buffer->base);
 		}
-#if HAVE_RSVG
 		if (img->data->svg) {
 			g_object_unref(img->data->svg);
 		}
-#endif
 		free(img->data);
 	}
 

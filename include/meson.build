@@ -1,1 +1,1 @@
-configure_file(output: 'config.h',  configuration: conf_data)
+# empty for now

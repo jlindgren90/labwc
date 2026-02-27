@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
+#include <wlr/xwayland.h>
 #include "action.h"
 #include "buffer.h"
 #include "common/border.h"
@@ -25,11 +26,7 @@
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
-
-#if HAVE_XWAYLAND
-#include <wlr/xwayland.h>
 #include "xwayland.h"
-#endif
 
 struct view *
 view_from_wlr_surface(struct wlr_surface *surface)
@@ -45,7 +42,7 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	if (xdg_surface) {
 		return xdg_surface->data;
 	}
-#if HAVE_XWAYLAND
+
 	// Doing this is harmless even in the case that xwayland could not be
 	// successfully started.
 	struct wlr_xwayland_surface *xsurface =
@@ -53,7 +50,7 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	if (xsurface) {
 		return xsurface->data;
 	}
-#endif
+
 	return NULL;
 }
 
@@ -855,12 +852,10 @@ view_set_layer(struct view *view, enum view_layer layer)
 	wlr_scene_node_reparent(&view->scene_tree->node,
 		server.view_trees[layer]);
 
-#if HAVE_XWAYLAND
 	if (view->xwayland_surface) {
 		wlr_xwayland_surface_set_above(view->xwayland_surface,
 			layer == VIEW_LAYER_ALWAYS_ON_TOP);
 	}
-#endif
 }
 
 void
@@ -1171,7 +1166,6 @@ view_move_to_front(struct view *view)
 		move_to_front(view);
 	}
 
-#if HAVE_XWAYLAND
 	/*
 	 * view_move_to_front() is typically called on each mouse press
 	 * via Raise action. This means we are restacking windows just
@@ -1183,7 +1177,7 @@ view_move_to_front(struct view *view)
 	if (view->xwayland_surface) {
 		xwayland_flush();
 	}
-#endif
+
 	cursor_update_focus();
 	desktop_update_top_layer_visibility();
 }
