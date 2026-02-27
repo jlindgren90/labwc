@@ -18,7 +18,7 @@ ssd_border_create(struct ssd *ssd)
 	assert(!ssd->border.tree);
 
 	struct view *view = ssd->view;
-	struct theme *theme = view->server->theme;
+	struct theme *theme = g_server.theme;
 #if 0
 	/* XXX: not using with textured borders */
 	int width = view->current.width;
