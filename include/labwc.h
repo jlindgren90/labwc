@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef LABWC_H
 #define LABWC_H
-#include "config.h"
+
 #include <wlr/util/box.h>
 #include <wlr/util/log.h>
 #include "common/set.h"
@@ -125,12 +125,11 @@ struct server {
 
 	struct wl_listener kde_server_decoration;
 	struct wl_listener xdg_toplevel_decoration;
-#if HAVE_XWAYLAND
+
 	struct wlr_xwayland *xwayland;
 	struct wl_listener xwayland_server_ready;
 	struct wl_listener xwayland_xwm_ready;
 	struct wl_listener xwayland_new_surface;
-#endif
 
 	struct wlr_xdg_activation_v1 *xdg_activation;
 	struct wl_listener xdg_activation_request;
@@ -172,10 +171,8 @@ struct server {
 	/* Tree for all non-layer xdg/xwayland-shell surfaces */
 	struct wlr_scene_tree *view_trees[3];
 
-#if HAVE_XWAYLAND
 	/* Tree for unmanaged xsurfaces without initialized view (usually popups) */
 	struct wlr_scene_tree *unmanaged_tree;
-#endif
 	/* Tree for built in menu */
 	struct wlr_scene_tree *menu_tree;
 

@@ -9,6 +9,7 @@
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
+#include <wlr/xwayland.h>
 #include "action.h"
 #include "buffer.h"
 #include "common/border.h"
@@ -25,11 +26,7 @@
 #include "session-lock.h"
 #include "ssd.h"
 #include "theme.h"
-
-#if HAVE_XWAYLAND
-#include <wlr/xwayland.h>
 #include "xwayland.h"
-#endif
 
 struct view *
 view_from_wlr_surface(struct wlr_surface *surface)
@@ -45,13 +42,13 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	if (xdg_surface) {
 		return xdg_surface->data;
 	}
-#if HAVE_XWAYLAND
+
 	struct wlr_xwayland_surface *xsurface =
 		wlr_xwayland_surface_try_from_wlr_surface(surface);
 	if (xsurface) {
 		return xsurface->data;
 	}
-#endif
+
 	return NULL;
 }
 

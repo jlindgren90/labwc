@@ -2,14 +2,11 @@
 #include "scaled-buffer/scaled-icon-buffer.h"
 #include <wlr/util/log.h>
 #include "buffer.h"
-#include "config.h"
 #include "config/rcxml.h"
 #include "desktop-entry.h"
 #include "img/img.h"
 #include "labwc.h"
 #include "view.h"
-
-#if HAVE_LIBSFDO
 
 static struct lab_data_buffer *
 choose_best_icon_buffer(struct view *view, int icon_size, float scale)
@@ -80,12 +77,9 @@ load_server_icon(struct view *view, int icon_size, float scale)
 	return NULL;
 }
 
-#endif /* HAVE_LIBSFDO */
-
 struct lab_data_buffer *
 scaled_icon_buffer_load(struct view *view, int icon_size)
 {
-#if HAVE_LIBSFDO
 	float scale = g_server.max_output_scale;
 	struct lab_img *img = NULL;
 	struct lab_data_buffer *buffer = NULL;
@@ -105,6 +99,5 @@ scaled_icon_buffer_load(struct view *view, int icon_size)
 		wlr_log(WLR_DEBUG, "loaded fallback icon");
 		return img_to_buffer(img, icon_size, scale);
 	}
-#endif /* HAVE_LIBSFDO */
 	return NULL;
 }
