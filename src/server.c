@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #define _POSIX_C_SOURCE 200809L
-#include "config.h"
 #include <signal.h>
 #include <string.h>
 #include <sys/wait.h>
@@ -33,11 +32,7 @@
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
-
-#if HAVE_XWAYLAND
 #include <wlr/xwayland.h>
-#include "xwayland-shell-v1-protocol.h"
-#endif
 
 #include "action.h"
 #include "common/mem.h"
@@ -58,6 +53,7 @@
 #include "theme.h"
 #include "view.h"
 #include "xwayland.h"
+#include "xwayland-shell-v1-protocol.h"
 
 #define LAB_EXT_DATA_CONTROL_VERSION 1
 #define LAB_EXT_FOREIGN_TOPLEVEL_LIST_VERSION 1
@@ -74,11 +70,8 @@ reload_config_and_theme(void)
 	rcxml_read(rc.config_file);
 	theme_finish();
 	theme_init(rc.theme_name);
-
-#if HAVE_LIBSFDO
 	desktop_entry_finish();
 	desktop_entry_init();
-#endif
 
 	struct view *view;
 	wl_list_for_each(view, &server.views, link) {
@@ -125,13 +118,11 @@ handle_sigchld(int signal, void *data)
 		return 0;
 	}
 
-#if HAVE_XWAYLAND
 	/* Ensure that we do not break xwayland lazy initialization */
 	if (server.xwayland && server.xwayland->server
 			&& info.si_pid == server.xwayland->server->pid) {
 		return 0;
 	}
-#endif
 
 	/* And then do the actual (consuming) lookup again */
 	int ret = waitid(P_PID, info.si_pid, &info, WEXITED);
@@ -183,10 +174,7 @@ static bool
 server_global_filter(const struct wl_client *client, const struct wl_global *global, void *data)
 {
 	const struct wl_interface *iface = wl_global_get_interface(global);
-	/* Silence unused var compiler warnings */
-	(void)iface;
 
-#if HAVE_XWAYLAND
 	struct wl_client *xwayland_client = (server.xwayland && server.xwayland->server)
 		? server.xwayland->server->client
 		: NULL;
@@ -195,7 +183,6 @@ server_global_filter(const struct wl_client *client, const struct wl_global *glo
 		/* Filter out the xwayland shell for usual clients */
 		return false;
 	}
-#endif
 
 	return true;
 }
@@ -440,11 +427,9 @@ server_init(void)
 	server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
 		lab_wlr_scene_tree_create(&server.scene->tree);
 
-#if HAVE_XWAYLAND
 	// Creating/setting this is harmless when xwayland support is built-in
 	// but xwayland could not be successfully started.
 	server.unmanaged_tree = lab_wlr_scene_tree_create(&server.scene->tree);
-#endif
 	server.menu_tree = lab_wlr_scene_tree_create(&server.scene->tree);
 
 	output_init();
@@ -553,13 +538,8 @@ server_init(void)
 	wlr_xdg_foreign_v1_create(server.wl_display, registry);
 	wlr_xdg_foreign_v2_create(server.wl_display, registry);
 
-#if HAVE_LIBSFDO
 	desktop_entry_init();
-#endif
-
-#if HAVE_XWAYLAND
 	xwayland_server_init(server.compositor);
-#endif
 }
 
 void
@@ -591,12 +571,9 @@ server_start(void)
 void
 server_finish(void)
 {
-#if HAVE_XWAYLAND
 	xwayland_server_finish();
-#endif
-#if HAVE_LIBSFDO
 	desktop_entry_finish();
-#endif
+
 	wl_event_source_remove(server.sighup_source);
 	wl_event_source_remove(server.sigint_source);
 	wl_event_source_remove(server.sigterm_source);
