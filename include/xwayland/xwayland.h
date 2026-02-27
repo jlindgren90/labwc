@@ -6,8 +6,8 @@
 #error "Add -DWLR_USE_UNSTABLE to enable unstable wlroots features"
 #endif
 
-#ifndef WLR_XWAYLAND_XWAYLAND_H
-#define WLR_XWAYLAND_XWAYLAND_H
+#ifndef XWAYLAND_XWAYLAND_H
+#define XWAYLAND_XWAYLAND_H
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 struct wlr_box;
-struct wlr_xwm;
+struct xwm;
 struct wlr_data_source;
 struct wlr_drag;
 
@@ -30,7 +30,7 @@ struct wlr_drag;
  * Xwayland integration.
  *
  * This includes a utility to start and monitor the Xwayland process (see
- * struct wlr_xwayland_server), an implementation of the xwayland_shell_v1
+ * struct xwayland_server), an implementation of the xwayland_shell_v1
  * Wayland protocol, and a X11 window manager.
  *
  * Compositors are expected to set DISPLAY (see display_name) and listen to the
@@ -41,12 +41,12 @@ struct wlr_drag;
  * wl_display_set_global_filter() to ensure the global stored in
  * shell_v1.global is only exposed to the client stored in server.client.
  */
-struct wlr_xwayland {
-	struct wlr_xwayland_server *server;
+struct xwayland {
+	struct xwayland_server *server;
 	bool own_server;
-	struct wlr_xwm *xwm;
-	struct wlr_xwayland_shell_v1 *shell_v1;
-	struct wlr_xwayland_cursor *cursor;
+	struct xwm *xwm;
+	struct xwayland_shell_v1 *shell_v1;
+	struct xwayland_cursor *cursor;
 
 	// Value the DISPLAY environment variable should be set to by the compositor
 	const char *display_name;
@@ -58,8 +58,8 @@ struct wlr_xwayland {
 	struct {
 		struct wl_signal destroy;
 		struct wl_signal ready;
-		struct wl_signal new_surface; // struct wlr_xwayland_surface
-		struct wl_signal remove_startup_info; // struct wlr_xwayland_remove_startup_info_event
+		struct wl_signal new_surface; // struct xwayland_surface
+		struct wl_signal remove_startup_info; // struct xwayland_remove_startup_info_event
 	} events;
 
 	/**
@@ -67,7 +67,7 @@ struct wlr_xwayland {
 	 * handled or false to use the default wlr-xwayland handler. wlr-xwayland will
 	 * free the event.
 	 */
-	bool (*user_event_handler)(struct wlr_xwayland *wlr_xwayland, xcb_generic_event_t *event);
+	bool (*user_event_handler)(struct xwayland *xwayland, xcb_generic_event_t *event);
 
 	void *data;
 
@@ -80,10 +80,10 @@ struct wlr_xwayland {
 	} WLR_PRIVATE;
 };
 
-enum wlr_xwayland_surface_decorations {
-	WLR_XWAYLAND_SURFACE_DECORATIONS_ALL = 0,
-	WLR_XWAYLAND_SURFACE_DECORATIONS_NO_BORDER = 1,
-	WLR_XWAYLAND_SURFACE_DECORATIONS_NO_TITLE = 2,
+enum xwayland_surface_decorations {
+	XWAYLAND_SURFACE_DECORATIONS_ALL = 0,
+	XWAYLAND_SURFACE_DECORATIONS_NO_BORDER = 1,
+	XWAYLAND_SURFACE_DECORATIONS_NO_TITLE = 2,
 };
 
 /**
@@ -91,7 +91,7 @@ enum wlr_xwayland_surface_decorations {
  *
  * https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#input_focus
  */
-enum wlr_xwayland_icccm_input_model {
+enum xwayland_icccm_input_model {
 	WLR_ICCCM_INPUT_MODEL_NONE = 0,
 	WLR_ICCCM_INPUT_MODEL_PASSIVE = 1,
 	WLR_ICCCM_INPUT_MODEL_LOCAL = 2,
@@ -102,21 +102,21 @@ enum wlr_xwayland_icccm_input_model {
  * The type of window (_NET_WM_WINDOW_TYPE). See:
  * https://specifications.freedesktop.org/wm-spec/latest/
  */
-enum wlr_xwayland_net_wm_window_type {
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DESKTOP = 0,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DOCK,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_TOOLBAR,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_MENU,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_UTILITY,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_SPLASH,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_POPUP_MENU,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_TOOLTIP,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NOTIFICATION,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_COMBO,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_DND,
-	WLR_XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL,
+enum xwayland_net_wm_window_type {
+	XWAYLAND_NET_WM_WINDOW_TYPE_DESKTOP = 0,
+	XWAYLAND_NET_WM_WINDOW_TYPE_DOCK,
+	XWAYLAND_NET_WM_WINDOW_TYPE_TOOLBAR,
+	XWAYLAND_NET_WM_WINDOW_TYPE_MENU,
+	XWAYLAND_NET_WM_WINDOW_TYPE_UTILITY,
+	XWAYLAND_NET_WM_WINDOW_TYPE_SPLASH,
+	XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG,
+	XWAYLAND_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
+	XWAYLAND_NET_WM_WINDOW_TYPE_POPUP_MENU,
+	XWAYLAND_NET_WM_WINDOW_TYPE_TOOLTIP,
+	XWAYLAND_NET_WM_WINDOW_TYPE_NOTIFICATION,
+	XWAYLAND_NET_WM_WINDOW_TYPE_COMBO,
+	XWAYLAND_NET_WM_WINDOW_TYPE_DND,
+	XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL,
 };
 
 /**
@@ -127,9 +127,9 @@ enum wlr_xwayland_net_wm_window_type {
  * Compositors can set up e.g. map and unmap listeners at this point. The
  * struct wlr_surface becomes invalid when the dissociate event is emitted.
  */
-struct wlr_xwayland_surface {
+struct xwayland_surface {
 	xcb_window_t window_id;
-	struct wlr_xwm *xwm;
+	struct xwm *xwm;
 	uint32_t surface_id;
 	uint64_t serial;
 
@@ -153,9 +153,9 @@ struct wlr_xwayland_surface {
 	pid_t pid;
 	bool has_utf8_title;
 
-	struct wl_list children; // wlr_xwayland_surface.parent_link
-	struct wlr_xwayland_surface *parent;
-	struct wl_list parent_link; // wlr_xwayland_surface.children
+	struct wl_list children; // xwayland_surface.parent_link
+	struct xwayland_surface *parent;
+	struct wl_list parent_link; // xwayland_surface.children
 
 	xcb_atom_t *window_type;
 	size_t window_type_len;
@@ -196,10 +196,10 @@ struct wlr_xwayland_surface {
 
 	struct {
 		struct wl_signal destroy;
-		struct wl_signal request_configure; // struct wlr_xwayland_surface_configure_event
+		struct wl_signal request_configure; // struct xwayland_surface_configure_event
 		struct wl_signal request_move;
-		struct wl_signal request_resize; // struct wlr_xwayland_resize_event
-		struct wl_signal request_minimize; // struct wlr_xwayland_minimize_event
+		struct wl_signal request_resize; // struct xwayland_resize_event
+		struct wl_signal request_minimize; // struct xwayland_minimize_event
 		struct wl_signal request_maximize;
 		struct wl_signal request_fullscreen;
 		struct wl_signal request_activate;
@@ -246,25 +246,25 @@ struct wlr_xwayland_surface {
 	} WLR_PRIVATE;
 };
 
-struct wlr_xwayland_surface_configure_event {
-	struct wlr_xwayland_surface *surface;
+struct xwayland_surface_configure_event {
+	struct xwayland_surface *surface;
 	int16_t x, y;
 	uint16_t width, height;
 	uint16_t mask; // xcb_config_window_t
 };
 
-struct wlr_xwayland_remove_startup_info_event  {
+struct xwayland_remove_startup_info_event  {
 	const char *id;
 	xcb_window_t window;
 };
 
-struct wlr_xwayland_resize_event {
-	struct wlr_xwayland_surface *surface;
+struct xwayland_resize_event {
+	struct xwayland_surface *surface;
 	uint32_t edges;
 };
 
-struct wlr_xwayland_minimize_event {
-	struct wlr_xwayland_surface *surface;
+struct xwayland_minimize_event {
+	struct xwayland_surface *surface;
 	bool minimize;
 };
 
@@ -273,22 +273,22 @@ struct wlr_xwayland_minimize_event {
  * The server supports a lazy mode in which Xwayland is only started when a
  * client tries to connect.
  */
-struct wlr_xwayland *wlr_xwayland_create(struct wl_display *wl_display,
+struct xwayland *xwayland_create(struct wl_display *wl_display,
 	struct wlr_compositor *compositor, bool lazy);
 
 /**
  * Create an XWM from an existing Xwayland server.
  */
-struct wlr_xwayland *wlr_xwayland_create_with_server(struct wl_display *display,
-	struct wlr_compositor *compositor, struct wlr_xwayland_server *server);
+struct xwayland *xwayland_create_with_server(struct wl_display *display,
+	struct wlr_compositor *compositor, struct xwayland_server *server);
 
-void wlr_xwayland_destroy(struct wlr_xwayland *wlr_xwayland);
+void xwayland_destroy(struct xwayland *xwayland);
 
-void wlr_xwayland_set_cursor(struct wlr_xwayland *wlr_xwayland,
+void xwayland_set_cursor(struct xwayland *xwayland,
 	uint8_t *pixels, uint32_t stride, uint32_t width, uint32_t height,
 	int32_t hotspot_x, int32_t hotspot_y);
 
-void wlr_xwayland_surface_activate(struct wlr_xwayland_surface *surface,
+void xwayland_surface_activate(struct xwayland_surface *surface,
 	bool activated);
 
 /**
@@ -296,57 +296,57 @@ void wlr_xwayland_surface_activate(struct wlr_xwayland_surface *surface,
  * If sibling is NULL, then the surface is moved to the top or the bottom
  * of the stack (depending on the mode).
  */
-void wlr_xwayland_surface_restack(struct wlr_xwayland_surface *surface,
-	struct wlr_xwayland_surface *sibling, enum xcb_stack_mode_t mode);
+void xwayland_surface_restack(struct xwayland_surface *surface,
+	struct xwayland_surface *sibling, enum xcb_stack_mode_t mode);
 
-void wlr_xwayland_surface_configure(struct wlr_xwayland_surface *surface,
+void xwayland_surface_configure(struct xwayland_surface *surface,
 	int16_t x, int16_t y, uint16_t width, uint16_t height);
 
-void wlr_xwayland_surface_close(struct wlr_xwayland_surface *surface);
+void xwayland_surface_close(struct xwayland_surface *surface);
 
-void wlr_xwayland_surface_set_withdrawn(struct wlr_xwayland_surface *surface,
+void xwayland_surface_set_withdrawn(struct xwayland_surface *surface,
 	bool withdrawn);
 
-void wlr_xwayland_surface_set_minimized(struct wlr_xwayland_surface *surface,
+void xwayland_surface_set_minimized(struct xwayland_surface *surface,
 	bool minimized);
 
-void wlr_xwayland_surface_set_maximized(struct wlr_xwayland_surface *surface,
+void xwayland_surface_set_maximized(struct xwayland_surface *surface,
 	bool maximized_horz, bool maximized_vert);
 
-void wlr_xwayland_surface_set_fullscreen(struct wlr_xwayland_surface *surface,
+void xwayland_surface_set_fullscreen(struct xwayland_surface *surface,
 	bool fullscreen);
 
-void wlr_xwayland_surface_set_sticky(
-	struct wlr_xwayland_surface *surface, bool sticky);
+void xwayland_surface_set_sticky(
+	struct xwayland_surface *surface, bool sticky);
 
-void wlr_xwayland_surface_set_shaded(
-	struct wlr_xwayland_surface *surface, bool shaded);
+void xwayland_surface_set_shaded(
+	struct xwayland_surface *surface, bool shaded);
 
-void wlr_xwayland_surface_set_skip_taskbar(
-	struct wlr_xwayland_surface *surface, bool skip_taskbar);
+void xwayland_surface_set_skip_taskbar(
+	struct xwayland_surface *surface, bool skip_taskbar);
 
-void wlr_xwayland_surface_set_skip_pager(
-	struct wlr_xwayland_surface *surface, bool skip_pager);
+void xwayland_surface_set_skip_pager(
+	struct xwayland_surface *surface, bool skip_pager);
 
-void wlr_xwayland_surface_set_above(
-	struct wlr_xwayland_surface *surface, bool above);
+void xwayland_surface_set_above(
+	struct xwayland_surface *surface, bool above);
 
-void wlr_xwayland_surface_set_below(
-	struct wlr_xwayland_surface *surface, bool below);
+void xwayland_surface_set_below(
+	struct xwayland_surface *surface, bool below);
 
-void wlr_xwayland_surface_set_demands_attention(
-	struct wlr_xwayland_surface *surface, bool demands_attention);
+void xwayland_surface_set_demands_attention(
+	struct xwayland_surface *surface, bool demands_attention);
 
-void wlr_xwayland_set_seat(struct wlr_xwayland *xwayland,
+void xwayland_set_seat(struct xwayland *xwayland,
 	struct wlr_seat *seat);
 
 /**
- * Get a struct wlr_xwayland_surface from a struct wlr_surface.
+ * Get a struct xwayland_surface from a struct wlr_surface.
  *
  * If the surface hasn't been created by Xwayland or has no X11 window
  * associated, NULL is returned.
  */
-struct wlr_xwayland_surface *wlr_xwayland_surface_try_from_wlr_surface(
+struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 	struct wlr_surface *surface);
 
 /**
@@ -355,21 +355,21 @@ struct wlr_xwayland_surface *wlr_xwayland_surface_try_from_wlr_surface(
  * emit the focus_in signal notifying the compositor that it has received focus.
  *
  * This is a more compatible method of giving focus to windows using the
- * Globally Active input model (see wlr_xwayland_icccm_input_model()) than
- * calling wlr_xwayland_surface_activate() unconditionally, since there is no
+ * Globally Active input model (see xwayland_icccm_input_model()) than
+ * calling xwayland_surface_activate() unconditionally, since there is no
  * reliable way to know in advance whether these windows want to be focused.
  */
-void wlr_xwayland_surface_offer_focus(struct wlr_xwayland_surface *xsurface);
+void xwayland_surface_offer_focus(struct xwayland_surface *xsurface);
 
-void wlr_xwayland_surface_ping(struct wlr_xwayland_surface *surface);
+void xwayland_surface_ping(struct xwayland_surface *surface);
 
 /**
  * Returns true if the surface has the given window type.
  * Note: a surface may have multiple window types set.
  */
-bool wlr_xwayland_surface_has_window_type(
-	const struct wlr_xwayland_surface *xsurface,
-	enum wlr_xwayland_net_wm_window_type window_type);
+bool xwayland_surface_has_window_type(
+	const struct xwayland_surface *xsurface,
+	enum xwayland_net_wm_window_type window_type);
 
 /** Metric to guess if an OR window should "receive" focus
  *
@@ -392,11 +392,11 @@ bool wlr_xwayland_surface_has_window_type(
  * Returns: true if the window should receive focus
  *          false if it should be ignored
  */
-bool wlr_xwayland_surface_override_redirect_wants_focus(
-	const struct wlr_xwayland_surface *xsurface);
+bool xwayland_surface_override_redirect_wants_focus(
+	const struct xwayland_surface *xsurface);
 
-enum wlr_xwayland_icccm_input_model wlr_xwayland_surface_icccm_input_model(
-	const struct wlr_xwayland_surface *xsurface);
+enum xwayland_icccm_input_model xwayland_surface_icccm_input_model(
+	const struct xwayland_surface *xsurface);
 
 /**
  * Sets the _NET_WORKAREA root window property. The compositor should set
@@ -405,7 +405,7 @@ enum wlr_xwayland_icccm_input_model wlr_xwayland_surface_icccm_input_model(
  * panels, docks, etc. Unfortunately, it is not possible to specify
  * per-output workareas.
  */
-void wlr_xwayland_set_workareas(struct wlr_xwayland *wlr_xwayland,
+void xwayland_set_workareas(struct xwayland *xwayland,
 	const struct wlr_box *workareas, size_t num_workareas);
 
 /**
@@ -414,19 +414,19 @@ void wlr_xwayland_set_workareas(struct wlr_xwayland *wlr_xwayland,
  * Returns true on success. The caller is responsible for freeing the reply
  * using xcb_ewmh_get_wm_icon_reply_wipe().
  */
-bool wlr_xwayland_surface_fetch_icon(
-	const struct wlr_xwayland_surface *xsurface,
+bool xwayland_surface_fetch_icon(
+	const struct xwayland_surface *xsurface,
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
 
 /**
  * Get the XCB connection of the XWM.
  *
- * The connection is only valid after wlr_xwayland.events.ready, and becomes
- * invalid on wlr_xwayland_server.events.destroy. In that case, NULL is
+ * The connection is only valid after xwayland.events.ready, and becomes
+ * invalid on xwayland_server.events.destroy. In that case, NULL is
  * returned.
  */
-xcb_connection_t *wlr_xwayland_get_xwm_connection(
-	struct wlr_xwayland *wlr_xwayland);
+xcb_connection_t *xwayland_get_xwm_connection(
+	struct xwayland *xwayland);
 
 #ifdef __cplusplus
 }

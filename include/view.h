@@ -43,7 +43,7 @@ struct view {
 	struct wl_listener new_popup;
 
 	/* xwayland view fields */
-	struct wlr_xwayland_surface *xwayland_surface;
+	struct xwayland_surface *xwayland_surface;
 	bool focused_before_map;
 
 	/* Events unique to XWayland views */

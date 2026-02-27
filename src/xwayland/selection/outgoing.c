@@ -11,7 +11,7 @@
 #include "xwayland/selection.h"
 #include "xwayland/xwm.h"
 
-static void xwm_selection_send_notify(struct wlr_xwm *xwm,
+static void xwm_selection_send_notify(struct xwm *xwm,
 		xcb_selection_request_event_t *req, bool success) {
 	xcb_selection_notify_event_t selection_notify = {
 		.response_type = XCB_SELECTION_NOTIFY,
@@ -37,7 +37,7 @@ static void xwm_selection_send_notify(struct wlr_xwm *xwm,
 }
 
 static int xwm_selection_flush_source_data(
-		struct wlr_xwm_selection_transfer *transfer) {
+		struct xwm_selection_transfer *transfer) {
 	xcb_change_property(transfer->selection->xwm->xcb_conn,
 		XCB_PROP_MODE_REPLACE,
 		transfer->request.requestor,
@@ -54,10 +54,10 @@ static int xwm_selection_flush_source_data(
 }
 
 static void xwm_selection_transfer_start_outgoing(
-		struct wlr_xwm_selection_transfer *transfer);
+		struct xwm_selection_transfer *transfer);
 
 void xwm_selection_transfer_destroy_outgoing(
-		struct wlr_xwm_selection_transfer *transfer) {
+		struct xwm_selection_transfer *transfer) {
 	wl_list_remove(&transfer->link);
 	wlr_log(WLR_DEBUG, "Destroying transfer %p", transfer);
 
@@ -68,8 +68,8 @@ void xwm_selection_transfer_destroy_outgoing(
 }
 
 static int xwm_data_source_read(int fd, uint32_t mask, void *data) {
-	struct wlr_xwm_selection_transfer *transfer = data;
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+	struct xwm_selection_transfer *transfer = data;
+	struct xwm *xwm = transfer->selection->xwm;
 
 	void *p;
 	size_t current = transfer->source_data.size;
@@ -154,7 +154,7 @@ error_out:
 	return 0;
 }
 
-void xwm_send_incr_chunk(struct wlr_xwm_selection_transfer *transfer) {
+void xwm_send_incr_chunk(struct xwm_selection_transfer *transfer) {
 	wlr_log(WLR_DEBUG, "property deleted");
 
 	transfer->property_set = false;
@@ -180,7 +180,7 @@ void xwm_send_incr_chunk(struct wlr_xwm_selection_transfer *transfer) {
 	}
 }
 
-static void xwm_selection_source_send(struct wlr_xwm_selection *selection,
+static void xwm_selection_source_send(struct xwm_selection *selection,
 		const char *mime_type, int32_t fd) {
 	if (selection == &selection->xwm->clipboard_selection) {
 		struct wlr_data_source *source =
@@ -209,8 +209,8 @@ static void xwm_selection_source_send(struct wlr_xwm_selection *selection,
 }
 
 static void xwm_selection_transfer_start_outgoing(
-		struct wlr_xwm_selection_transfer *transfer) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+		struct xwm_selection_transfer *transfer) {
+	struct xwm *xwm = transfer->selection->xwm;
 	struct wl_event_loop *loop =
 		wl_display_get_event_loop(xwm->xwayland->wl_display);
 	wlr_log(WLR_DEBUG, "Starting transfer %p", transfer);
@@ -219,7 +219,7 @@ static void xwm_selection_transfer_start_outgoing(
 }
 
 static struct wl_array *xwm_selection_source_get_mime_types(
-		struct wlr_xwm_selection *selection) {
+		struct xwm_selection *selection) {
 	if (selection == &selection->xwm->clipboard_selection) {
 		struct wlr_data_source *source =
 			selection->xwm->seat->selection_source;
@@ -245,7 +245,7 @@ static struct wl_array *xwm_selection_source_get_mime_types(
 /**
  * Read the Wayland selection and send it to an Xwayland client.
  */
-static bool xwm_selection_send_data(struct wlr_xwm_selection *selection,
+static bool xwm_selection_send_data(struct xwm_selection *selection,
 		xcb_selection_request_event_t *req, const char *mime_type) {
 	// Check MIME type
 	struct wl_array *mime_types =
@@ -270,7 +270,7 @@ static bool xwm_selection_send_data(struct wlr_xwm_selection *selection,
 		return false;
 	}
 
-	struct wlr_xwm_selection_transfer *transfer = calloc(1, sizeof(*transfer));
+	struct xwm_selection_transfer *transfer = calloc(1, sizeof(*transfer));
 	if (transfer == NULL) {
 		wlr_log(WLR_ERROR, "Allocation failed");
 		return false;
@@ -302,7 +302,7 @@ static bool xwm_selection_send_data(struct wlr_xwm_selection *selection,
 	// another has been sent by the same requestor, the requestor never reads
 	// from it. It appears to only ever read from the latest, so purge stale
 	// transfers to prevent clipboard hangs.
-	struct wlr_xwm_selection_transfer *outgoing, *tmp;
+	struct xwm_selection_transfer *outgoing, *tmp;
 	wl_list_for_each_safe(outgoing, tmp, &selection->outgoing, link) {
 		if (transfer->request.requestor == outgoing->request.requestor) {
 			wlr_log(WLR_DEBUG, "Destroying stale transfer %p", outgoing);
@@ -320,9 +320,9 @@ static bool xwm_selection_send_data(struct wlr_xwm_selection *selection,
 	return true;
 }
 
-static void xwm_selection_send_targets(struct wlr_xwm_selection *selection,
+static void xwm_selection_send_targets(struct xwm_selection *selection,
 		xcb_selection_request_event_t *req) {
-	struct wlr_xwm *xwm = selection->xwm;
+	struct xwm *xwm = selection->xwm;
 
 	struct wl_array *mime_types =
 		xwm_selection_source_get_mime_types(selection);
@@ -357,7 +357,7 @@ static void xwm_selection_send_targets(struct wlr_xwm_selection *selection,
 	xwm_selection_send_notify(selection->xwm, req, true);
 }
 
-static void xwm_selection_send_timestamp(struct wlr_xwm_selection *selection,
+static void xwm_selection_send_timestamp(struct xwm_selection *selection,
 		xcb_selection_request_event_t *req) {
 	xcb_change_property(selection->xwm->xcb_conn,
 		XCB_PROP_MODE_REPLACE,
@@ -370,7 +370,7 @@ static void xwm_selection_send_timestamp(struct wlr_xwm_selection *selection,
 	xwm_selection_send_notify(selection->xwm, req, true);
 }
 
-void xwm_handle_selection_request(struct wlr_xwm *xwm,
+void xwm_handle_selection_request(struct xwm *xwm,
 		xcb_selection_request_event_t *req) {
 	wlr_log(WLR_DEBUG, "XCB_SELECTION_REQUEST (time=%u owner=%u, requestor=%u "
 		"selection=%u, target=%u, property=%u)",
@@ -385,7 +385,7 @@ void xwm_handle_selection_request(struct wlr_xwm *xwm,
 		return;
 	}
 
-	struct wlr_xwm_selection *selection =
+	struct xwm_selection *selection =
 		xwm_get_selection(xwm, req->selection);
 	if (selection == NULL) {
 		wlr_log(WLR_DEBUG, "received selection request for unknown selection");
@@ -454,18 +454,18 @@ fail_notify_requestor:
 	xwm_selection_send_notify(xwm, req, false);
 }
 
-void xwm_handle_selection_destroy_notify(struct wlr_xwm *xwm,
+void xwm_handle_selection_destroy_notify(struct xwm *xwm,
 		xcb_destroy_notify_event_t *event) {
-	struct wlr_xwm_selection *selections[] = {
+	struct xwm_selection *selections[] = {
 		&xwm->clipboard_selection,
 		&xwm->primary_selection,
 		&xwm->dnd_selection,
 	};
 
 	for (size_t i = 0; i < sizeof(selections)/sizeof(selections[0]); ++i) {
-		struct wlr_xwm_selection *selection = selections[i];
+		struct xwm_selection *selection = selections[i];
 
-		struct wlr_xwm_selection_transfer *outgoing, *tmp;
+		struct xwm_selection_transfer *outgoing, *tmp;
 		wl_list_for_each_safe(outgoing, tmp, &selection->outgoing, link) {
 			if (event->window == outgoing->request.requestor) {
 				xwm_selection_transfer_destroy_outgoing(outgoing);

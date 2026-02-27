@@ -110,8 +110,8 @@ enum atom_name {
 	ATOM_LAST // keep last
 };
 
-struct wlr_xwm {
-	struct wlr_xwayland *xwayland;
+struct xwm {
+	struct xwayland *xwayland;
 	struct wl_event_source *event_source;
 	struct wlr_seat *seat;
 	uint32_t ping_timeout;
@@ -125,23 +125,23 @@ struct wlr_xwm {
 	xcb_render_pictformat_t render_format_id;
 	xcb_cursor_t cursor;
 
-	struct wlr_xwm_selection clipboard_selection;
-	struct wlr_xwm_selection primary_selection;
-	struct wlr_xwm_selection dnd_selection;
+	struct xwm_selection clipboard_selection;
+	struct xwm_selection primary_selection;
+	struct xwm_selection dnd_selection;
 
-	struct wlr_xwayland_surface *focus_surface;
-	struct wlr_xwayland_surface *offered_focus;
+	struct xwayland_surface *focus_surface;
+	struct xwayland_surface *offered_focus;
 
 	// Surfaces in creation order
-	struct wl_list surfaces; // wlr_xwayland_surface.link
+	struct wl_list surfaces; // xwayland_surface.link
 	// Surfaces in bottom-to-top stacking order, for _NET_CLIENT_LIST_STACKING
-	struct wl_list surfaces_in_stack_order; // wlr_xwayland_surface.stack_link
-	struct wl_list unpaired_surfaces; // wlr_xwayland_surface.unpaired_link
+	struct wl_list surfaces_in_stack_order; // xwayland_surface.stack_link
+	struct wl_list unpaired_surfaces; // xwayland_surface.unpaired_link
 	struct wl_list pending_startup_ids; // pending_startup_id
 
 	struct wlr_drag *drag;
-	struct wlr_xwayland_surface *drag_focus;
-	struct wlr_xwayland_surface *drop_focus;
+	struct xwayland_surface *drag_focus;
+	struct xwayland_surface *drop_focus;
 
 	const xcb_query_extension_reply_t *xfixes;
 	const xcb_query_extension_reply_t *xres;
@@ -168,22 +168,22 @@ struct wlr_xwm {
 };
 
 // xwm_create takes ownership of wm_fd and will close it under all circumstances.
-struct wlr_xwm *xwm_create(struct wlr_xwayland *wlr_xwayland, int wm_fd);
+struct xwm *xwm_create(struct xwayland *xwayland, int wm_fd);
 
-void xwm_destroy(struct wlr_xwm *xwm);
+void xwm_destroy(struct xwm *xwm);
 
-void xwm_set_cursor(struct wlr_xwm *xwm, const uint8_t *pixels, uint32_t stride,
+void xwm_set_cursor(struct xwm *xwm, const uint8_t *pixels, uint32_t stride,
 	uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
 
-int xwm_handle_selection_event(struct wlr_xwm *xwm, xcb_generic_event_t *event);
-int xwm_handle_selection_client_message(struct wlr_xwm *xwm,
+int xwm_handle_selection_event(struct xwm *xwm, xcb_generic_event_t *event);
+int xwm_handle_selection_client_message(struct xwm *xwm,
 	xcb_client_message_event_t *ev);
-void xwm_seat_unlink_drag_handlers(struct wlr_xwm *xwm);
+void xwm_seat_unlink_drag_handlers(struct xwm *xwm);
 
-void xwm_set_seat(struct wlr_xwm *xwm, struct wlr_seat *seat);
+void xwm_set_seat(struct xwm *xwm, struct wlr_seat *seat);
 
-char *xwm_get_atom_name(struct wlr_xwm *xwm, xcb_atom_t atom);
-bool xwm_atoms_contains(struct wlr_xwm *xwm, xcb_atom_t *atoms,
+char *xwm_get_atom_name(struct xwm *xwm, xcb_atom_t atom);
+bool xwm_atoms_contains(struct xwm *xwm, xcb_atom_t *atoms,
 	size_t num_atoms, enum atom_name needle);
 
 xcb_void_cookie_t xwm_send_event_with_size(xcb_connection_t *c,

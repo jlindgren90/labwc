@@ -25,9 +25,9 @@ desktop_focus_view_or_surface(ViewId view_id,
 	if (view_id) {
 		view_focus(view_id, raise);
 	} else {
-		struct wlr_xwayland_surface *xsurface =
-			wlr_xwayland_surface_try_from_wlr_surface(surface);
-		if (xsurface && wlr_xwayland_surface_override_redirect_wants_focus(xsurface)) {
+		struct xwayland_surface *xsurface =
+			xwayland_surface_try_from_wlr_surface(surface);
+		if (xsurface && xwayland_surface_override_redirect_wants_focus(xsurface)) {
 			seat_focus_surface(surface);
 		}
 	}

@@ -10,9 +10,9 @@
 #include "xwayland/selection.h"
 #include "xwayland/xwm.h"
 
-static struct wlr_xwm_selection_transfer *
-xwm_selection_transfer_create_incoming(struct wlr_xwm_selection *selection) {
-	struct wlr_xwm_selection_transfer *transfer = calloc(1, sizeof(*transfer));
+static struct xwm_selection_transfer *
+xwm_selection_transfer_create_incoming(struct xwm_selection *selection) {
+	struct xwm_selection_transfer *transfer = calloc(1, sizeof(*transfer));
 	if (!transfer) {
 		return NULL;
 	}
@@ -21,7 +21,7 @@ xwm_selection_transfer_create_incoming(struct wlr_xwm_selection *selection) {
 
 	wl_list_insert(&selection->incoming, &transfer->link);
 
-	struct wlr_xwm *xwm = selection->xwm;
+	struct xwm *xwm = selection->xwm;
 	transfer->incoming_window = xcb_generate_id(xwm->xcb_conn);
 	xcb_create_window(
 		xwm->xcb_conn,
@@ -42,10 +42,10 @@ xwm_selection_transfer_create_incoming(struct wlr_xwm_selection *selection) {
 	return transfer;
 }
 
-struct wlr_xwm_selection_transfer *
+struct xwm_selection_transfer *
 xwm_selection_find_incoming_transfer_by_window(
-		struct wlr_xwm_selection *selection, xcb_window_t window) {
-	struct wlr_xwm_selection_transfer *transfer;
+		struct xwm_selection *selection, xcb_window_t window) {
+	struct xwm_selection_transfer *transfer;
 	wl_list_for_each(transfer, &selection->incoming, link) {
 		if (transfer->incoming_window == window) {
 			return transfer;
@@ -56,8 +56,8 @@ xwm_selection_find_incoming_transfer_by_window(
 }
 
 static bool xwm_selection_transfer_get_incoming_selection_property(
-		struct wlr_xwm_selection_transfer *transfer, bool delete) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+		struct xwm_selection_transfer *transfer, bool delete) {
+	struct xwm *xwm = transfer->selection->xwm;
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(
 		xwm->xcb_conn,
@@ -82,8 +82,8 @@ static bool xwm_selection_transfer_get_incoming_selection_property(
 }
 
 static void xwm_notify_ready_for_next_incr_chunk(
-		struct wlr_xwm_selection_transfer *transfer) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+		struct xwm_selection_transfer *transfer) {
+	struct xwm *xwm = transfer->selection->xwm;
 	assert(transfer->incr);
 
 	wlr_log(WLR_DEBUG, "deleting property");
@@ -101,7 +101,7 @@ static void xwm_notify_ready_for_next_incr_chunk(
  */
 static int write_selection_property_to_wl_client(int fd, uint32_t mask,
 		void *data) {
-	struct wlr_xwm_selection_transfer *transfer = data;
+	struct xwm_selection_transfer *transfer = data;
 
 	char *property = xcb_get_property_value(transfer->property_reply);
 	int remainder = xcb_get_property_value_length(transfer->property_reply) -
@@ -133,7 +133,7 @@ static int write_selection_property_to_wl_client(int fd, uint32_t mask,
 }
 
 static void xwm_write_selection_property_to_wl_client(
-		struct wlr_xwm_selection_transfer *transfer) {
+		struct xwm_selection_transfer *transfer) {
 	if (transfer->incr && transfer->wl_client_fd < 0) {
 		// Wayland client closed its pipe prematurely before the X11 client finished
 		// its incremental transfer. Continue draining the X11 client.
@@ -155,7 +155,7 @@ static void xwm_write_selection_property_to_wl_client(
 	}
 }
 
-void xwm_get_incr_chunk(struct wlr_xwm_selection_transfer *transfer) {
+void xwm_get_incr_chunk(struct xwm_selection_transfer *transfer) {
 	wlr_log(WLR_DEBUG, "xwm_get_incr_chunk");
 
 	if (transfer->property_reply) {
@@ -176,8 +176,8 @@ void xwm_get_incr_chunk(struct wlr_xwm_selection_transfer *transfer) {
 }
 
 static void xwm_selection_transfer_get_data(
-		struct wlr_xwm_selection_transfer *transfer) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+		struct xwm_selection_transfer *transfer) {
+	struct xwm *xwm = transfer->selection->xwm;
 
 	if (!xwm_selection_transfer_get_incoming_selection_property(transfer, true)) {
 		return;
@@ -193,10 +193,10 @@ static void xwm_selection_transfer_get_data(
 	}
 }
 
-static void source_send(struct wlr_xwm_selection *selection,
+static void source_send(struct xwm_selection *selection,
 		struct wl_array *mime_types, struct wl_array *mime_types_atoms,
 		const char *requested_mime_type, int fd) {
-	struct wlr_xwm *xwm = selection->xwm;
+	struct xwm *xwm = selection->xwm;
 
 	xcb_atom_t *atoms = mime_types_atoms->data;
 	bool found = false;
@@ -219,7 +219,7 @@ static void source_send(struct wlr_xwm_selection *selection,
 		return;
 	}
 
-	struct wlr_xwm_selection_transfer *transfer =
+	struct xwm_selection_transfer *transfer =
 		xwm_selection_transfer_create_incoming(selection);
 	if (!transfer) {
 		wlr_log(WLR_ERROR, "Cannot create transfer");
@@ -242,7 +242,7 @@ static void source_send(struct wlr_xwm_selection *selection,
 
 struct x11_data_source {
 	struct wlr_data_source base;
-	struct wlr_xwm_selection *selection;
+	struct xwm_selection *selection;
 	struct wl_array mime_types_atoms;
 };
 
@@ -264,7 +264,7 @@ static void data_source_send(struct wlr_data_source *wlr_source,
 		const char *mime_type, int32_t fd) {
 	struct x11_data_source *source =
 		data_source_from_wlr_data_source(wlr_source);
-	struct wlr_xwm_selection *selection = source->selection;
+	struct xwm_selection *selection = source->selection;
 
 	source_send(selection, &wlr_source->mime_types, &source->mime_types_atoms,
 		mime_type, fd);
@@ -284,7 +284,7 @@ static const struct wlr_data_source_impl data_source_impl = {
 
 struct x11_primary_selection_source {
 	struct wlr_primary_selection_source base;
-	struct wlr_xwm_selection *selection;
+	struct xwm_selection *selection;
 	struct wl_array mime_types_atoms;
 };
 
@@ -300,7 +300,7 @@ static void primary_selection_source_send(
 		struct wlr_primary_selection_source *wlr_source,
 		const char *mime_type, int fd) {
 	struct x11_primary_selection_source *source = wl_container_of(wlr_source, source, base);
-	struct wlr_xwm_selection *selection = source->selection;
+	struct xwm_selection *selection = source->selection;
 
 	source_send(selection, &wlr_source->mime_types, &source->mime_types_atoms,
 		mime_type, fd);
@@ -319,9 +319,9 @@ static const struct wlr_primary_selection_source_impl
 	.destroy = primary_selection_source_destroy,
 };
 
-static bool source_get_targets(struct wlr_xwm_selection *selection,
+static bool source_get_targets(struct xwm_selection *selection,
 		struct wl_array *mime_types, struct wl_array *mime_types_atoms) {
-	struct wlr_xwm *xwm = selection->xwm;
+	struct xwm *xwm = selection->xwm;
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(xwm->xcb_conn,
 		1, // delete
@@ -396,9 +396,9 @@ static bool source_get_targets(struct wlr_xwm_selection *selection,
 	return true;
 }
 
-static void xwm_selection_get_targets(struct wlr_xwm_selection *selection) {
+static void xwm_selection_get_targets(struct xwm_selection *selection) {
 	// set the wayland selection to the X11 selection
-	struct wlr_xwm *xwm = selection->xwm;
+	struct xwm *xwm = selection->xwm;
 
 	if (selection == &xwm->clipboard_selection) {
 		struct x11_data_source *source = calloc(1, sizeof(*source));
@@ -442,19 +442,19 @@ static void xwm_selection_get_targets(struct wlr_xwm_selection *selection) {
 	}
 }
 
-void xwm_handle_selection_notify(struct wlr_xwm *xwm,
+void xwm_handle_selection_notify(struct xwm *xwm,
 		xcb_selection_notify_event_t *event) {
 	wlr_log(WLR_DEBUG, "XCB_SELECTION_NOTIFY (selection=%u, property=%u, target=%u)",
 		event->selection, event->property,
 		event->target);
 
-	struct wlr_xwm_selection *selection =
+	struct xwm_selection *selection =
 		xwm_get_selection(xwm, event->selection);
 	if (selection == NULL) {
 		return;
 	}
 
-	struct wlr_xwm_selection_transfer *transfer =
+	struct xwm_selection_transfer *transfer =
 		xwm_selection_find_incoming_transfer_by_window(selection, event->requestor);
 
 	if (event->property == XCB_ATOM_NONE) {
@@ -477,12 +477,12 @@ void xwm_handle_selection_notify(struct wlr_xwm *xwm,
 	}
 }
 
-int xwm_handle_xfixes_selection_notify(struct wlr_xwm *xwm,
+int xwm_handle_xfixes_selection_notify(struct xwm *xwm,
 		xcb_xfixes_selection_notify_event_t *event) {
 	wlr_log(WLR_DEBUG, "XCB_XFIXES_SELECTION_NOTIFY (selection=%u, owner=%u)",
 		event->selection, event->owner);
 
-	struct wlr_xwm_selection *selection =
+	struct xwm_selection *selection =
 		xwm_get_selection(xwm, event->selection);
 	if (selection == NULL) {
 		return 0;
