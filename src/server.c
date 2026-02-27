@@ -49,8 +49,8 @@
 #include "session-lock.h"
 #include "theme.h"
 #include "view.h"
-#include "xwayland.h"
 #include "xwayland-shell-v1-protocol.h"
+#include "xwayland-view.h"
 
 #define LAB_EXT_DATA_CONTROL_VERSION 1
 #define LAB_WLR_COMPOSITOR_VERSION 6

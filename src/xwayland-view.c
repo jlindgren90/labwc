@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #define _POSIX_C_SOURCE 200809L
-#include "xwayland.h"
+#include "xwayland-view.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_compositor.h>

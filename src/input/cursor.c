@@ -29,7 +29,7 @@
 #include "menu/menu.h"
 #include "ssd.h"
 #include "view.h"
-#include "xwayland.h"
+#include "xwayland-view.h"
 
 #define LAB_CURSOR_SHAPE_V1_VERSION 1
 

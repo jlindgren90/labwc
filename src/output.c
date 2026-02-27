@@ -32,7 +32,7 @@
 #include "output-state.h"
 #include "session-lock.h"
 #include "view.h"
-#include "xwayland.h"
+#include "xwayland-view.h"
 
 static void
 output_apply_gamma(struct output *output)
