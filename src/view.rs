@@ -566,6 +566,9 @@ impl View {
 
     pub fn raise(&self) {
         unsafe { view_scene_tree_raise(self.scene.scene_tree) };
+        if self.state.visible() {
+            self.v.raise();
+        }
     }
 
     // Returns true if focus was (immediately) changed
