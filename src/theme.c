@@ -121,14 +121,12 @@ load_button(struct button *b, enum ssd_active_state active)
 		active ? "-active.png" : "-inactive.png");
 	*img = lab_img_load(LAB_IMG_PNG, filename, rgba);
 
-#if HAVE_RSVG
 	/* SVG */
 	if (!*img) {
 		get_button_filename(filename, sizeof(filename), b->name,
 			active ? "-active.svg" : "-inactive.svg");
 		*img = lab_img_load(LAB_IMG_SVG, filename, rgba);
 	}
-#endif
 
 	/* XBM */
 	if (!*img) {

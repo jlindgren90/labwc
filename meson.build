@@ -53,15 +53,12 @@ add_project_arguments('-DLABWC_VERSION=@0@'.format(version), language: 'c')
 # jlindgren: force use of wlroots subproject
 wlroots = subproject('wlroots').get_variable('wlroots')
 
-wlroots_has_xwayland = wlroots.get_variable('have_xwayland') == 'true'
-have_libsfdo = not get_option('icon').disabled()
-
 wayland_server = dependency('wayland-server', version: '>=1.22.90')
 wayland_protos = dependency('wayland-protocols', version: '>=1.39')
 xkbcommon = dependency('xkbcommon')
-xcb = dependency('xcb', required: get_option('xwayland'))
-xcb_ewmh = dependency('xcb-ewmh', required: get_option('xwayland'))
-xcb_icccm = dependency('xcb-icccm', required: get_option('xwayland'))
+xcb = dependency('xcb')
+xcb_ewmh = dependency('xcb-ewmh')
+xcb_icccm = dependency('xcb-icccm')
 drm_full = dependency('libdrm')
 drm = drm_full.partial_dependency(compile_args: true, includes: true)
 xml2 = dependency('libxml-2.0')
@@ -72,62 +69,27 @@ input = dependency('libinput', version: '>=1.14')
 pixman = dependency('pixman-1')
 math = cc.find_library('m')
 png = dependency('libpng')
-svg = dependency('librsvg-2.0', version: '>=2.46', required: false)
+svg = dependency('librsvg-2.0', version: '>=2.46')
 sfdo_basedir = dependency(
   'libsfdo-basedir',
   default_options: ['default_library=static', 'examples=false', 'tests=false'],
   version: '>=0.1.3',
-  required: have_libsfdo,
 )
 sfdo_desktop = dependency(
   'libsfdo-desktop',
   default_options: ['default_library=static', 'examples=false', 'tests=false'],
   version: '>=0.1.3',
-  required: have_libsfdo,
 )
 sfdo_icon = dependency(
   'libsfdo-icon',
   default_options: ['default_library=static', 'examples=false', 'tests=false'],
   version: '>=0.1.3',
-  required: have_libsfdo,
 )
 
 xwayland = dependency(
   'xwayland',
   version: '>=21.1.9',
-  required: get_option('xwayland'),
 )
-
-if get_option('xwayland').enabled() and not wlroots_has_xwayland
-	error('no wlroots Xwayland support')
-endif
-if get_option('xwayland').disabled()
-	have_xwayland = false
-elif not xwayland.found()
-	warning('disabling xwayland, requires version >= 21.1.9')
-	have_xwayland = false
-elif xcb.found() and wlroots_has_xwayland
-	have_xwayland = true
-else
-	have_xwayland = false
-endif
-conf_data = configuration_data()
-conf_data.set10('HAVE_XWAYLAND', have_xwayland)
-
-if get_option('svg').disabled()
-  have_rsvg = false
-else
-  have_rsvg = svg.found()
-endif
-conf_data.set10('HAVE_RSVG', have_rsvg)
-
-conf_data.set10('HAVE_LIBSFDO', have_libsfdo)
-
-foreach sym : ['LIBINPUT_CONFIG_DRAG_LOCK_ENABLED_STICKY', 'LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG']
-  has_sym = input.type_name() != 'internal' \
-              and cc.has_header_symbol('libinput.h', sym, dependencies: input)
-	conf_data.set10('HAVE_' + sym, has_sym)
-endforeach
 
 if get_option('static_analyzer').enabled()
   add_project_arguments(['-fanalyzer'], language: 'c')
@@ -142,14 +104,9 @@ if get_option('sections').enabled()
   ]
 endif
 
-msgfmt = find_program('msgfmt', required: get_option('nls'))
-if msgfmt.found()
-  source_root = meson.current_source_dir()
-  conf_data.set('HAVE_NLS', 1)
-  subdir('po')
-else
-  conf_data.set('HAVE_NLS', 0)
-endif
+msgfmt = find_program('msgfmt')
+source_root = meson.current_source_dir()
+subdir('po')
 
 labwc_inc = include_directories('include')
 
@@ -171,19 +128,11 @@ labwc_deps = [
   pixman,
   math,
   png,
+  svg,
+  sfdo_basedir,
+  sfdo_desktop,
+  sfdo_icon,
 ]
-if have_rsvg
-  labwc_deps += [
-    svg,
-  ]
-endif
-if have_libsfdo
-  labwc_deps += [
-    sfdo_basedir,
-    sfdo_desktop,
-    sfdo_icon,
-  ]
-endif
 
 subdir('include')
 subdir('src')
