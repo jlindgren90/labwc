@@ -1,11 +1,6 @@
-/*
- * This an unstable interface of wlroots. No guarantees are made regarding the
- * future consistency of this API.
- */
-#ifndef WLR_USE_UNSTABLE
-#error "Add -DWLR_USE_UNSTABLE to enable unstable wlroots features"
-#endif
-
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #ifndef XWAYLAND_XWAYLAND_H
 #define XWAYLAND_XWAYLAND_H
 
@@ -15,11 +10,6 @@
 #include <xcb/xcb_ewmh.h>
 #include <xcb/xcb_icccm.h>
 #include <wlr/util/addon.h>
-
-#ifdef __cplusplus
-#define class class_
-extern "C" {
-#endif
 
 struct wlr_box;
 struct lab_xwm;
@@ -427,10 +417,5 @@ bool xwayland_surface_fetch_icon(
  */
 xcb_connection_t *xwayland_get_xwm_connection(
 	struct xwayland *xwayland);
-
-#ifdef __cplusplus
-}
-#undef class
-#endif
 
 #endif
