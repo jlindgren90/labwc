@@ -120,6 +120,13 @@ xwayland_view_has_strut_partial(struct view *view)
 }
 
 void
+xwayland_view_raise(struct view *view)
+{
+	xwayland_surface_restack(view->xwayland_surface, NULL,
+		XCB_STACK_MODE_ABOVE);
+}
+
+void
 xwayland_view_offer_focus(struct view *view)
 {
 	xwayland_surface_offer_focus(xwayland_surface_from_view(view));
@@ -741,8 +748,11 @@ xwayland_view_maximize(struct view *view, enum view_axis maximized)
 void
 xwayland_view_minimize(struct view *view, bool minimized)
 {
-	xwayland_surface_set_minimized(xwayland_surface_from_view(view),
-		minimized);
+	struct xwayland_surface *xsurface = xwayland_surface_from_view(view);
+	xwayland_surface_set_minimized(xsurface, minimized);
+	if (minimized) {
+		xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_BELOW);
+	}
 }
 
 ViewId

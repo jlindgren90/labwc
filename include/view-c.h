@@ -107,6 +107,7 @@ void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);
 void xwayland_view_minimize(CView *view, _Bool minimized);
 void xwayland_view_configure(CView *view, Rect geom, _Bool *commit_move);
+void xwayland_view_raise(CView *view);
 void xwayland_view_offer_focus(CView *view);
 void xwayland_view_close(CView *view);
 

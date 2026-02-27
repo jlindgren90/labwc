@@ -603,6 +603,9 @@ impl View {
 
     pub fn raise(&self) {
         unsafe { view_scene_tree_raise(self.state.scene_tree) };
+        if self.is_xwayland && self.state.visible() {
+            unsafe { xwayland_view_raise(self.c_ptr) };
+        }
     }
 
     // Returns true if focus was (immediately) changed
