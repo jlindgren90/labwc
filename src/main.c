@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #define _POSIX_C_SOURCE 200809L
 #include <getopt.h>
+#include <libintl.h>
+#include <locale.h>
 #include <pango/pangocairo.h>
 #include <signal.h>
 #include <unistd.h>
@@ -11,7 +13,6 @@
 #include "config/session.h"
 #include "labwc.h"
 #include "theme.h"
-#include "translate.h"
 #include "menu/menu.h"
 
 struct rcxml rc = { 0 };
@@ -58,15 +59,7 @@ usage(void)
 static void
 print_version(void)
 {
-	#define FEATURE_ENABLED(feature) (HAVE_##feature ? "+" : "-")
-	printf("labwc %s (%sxwayland %snls %srsvg %slibsfdo)\n",
-		LABWC_VERSION,
-		FEATURE_ENABLED(XWAYLAND),
-		FEATURE_ENABLED(NLS),
-		FEATURE_ENABLED(RSVG),
-		FEATURE_ENABLED(LIBSFDO)
-	);
-	#undef FEATURE_ENABLED
+	printf("labwc-unofficial %s\n", LABWC_VERSION);
 }
 
 static void
@@ -212,12 +205,10 @@ main(int argc, char *argv[])
 
 	session_environment_init();
 
-#if HAVE_NLS
 	/* Initialize locale after setting env vars */
 	setlocale(LC_ALL, "");
 	bindtextdomain(GETTEXT_PACKAGE, LOCALEDIR);
 	textdomain(GETTEXT_PACKAGE);
-#endif
 
 	rcxml_read(rc.config_file);
 

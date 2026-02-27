@@ -2,6 +2,7 @@ labwc_sources = files(
   'action.c',
   'buffer.c',
   'desktop.c',
+  'desktop-entry.c',
   'dnd.c',
   'idle.c',
   'interactive.c',
@@ -19,20 +20,9 @@ labwc_sources = files(
   'view-impl-common.c',
   'xdg.c',
   'xdg-popup.c',
+  'xwayland.c',
+  'xwayland-unmanaged.c',
 )
-
-if have_xwayland
-  labwc_sources += files(
-    'xwayland.c',
-    'xwayland-unmanaged.c',
-  )
-endif
-
-if have_libsfdo
-  labwc_sources += files(
-    'desktop-entry.c',
-  )
-endif
 
 subdir('common')
 subdir('config')

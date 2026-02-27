@@ -825,11 +825,9 @@ cursor_process_button_press(uint32_t button, uint32_t time_msec)
 		if (layer && layer->current.keyboard_interactive) {
 			layer_try_set_focus(layer);
 		}
-#ifdef HAVE_XWAYLAND
 	} else if (ctx.type == LAB_NODE_UNMANAGED) {
 		desktop_focus_view_or_surface(NULL, ctx.surface,
 			/*raise*/ false);
-#endif
 	}
 
 	if (ctx.type != LAB_NODE_CLIENT && ctx.type != LAB_NODE_LAYER_SURFACE
@@ -1255,9 +1253,7 @@ void
 cursor_reload(void)
 {
 	cursor_load();
-#if HAVE_XWAYLAND
 	xwayland_reset_cursor();
-#endif
 	cursor_update_image();
 }
 

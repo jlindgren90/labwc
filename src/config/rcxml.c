@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #define _POSIX_C_SOURCE 200809L
-#include "config.h"
 #include "config/rcxml.h"
 #include <assert.h>
 #include <glib.h>
@@ -23,7 +22,6 @@
 #include "common/parse-double.h"
 #include "common/string-helpers.h"
 #include "common/xml.h"
-#include "config.h"
 #include "config/default-bindings.h"
 #include "config/keybind.h"
 #include "config/libinput.h"
@@ -301,34 +299,25 @@ fill_libinput_category(xmlNode *node)
 			if (ret < 0) {
 				continue;
 			}
-			/* "yes" enables drag-lock, without timeout if libinput >= 1.27 */
-			int enabled = LIBINPUT_CONFIG_DRAG_LOCK_ENABLED;
-#if HAVE_LIBINPUT_CONFIG_DRAG_LOCK_ENABLED_STICKY
-			enabled = LIBINPUT_CONFIG_DRAG_LOCK_ENABLED_STICKY;
-#endif
-			category->drag_lock = ret ?
-				enabled : LIBINPUT_CONFIG_DRAG_LOCK_DISABLED;
-	} else if (!strcasecmp(key, "threeFingerDrag")) {
-#if HAVE_LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG
-		if (!strcmp(content, "3")) {
-			category->three_finger_drag =
-				LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG;
-		} else if (!strcmp(content, "4")) {
-			category->three_finger_drag =
-				LIBINPUT_CONFIG_3FG_DRAG_ENABLED_4FG;
-		} else {
-			int ret = parse_bool(content, -1);
-			if (ret < 0) {
-				continue;
+			category->drag_lock = ret
+				? LIBINPUT_CONFIG_DRAG_LOCK_ENABLED_STICKY
+				: LIBINPUT_CONFIG_DRAG_LOCK_DISABLED;
+		} else if (!strcasecmp(key, "threeFingerDrag")) {
+			if (!strcmp(content, "3")) {
+				category->three_finger_drag =
+					LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG;
+			} else if (!strcmp(content, "4")) {
+				category->three_finger_drag =
+					LIBINPUT_CONFIG_3FG_DRAG_ENABLED_4FG;
+			} else {
+				int ret = parse_bool(content, -1);
+				if (ret < 0) {
+					continue;
+				}
+				category->three_finger_drag = ret
+					? LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG
+					: LIBINPUT_CONFIG_3FG_DRAG_DISABLED;
 			}
-			category->three_finger_drag = ret
-				? LIBINPUT_CONFIG_3FG_DRAG_ENABLED_3FG
-				: LIBINPUT_CONFIG_3FG_DRAG_DISABLED;
-		}
-#else
-		wlr_log(WLR_ERROR, "<threeFingerDrag> is only"
-			" supported in libinput >= 1.28");
-#endif
 		} else if (!strcasecmp(key, "accelProfile")) {
 			category->accel_profile =
 				get_accel_profile(content);

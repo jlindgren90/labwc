@@ -1,9 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0-only */
 #ifndef LABWC_XWAYLAND_H
 #define LABWC_XWAYLAND_H
-#include "config.h"
 
-#if HAVE_XWAYLAND
 #include "view.h"
 
 struct wlr_compositor;
@@ -50,5 +48,4 @@ void xwayland_update_workarea(void);
 
 void xwayland_reset_cursor(void);
 
-#endif /* HAVE_XWAYLAND */
 #endif /* LABWC_XWAYLAND_H */

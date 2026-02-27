@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: GPL-2.0-only
-#include "config.h"
 #include <assert.h>
 #include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_layer_shell_v1.h>
@@ -8,6 +7,7 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xdg_shell.h>
+#include <wlr/xwayland.h>
 #include "common/scene-helpers.h"
 #include "dnd.h"
 #include "labwc.h"
@@ -16,10 +16,6 @@
 #include "output.h"
 #include "ssd.h"
 #include "view.h"
-
-#if HAVE_XWAYLAND
-#include <wlr/xwayland.h>
-#endif
 
 void
 desktop_arrange_all_views(void)
@@ -117,14 +113,12 @@ desktop_focus_view_or_surface(struct view *view,
 	assert(view || surface);
 	if (view) {
 		desktop_focus_view(view, raise);
-#if HAVE_XWAYLAND
 	} else {
 		struct wlr_xwayland_surface *xsurface =
 			wlr_xwayland_surface_try_from_wlr_surface(surface);
 		if (xsurface && wlr_xwayland_surface_override_redirect_wants_focus(xsurface)) {
 			seat_focus_surface(surface);
 		}
-#endif
 	}
 }
 
@@ -252,7 +246,6 @@ get_cursor_context(void)
 
 	avoid_edge_rounding_issues(&ret);
 
-#if HAVE_XWAYLAND
 	/* TODO: attach LAB_NODE_UNMANAGED node-descriptor to unmanaged surfaces */
 	if (node->type == WLR_SCENE_NODE_BUFFER) {
 		if (node->parent == g_server.unmanaged_tree) {
@@ -260,7 +253,7 @@ get_cursor_context(void)
 			return ret;
 		}
 	}
-#endif
+
 	while (node) {
 		struct node_descriptor *desc = node->data;
 		if (desc) {

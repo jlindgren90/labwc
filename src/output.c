@@ -990,7 +990,6 @@ update_usable_area(struct output *output)
 	struct wlr_box old = output->usable_area;
 	layers_arrange(output);
 
-#if HAVE_XWAYLAND
 	struct view *view;
 	wl_list_for_each(view, &g_server.views, link) {
 		if (view->mapped && view->xwayland_surface) {
@@ -999,7 +998,7 @@ update_usable_area(struct output *output)
 				output->wlr_output, &output->usable_area);
 		}
 	}
-#endif
+
 	return !wlr_box_equal(&old, &output->usable_area);
 }
 
@@ -1007,9 +1006,7 @@ void
 output_update_usable_area(struct output *output)
 {
 	if (update_usable_area(output)) {
-#if HAVE_XWAYLAND
 		xwayland_update_workarea();
-#endif
 		desktop_arrange_all_views();
 	}
 }
@@ -1026,9 +1023,7 @@ output_update_all_usable_areas(bool layout_changed)
 		}
 	}
 	if (usable_area_changed || layout_changed) {
-#if HAVE_XWAYLAND
 		xwayland_update_workarea();
-#endif
 		desktop_arrange_all_views();
 	}
 }

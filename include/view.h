@@ -8,7 +8,6 @@
 #include <wlr/util/box.h>
 #include <xkbcommon/xkbcommon.h>
 #include "common/edge.h"
-#include "config.h"
 
 /*
  * Default minimal window size. Clients can explicitly set smaller values via
@@ -225,7 +224,6 @@ struct view {
 	struct wl_listener request_show_window_menu;
 	struct wl_listener new_popup;
 
-#if HAVE_XWAYLAND
 	/* xwayland view fields */
 	struct wlr_xwayland_surface *xwayland_surface;
 	bool focused_before_map;
@@ -244,7 +242,6 @@ struct view {
 	struct wl_listener set_icon;
 	struct wl_listener focus_in;
 	struct wl_listener map_request;
-#endif
 };
 
 /**

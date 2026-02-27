@@ -82,10 +82,7 @@ desktop_entry_init(void)
 	sfdo_icon_ctx_set_log_handler(
 		sfdo->icon_ctx, level, log_handler, "sfdo-icon");
 
-	char *locale = NULL;
-#if HAVE_NLS
-	locale = setlocale(LC_ALL, "");
-#endif
+	char *locale = setlocale(LC_ALL, "");
 
 	sfdo->desktop_db = sfdo_desktop_db_load(sfdo->desktop_ctx, locale);
 	if (!sfdo->desktop_db) {
@@ -202,9 +199,6 @@ process_rel_name(struct icon_ctx *ctx, const char *icon_name,
 {
 	int ret = 0;
 	int lookup_options = SFDO_ICON_THEME_LOOKUP_OPTIONS_DEFAULT;
-#if !HAVE_RSVG
-	lookup_options |= SFDO_ICON_THEME_LOOKUP_OPTION_NO_SVG;
-#endif
 
 	/*
 	 * Relative icon names are not supposed to include an extension,
