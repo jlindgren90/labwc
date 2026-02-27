@@ -22,7 +22,7 @@ extern "C" {
 #endif
 
 struct wlr_box;
-struct xwm;
+struct lab_xwm;
 struct wlr_data_source;
 struct wlr_drag;
 
@@ -44,7 +44,7 @@ struct wlr_drag;
 struct xwayland {
 	struct xwayland_server *server;
 	bool own_server;
-	struct xwm *xwm;
+	struct lab_xwm *xwm;
 	struct xwayland_shell_v1 *shell_v1;
 	struct xwayland_cursor *cursor;
 
@@ -129,7 +129,7 @@ enum xwayland_net_wm_window_type {
  */
 struct xwayland_surface {
 	xcb_window_t window_id;
-	struct xwm *xwm;
+	struct lab_xwm *xwm;
 	uint32_t surface_id;
 	uint64_t serial;
 

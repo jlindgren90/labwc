@@ -41,8 +41,8 @@ static void handle_server_start(struct wl_listener *listener, void *data) {
 
 static void xwayland_mark_ready(struct xwayland *xwayland) {
 	assert(xwayland->server->wm_fd[0] >= 0);
-	xwayland->xwm = xwm_create(xwayland, xwayland->server->wm_fd[0]);
-	// xwm_create takes ownership of wm_fd[0] under all circumstances
+	xwayland->xwm = lab_xwm_create(xwayland, xwayland->server->wm_fd[0]);
+	// lab_xwm_create takes ownership of wm_fd[0] under all circumstances
 	xwayland->server->wm_fd[0] = -1;
 
 	if (!xwayland->xwm) {
@@ -50,12 +50,12 @@ static void xwayland_mark_ready(struct xwayland *xwayland) {
 	}
 
 	if (xwayland->seat) {
-		xwm_set_seat(xwayland->xwm, xwayland->seat);
+		lab_xwm_set_seat(xwayland->xwm, xwayland->seat);
 	}
 
 	if (xwayland->cursor != NULL) {
 		struct xwayland_cursor *cur = xwayland->cursor;
-		xwm_set_cursor(xwayland->xwm, cur->pixels, cur->stride, cur->width,
+		lab_xwm_set_cursor(xwayland->xwm, cur->pixels, cur->stride, cur->width,
 			cur->height, cur->hotspot_x, cur->hotspot_y);
 	}
 
@@ -103,7 +103,7 @@ void xwayland_destroy(struct xwayland *xwayland) {
 	}
 	xwayland->server = NULL;
 	xwayland_shell_v1_destroy(xwayland->shell_v1);
-	xwm_destroy(xwayland->xwm);
+	lab_xwm_destroy(xwayland->xwm);
 	free(xwayland);
 }
 
@@ -186,7 +186,7 @@ void xwayland_set_cursor(struct xwayland *xwayland,
 		uint8_t *pixels, uint32_t stride, uint32_t width, uint32_t height,
 		int32_t hotspot_x, int32_t hotspot_y) {
 	if (xwayland->xwm != NULL) {
-		xwm_set_cursor(xwayland->xwm, pixels, stride, width, height,
+		lab_xwm_set_cursor(xwayland->xwm, pixels, stride, width, height,
 			hotspot_x, hotspot_y);
 		return;
 	}
@@ -222,7 +222,7 @@ void xwayland_set_seat(struct xwayland *xwayland,
 	xwayland->seat = seat;
 
 	if (xwayland->xwm) {
-		xwm_set_seat(xwayland->xwm, seat);
+		lab_xwm_set_seat(xwayland->xwm, seat);
 	}
 
 	if (seat == NULL) {

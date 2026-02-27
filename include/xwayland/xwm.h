@@ -110,7 +110,7 @@ enum atom_name {
 	ATOM_LAST // keep last
 };
 
-struct xwm {
+struct lab_xwm {
 	struct xwayland *xwayland;
 	struct wl_event_source *event_source;
 	struct wlr_seat *seat;
@@ -125,9 +125,9 @@ struct xwm {
 	xcb_render_pictformat_t render_format_id;
 	xcb_cursor_t cursor;
 
-	struct xwm_selection clipboard_selection;
-	struct xwm_selection primary_selection;
-	struct xwm_selection dnd_selection;
+	struct lab_xwm_selection clipboard_selection;
+	struct lab_xwm_selection primary_selection;
+	struct lab_xwm_selection dnd_selection;
 
 	struct xwayland_surface *focus_surface;
 	struct xwayland_surface *offered_focus;
@@ -167,26 +167,26 @@ struct xwm {
 	struct wl_listener drop_focus_destroy;
 };
 
-// xwm_create takes ownership of wm_fd and will close it under all circumstances.
-struct xwm *xwm_create(struct xwayland *xwayland, int wm_fd);
+// lab_xwm_create takes ownership of wm_fd and will close it under all circumstances.
+struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd);
 
-void xwm_destroy(struct xwm *xwm);
+void lab_xwm_destroy(struct lab_xwm *xwm);
 
-void xwm_set_cursor(struct xwm *xwm, const uint8_t *pixels, uint32_t stride,
+void lab_xwm_set_cursor(struct lab_xwm *xwm, const uint8_t *pixels, uint32_t stride,
 	uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
 
-int xwm_handle_selection_event(struct xwm *xwm, xcb_generic_event_t *event);
-int xwm_handle_selection_client_message(struct xwm *xwm,
+int lab_xwm_handle_selection_event(struct lab_xwm *xwm, xcb_generic_event_t *event);
+int lab_xwm_handle_selection_client_message(struct lab_xwm *xwm,
 	xcb_client_message_event_t *ev);
-void xwm_seat_unlink_drag_handlers(struct xwm *xwm);
+void lab_xwm_seat_unlink_drag_handlers(struct lab_xwm *xwm);
 
-void xwm_set_seat(struct xwm *xwm, struct wlr_seat *seat);
+void lab_xwm_set_seat(struct lab_xwm *xwm, struct wlr_seat *seat);
 
-char *xwm_get_atom_name(struct xwm *xwm, xcb_atom_t atom);
-bool xwm_atoms_contains(struct xwm *xwm, xcb_atom_t *atoms,
+char *lab_xwm_get_atom_name(struct lab_xwm *xwm, xcb_atom_t atom);
+bool lab_xwm_atoms_contains(struct lab_xwm *xwm, xcb_atom_t *atoms,
 	size_t num_atoms, enum atom_name needle);
 
-xcb_void_cookie_t xwm_send_event_with_size(xcb_connection_t *c,
+xcb_void_cookie_t lab_xwm_send_event_with_size(xcb_connection_t *c,
 	uint8_t propagate, xcb_window_t destination,
 	uint32_t event_mask, const void *event, uint32_t length);
 
