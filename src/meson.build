@@ -20,7 +20,6 @@ labwc_sources = files(
   'xdg.c',
   'xdg-popup.c',
   'xwayland.c',
-  'xwayland-unmanaged.c',
 )
 
 subdir('common')
