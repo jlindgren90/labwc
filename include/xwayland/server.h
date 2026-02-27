@@ -1,11 +1,6 @@
-/*
- * This an unstable interface of wlroots. No guarantees are made regarding the
- * future consistency of this API.
- */
-#ifndef WLR_USE_UNSTABLE
-#error "Add -DWLR_USE_UNSTABLE to enable unstable wlroots features"
-#endif
-
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #ifndef XWAYLAND_SERVER_H
 #define XWAYLAND_SERVER_H
 
@@ -13,10 +8,6 @@
 #include <sys/types.h>
 #include <time.h>
 #include <wayland-server-core.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 struct xwayland_server_options {
 	bool lazy;
@@ -68,9 +59,5 @@ struct xwayland_server_ready_event {
 struct xwayland_server *xwayland_server_create(
 	struct wl_display *display, struct xwayland_server_options *options);
 void xwayland_server_destroy(struct xwayland_server *server);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

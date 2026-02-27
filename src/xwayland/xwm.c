@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #define _POSIX_C_SOURCE 200809L
 #include "xwayland/xwm.h"
 #include <assert.h>
@@ -1928,7 +1931,6 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 }
 
 static void lab_xwm_handle_xcb_error(struct lab_xwm *xwm, xcb_value_error_t *ev) {
-#if HAVE_XCB_ERRORS
 	const char *major_name =
 		xcb_errors_get_name_for_major_code(xwm->errors_context,
 			ev->major_opcode);
@@ -1957,7 +1959,6 @@ static void lab_xwm_handle_xcb_error(struct lab_xwm *xwm, xcb_value_error_t *ev)
 
 	return;
 log_raw:
-#endif
 	wlr_log(WLR_ERROR,
 		"xcb error: op %"PRIu8":%"PRIu16", code %"PRIu8", sequence %"PRIu16", value %"PRIu32,
 		ev->major_opcode, ev->minor_opcode, ev->error_code,
@@ -1966,7 +1967,6 @@ log_raw:
 }
 
 static void lab_xwm_handle_unhandled_event(struct lab_xwm *xwm, xcb_generic_event_t *ev) {
-#if HAVE_XCB_ERRORS
 	const char *extension;
 	const char *event_name =
 		xcb_errors_get_name_for_xcb_event(xwm->errors_context,
@@ -1978,9 +1978,6 @@ static void lab_xwm_handle_unhandled_event(struct lab_xwm *xwm, xcb_generic_even
 	}
 
 	wlr_log(WLR_DEBUG, "unhandled X11 event: %s (%u)", event_name, ev->response_type);
-#else
-	wlr_log(WLR_DEBUG, "unhandled X11 event: %u", ev->response_type);
-#endif
 }
 
 static int read_x11_events(struct lab_xwm *xwm) {
@@ -2236,11 +2233,9 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 	if (xwm->event_source) {
 		wl_event_source_remove(xwm->event_source);
 	}
-#if HAVE_XCB_ERRORS
 	if (xwm->errors_context) {
 		xcb_errors_context_free(xwm->errors_context);
 	}
-#endif
 	struct xwayland_surface *xsurface, *tmp;
 	wl_list_for_each_safe(xsurface, tmp, &xwm->surfaces, link) {
 		xwayland_surface_destroy(xsurface);
@@ -2519,13 +2514,11 @@ struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
 		return NULL;
 	}
 
-#if HAVE_XCB_ERRORS
 	if (xcb_errors_context_new(xwm->xcb_conn, &xwm->errors_context)) {
 		wlr_log(WLR_ERROR, "Could not allocate error context");
 		lab_xwm_destroy(xwm);
 		return NULL;
 	}
-#endif
 
 	xcb_screen_iterator_t screen_iterator =
 		xcb_setup_roots_iterator(xcb_get_setup(xwm->xcb_conn));

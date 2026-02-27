@@ -1,20 +1,11 @@
-/*
- * This an unstable interface of wlroots. No guarantees are made regarding the
- * future consistency of this API.
- */
-#ifndef WLR_USE_UNSTABLE
-#error "Add -DWLR_USE_UNSTABLE to enable unstable wlroots features"
-#endif
-
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #ifndef XWAYLAND_SHELL_H
 #define XWAYLAND_SHELL_H
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 /**
  * The Xwayland shell.
@@ -80,9 +71,5 @@ void xwayland_shell_v1_set_client(struct xwayland_shell_v1 *shell,
  */
 struct wlr_surface *xwayland_shell_v1_surface_from_serial(
 	struct xwayland_shell_v1 *shell, uint64_t serial);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif
