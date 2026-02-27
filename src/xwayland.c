@@ -617,7 +617,6 @@ handle_focus_in(struct wl_listener *listener, void *data)
 	struct xwayland_view *xwayland_view =
 		wl_container_of(listener, xwayland_view, focus_in);
 	struct view *view = &xwayland_view->base;
-	struct seat *seat = &g_server.seat;
 
 	if (!view->surface) {
 		/*
@@ -637,8 +636,8 @@ handle_focus_in(struct wl_listener *listener, void *data)
 		return;
 	}
 
-	if (view->surface != seat->wlr_seat->keyboard_state.focused_surface) {
-		seat_focus_surface(seat, view->surface);
+	if (view->surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
+		seat_focus_surface(view->surface);
 	}
 }
 
@@ -835,7 +834,7 @@ handle_map(struct wl_listener *listener, void *data)
 	 */
 	if (xwayland_view->focused_before_map) {
 		xwayland_view->focused_before_map = false;
-		seat_focus_surface(&g_server.seat, view->surface);
+		seat_focus_surface(view->surface);
 	}
 
 	view_impl_map(view);
@@ -1075,7 +1074,7 @@ handle_server_ready(struct wl_listener *listener, void *data)
 static void
 handle_xwm_ready(struct wl_listener *listener, void *data)
 {
-	wlr_xwayland_set_seat(g_server.xwayland, g_server.seat.wlr_seat);
+	wlr_xwayland_set_seat(g_server.xwayland, g_seat.wlr_seat);
 	xwayland_update_workarea();
 }
 
@@ -1110,7 +1109,7 @@ xwayland_server_init(struct wlr_compositor *compositor)
 
 	struct wlr_xcursor *xcursor;
 	xcursor = wlr_xcursor_manager_get_xcursor(
-		g_server.seat.xcursor_manager, XCURSOR_DEFAULT, 1);
+		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
 	if (xcursor) {
 		struct wlr_xcursor_image *image = xcursor->images[0];
 		wlr_xwayland_set_cursor(g_server.xwayland, image->buffer,
@@ -1146,7 +1145,7 @@ xwayland_reset_cursor(void)
 	}
 
 	struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(
-		g_server.seat.xcursor_manager, XCURSOR_DEFAULT, 1);
+		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
 
 	if (xcursor && !g_server.xwayland->xwm) {
 		/* Prevents setting the cursor on an active xwayland server */
