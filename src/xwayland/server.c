@@ -1,9 +1,11 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #define _POSIX_C_SOURCE 200809L
 #include "xwayland/server.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
@@ -15,7 +17,6 @@
 #include <wayland-server-core.h>
 #include <wlr/util/log.h>
 #include "sockets.h"
-#include "xwayland/xwayland.h"
 
 #define XWAYLAND_PATH "/usr/bin/Xwayland"
 

@@ -1,13 +1,12 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #ifndef XWAYLAND_SELECTION_H
 #define XWAYLAND_SELECTION_H
 
 #include <stdbool.h>
 #include <xcb/xfixes.h>
 #include <wayland-util.h>
-
-#ifdef __cplusplus
-extern "C" {
-#endif
 
 #define INCR_CHUNK_SIZE (64 * 1024)
 
@@ -95,9 +94,5 @@ void lab_xwm_seat_handle_start_drag(struct lab_xwm *xwm, struct wlr_drag *drag);
 void lab_xwm_selection_init(struct lab_xwm_selection *selection,
 	struct lab_xwm *xwm, xcb_atom_t atom);
 void lab_xwm_selection_finish(struct lab_xwm_selection *selection);
-
-#ifdef __cplusplus
-}
-#endif
 
 #endif

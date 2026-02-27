@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-2.0-only
+// adapted from wlroots (copyrights apply)
+//
 #undef _POSIX_C_SOURCE
 #define _XOPEN_SOURCE 700 // for S_ISVTX
 #include <errno.h>
