@@ -17,6 +17,7 @@ pub trait ViewImpl {
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
     fn configure(&self, geom: Rect, commit_move: *mut bool);
+    fn raise(&self);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn offer_focus(&self);
     fn close(&self);
@@ -93,6 +94,10 @@ impl ViewImpl for XView {
         unsafe {
             xwayland_view_configure(self.c_ptr, geom, commit_move);
         }
+    }
+
+    fn raise(&self) {
+        unsafe { xwayland_view_raise(self.c_ptr) };
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
@@ -204,6 +209,10 @@ impl ViewImpl for XdgView {
         unsafe {
             xdg_toplevel_view_configure(self.c_ptr, geom, commit_move);
         }
+    }
+
+    fn raise(&self) {
+        // not supported
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {

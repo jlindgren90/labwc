@@ -1292,8 +1292,6 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 		wl_list_remove(&xsurface->stack_link);
 		wl_list_init(&xsurface->stack_link);
 		lab_xwm_set_net_client_list_stacking(xsurface->xwm);
-	} else if (xsurface->surface != NULL && xsurface->surface->mapped) {
-		xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_BELOW);
 	}
 
 	wl_signal_emit_mutable(&xsurface->events.set_override_redirect, NULL);
@@ -1416,7 +1414,6 @@ static void lab_xwm_handle_map_notify(struct lab_xwm *xwm,
 
 	if (!xsurface->override_redirect) {
 		xwayland_surface_set_withdrawn(xsurface, false);
-		xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_BELOW);
 	}
 }
 
