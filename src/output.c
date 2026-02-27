@@ -152,17 +152,16 @@ static void
 handle_output_destroy(struct wl_listener *listener, void *data)
 {
 	struct output *output = wl_container_of(listener, output, destroy);
-	struct seat *seat = &g_server.seat;
 	regions_evacuate_output(output);
 	regions_destroy(&output->regions, /* check_active */ true);
-	if (seat->overlay.active.output == output) {
-		overlay_finish(seat);
+	if (g_seat.overlay.active.output == output) {
+		overlay_finish();
 	}
 	wl_list_remove(&output->link);
 	wl_list_remove(&output->frame.link);
 	wl_list_remove(&output->destroy.link);
 	wl_list_remove(&output->request_state.link);
-	seat_output_layout_changed(seat);
+	seat_output_layout_changed();
 
 	for (size_t i = 0; i < ARRAY_SIZE(output->layer_tree); i++) {
 		wlr_scene_node_destroy(&output->layer_tree[i]->node);
@@ -632,8 +631,8 @@ output_update_for_layout_change(void)
 	 * align with the seat cursor. Re-set the cursor image so that
 	 * the cursor isn't invisible on new outputs.
 	 */
-	wlr_cursor_move(g_server.seat.cursor, NULL, 0, 0);
-	cursor_update_image(&g_server.seat);
+	wlr_cursor_move(g_seat.cursor, NULL, 0, 0);
+	cursor_update_image();
 }
 
 static bool
@@ -821,13 +820,13 @@ handle_output_manager_apply(struct wl_listener *listener, void *data)
 	wlr_output_configuration_v1_destroy(config);
 	struct output *output;
 	wl_list_for_each(output, &g_server.outputs, link) {
-		wlr_xcursor_manager_load(g_server.seat.xcursor_manager,
+		wlr_xcursor_manager_load(g_seat.xcursor_manager,
 			output->wlr_output->scale);
 	}
 
 	/* Re-set cursor image in case scale changed */
 	cursor_update_focus();
-	cursor_update_image(&g_server.seat);
+	cursor_update_image();
 }
 
 /*
@@ -878,7 +877,7 @@ do_output_layout_change(void)
 				"wlr_output_manager_v1_set_configuration()");
 		}
 		output_update_for_layout_change();
-		seat_output_layout_changed(&g_server.seat);
+		seat_output_layout_changed();
 	}
 }
 
@@ -978,8 +977,8 @@ output_nearest_to(int lx, int ly)
 struct output *
 output_nearest_to_cursor(void)
 {
-	return output_nearest_to(g_server.seat.cursor->x,
-		g_server.seat.cursor->y);
+	return output_nearest_to(g_seat.cursor->x,
+		g_seat.cursor->y);
 }
 
 struct output *
@@ -1142,7 +1141,7 @@ handle_output_power_manager_set_mode(struct wl_listener *listener, void *data)
 		 * Re-set the cursor image so that the cursor
 		 * isn't invisible on the newly enabled output.
 		 */
-		cursor_update_image(&g_server.seat);
+		cursor_update_image();
 		break;
 	}
 }
