@@ -125,9 +125,6 @@ struct server {
 	struct wl_listener new_layer_surface;
 
 	struct xwayland *xwayland;
-	struct wl_listener xwayland_server_ready;
-	struct wl_listener xwayland_xwm_ready;
-	struct wl_listener xwayland_new_surface;
 
 	struct wlr_xdg_activation_v1 *xdg_activation;
 	struct wl_listener xdg_activation_request;
