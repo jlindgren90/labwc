@@ -9,6 +9,4 @@ void xwayland_server_finish(void);
 
 void xwayland_update_workarea(void);
 
-void xwayland_reset_cursor(void);
-
 #endif /* LABWC_XWAYLAND_VIEW_H */

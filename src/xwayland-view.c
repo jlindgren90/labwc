@@ -868,6 +868,17 @@ handle_xwm_ready(struct wl_listener *listener, void *data)
 {
 	xwayland_set_seat(g_server.xwayland, g_seat.wlr_seat);
 	xwayland_update_workarea();
+
+	struct wlr_xcursor *xcursor;
+	xcursor = wlr_xcursor_manager_get_xcursor(
+		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
+	if (xcursor) {
+		struct wlr_xcursor_image *image = xcursor->images[0];
+		xwayland_set_cursor(g_server.xwayland, image->buffer,
+			image->width * 4, image->width,
+			image->height, image->hotspot_x,
+			image->hotspot_y);
+	}
 }
 
 void
@@ -896,67 +907,6 @@ xwayland_server_init(struct wlr_compositor *compositor)
 	} else {
 		wlr_log(WLR_DEBUG, "xwayland is running on display %s",
 			g_server.xwayland->display_name);
-	}
-
-	struct wlr_xcursor *xcursor;
-	xcursor = wlr_xcursor_manager_get_xcursor(
-		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
-	if (xcursor) {
-		struct wlr_xcursor_image *image = xcursor->images[0];
-		xwayland_set_cursor(g_server.xwayland, image->buffer,
-			image->width * 4, image->width,
-			image->height, image->hotspot_x,
-			image->hotspot_y);
-	}
-}
-
-void
-xwayland_reset_cursor(void)
-{
-	/*
-	 * As xwayland caches the pixel data when not yet started up
-	 * due to the delayed lazy startup approach, we do have to
-	 * re-set the xwayland cursor image. Otherwise the first X11
-	 * client connected will cause the xwayland server to use
-	 * the cached (and potentially destroyed) pixel data.
-	 *
-	 * Calling this function after reloading the cursor theme
-	 * ensures that the cached pixel data keeps being valid.
-	 *
-	 * To reproduce:
-	 * - Compile with b_sanitize=address,undefined
-	 * - Start labwc (nothing in autostart that could create
-	 *   a X11 connection, e.g. no GTK or X11 application)
-	 * - Reconfigure
-	 * - Start some X11 client
-	 */
-
-	if (!g_server.xwayland) {
-		return;
-	}
-
-	struct wlr_xcursor *xcursor = wlr_xcursor_manager_get_xcursor(
-		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
-
-	if (xcursor && !g_server.xwayland->xwm) {
-		/* Prevents setting the cursor on an active xwayland server */
-		struct wlr_xcursor_image *image = xcursor->images[0];
-		xwayland_set_cursor(g_server.xwayland, image->buffer,
-			image->width * 4, image->width,
-			image->height, image->hotspot_x,
-			image->hotspot_y);
-		return;
-	}
-
-	if (g_server.xwayland->cursor) {
-		/*
-		 * The previous configured theme has set the
-		 * default cursor or the xwayland server is
-		 * currently running but still has a cached
-		 * xcursor set that will be used on the next
-		 * xwayland destroy -> lazy startup cycle.
-		 */
-		zfree(g_server.xwayland->cursor);
 	}
 }
 

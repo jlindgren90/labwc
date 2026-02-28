@@ -36,7 +36,6 @@ struct xwayland {
 	bool own_server;
 	struct lab_xwm *xwm;
 	struct xwayland_shell_v1 *shell_v1;
-	struct xwayland_cursor *cursor;
 
 	// Value the DISPLAY environment variable should be set to by the compositor
 	const char *display_name;

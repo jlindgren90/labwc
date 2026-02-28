@@ -1173,7 +1173,6 @@ void
 cursor_reload(void)
 {
 	cursor_load();
-	xwayland_reset_cursor();
 	cursor_update_image();
 }
 
