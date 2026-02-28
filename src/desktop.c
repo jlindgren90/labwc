@@ -27,7 +27,7 @@ desktop_focus_view_or_surface(ViewId view_id,
 	} else {
 		struct xwayland_surface *xsurface =
 			xwayland_surface_try_from_wlr_surface(surface);
-		if (xsurface && xwayland_surface_override_redirect_wants_focus(xsurface)) {
+		if (xsurface) {
 			seat_focus_surface(surface);
 		}
 	}

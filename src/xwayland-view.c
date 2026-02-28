@@ -612,8 +612,7 @@ map_unmanaged_surface(struct view *view)
 
 	CONNECT_SIGNAL(xsurface, view, set_geometry);
 
-	if (xwayland_surface_override_redirect_wants_focus(xsurface)
-			|| view->ever_grabbed_focus) {
+	if (view->ever_grabbed_focus) {
 		seat_focus_surface(xsurface->surface);
 	}
 
@@ -674,8 +673,7 @@ focus_next_surface(struct xwayland_surface *xsurface)
 	struct wl_list *list = &g_server.unmanaged_surfaces;
 	wl_list_for_each_reverse(u, list, link) {
 		struct xwayland_surface *prev = u->xwayland_surface;
-		if (xwayland_surface_override_redirect_wants_focus(prev)
-				|| u->ever_grabbed_focus) {
+		if (u->ever_grabbed_focus) {
 			seat_focus_surface(prev->surface);
 			return;
 		}
