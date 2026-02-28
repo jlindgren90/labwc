@@ -15,7 +15,6 @@
 #include <wlr/xcursor.h>
 #include <xcb/composite.h>
 #include <xcb/render.h>
-#include <xcb/res.h>
 #include <xcb/xfixes.h>
 #include "xwayland/server.h"
 #include "xwayland/shell.h"
@@ -133,34 +132,6 @@ static struct xwayland_surface *lookup_surface(struct lab_xwm *xwm,
 	return NULL;
 }
 
-static void read_surface_client_id(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface,
-		xcb_res_query_client_ids_cookie_t cookie) {
-	xcb_res_query_client_ids_reply_t *reply = xcb_res_query_client_ids_reply(
-		xwm->xcb_conn, cookie, NULL);
-	if (reply == NULL) {
-		return;
-	}
-
-	uint32_t *pid = NULL;
-	xcb_res_client_id_value_iterator_t iter =
-		xcb_res_query_client_ids_ids_iterator(reply);
-	while (iter.rem > 0) {
-		if (iter.data->spec.mask & XCB_RES_CLIENT_ID_MASK_LOCAL_CLIENT_PID &&
-				xcb_res_client_id_value_value_length(iter.data) > 0) {
-			pid = xcb_res_client_id_value_value(iter.data);
-			break;
-		}
-		xcb_res_client_id_value_next(&iter);
-	}
-	if (pid == NULL) {
-		free(reply);
-		return;
-	}
-	xsurface->pid = *pid;
-	free(reply);
-}
-
 static struct xwayland_surface *xwayland_surface_create(
 		struct lab_xwm *xwm, xcb_window_t window_id, int16_t x, int16_t y,
 		uint16_t width, uint16_t height, bool override_redirect) {
@@ -168,15 +139,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	if (!surface) {
 		wlr_log(WLR_ERROR, "Could not allocate wlr xwayland surface");
 		return NULL;
-	}
-
-	xcb_res_query_client_ids_cookie_t client_id_cookie = { 0 };
-	if (xwm->xres) {
-		xcb_res_client_id_spec_t spec = {
-			.client = window_id,
-			.mask = XCB_RES_CLIENT_ID_MASK_LOCAL_CLIENT_PID
-		};
-		client_id_cookie = xcb_res_query_client_ids(xwm->xcb_conn, 1, &spec);
 	}
 
 	uint32_t values[1];
@@ -222,10 +184,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_signal_init(&surface->events.map_request);
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
-
-	if (xwm->xres) {
-		read_surface_client_id(xwm, surface, client_id_cookie);
-	}
 
 	wl_signal_emit_mutable(&xwm->xwayland->events.new_surface, surface);
 
@@ -1598,17 +1556,9 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 		return;
 	}
 
-	// Allow focus changes between surfaces belonging to the same
-	// application. Steam for example relies on this:
-	// https://github.com/swaywm/sway/issues/1865
-	if (xsurface && ((xwm->focus_surface && xsurface->pid == xwm->focus_surface->pid) ||
-			(xwm->offered_focus && xsurface->pid == xwm->offered_focus->pid))) {
+	if (xsurface) {
 		lab_xwm_set_focused_window(xwm, xsurface);
 		wl_signal_emit_mutable(&xsurface->events.focus_in, NULL);
-	} else {
-		// Try to prevent clients from changing focus between
-		// applications, by refocusing the previous surface.
-		lab_xwm_focus_window(xwm, xwm->focus_surface);
 	}
 }
 
@@ -1929,7 +1879,6 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 static void lab_xwm_get_resources(struct lab_xwm *xwm) {
 	xcb_prefetch_extension_data(xwm->xcb_conn, &xcb_xfixes_id);
 	xcb_prefetch_extension_data(xwm->xcb_conn, &xcb_composite_id);
-	xcb_prefetch_extension_data(xwm->xcb_conn, &xcb_res_id);
 
 	size_t i;
 	xcb_intern_atom_cookie_t cookies[ATOM_LAST];
@@ -1974,29 +1923,6 @@ static void lab_xwm_get_resources(struct lab_xwm *xwm) {
 	xwm->xfixes_major_version = xfixes_reply->major_version;
 
 	free(xfixes_reply);
-
-	const xcb_query_extension_reply_t *xres =
-		xcb_get_extension_data(xwm->xcb_conn, &xcb_res_id);
-	if (!xres || !xres->present) {
-		return;
-	}
-
-	xcb_res_query_version_cookie_t xres_cookie =
-		xcb_res_query_version(xwm->xcb_conn, XCB_RES_MAJOR_VERSION,
-			XCB_RES_MINOR_VERSION);
-	xcb_res_query_version_reply_t *xres_reply =
-		xcb_res_query_version_reply(xwm->xcb_conn, xres_cookie, NULL);
-	if (xres_reply == NULL) {
-		return;
-	}
-
-	wlr_log(WLR_DEBUG, "xres version: %" PRIu32 ".%" PRIu32,
-		xres_reply->server_major, xres_reply->server_minor);
-	if (xres_reply->server_major > 1 ||
-			(xres_reply->server_major == 1 && xres_reply->server_minor >= 2)) {
-		xwm->xres = xres;
-	}
-	free(xres_reply);
 }
 
 static void lab_xwm_create_wm_window(struct lab_xwm *xwm) {

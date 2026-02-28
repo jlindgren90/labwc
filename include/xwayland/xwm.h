@@ -135,7 +135,6 @@ struct lab_xwm {
 	struct xwayland_surface *drop_focus;
 
 	const xcb_query_extension_reply_t *xfixes;
-	const xcb_query_extension_reply_t *xres;
 	uint32_t xfixes_major_version;
 	xcb_errors_context_t *errors_context;
 	unsigned int last_focus_seq;
