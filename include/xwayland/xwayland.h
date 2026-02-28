@@ -129,7 +129,6 @@ struct xwayland_surface {
 	char *title;
 	char *class;
 	char *instance;
-	pid_t pid;
 
 	struct wl_list children; // xwayland_surface.parent_link
 	struct xwayland_surface *parent;
