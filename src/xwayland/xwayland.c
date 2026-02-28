@@ -16,23 +16,17 @@
 #include "xwayland/shell.h"
 #include "xwayland/xwm.h"
 
-static void handle_server_destroy(struct wl_listener *listener, void *data) {
-	struct xwayland *xwayland =
-		wl_container_of(listener, xwayland, server_destroy);
-	// Server is being destroyed so avoid destroying it once again.
-	xwayland->server = NULL;
-	xwayland_destroy(xwayland);
-}
-
-static void handle_server_start(struct wl_listener *listener, void *data) {
-	struct xwayland *xwayland =
-		wl_container_of(listener, xwayland, server_start);
+void
+xwayland_on_server_start(struct xwayland *xwayland)
+{
 	if (xwayland->shell_v1 != NULL) {
 		xwayland_shell_v1_set_client(xwayland->shell_v1, xwayland->server->client);
 	}
 }
 
-static void xwayland_mark_ready(struct xwayland *xwayland) {
+void
+xwayland_on_server_ready(struct xwayland *xwayland)
+{
 	assert(xwayland->server->wm_fd[0] >= 0);
 	xwayland->xwm = lab_xwm_create(xwayland, xwayland->server->wm_fd[0]);
 	// lab_xwm_create takes ownership of wm_fd[0] under all circumstances
@@ -46,13 +40,7 @@ static void xwayland_mark_ready(struct xwayland *xwayland) {
 		lab_xwm_set_seat(xwayland->xwm, xwayland->seat);
 	}
 
-	wl_signal_emit_mutable(&xwayland->events.ready, NULL);
-}
-
-static void handle_server_ready(struct wl_listener *listener, void *data) {
-	struct xwayland *xwayland =
-		wl_container_of(listener, xwayland, server_ready);
-	xwayland_mark_ready(xwayland);
+	xwayland_on_ready();
 }
 
 static void handle_shell_destroy(struct wl_listener *listener, void *data) {
@@ -71,58 +59,40 @@ void xwayland_destroy(struct xwayland *xwayland) {
 		return;
 	}
 
-	wl_signal_emit_mutable(&xwayland->events.destroy, NULL);
-
-	assert(wl_list_empty(&xwayland->events.destroy.listener_list));
-	assert(wl_list_empty(&xwayland->events.new_surface.listener_list));
-	assert(wl_list_empty(&xwayland->events.ready.listener_list));
-
-	wl_list_remove(&xwayland->server_destroy.link);
-	wl_list_remove(&xwayland->server_start.link);
-	wl_list_remove(&xwayland->server_ready.link);
 	wl_list_remove(&xwayland->shell_destroy.link);
 
 	xwayland_set_seat(xwayland, NULL);
-	if (xwayland->own_server) {
-		xwayland_server_destroy(xwayland->server);
-	}
+	xwayland_server_destroy(xwayland->server);
 	xwayland->server = NULL;
 	xwayland_shell_v1_destroy(xwayland->shell_v1);
 	lab_xwm_destroy(xwayland->xwm);
 	free(xwayland);
 }
 
-struct xwayland *xwayland_create_with_server(struct wl_display *wl_display,
-		struct wlr_compositor *compositor, struct xwayland_server *server) {
+static struct xwayland *
+xwayland_create_inner(struct wl_display *wl_display,
+		struct wlr_compositor *compositor,
+		struct xwayland_server_options *options)
+{
 	struct xwayland *xwayland = calloc(1, sizeof(*xwayland));
 	if (!xwayland) {
+		return NULL;
+	}
+
+	struct xwayland_server *server =
+		xwayland_server_create(wl_display, options, xwayland);
+	if (server == NULL) {
+		free(xwayland);
 		return NULL;
 	}
 
 	xwayland->wl_display = wl_display;
 	xwayland->compositor = compositor;
 
-	wl_signal_init(&xwayland->events.destroy);
-	wl_signal_init(&xwayland->events.new_surface);
-	wl_signal_init(&xwayland->events.ready);
-
 	xwayland->server = server;
 	xwayland->display_name = xwayland->server->display_name;
 
-	xwayland->server_destroy.notify = handle_server_destroy;
-	wl_signal_add(&xwayland->server->events.destroy, &xwayland->server_destroy);
-
-	xwayland->server_start.notify = handle_server_start;
-	wl_signal_add(&xwayland->server->events.start, &xwayland->server_start);
-
-	xwayland->server_ready.notify = handle_server_ready;
-	wl_signal_add(&xwayland->server->events.ready, &xwayland->server_ready);
-
 	wl_list_init(&xwayland->shell_destroy.link);
-
-	if (server->ready) {
-		xwayland_mark_ready(xwayland);
-	}
 
 	return xwayland;
 }
@@ -138,29 +108,20 @@ struct xwayland *xwayland_create(struct wl_display *wl_display,
 		.lazy = lazy,
 		.enable_wm = true,
 	};
-	struct xwayland_server *server = xwayland_server_create(wl_display, &options);
-	if (server == NULL) {
-		goto error_shell_v1;
-	}
 
-	struct xwayland *xwayland = xwayland_create_with_server(wl_display, compositor, server);
+	struct xwayland *xwayland =
+		xwayland_create_inner(wl_display, compositor, &options);
 	if (xwayland == NULL) {
-		goto error_server;
+		xwayland_shell_v1_destroy(shell_v1);
+		return NULL;
 	}
 
 	xwayland->shell_v1 = shell_v1;
-	xwayland->own_server = true;
 
 	xwayland->shell_destroy.notify = handle_shell_destroy;
 	wl_signal_add(&xwayland->shell_v1->events.destroy, &xwayland->shell_destroy);
 
 	return xwayland;
-
-error_server:
-	xwayland_server_destroy(server);
-error_shell_v1:
-	xwayland_shell_v1_destroy(shell_v1);
-	return NULL;
 }
 
 void xwayland_set_cursor(struct xwayland *xwayland,
