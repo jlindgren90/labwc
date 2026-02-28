@@ -114,9 +114,12 @@ desktop_focus_view_or_surface(struct view *view,
 	if (view) {
 		desktop_focus_view(view, raise);
 	} else {
+		// Give seat focus to an unmanaged surface when clicked.
+		// This just allows keyboard input to pass to XWayland;
+		// it doesn't necessarily change the X11 keyboard focus.
 		struct wlr_xwayland_surface *xsurface =
 			wlr_xwayland_surface_try_from_wlr_surface(surface);
-		if (xsurface && wlr_xwayland_surface_override_redirect_wants_focus(xsurface)) {
+		if (xsurface) {
 			seat_focus_surface(surface);
 		}
 	}
