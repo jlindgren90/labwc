@@ -75,7 +75,5 @@ void xwayland_update_workarea(void);
 
 void xwayland_reset_cursor(void);
 
-void xwayland_flush(void);
-
 #endif /* HAVE_XWAYLAND */
 #endif /* LABWC_XWAYLAND_H */

@@ -2205,19 +2205,6 @@ view_move_to_front(struct view *view)
 		move_to_front(view);
 	}
 
-#if HAVE_XWAYLAND
-	/*
-	 * view_move_to_front() is typically called on each mouse press
-	 * via Raise action. This means we are restacking windows just
-	 * about at the same time we send the mouse press input to the
-	 * X server, and creates a race where the mouse press could go
-	 * to an incorrect X window depending on timing. To mitigate the
-	 * race, perform an explicit flush after restacking.
-	 */
-	if (view->type == LAB_XWAYLAND_VIEW) {
-		xwayland_flush();
-	}
-#endif
 	cursor_update_focus();
 	desktop_update_top_layer_visibility();
 }
