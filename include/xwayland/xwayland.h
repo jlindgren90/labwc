@@ -49,15 +49,7 @@ struct xwayland {
 		struct wl_signal destroy;
 		struct wl_signal ready;
 		struct wl_signal new_surface; // struct xwayland_surface
-		struct wl_signal remove_startup_info; // struct xwayland_remove_startup_info_event
 	} events;
-
-	/**
-	 * Add a custom event handler to xwayland. Return true if the event was
-	 * handled or false to use the default wlr-xwayland handler. wlr-xwayland will
-	 * free the event.
-	 */
-	bool (*user_event_handler)(struct xwayland *xwayland, xcb_generic_event_t *event);
 
 	void *data;
 
@@ -133,15 +125,11 @@ struct xwayland_surface {
 	int16_t x, y;
 	uint16_t width, height;
 	bool override_redirect;
-	float opacity;
 
 	char *title;
 	char *class;
 	char *instance;
-	char *role;
-	char *startup_id;
 	pid_t pid;
-	bool has_utf8_title;
 
 	struct wl_list children; // xwayland_surface.parent_link
 	struct xwayland_surface *parent;
@@ -165,24 +153,13 @@ struct xwayland_surface {
 	 */
 	xcb_ewmh_wm_strut_partial_t *strut_partial;
 
-	bool pinging;
-	struct wl_event_source *ping_timer;
-
 	// _NET_WM_STATE
 	bool modal;
 	bool fullscreen;
 	bool maximized_vert, maximized_horz;
 	bool minimized;
 	bool withdrawn;
-	bool sticky;
-	bool shaded;
-	bool skip_taskbar;
-	bool skip_pager;
 	bool above;
-	bool below;
-	bool demands_attention;
-
-	bool has_alpha;
 
 	struct {
 		struct wl_signal destroy;
@@ -194,35 +171,22 @@ struct xwayland_surface {
 		struct wl_signal request_fullscreen;
 		struct wl_signal request_activate;
 		struct wl_signal request_close;
-		struct wl_signal request_sticky;
-		struct wl_signal request_shaded;
-		struct wl_signal request_skip_taskbar;
-		struct wl_signal request_skip_pager;
 		struct wl_signal request_above;
-		struct wl_signal request_below;
-		struct wl_signal request_demands_attention;
 
 		struct wl_signal associate;
 		struct wl_signal dissociate;
 
 		struct wl_signal set_title;
 		struct wl_signal set_class;
-		struct wl_signal set_role;
-		struct wl_signal set_parent;
-		struct wl_signal set_startup_id;
-		struct wl_signal set_window_type;
-		struct wl_signal set_hints;
 		struct wl_signal set_decorations;
 		struct wl_signal set_strut_partial;
 		struct wl_signal set_override_redirect;
 		struct wl_signal set_geometry;
-		struct wl_signal set_opacity;
 		struct wl_signal set_icon;
 		struct wl_signal focus_in;
 		struct wl_signal grab_focus;
 		/* can be used to set initial maximized/fullscreen geometry */
 		struct wl_signal map_request;
-		struct wl_signal ping_timeout;
 	} events;
 
 	void *data;
@@ -241,11 +205,6 @@ struct xwayland_surface_configure_event {
 	int16_t x, y;
 	uint16_t width, height;
 	uint16_t mask; // xcb_config_window_t
-};
-
-struct xwayland_remove_startup_info_event  {
-	const char *id;
-	xcb_window_t window;
 };
 
 struct xwayland_resize_event {
@@ -306,27 +265,6 @@ void xwayland_surface_set_maximized(struct xwayland_surface *surface,
 void xwayland_surface_set_fullscreen(struct xwayland_surface *surface,
 	bool fullscreen);
 
-void xwayland_surface_set_sticky(
-	struct xwayland_surface *surface, bool sticky);
-
-void xwayland_surface_set_shaded(
-	struct xwayland_surface *surface, bool shaded);
-
-void xwayland_surface_set_skip_taskbar(
-	struct xwayland_surface *surface, bool skip_taskbar);
-
-void xwayland_surface_set_skip_pager(
-	struct xwayland_surface *surface, bool skip_pager);
-
-void xwayland_surface_set_above(
-	struct xwayland_surface *surface, bool above);
-
-void xwayland_surface_set_below(
-	struct xwayland_surface *surface, bool below);
-
-void xwayland_surface_set_demands_attention(
-	struct xwayland_surface *surface, bool demands_attention);
-
 void xwayland_set_seat(struct xwayland *xwayland,
 	struct wlr_seat *seat);
 
@@ -350,8 +288,6 @@ struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
  * reliable way to know in advance whether these windows want to be focused.
  */
 void xwayland_surface_offer_focus(struct xwayland_surface *xsurface);
-
-void xwayland_surface_ping(struct xwayland_surface *surface);
 
 /**
  * Returns true if the surface has the given window type.
@@ -407,15 +343,5 @@ void xwayland_set_workareas(struct xwayland *xwayland,
 bool xwayland_surface_fetch_icon(
 	const struct xwayland_surface *xsurface,
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
-
-/**
- * Get the XCB connection of the XWM.
- *
- * The connection is only valid after xwayland.events.ready, and becomes
- * invalid on xwayland_server.events.destroy. In that case, NULL is
- * returned.
- */
-xcb_connection_t *xwayland_get_xwm_connection(
-	struct xwayland *xwayland);
 
 #endif

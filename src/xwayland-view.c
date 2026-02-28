@@ -294,7 +294,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	wl_list_remove(&view->set_decorations.link);
 	wl_list_remove(&view->set_override_redirect.link);
 	wl_list_remove(&view->set_strut_partial.link);
-	wl_list_remove(&view->set_window_type.link);
 	wl_list_remove(&view->set_icon.link);
 	wl_list_remove(&view->focus_in.link);
 	wl_list_remove(&view->map_request.link);
@@ -449,12 +448,6 @@ handle_set_decorations(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_decorations);
 	view_enable_ssd(view->id, want_deco(view->xwayland_surface));
-}
-
-static void
-handle_set_window_type(struct wl_listener *listener, void *data)
-{
-	/* Intentionally left blank */
 }
 
 static void
@@ -822,7 +815,6 @@ xwayland_view_create(struct xwayland_surface *xsurface, bool mapped)
 	CONNECT_SIGNAL(xsurface, view, set_decorations);
 	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
 	CONNECT_SIGNAL(xsurface, view, set_strut_partial);
-	CONNECT_SIGNAL(xsurface, view, set_window_type);
 	CONNECT_SIGNAL(xsurface, view, set_icon);
 	CONNECT_SIGNAL(xsurface, view, focus_in);
 	CONNECT_SIGNAL(xsurface, view, map_request);

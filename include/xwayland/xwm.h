@@ -109,14 +109,11 @@ struct lab_xwm {
 	struct xwayland *xwayland;
 	struct wl_event_source *event_source;
 	struct wlr_seat *seat;
-	uint32_t ping_timeout;
 
 	xcb_atom_t atoms[ATOM_LAST];
 	xcb_connection_t *xcb_conn;
 	xcb_screen_t *screen;
 	xcb_window_t window;
-	xcb_visualid_t visual_id;
-	xcb_colormap_t colormap;
 	xcb_render_pictformat_t render_format_id;
 	xcb_cursor_t cursor;
 
@@ -132,7 +129,6 @@ struct lab_xwm {
 	// Surfaces in bottom-to-top stacking order, for _NET_CLIENT_LIST_STACKING
 	struct wl_list surfaces_in_stack_order; // xwayland_surface.stack_link
 	struct wl_list unpaired_surfaces; // xwayland_surface.unpaired_link
-	struct wl_list pending_startup_ids; // pending_startup_id
 
 	struct wlr_drag *drag;
 	struct xwayland_surface *drag_focus;

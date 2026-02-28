@@ -91,7 +91,6 @@ void xwayland_destroy(struct xwayland *xwayland) {
 	assert(wl_list_empty(&xwayland->events.destroy.listener_list));
 	assert(wl_list_empty(&xwayland->events.new_surface.listener_list));
 	assert(wl_list_empty(&xwayland->events.ready.listener_list));
-	assert(wl_list_empty(&xwayland->events.remove_startup_info.listener_list));
 
 	wl_list_remove(&xwayland->server_destroy.link);
 	wl_list_remove(&xwayland->server_start.link);
@@ -122,7 +121,6 @@ struct xwayland *xwayland_create_with_server(struct wl_display *wl_display,
 	wl_signal_init(&xwayland->events.destroy);
 	wl_signal_init(&xwayland->events.new_surface);
 	wl_signal_init(&xwayland->events.ready);
-	wl_signal_init(&xwayland->events.remove_startup_info);
 
 	xwayland->server = server;
 	xwayland->display_name = xwayland->server->display_name;
