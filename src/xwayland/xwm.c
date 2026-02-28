@@ -185,7 +185,7 @@ static struct xwayland_surface *xwayland_surface_create(
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
-	wl_signal_emit_mutable(&xwm->xwayland->events.new_surface, surface);
+	xwayland_on_new_surface(surface);
 
 	return surface;
 }

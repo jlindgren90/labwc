@@ -9,6 +9,8 @@
 #include <time.h>
 #include <wayland-server-core.h>
 
+struct xwayland;
+
 struct xwayland_server_options {
 	bool lazy;
 	bool enable_wm;
@@ -33,15 +35,10 @@ struct xwayland_server {
 	int x_fd[2];
 	struct wl_event_source *x_fd_read_event[2];
 	struct xwayland_server_options options;
+	struct xwayland *xwayland;
 
 	struct wl_display *wl_display;
 	struct wl_event_source *idle_source;
-
-	struct {
-		struct wl_signal start;
-		struct wl_signal ready;
-		struct wl_signal destroy;
-	} events;
 
 	void *data;
 
@@ -51,13 +48,13 @@ struct xwayland_server {
 	};
 };
 
-struct xwayland_server_ready_event {
-	struct xwayland_server *server;
-	int wm_fd;
-};
-
-struct xwayland_server *xwayland_server_create(
-	struct wl_display *display, struct xwayland_server_options *options);
+struct xwayland_server *xwayland_server_create(struct wl_display *display,
+	struct xwayland_server_options *options, struct xwayland *xwayland);
 void xwayland_server_destroy(struct xwayland_server *server);
+
+// listeners (external)
+void xwayland_on_server_start(struct xwayland *xwayland);
+void xwayland_on_server_ready(struct xwayland *xwayland);
+void xwayland_destroy(struct xwayland *xwayland);
 
 #endif

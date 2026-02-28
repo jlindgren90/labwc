@@ -206,7 +206,7 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 		wl_list_remove(&server->client_destroy.link);
 	}
 
-	xwayland_server_destroy(server);
+	xwayland_destroy(server->xwayland); // calls xwayland_server_destroy()
 }
 
 static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
@@ -263,11 +263,7 @@ static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
 	server->pipe_source = NULL;
 	server->ready = true;
 
-	struct xwayland_server_ready_event event = {
-		.server = server,
-		.wm_fd = server->wm_fd[0],
-	};
-	wl_signal_emit_mutable(&server->events.ready, &event);
+	xwayland_on_server_ready(server->xwayland);
 
 	/* We removed the source, so don't need recheck */
 	return 0;
@@ -354,7 +350,7 @@ static bool server_start(struct xwayland_server *server) {
 	server->pipe_source = wl_event_loop_add_fd(loop, notify_fd[0],
 		WL_EVENT_READABLE, xserver_handle_ready, server);
 
-	wl_signal_emit_mutable(&server->events.start, NULL);
+	xwayland_on_server_start(server->xwayland);
 
 	server->pid = fork();
 	if (server->pid < 0) {
@@ -431,19 +427,14 @@ void xwayland_server_destroy(struct xwayland_server *server) {
 	}
 	server_finish_process(server);
 	server_finish_display(server);
-
-	wl_signal_emit_mutable(&server->events.destroy, NULL);
-
-	assert(wl_list_empty(&server->events.start.listener_list));
-	assert(wl_list_empty(&server->events.ready.listener_list));
-	assert(wl_list_empty(&server->events.destroy.listener_list));
-
 	free(server);
 }
 
-struct xwayland_server *xwayland_server_create(
-		struct wl_display *wl_display,
-		struct xwayland_server_options *options) {
+struct xwayland_server *
+xwayland_server_create(struct wl_display *wl_display,
+		struct xwayland_server_options *options,
+		struct xwayland *xwayland)
+{
 	if (!getenv("XWAYLAND") && access(XWAYLAND_PATH, X_OK) != 0) {
 		wlr_log(WLR_ERROR, "Cannot find Xwayland binary \"%s\"", XWAYLAND_PATH);
 		return NULL;
@@ -456,16 +447,13 @@ struct xwayland_server *xwayland_server_create(
 
 	server->wl_display = wl_display;
 	server->options = *options;
+	server->xwayland = xwayland;
 
 	server->options.terminate_delay = 0;
 
 	server->x_fd[0] = server->x_fd[1] = -1;
 	server->wl_fd[0] = server->wl_fd[1] = -1;
 	server->wm_fd[0] = server->wm_fd[1] = -1;
-
-	wl_signal_init(&server->events.start);
-	wl_signal_init(&server->events.ready);
-	wl_signal_init(&server->events.destroy);
 
 	if (!server_start_display(server, wl_display)) {
 		goto error_alloc;

@@ -33,7 +33,6 @@ struct wlr_drag;
  */
 struct xwayland {
 	struct xwayland_server *server;
-	bool own_server;
 	struct lab_xwm *xwm;
 	struct xwayland_shell_v1 *shell_v1;
 
@@ -45,17 +44,6 @@ struct xwayland {
 	struct wlr_seat *seat;
 
 	struct {
-		struct wl_signal destroy;
-		struct wl_signal ready;
-		struct wl_signal new_surface; // struct xwayland_surface
-	} events;
-
-	void *data;
-
-	struct {
-		struct wl_listener server_start;
-		struct wl_listener server_ready;
-		struct wl_listener server_destroy;
 		struct wl_listener seat_destroy;
 		struct wl_listener shell_destroy;
 	};
@@ -223,12 +211,6 @@ struct xwayland_minimize_event {
 struct xwayland *xwayland_create(struct wl_display *wl_display,
 	struct wlr_compositor *compositor, bool lazy);
 
-/**
- * Create an XWM from an existing Xwayland server.
- */
-struct xwayland *xwayland_create_with_server(struct wl_display *display,
-	struct wlr_compositor *compositor, struct xwayland_server *server);
-
 void xwayland_destroy(struct xwayland *xwayland);
 
 void xwayland_set_cursor(struct xwayland *xwayland,
@@ -317,5 +299,9 @@ void xwayland_set_workareas(struct xwayland *xwayland,
 bool xwayland_surface_fetch_icon(
 	const struct xwayland_surface *xsurface,
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
+
+/* listeners (external) */
+void xwayland_on_new_surface(struct xwayland_surface *surface);
+void xwayland_on_ready(void);
 
 #endif

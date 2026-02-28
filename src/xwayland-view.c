@@ -840,11 +840,9 @@ xwayland_unmanaged_create(struct xwayland_surface *xsurface, bool mapped)
 	}
 }
 
-static void
-handle_new_surface(struct wl_listener *listener, void *data)
+void
+xwayland_on_new_surface(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *xsurface = data;
-
 	/*
 	 * We do not create 'views' for xwayland override_redirect surfaces,
 	 * but add them to server.unmanaged_surfaces so that we can render them
@@ -856,15 +854,8 @@ handle_new_surface(struct wl_listener *listener, void *data)
 	}
 }
 
-static void
-handle_server_ready(struct wl_listener *listener, void *data)
-{
-	/* Fire an Xwayland startup script if one (or many) can be found */
-	session_run_script("xinitrc");
-}
-
-static void
-handle_xwm_ready(struct wl_listener *listener, void *data)
+void
+xwayland_on_ready(void)
 {
 	xwayland_set_seat(g_server.xwayland, g_seat.wlr_seat);
 	xwayland_update_workarea();
@@ -879,6 +870,9 @@ handle_xwm_ready(struct wl_listener *listener, void *data)
 			image->height, image->hotspot_x,
 			image->hotspot_y);
 	}
+
+	/* Fire an Xwayland startup script if one (or many) can be found */
+	session_run_script("xinitrc");
 }
 
 void
@@ -890,17 +884,6 @@ xwayland_server_init(struct wlr_compositor *compositor)
 		wlr_log(WLR_ERROR, "cannot create xwayland server");
 		exit(EXIT_FAILURE);
 	}
-	g_server.xwayland_new_surface.notify = handle_new_surface;
-	wl_signal_add(&g_server.xwayland->events.new_surface,
-		&g_server.xwayland_new_surface);
-
-	g_server.xwayland_server_ready.notify = handle_server_ready;
-	wl_signal_add(&g_server.xwayland->server->events.ready,
-		&g_server.xwayland_server_ready);
-
-	g_server.xwayland_xwm_ready.notify = handle_xwm_ready;
-	wl_signal_add(&g_server.xwayland->events.ready,
-		&g_server.xwayland_xwm_ready);
 
 	if (setenv("DISPLAY", g_server.xwayland->display_name, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "unable to set DISPLAY for xwayland");
@@ -914,9 +897,6 @@ void
 xwayland_server_finish(void)
 {
 	struct xwayland *xwayland = g_server.xwayland;
-	wl_list_remove(&g_server.xwayland_new_surface.link);
-	wl_list_remove(&g_server.xwayland_server_ready.link);
-	wl_list_remove(&g_server.xwayland_xwm_ready.link);
 
 	/*
 	 * Reset g_server.xwayland to NULL first to prevent callbacks (like
