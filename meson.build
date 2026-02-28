@@ -135,7 +135,6 @@ xcb_libs = [
   'xcb-ewmh',
   'xcb-icccm',
   'xcb-render',
-  'xcb-res',
   'xcb-xfixes',
   'xcb-errors',
 ]
