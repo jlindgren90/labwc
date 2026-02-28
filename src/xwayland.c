@@ -912,14 +912,6 @@ xwayland_view_set_activated(struct view *view, bool activated)
 	}
 
 	wlr_xwayland_surface_activate(xwayland_surface, activated);
-	/*
-	 * Make sure that the X11-protocol messages (SetInputFocus etc.)
-	 * are sent immediately. This mitigates a race where the XWayland
-	 * server may generate an unwanted FocusOut event for the newly
-	 * activated window, if it receives mouse/pointer events over the
-	 * parallel wayland connection first.
-	 */
-	xwayland_flush();
 }
 
 static void
@@ -1331,14 +1323,4 @@ xwayland_update_workarea(void)
 		.height = workarea_bottom - workarea_top,
 	};
 	wlr_xwayland_set_workareas(server.xwayland, &workarea, 1);
-}
-
-void
-xwayland_flush(void)
-{
-	if (!server.xwayland || !server.xwayland->xwm) {
-		return;
-	}
-
-	xcb_flush(wlr_xwayland_get_xwm_connection(server.xwayland));
 }
