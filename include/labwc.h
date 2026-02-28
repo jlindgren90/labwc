@@ -133,8 +133,6 @@ struct server {
 	struct wl_listener xdg_activation_request;
 	struct wl_listener xdg_activation_new_token;
 
-	struct wl_list unmanaged_surfaces;
-
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
 	bool direct_scanout_enabled;

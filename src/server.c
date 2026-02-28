@@ -377,7 +377,6 @@ server_init(void)
 		exit(EXIT_FAILURE);
 	}
 
-	wl_list_init(&g_server.unmanaged_surfaces);
 	wl_list_init(&g_server.cycle.osd_outputs);
 
 	g_server.scene = wlr_scene_create();

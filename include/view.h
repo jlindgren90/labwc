@@ -62,7 +62,6 @@ struct view {
 
 	/* xwayland-unmanaged fields */
 	struct wlr_scene_node *node;
-	struct wl_list link;
 
 	struct wl_listener grab_focus;
 	struct wl_listener set_geometry;

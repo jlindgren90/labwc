@@ -8,7 +8,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
-#include "common/list.h"
 #include "common/macros.h"
 #include "common/mem.h"
 #include "config/rcxml.h"
@@ -607,9 +606,6 @@ map_unmanaged_surface(struct view *view)
 	assert(!view->node);
 	struct xwayland_surface *xsurface = view->xwayland_surface;
 
-	/* Stack new surface on top */
-	wl_list_append(&g_server.unmanaged_surfaces, &view->link);
-
 	CONNECT_SIGNAL(xsurface, view, set_geometry);
 
 	if (view->ever_grabbed_focus) {
@@ -666,34 +662,11 @@ handle_map(struct wl_listener *listener, void *data)
 }
 
 static void
-focus_next_surface(struct xwayland_surface *xsurface)
-{
-	/* Try to focus on last created unmanaged xwayland surface */
-	struct view *u;
-	struct wl_list *list = &g_server.unmanaged_surfaces;
-	wl_list_for_each_reverse(u, list, link) {
-		struct xwayland_surface *prev = u->xwayland_surface;
-		if (u->ever_grabbed_focus) {
-			seat_focus_surface(prev->surface);
-			return;
-		}
-	}
-
-	/*
-	 * Unmanaged surfaces do not clear the active view when mapped.
-	 * Therefore, we can simply give the focus back to the active
-	 * view when the last unmanaged surface is unmapped.
-	 */
-	view_refocus_active();
-}
-
-static void
 unmap_unmanaged_surface(struct view *view)
 {
 	assert(view->node);
 	struct xwayland_surface *xsurface = view->xwayland_surface;
 
-	wl_list_remove(&view->link);
 	wl_list_remove(&view->set_geometry.link);
 
 	/*
@@ -707,7 +680,8 @@ unmap_unmanaged_surface(struct view *view)
 	cursor_update_focus();
 
 	if (g_seat.wlr_seat->keyboard_state.focused_surface == xsurface->surface) {
-		focus_next_surface(xsurface);
+		/* Give focus back to active view after grab */
+		view_refocus_active();
 	}
 }
 
