@@ -1,0 +1,17 @@
+{
+    "target_sets": [
+        {
+            "cmake_config": "",
+            "directory": "build",
+            "loaded_via_cmake": false,
+            "name": "Default Target Set",
+            "targets": [
+                {
+                    "build_cmd": "meson compile",
+                    "name": "Default Command",
+                    "run_cmd": "../build/labwc"
+                }
+            ]
+        }
+    ]
+}
