@@ -6,6 +6,5 @@ labwc_sources += files(
 	'server.c',
 	'shell.c',
 	'sockets.c',
-	'xwayland.c',
 	'xwm.c',
 )
