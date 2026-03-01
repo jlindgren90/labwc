@@ -84,26 +84,6 @@ view_toggle_maximize(struct view *view, enum view_axis axis)
 }
 
 void
-view_set_layer(struct view *view, enum view_layer layer)
-{
-	assert(view);
-	view->layer = layer;
-	wlr_scene_node_reparent(&view->scene_tree->node,
-		g_server.view_trees[layer]);
-}
-
-void
-view_toggle_always_on_top(struct view *view)
-{
-	assert(view);
-	if (view->layer == VIEW_LAYER_ALWAYS_ON_TOP) {
-		view_set_layer(view, VIEW_LAYER_NORMAL);
-	} else {
-		view_set_layer(view, VIEW_LAYER_ALWAYS_ON_TOP);
-	}
-}
-
-void
 view_toggle_fullscreen(struct view *view)
 {
 	assert(view);

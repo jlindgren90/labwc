@@ -12,11 +12,6 @@
 #include "view-c.h"
 #include "view_api.h"
 
-enum view_layer {
-	VIEW_LAYER_NORMAL = 0,
-	VIEW_LAYER_ALWAYS_ON_TOP,
-};
-
 struct wlr_surface;
 
 struct view {
@@ -26,8 +21,6 @@ struct view {
 
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
-
-	enum view_layer layer;
 
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
@@ -86,9 +79,6 @@ struct wlr_surface *view_get_surface(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
 void view_toggle_maximize(struct view *view, enum view_axis axis);
-
-void view_set_layer(struct view *view, enum view_layer layer);
-void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
 

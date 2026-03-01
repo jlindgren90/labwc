@@ -202,6 +202,7 @@ impl View {
         }
     }
 
+    // Note: call raise() after unminimize to ensure stacking order consistency
     pub fn set_minimized(&mut self, minimized: bool, visibility_changed: &mut bool) {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
@@ -214,6 +215,10 @@ impl View {
                 *visibility_changed = true;
             }
         }
+    }
+
+    pub fn set_always_on_top(&mut self, always_on_top: bool) {
+        self.state.always_on_top = always_on_top;
     }
 
     pub fn set_pending_geom(&mut self, geom: Rect) {

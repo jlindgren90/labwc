@@ -337,8 +337,7 @@ static void
 handle_request_above(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_above);
-	view_set_layer(view, view->xwayland_surface->above
-		? VIEW_LAYER_ALWAYS_ON_TOP : VIEW_LAYER_NORMAL);
+	view_set_always_on_top(view->id, view->xwayland_surface->above);
 }
 
 static void
@@ -579,8 +578,7 @@ handle_map_request(struct wl_listener *listener, void *data)
 		axis |= VIEW_AXIS_VERTICAL;
 	}
 	view_maximize(view->id, axis);
-	view_set_layer(view, xsurface->above
-		? VIEW_LAYER_ALWAYS_ON_TOP : VIEW_LAYER_NORMAL);
+	view_set_always_on_top(view->id, xsurface->above);
 	/*
 	 * We could also call set_initial_position() here, but it's not
 	 * really necessary until the view is actually mapped (and at
@@ -729,8 +727,7 @@ xwayland_view_create(struct wlr_xwayland_surface *xsurface, bool mapped)
 	view->xwayland_surface = xsurface;
 	xsurface->data = view;
 
-	view->scene_tree =
-		wlr_scene_tree_create(g_server.view_trees[VIEW_LAYER_NORMAL]);
+	view->scene_tree = wlr_scene_tree_create(g_server.view_tree);
 	node_descriptor_create(&view->scene_tree->node,
 		LAB_NODE_VIEW, view, /*data*/ NULL);
 

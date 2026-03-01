@@ -411,11 +411,7 @@ server_init(void)
 	 * | output->layer_tree[0]              | background layer surfaces (e.g. swaybg)
 	 */
 
-	g_server.view_trees[VIEW_LAYER_NORMAL] =
-		wlr_scene_tree_create(&g_server.scene->tree);
-	g_server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
-		wlr_scene_tree_create(&g_server.scene->tree);
-
+	g_server.view_tree = wlr_scene_tree_create(&g_server.scene->tree);
 	g_server.unmanaged_tree = wlr_scene_tree_create(&g_server.scene->tree);
 	g_server.menu_tree = wlr_scene_tree_create(&g_server.scene->tree);
 

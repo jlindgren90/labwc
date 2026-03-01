@@ -147,8 +147,7 @@ struct server {
 	struct ssd_button *hovered_button;
 
 	/* Tree for all non-layer xdg/xwayland-shell surfaces */
-	struct wlr_scene_tree *view_trees[3];
-
+	struct wlr_scene_tree *view_tree;
 	/* Tree for unmanaged xsurfaces without initialized view (usually popups) */
 	struct wlr_scene_tree *unmanaged_tree;
 	/* Tree for built in menu */

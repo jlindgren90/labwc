@@ -560,7 +560,7 @@ run_action(struct view *view, struct action *action,
 		break;
 	case ACTION_TYPE_TOGGLE_ALWAYS_ON_TOP:
 		if (view) {
-			view_toggle_always_on_top(view);
+			view_toggle_always_on_top(view->id);
 		}
 		break;
 	case ACTION_TYPE_FOCUS:

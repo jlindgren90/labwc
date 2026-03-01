@@ -73,6 +73,23 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_set_always_on_top(id: ViewId, always_on_top: bool) {
+    views_mut().set_always_on_top(id, always_on_top);
+    unsafe { cursor_update_focus() };
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_toggle_always_on_top(id: ViewId) {
+    let always_on_top;
+    if let Some(view) = views().get_view(id) {
+        always_on_top = view.get_state().always_on_top;
+    } else {
+        return;
+    }
+    view_set_always_on_top(id, !always_on_top);
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_get_active() -> *mut CView {
     views().get_active()
 }
@@ -194,15 +211,14 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_raise(id: ViewId) {
-    views_mut().raise(id);
+    views_mut().raise(id, /* force_restack */ false);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_focus(id: ViewId, raise: bool) {
-    let mut views = views_mut();
     // Unminimizing also focuses (and raises) the view
-    if !views.minimize(id, false) {
-        views.focus(id, raise);
+    if !views_mut().minimize(id, false) {
+        views_mut().focus(id, raise, /* force_restack */ false);
     }
 }
 
