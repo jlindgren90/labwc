@@ -865,8 +865,7 @@ xwayland_on_ready(void)
 void
 xwayland_server_init(struct wlr_compositor *compositor)
 {
-	server.xwayland = xwayland_create(
-		server.wl_display, compositor, /* lazy */ false);
+	server.xwayland = xwayland_create(server.wl_display, compositor);
 	if (!server.xwayland) {
 		wlr_log(WLR_ERROR, "failed to create xwayland server, continuing without");
 		unsetenv("DISPLAY");
