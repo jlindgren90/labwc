@@ -602,9 +602,7 @@ server_init(void)
 	 *
 	 * https://wayfire.org/2020/08/04/Wayfire-0-5.html
 	 */
-	if (rc.primary_selection) {
-		wlr_primary_selection_v1_device_manager_create(g_server.wl_display);
-	}
+	wlr_primary_selection_v1_device_manager_create(g_server.wl_display);
 
 	g_server.input_method_manager = wlr_input_method_manager_v2_create(
 		g_server.wl_display);

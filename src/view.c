@@ -10,6 +10,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include "action.h"
 #include "buffer.h"
+#include "common/border.h"
 #include "common/box.h"
 #include "common/mem.h"
 #include "common/string-helpers.h"
@@ -22,7 +23,6 @@
 #include "output.h"
 #include "session-lock.h"
 #include "ssd.h"
-#include "theme.h"
 #include "wlr/util/log.h"
 
 #if HAVE_XWAYLAND
@@ -266,7 +266,6 @@ view_set_activated(struct view *view, bool activated)
 			keyboard_update_layout(view->keyboard_layout);
 		}
 	}
-	output_set_has_fullscreen_view(view->output, view->fullscreen);
 }
 
 void
@@ -969,11 +968,7 @@ view_wants_decorations(struct view *view)
 	case LAB_SSD_PREF_CLIENT:
 		return false;
 	default:
-		/*
-		 * We don't know anything about the client preference
-		 * so fall back to core.decoration settings in rc.xml
-		 */
-		return rc.xdg_shell_server_side_deco;
+		return true;
 	}
 }
 
@@ -1016,10 +1011,6 @@ undecorate(struct view *view)
 bool
 view_titlebar_visible(struct view *view)
 {
-	if (view->maximized == VIEW_AXIS_BOTH
-			&& rc.hide_maximized_window_titlebar) {
-		return false;
-	}
 	return view->ssd_mode == LAB_SSD_MODE_FULL;
 }
 
@@ -1112,7 +1103,6 @@ view_set_fullscreen(struct view *view, bool fullscreen)
 	} else {
 		view_apply_special_geometry(view);
 	}
-	output_set_has_fullscreen_view(view->output, view->fullscreen);
 	/*
 	 * Entering/leaving fullscreen might result in a different
 	 * scene node ending up under the cursor even if view_moved()
@@ -1492,17 +1482,6 @@ view_update_visibility(struct view *view)
 	 * Hide it if a fullscreen view is shown (or uncovered).
 	 */
 	desktop_update_top_layer_visibility();
-
-	/*
-	 * We may need to disable adaptive sync if view was fullscreen.
-	 *
-	 * FIXME: this logic doesn't account for multiple fullscreen
-	 * views. It should probably be combined with the existing
-	 * logic in desktop_update_top_layer_visibility().
-	 */
-	if (view->fullscreen && !visible) {
-		output_set_has_fullscreen_view(view->output, false);
-	}
 
 	/* Update usable area to account for XWayland "struts" (panels) */
 	if (view_has_strut_partial(view)) {

@@ -987,9 +987,8 @@ handle_xwm_ready(struct wl_listener *listener, void *data)
 void
 xwayland_server_init(struct wlr_compositor *compositor)
 {
-	g_server.xwayland =
-		wlr_xwayland_create(g_server.wl_display,
-			compositor, /* lazy */ !rc.xwayland_persistence);
+	g_server.xwayland = wlr_xwayland_create(
+		g_server.wl_display, compositor, /* lazy */ false);
 	if (!g_server.xwayland) {
 		wlr_log(WLR_ERROR, "cannot create xwayland server");
 		exit(EXIT_FAILURE);

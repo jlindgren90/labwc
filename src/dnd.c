@@ -4,10 +4,8 @@
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/types/wlr_scene.h>
 #include <wlr/util/log.h>
-#include "config/rcxml.h"
 #include "input/cursor.h"
 #include "labwc.h"  /* for struct seat */
-#include "view.h"
 
 /* Internal DnD handlers */
 static void
@@ -50,30 +48,6 @@ handle_drag_destroy(struct wl_listener *listener, void *data)
 	g_seat.drag.active = false;
 	wl_list_remove(&g_seat.drag.events.destroy.link);
 	wlr_scene_node_set_enabled(&g_seat.drag.icons->node, false);
-
-	/*
-	 * The default focus behaviour at the end of a dnd operation is that the
-	 * window that originally had keyboard-focus retains that focus. This is
-	 * consistent with the default behaviour of openbox and mutter.
-	 *
-	 * However, if the 'focus/followMouse' option is enabled we need to
-	 * refocus the current surface under the cursor because keyboard focus
-	 * is not changed during drag.
-	 */
-	if (!rc.focus_follow_mouse) {
-		return;
-	}
-
-	struct cursor_context ctx = get_cursor_context();
-	if (!ctx.surface) {
-		return;
-	}
-	seat_focus_surface(NULL);
-	seat_focus_surface(ctx.surface);
-
-	if (ctx.view && rc.raise_on_focus) {
-		view_move_to_front(ctx.view);
-	}
 }
 
 /* Public API */

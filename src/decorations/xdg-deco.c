@@ -57,9 +57,7 @@ xdg_deco_request_mode(struct wl_listener *listener, void *data)
 		break;
 	case WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_NONE:
 		xdg_deco->view->ssd_preference = LAB_SSD_PREF_UNSPEC;
-		client_mode = rc.xdg_shell_server_side_deco
-			? WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE
-			: WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_CLIENT_SIDE;
+		client_mode = WLR_XDG_TOPLEVEL_DECORATION_V1_MODE_SERVER_SIDE;
 		break;
 	default:
 		wlr_log(WLR_ERROR, "Unspecified xdg decoration variant "
