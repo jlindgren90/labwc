@@ -857,7 +857,6 @@ xwayland_on_new_surface(struct xwayland_surface *xsurface)
 void
 xwayland_on_ready(void)
 {
-	xwayland_set_seat(g_server.xwayland, g_seat.wlr_seat);
 	xwayland_update_workarea();
 
 	struct wlr_xcursor *xcursor;
@@ -865,10 +864,9 @@ xwayland_on_ready(void)
 		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
 	if (xcursor) {
 		struct wlr_xcursor_image *image = xcursor->images[0];
-		xwayland_set_cursor(g_server.xwayland, image->buffer,
-			image->width * 4, image->width,
-			image->height, image->hotspot_x,
-			image->hotspot_y);
+		xwayland_set_cursor(g_server.xwayland_server, image->buffer,
+			image->width * 4, image->width, image->height,
+			image->hotspot_x, image->hotspot_y);
 	}
 
 	/* Fire an Xwayland startup script if one (or many) can be found */
@@ -878,31 +876,32 @@ xwayland_on_ready(void)
 void
 xwayland_server_init(struct wlr_compositor *compositor)
 {
-	g_server.xwayland = xwayland_create(g_server.wl_display, compositor);
-	if (!g_server.xwayland) {
+	g_server.xwayland_server = xwayland_server_create(
+		g_server.wl_display, compositor, g_seat.wlr_seat);
+	if (!g_server.xwayland_server) {
 		wlr_log(WLR_ERROR, "cannot create xwayland server");
 		exit(EXIT_FAILURE);
 	}
 
-	if (setenv("DISPLAY", g_server.xwayland->display_name, true) < 0) {
+	if (setenv("DISPLAY", g_server.xwayland_server->display_name, true) < 0) {
 		wlr_log_errno(WLR_ERROR, "unable to set DISPLAY for xwayland");
 	} else {
 		wlr_log(WLR_DEBUG, "xwayland is running on display %s",
-			g_server.xwayland->display_name);
+			g_server.xwayland_server->display_name);
 	}
 }
 
 void
 xwayland_server_finish(void)
 {
-	struct xwayland *xwayland = g_server.xwayland;
+	struct xwayland_server *xwayland_server = g_server.xwayland_server;
 
 	/*
 	 * Reset g_server.xwayland to NULL first to prevent callbacks (like
 	 * server_global_filter) from accessing it as it is destroyed
 	 */
-	g_server.xwayland = NULL;
-	xwayland_destroy(xwayland);
+	g_server.xwayland_server = NULL;
+	xwayland_server_destroy(xwayland_server);
 }
 
 static bool
@@ -998,7 +997,7 @@ xwayland_update_workarea(void)
 	 * Do nothing if called during destroy or before xwayland is ready.
 	 * This function will be called again from the ready signal handler.
 	 */
-	if (!g_server.xwayland || !g_server.xwayland->xwm) {
+	if (!g_server.xwayland_server || !g_server.xwayland_server->xwm) {
 		return;
 	}
 
@@ -1067,5 +1066,5 @@ xwayland_update_workarea(void)
 		.width = workarea_right - workarea_left,
 		.height = workarea_bottom - workarea_top,
 	};
-	xwayland_set_workareas(g_server.xwayland, &workarea, 1);
+	xwayland_set_workareas(g_server.xwayland_server, &workarea, 1);
 }

@@ -1245,7 +1245,7 @@ static void lab_xwm_handle_surface_id_message(struct lab_xwm *xwm,
 	/* Check if we got notified after wayland surface create event */
 	uint32_t id = ev->data.data32[0];
 	struct wl_resource *resource =
-		wl_client_get_object(xwm->xwayland->server->client, id);
+		wl_client_get_object(xwm->server->client, id);
 	if (resource) {
 		struct wlr_surface *surface = wlr_surface_from_resource(resource);
 		xwayland_surface_associate(xwm, xsurface, surface);
@@ -1276,7 +1276,7 @@ static void lab_xwm_handle_surface_serial_message(struct lab_xwm *xwm,
 	xsurface->serial = ((uint64_t)serial_hi << 32) | serial_lo;
 
 	struct wlr_surface *surface = xwayland_shell_v1_surface_from_serial(
-		xwm->xwayland->shell_v1, xsurface->serial);
+		xwm->server->shell_v1, xsurface->serial);
 	if (surface != NULL) {
 		xwayland_surface_associate(xwm, xsurface, surface);
 	} else {
@@ -1694,7 +1694,7 @@ static void handle_compositor_new_surface(struct wl_listener *listener,
 	struct wlr_surface *surface = data;
 
 	struct wl_client *client = wl_resource_get_client(surface->resource);
-	if (client != xwm->xwayland->server->client) {
+	if (client != xwm->server->client) {
 		return;
 	}
 
@@ -1834,17 +1834,17 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 		if (xwm->seat->selection_source &&
 				lab_data_source_is_xwayland(xwm->seat->selection_source)) {
 			wlr_seat_set_selection(xwm->seat, NULL,
-				wl_display_next_serial(xwm->xwayland->wl_display));
+				wl_display_next_serial(xwm->server->wl_display));
 		}
 
 		if (xwm->seat->primary_selection_source &&
 				lab_primary_selection_source_is_xwayland(
 					xwm->seat->primary_selection_source)) {
 			wlr_seat_set_primary_selection(xwm->seat, NULL,
-				wl_display_next_serial(xwm->xwayland->wl_display));
+				wl_display_next_serial(xwm->server->wl_display));
 		}
 
-		xwayland_set_seat(xwm->xwayland, NULL);
+		lab_xwm_set_seat(xwm, NULL);
 	}
 
 	if (xwm->cursor) {
@@ -1872,7 +1872,7 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 	wl_list_remove(&xwm->shell_v1_destroy.link);
 	xcb_disconnect(xwm->xcb_conn);
 
-	xwm->xwayland->xwm = NULL;
+	xwm->server->xwm = NULL;
 	free(xwm);
 }
 
@@ -2007,8 +2007,14 @@ static void lab_xwm_get_render_format(struct lab_xwm *xwm) {
 	free(reply);
 }
 
-void lab_xwm_set_cursor(struct lab_xwm *xwm, const uint8_t *pixels, uint32_t stride,
-		uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y) {
+void
+xwayland_set_cursor(struct xwayland_server *server, const uint8_t *pixels,
+		uint32_t stride, uint32_t width, uint32_t height,
+		int32_t hotspot_x, int32_t hotspot_y)
+{
+	struct lab_xwm *xwm = server->xwm;
+	assert(xwm && xwm->xcb_conn);
+
 	if (!xwm->render_format_id) {
 		wlr_log(WLR_ERROR, "Cannot set xwm cursor: no render format available");
 		return;
@@ -2047,14 +2053,16 @@ void lab_xwm_set_cursor(struct lab_xwm *xwm, const uint8_t *pixels, uint32_t str
 	xcb_flush(xwm->xcb_conn);
 }
 
-struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
+struct lab_xwm *
+lab_xwm_create(struct xwayland_server *server, int wm_fd)
+{
 	struct lab_xwm *xwm = calloc(1, sizeof(*xwm));
 	if (xwm == NULL) {
 		close(wm_fd);
 		return NULL;
 	}
 
-	xwm->xwayland = xwayland;
+	xwm->server = server;
 	wl_list_init(&xwm->surfaces);
 	wl_list_init(&xwm->surfaces_in_stack_order);
 	wl_list_init(&xwm->unpaired_surfaces);
@@ -2084,7 +2092,7 @@ struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
 	xwm->screen = screen_iterator.data;
 
 	struct wl_event_loop *event_loop =
-		wl_display_get_event_loop(xwayland->wl_display);
+		wl_display_get_event_loop(server->wl_display);
 	xwm->event_source = wl_event_loop_add_fd(event_loop, wm_fd,
 		WL_EVENT_READABLE, x11_event_handler, xwm);
 	wl_event_source_check(xwm->event_source);
@@ -2145,17 +2153,17 @@ struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
 	lab_xwm_selection_init(&xwm->dnd_selection, xwm, xwm->atoms[DND_SELECTION]);
 
 	xwm->compositor_new_surface.notify = handle_compositor_new_surface;
-	wl_signal_add(&xwayland->compositor->events.new_surface,
+	wl_signal_add(&server->compositor->events.new_surface,
 		&xwm->compositor_new_surface);
 	xwm->compositor_destroy.notify = handle_compositor_destroy;
-	wl_signal_add(&xwayland->compositor->events.destroy,
+	wl_signal_add(&server->compositor->events.destroy,
 		&xwm->compositor_destroy);
 
 	xwm->shell_v1_new_surface.notify = handle_shell_v1_new_surface;
-	wl_signal_add(&xwayland->shell_v1->events.new_surface,
+	wl_signal_add(&server->shell_v1->events.new_surface,
 		&xwm->shell_v1_new_surface);
 	xwm->shell_v1_destroy.notify = handle_shell_v1_destroy;
-	wl_signal_add(&xwayland->shell_v1->events.destroy,
+	wl_signal_add(&server->shell_v1->events.destroy,
 		&xwm->shell_v1_destroy);
 
 	lab_xwm_create_wm_window(xwm);
@@ -2256,8 +2264,13 @@ enum xwayland_icccm_input_model xwayland_surface_icccm_input_model(
 	return WLR_ICCCM_INPUT_MODEL_NONE;
 }
 
-void xwayland_set_workareas(struct xwayland *xwayland,
-		const struct wlr_box *workareas, size_t num_workareas) {
+void
+xwayland_set_workareas(struct xwayland_server *server,
+		const struct wlr_box *workareas, size_t num_workareas)
+{
+	struct lab_xwm *xwm = server->xwm;
+	assert(xwm && xwm->xcb_conn);
+
 	uint32_t *data = malloc(4 * sizeof(uint32_t) * num_workareas);
 	if (!data) {
 		return;
@@ -2270,7 +2283,6 @@ void xwayland_set_workareas(struct xwayland *xwayland,
 		data[4 * i + 3] = workareas[i].height;
 	}
 
-	struct lab_xwm *xwm = xwayland->xwm;
 	xcb_change_property(xwm->xcb_conn, XCB_PROP_MODE_REPLACE,
 			xwm->screen->root, xwm->atoms[NET_WORKAREA],
 			XCB_ATOM_CARDINAL, 32, 4 * num_workareas, data);

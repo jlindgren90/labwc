@@ -12,6 +12,7 @@
 #include <wlr/util/log.h>
 #include <xcb/xfixes.h>
 #include "xwayland/selection.h"
+#include "xwayland/server.h"
 #include "xwayland/xwm.h"
 
 static void lab_xwm_selection_send_notify(struct lab_xwm *xwm,
@@ -215,7 +216,7 @@ static void lab_xwm_selection_transfer_start_outgoing(
 		struct lab_xwm_selection_transfer *transfer) {
 	struct lab_xwm *xwm = transfer->selection->xwm;
 	struct wl_event_loop *loop =
-		wl_display_get_event_loop(xwm->xwayland->wl_display);
+		wl_display_get_event_loop(xwm->server->wl_display);
 	wlr_log(WLR_DEBUG, "Starting transfer %p", transfer);
 	transfer->event_source = wl_event_loop_add_fd(loop, transfer->wl_client_fd,
 		WL_EVENT_READABLE, lab_xwm_data_source_read, transfer);

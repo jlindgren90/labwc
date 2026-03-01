@@ -111,8 +111,8 @@ handle_sigchld(int signal, void *data)
 	}
 
 	/* Ensure that we do not break xwayland lazy initialization */
-	if (g_server.xwayland && g_server.xwayland->server
-			&& info.si_pid == g_server.xwayland->server->pid) {
+	if (g_server.xwayland_server
+			&& info.si_pid == g_server.xwayland_server->pid) {
 		return 0;
 	}
 
@@ -167,8 +167,8 @@ server_global_filter(const struct wl_client *client, const struct wl_global *glo
 {
 	const struct wl_interface *iface = wl_global_get_interface(global);
 
-	struct wl_client *xwayland_client = (g_server.xwayland && g_server.xwayland->server)
-		? g_server.xwayland->server->client
+	struct wl_client *xwayland_client = g_server.xwayland_server
+		? g_server.xwayland_server->client
 		: NULL;
 
 	if (client != xwayland_client && !strcmp(iface->name, xwayland_shell_v1_interface.name)) {

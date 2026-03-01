@@ -12,6 +12,7 @@
 #include <wlr/util/log.h>
 #include <xcb/xfixes.h>
 #include "xwayland/selection.h"
+#include "xwayland/server.h"
 #include "xwayland/xwm.h"
 
 static struct lab_xwm_selection_transfer *
@@ -151,8 +152,8 @@ static void lab_xwm_write_selection_property_to_wl_client(
 		// Wrote out part of the property to the Wayland client, but the client was
 		// unable to accept all of it. Schedule an event to asynchronously complete
 		// the transfer.
-		struct wl_event_loop *loop =
-			wl_display_get_event_loop(transfer->selection->xwm->xwayland->wl_display);
+		struct wl_event_loop *loop = wl_display_get_event_loop(
+			transfer->selection->xwm->server->wl_display);
 		transfer->event_source = wl_event_loop_add_fd(loop,
 			transfer->wl_client_fd, WL_EVENT_WRITABLE,
 			write_selection_property_to_wl_client, transfer);
@@ -418,7 +419,7 @@ static void lab_xwm_selection_get_targets(struct lab_xwm_selection *selection) {
 			&source->mime_types_atoms);
 		if (ok) {
 			wlr_seat_request_set_selection(xwm->seat, NULL, &source->base,
-				wl_display_next_serial(xwm->xwayland->wl_display));
+				wl_display_next_serial(xwm->server->wl_display));
 		} else {
 			wlr_data_source_destroy(&source->base);
 		}
@@ -437,7 +438,7 @@ static void lab_xwm_selection_get_targets(struct lab_xwm_selection *selection) {
 			&source->mime_types_atoms);
 		if (ok) {
 			wlr_seat_set_primary_selection(xwm->seat, &source->base,
-				wl_display_next_serial(xwm->xwayland->wl_display));
+				wl_display_next_serial(xwm->server->wl_display));
 		} else {
 			wlr_primary_selection_source_destroy(&source->base);
 		}
@@ -497,10 +498,10 @@ int lab_xwm_handle_xfixes_selection_notify(struct lab_xwm *xwm,
 			// A real X client selection went away, not our proxy selection
 			if (selection == &xwm->clipboard_selection) {
 				wlr_seat_request_set_selection(xwm->seat, NULL, NULL,
-					wl_display_next_serial(xwm->xwayland->wl_display));
+					wl_display_next_serial(xwm->server->wl_display));
 			} else if (selection == &xwm->primary_selection) {
 				wlr_seat_request_set_primary_selection(xwm->seat, NULL, NULL,
-					wl_display_next_serial(xwm->xwayland->wl_display));
+					wl_display_next_serial(xwm->server->wl_display));
 			} else if (selection == &xwm->dnd_selection) {
 				// TODO: DND
 			} else {
