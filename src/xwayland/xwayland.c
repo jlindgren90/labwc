@@ -71,8 +71,7 @@ void xwayland_destroy(struct xwayland *xwayland) {
 
 static struct xwayland *
 xwayland_create_inner(struct wl_display *wl_display,
-		struct wlr_compositor *compositor,
-		struct xwayland_server_options *options)
+		struct wlr_compositor *compositor)
 {
 	struct xwayland *xwayland = calloc(1, sizeof(*xwayland));
 	if (!xwayland) {
@@ -80,7 +79,7 @@ xwayland_create_inner(struct wl_display *wl_display,
 	}
 
 	struct xwayland_server *server =
-		xwayland_server_create(wl_display, options, xwayland);
+		xwayland_server_create(wl_display, xwayland);
 	if (server == NULL) {
 		free(xwayland);
 		return NULL;
@@ -97,20 +96,15 @@ xwayland_create_inner(struct wl_display *wl_display,
 	return xwayland;
 }
 
-struct xwayland *xwayland_create(struct wl_display *wl_display,
-		struct wlr_compositor *compositor, bool lazy) {
+struct xwayland *
+xwayland_create(struct wl_display *wl_display, struct wlr_compositor *compositor)
+{
 	struct xwayland_shell_v1 *shell_v1 = xwayland_shell_v1_create(wl_display, 1);
 	if (shell_v1 == NULL) {
 		return NULL;
 	}
 
-	struct xwayland_server_options options = {
-		.lazy = lazy,
-		.enable_wm = true,
-	};
-
-	struct xwayland *xwayland =
-		xwayland_create_inner(wl_display, compositor, &options);
+	struct xwayland *xwayland = xwayland_create_inner(wl_display, compositor);
 	if (xwayland == NULL) {
 		xwayland_shell_v1_destroy(shell_v1);
 		return NULL;
