@@ -106,7 +106,7 @@ enum atom_name {
 };
 
 struct lab_xwm {
-	struct xwayland *xwayland;
+	struct xwayland_server *server;
 	struct wl_event_source *event_source;
 	struct wlr_seat *seat;
 
@@ -156,7 +156,7 @@ struct lab_xwm {
 };
 
 // lab_xwm_create takes ownership of wm_fd and will close it under all circumstances.
-struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd);
+struct lab_xwm *lab_xwm_create(struct xwayland_server *server, int wm_fd);
 
 void lab_xwm_destroy(struct lab_xwm *xwm);
 
