@@ -56,9 +56,6 @@ wlroots = subproject('wlroots').get_variable('wlroots')
 wayland_server = dependency('wayland-server', version: '>=1.22.90')
 wayland_protos = dependency('wayland-protocols', version: '>=1.39')
 xkbcommon = dependency('xkbcommon')
-xcb = dependency('xcb')
-xcb_ewmh = dependency('xcb-ewmh')
-xcb_icccm = dependency('xcb-icccm')
 drm_full = dependency('libdrm')
 drm = drm_full.partial_dependency(compile_args: true, includes: true)
 xml2 = dependency('libxml-2.0')
@@ -117,8 +114,6 @@ labwc_deps = [
   wayland_server,
   wlroots,
   xkbcommon,
-	xcb_ewmh,
-  xcb_icccm,
   xml2,
   glib,
   cairo,
@@ -133,6 +128,20 @@ labwc_deps = [
   sfdo_desktop,
   sfdo_icon,
 ]
+
+xcb_libs = [
+  'xcb',
+  'xcb-composite',
+  'xcb-ewmh',
+  'xcb-icccm',
+  'xcb-render',
+  'xcb-res',
+  'xcb-xfixes',
+  'xcb-errors',
+]
+foreach lib : xcb_libs
+  labwc_deps += dependency(lib)
+endforeach
 
 subdir('include')
 subdir('src')

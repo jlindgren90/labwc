@@ -57,7 +57,7 @@ struct xwayland_server {
 	struct {
 		struct wl_listener client_destroy;
 		struct wl_listener display_destroy;
-	} WLR_PRIVATE;
+	};
 };
 
 struct xwayland_server_ready_event {

@@ -1,9 +1,10 @@
+#define _POSIX_C_SOURCE 200809L
+#include "xwayland/server.h"
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdlib.h>
 #include <stdnoreturn.h>
 #include <sys/socket.h>
@@ -13,9 +14,10 @@
 #include <unistd.h>
 #include <wayland-server-core.h>
 #include <wlr/util/log.h>
-#include <wlr/xwayland.h>
-#include "config.h"
 #include "sockets.h"
+#include "xwayland/xwayland.h"
+
+#define XWAYLAND_PATH "/usr/bin/Xwayland"
 
 static void safe_close(int fd) {
 	if (fd >= 0) {
@@ -50,26 +52,11 @@ noreturn static void exec_xwayland(struct xwayland_server *server,
 	argv[i++] = "-core";
 
 	argv[i++] = "-terminate";
-#if HAVE_XWAYLAND_TERMINATE_DELAY
-	char terminate_delay[16];
-	if (server->options.terminate_delay > 0) {
-		snprintf(terminate_delay, sizeof(terminate_delay), "%d",
-			server->options.terminate_delay);
-		argv[i++] = terminate_delay;
-	}
-#endif
 
-#if HAVE_XWAYLAND_LISTENFD
 	argv[i++] = "-listenfd";
 	argv[i++] = listenfd0;
 	argv[i++] = "-listenfd";
 	argv[i++] = listenfd1;
-#else
-	argv[i++] = "-listen";
-	argv[i++] = listenfd0;
-	argv[i++] = "-listen";
-	argv[i++] = listenfd1;
-#endif
 	argv[i++] = "-displayfd";
 	argv[i++] = displayfd;
 
@@ -80,21 +67,9 @@ noreturn static void exec_xwayland(struct xwayland_server *server,
 		argv[i++] = wmfd;
 	}
 
-#if HAVE_XWAYLAND_NO_TOUCH_POINTER_EMULATION
-	if (server->options.no_touch_pointer_emulation) {
-		argv[i++] = "-noTouchPointerEmulation";
-	}
-#else
 	server->options.no_touch_pointer_emulation = false;
-#endif
 
-#if HAVE_XWAYLAND_FORCE_XRANDR_EMULATION
-	if (server->options.force_xrandr_emulation) {
-		argv[i++] = "-force-xrandr-emulation";
-	}
-#else
 	server->options.force_xrandr_emulation = false;
-#endif
 
 	argv[i++] = NULL;
 
@@ -481,9 +456,7 @@ struct xwayland_server *xwayland_server_create(
 	server->wl_display = wl_display;
 	server->options = *options;
 
-#if !HAVE_XWAYLAND_TERMINATE_DELAY
 	server->options.terminate_delay = 0;
-#endif
 
 	server->x_fd[0] = server->x_fd[1] = -1;
 	server->wl_fd[0] = server->wl_fd[1] = -1;

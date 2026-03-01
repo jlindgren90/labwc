@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+#include "xwayland/xwm.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -8,13 +10,13 @@
 #include <wlr/util/edges.h>
 #include <wlr/util/log.h>
 #include <wlr/xcursor.h>
-#include <wlr/xwayland/shell.h>
-#include <wlr/xwayland/xwayland.h>
 #include <xcb/composite.h>
 #include <xcb/render.h>
 #include <xcb/res.h>
 #include <xcb/xfixes.h>
-#include "xwayland/xwm.h"
+#include "xwayland/server.h"
+#include "xwayland/shell.h"
+#include "xwayland/xwayland.h"
 
 static const char *const atom_map[ATOM_LAST] = {
 	[WL_SURFACE_ID] = "WL_SURFACE_ID",
@@ -1512,8 +1514,6 @@ static void lab_xwm_handle_surface_serial_message(struct lab_xwm *xwm,
 #define _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT 6
 #define _NET_WM_MOVERESIZE_SIZE_LEFT 7
 #define _NET_WM_MOVERESIZE_MOVE 8  // movement only
-#define _NET_WM_MOVERESIZE_SIZE_KEYBOARD 9  // size via keyboard
-#define _NET_WM_MOVERESIZE_MOVE_KEYBOARD 10  // move via keyboard
 #define _NET_WM_MOVERESIZE_CANCEL 11  // cancel operation
 
 static enum wlr_edges net_wm_edges_to_wlr(uint32_t net_wm_edges) {
@@ -1814,9 +1814,9 @@ static void lab_xwm_handle_net_startup_info_message(struct lab_xwm *xwm,
 	}
 
 	if (id) {
-		struct xwayland_remove_startup_info_event data = { id, ev->window };
+		struct xwayland_remove_startup_info_event event = { id, ev->window };
 		wlr_log(WLR_DEBUG, "Got startup id: %s", id);
-		wl_signal_emit_mutable(&xwm->xwayland->events.remove_startup_info, &data);
+		wl_signal_emit_mutable(&xwm->xwayland->events.remove_startup_info, &event);
 		pending_startup_id_destroy(curr);
 	}
 }
@@ -2587,14 +2587,6 @@ struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
 		32,
 		sizeof(supported)/sizeof(*supported),
 		supported);
-
-#if HAVE_XCB_XFIXES_SET_CLIENT_DISCONNECT_MODE
-	if (xwm->xwayland->server->options.terminate_delay > 0 &&
-			xwm->xfixes_major_version >= 6) {
-		xcb_xfixes_set_client_disconnect_mode(xwm->xcb_conn,
-			XCB_XFIXES_CLIENT_DISCONNECT_FLAGS_TERMINATE);
-	}
-#endif
 
 	xcb_flush(xwm->xcb_conn);
 

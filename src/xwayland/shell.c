@@ -1,7 +1,7 @@
+#include "xwayland/shell.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_compositor.h>
-#include <wlr/xwayland/shell.h>
 
 #include "xwayland-shell-v1-protocol.h"
 

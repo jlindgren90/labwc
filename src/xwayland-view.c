@@ -8,7 +8,6 @@
 #include <wlr/types/wlr_scene.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_xcursor_manager.h>
-#include <wlr/xwayland.h>
 #include "common/list.h"
 #include "common/macros.h"
 #include "common/mem.h"
@@ -17,6 +16,8 @@
 #include "labwc.h"
 #include "output.h"
 #include "view.h"
+#include "xwayland/server.h"
+#include "xwayland/xwayland.h"
 
 static void handle_map(struct wl_listener *listener, void *data);
 static void handle_unmap(struct wl_listener *listener, void *data);

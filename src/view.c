@@ -9,13 +9,13 @@
 #include <wlr/types/wlr_security_context_v1.h>
 #include <wlr/types/wlr_xdg_shell.h>
 #include <wlr/util/log.h>
-#include <wlr/xwayland.h>
 #include "action.h"
 #include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
 #include "node.h"
 #include "session-lock.h"
+#include "xwayland/xwayland.h"
 
 ViewId
 view_from_wlr_surface(struct wlr_surface *surface)

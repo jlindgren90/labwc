@@ -30,7 +30,8 @@
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
-#include <wlr/xwayland.h>
+#include "xwayland/server.h"
+#include "xwayland/xwayland.h"
 
 #include "action.h"
 #include "common/mem.h"

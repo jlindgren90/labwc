@@ -7,7 +7,6 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/xwayland.h>
 #include "common/scene-helpers.h"
 #include "dnd.h"
 #include "labwc.h"
@@ -15,6 +14,7 @@
 #include "node.h"
 #include "ssd.h"
 #include "view.h"
+#include "xwayland/xwayland.h"
 
 /* TODO: focus layer-shell surfaces also? */
 void

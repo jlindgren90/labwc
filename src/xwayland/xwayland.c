@@ -1,7 +1,8 @@
+#define _POSIX_C_SOURCE 200809L
+#include "xwayland/xwayland.h"
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <stdlib.h>
 #include <stdlib.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -10,8 +11,8 @@
 #include <unistd.h>
 #include <wlr/types/wlr_seat.h>
 #include <wlr/util/log.h>
-#include <wlr/xwayland/shell.h>
-#include <wlr/xwayland/xwayland.h>
+#include "xwayland/server.h"
+#include "xwayland/shell.h"
 #include "xwayland/xwm.h"
 
 struct xwayland_cursor {
@@ -153,9 +154,6 @@ struct xwayland *xwayland_create(struct wl_display *wl_display,
 	struct xwayland_server_options options = {
 		.lazy = lazy,
 		.enable_wm = true,
-#if HAVE_XCB_XFIXES_SET_CLIENT_DISCONNECT_MODE
-		.terminate_delay = lazy ? 10 : 0,
-#endif
 	};
 	struct xwayland_server *server = xwayland_server_create(wl_display, &options);
 	if (server == NULL) {
