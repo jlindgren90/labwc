@@ -7,29 +7,16 @@
 #include <wlr/util/box.h>
 #include <libxml/tree.h>
 
-#include "common/border.h"
 #include "common/font.h"
 #include "config/types.h"
 
 #define BUTTON_MAP_MAX 16
-
-enum adaptive_sync_mode {
-	LAB_ADAPTIVE_SYNC_DISABLED,
-	LAB_ADAPTIVE_SYNC_ENABLED,
-	LAB_ADAPTIVE_SYNC_FULLSCREEN,
-};
 
 struct buf;
 
 struct button_map_entry {
 	uint32_t from;
 	uint32_t to;
-};
-
-struct usable_area_override {
-	struct border margin;
-	char *output;
-	struct wl_list link; /* struct rcxml.usable_area_overrides */
 };
 
 struct rcxml {
@@ -39,18 +26,8 @@ struct rcxml {
 	bool merge_config;
 
 	/* core */
-	bool xdg_shell_server_side_deco;
-	bool hide_maximized_window_titlebar;
-	enum adaptive_sync_mode adaptive_sync;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;
-	bool xwayland_persistence;
-	bool primary_selection;
-
-	/* focus */
-	bool focus_follow_mouse;
-	bool focus_follow_mouse_requires_movement;
-	bool raise_on_focus;
 
 	/* theme */
 	char *theme_name;
@@ -62,9 +39,6 @@ struct rcxml {
 	struct font font_menuheader;
 	struct font font_menuitem;
 	struct font font_osd;
-
-	/* <margin top="" bottom="" left="" right="" output="" /> */
-	struct wl_list usable_area_overrides;
 
 	/* keyboard */
 	int repeat_rate;

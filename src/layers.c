@@ -19,27 +19,11 @@
 #include <wlr/util/log.h>
 #include "common/macros.h"
 #include "common/mem.h"
-#include "config/rcxml.h"
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
 
 #define LAB_LAYERSHELL_VERSION 4
-
-static void
-apply_override(struct output *output, struct wlr_box *usable_area)
-{
-	struct usable_area_override *override;
-	wl_list_for_each(override, &rc.usable_area_overrides, link) {
-		if (override->output && strcasecmp(override->output, output->wlr_output->name)) {
-			continue;
-		}
-		usable_area->x += override->margin.left;
-		usable_area->y += override->margin.top;
-		usable_area->width -= override->margin.left + override->margin.right;
-		usable_area->height -= override->margin.top + override->margin.bottom;
-	}
-}
 
 static void
 arrange_one_layer(const struct wlr_box *full_area, struct wlr_box *usable_area,
@@ -75,8 +59,6 @@ layers_arrange(struct output *output)
 	wlr_output_effective_resolution(output->wlr_output,
 		&full_area.width, &full_area.height);
 	struct wlr_box usable_area = full_area;
-
-	apply_override(output, &usable_area);
 
 	struct wlr_scene_output *scene_output =
 		wlr_scene_get_scene_output(g_server.scene, output->wlr_output);

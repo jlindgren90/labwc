@@ -583,28 +583,6 @@ cursor_process_motion(uint32_t time, double *sx, double *sy)
 	 */
 	struct cursor_context notified_ctx = {0};
 	cursor_update_common(&ctx, &notified_ctx);
-
-	if (rc.focus_follow_mouse) {
-		/*
-		 * If followMouse=yes, entering a surface or view updates
-		 * keyboard focus. Note that moving the cursor between a
-		 * surface and a SSD within the same view doesn't update
-		 * keyboard focus, and that entering a surface/view doesn't
-		 * update keyboard focus if implicit grab is active.
-		 */
-		bool entering = false;
-		if (notified_ctx.view) {
-			entering = notified_ctx.view
-					!= g_seat.last_cursor_ctx.ctx.view;
-		} else if (notified_ctx.surface) {
-			entering = notified_ctx.surface
-					!= g_seat.last_cursor_ctx.ctx.surface;
-		}
-		if (entering) {
-			desktop_focus_view_or_surface(notified_ctx.view,
-				notified_ctx.surface, rc.raise_on_focus);
-		}
-	}
 	cursor_context_save(&g_seat.last_cursor_ctx, &notified_ctx);
 
 	*sx = notified_ctx.sx;
@@ -617,17 +595,6 @@ _cursor_update_focus(void)
 {
 	/* Focus surface under cursor if it isn't already focused */
 	struct cursor_context ctx = get_cursor_context();
-
-	if ((ctx.view || ctx.surface) && rc.focus_follow_mouse
-			&& !rc.focus_follow_mouse_requires_movement) {
-		/*
-		 * Always focus the surface below the cursor when
-		 * followMouse=yes and followMouseRequiresMovement=no.
-		 */
-		desktop_focus_view_or_surface(ctx.view,
-			ctx.surface, rc.raise_on_focus);
-	}
-
 	cursor_update_common(&ctx, NULL);
 }
 
