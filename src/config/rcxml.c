@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 #define _POSIX_C_SOURCE 200809L
+#include "config.h"
 #include "config/rcxml.h"
 #include <assert.h>
 #include <glib.h>
@@ -27,7 +28,6 @@
 #include "config/libinput.h"
 #include "config/mousebind.h"
 #include "cycle.h"
-#include "view.h"
 
 /* for backward compatibility of <mouse><scrollFactor> */
 static double mouse_scroll_factor = -1;
@@ -45,33 +45,6 @@ enum font_place {
 
 static void load_default_key_bindings(void);
 static void load_default_mouse_bindings(void);
-
-static void
-fill_usable_area_override(xmlNode *node)
-{
-	struct usable_area_override *usable_area_override =
-		znew(*usable_area_override);
-	wl_list_append(&rc.usable_area_overrides, &usable_area_override->link);
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcmp(key, "output")) {
-			xstrdup_replace(usable_area_override->output, content);
-		} else if (!strcmp(key, "left")) {
-			usable_area_override->margin.left = atoi(content);
-		} else if (!strcmp(key, "right")) {
-			usable_area_override->margin.right = atoi(content);
-		} else if (!strcmp(key, "top")) {
-			usable_area_override->margin.top = atoi(content);
-		} else if (!strcmp(key, "bottom")) {
-			usable_area_override->margin.bottom = atoi(content);
-		} else {
-			wlr_log(WLR_ERROR, "Unexpected data usable-area-override "
-				"parser: %s=\"%s\"", key, content);
-		}
-	}
-}
 
 static void
 parse_action_args(xmlNode *node, struct action *action)
@@ -547,21 +520,6 @@ fill_font(xmlNode *node)
 	}
 }
 
-static void
-set_adaptive_sync_mode(const char *str, enum adaptive_sync_mode *variable)
-{
-	if (!strcasecmp(str, "fullscreen")) {
-		*variable = LAB_ADAPTIVE_SYNC_FULLSCREEN;
-	} else {
-		int ret = parse_bool(str, -1);
-		if (ret == 1) {
-			*variable = LAB_ADAPTIVE_SYNC_ENABLED;
-		} else {
-			*variable = LAB_ADAPTIVE_SYNC_DISABLED;
-		}
-	}
-}
-
 /* Returns true if the node's children should also be traversed */
 static bool
 entry(xmlNode *node, char *nodename, char *content)
@@ -574,9 +532,7 @@ entry(xmlNode *node, char *nodename, char *content)
 	}
 
 	/* handle nested nodes */
-	if (!strcasecmp(nodename, "margin")) {
-		fill_usable_area_override(node);
-	} else if (!strcasecmp(nodename, "keybind.keyboard")) {
+	if (!strcasecmp(nodename, "keybind.keyboard")) {
 		fill_keybind(node);
 	} else if (!strcasecmp(nodename, "context.mouse")) {
 		fill_mouse_context(node);
@@ -600,40 +556,16 @@ entry(xmlNode *node, char *nodename, char *content)
 			"Ignoring.", nodename);
 
 	/* handle non-empty leaf nodes */
-	} else if (!strcmp(nodename, "decoration.core")) {
-		if (!strcmp(content, "client")) {
-			rc.xdg_shell_server_side_deco = false;
-		} else {
-			rc.xdg_shell_server_side_deco = true;
-		}
-	} else if (!strcasecmp(nodename, "adaptiveSync.core")) {
-		set_adaptive_sync_mode(content, &rc.adaptive_sync);
 	} else if (!strcasecmp(nodename, "autoEnableOutputs.core")) {
 		set_bool(content, &rc.auto_enable_outputs);
 	} else if (!strcasecmp(nodename, "reuseOutputMode.core")) {
 		set_bool(content, &rc.reuse_output_mode);
-	} else if (!strcasecmp(nodename, "xwaylandPersistence.core")) {
-		set_bool(content, &rc.xwayland_persistence);
-	} else if (!strcasecmp(nodename, "primarySelection.core")) {
-		set_bool(content, &rc.primary_selection);
 	} else if (!strcmp(nodename, "name.theme")) {
 		xstrdup_replace(rc.theme_name, content);
 	} else if (!strcmp(nodename, "icon.theme")) {
 		xstrdup_replace(rc.icon_theme_name, content);
 	} else if (!strcasecmp(nodename, "fallbackAppIcon.theme")) {
 		xstrdup_replace(rc.fallback_app_icon_name, content);
-	} else if (!strcasecmp(nodename, "maximizedDecoration.theme")) {
-		if (!strcasecmp(content, "titlebar")) {
-			rc.hide_maximized_window_titlebar = false;
-		} else if (!strcasecmp(content, "none")) {
-			rc.hide_maximized_window_titlebar = true;
-		}
-	} else if (!strcasecmp(nodename, "followMouse.focus")) {
-		set_bool(content, &rc.focus_follow_mouse);
-	} else if (!strcasecmp(nodename, "followMouseRequiresMovement.focus")) {
-		set_bool(content, &rc.focus_follow_mouse_requires_movement);
-	} else if (!strcasecmp(nodename, "raiseOnFocus.focus")) {
-		set_bool(content, &rc.raise_on_focus);
 	} else if (!strcasecmp(nodename, "doubleClickTime.mouse")) {
 		long doubleclick_time_parsed = strtol(content, NULL, 10);
 		if (doubleclick_time_parsed > 0) {
@@ -747,31 +679,20 @@ rcxml_init(void)
 	static bool has_run;
 
 	if (!has_run) {
-		wl_list_init(&rc.usable_area_overrides);
 		wl_list_init(&rc.keybinds);
 		wl_list_init(&rc.mousebinds);
 		wl_list_init(&rc.libinput_categories);
 	}
 	has_run = true;
 
-	rc.xdg_shell_server_side_deco = true;
-	rc.hide_maximized_window_titlebar = false;
-
-	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;
 	rc.auto_enable_outputs = true;
 	rc.reuse_output_mode = false;
-	rc.xwayland_persistence = false;
-	rc.primary_selection = true;
 
 	init_font_defaults(&rc.font_activewindow);
 	init_font_defaults(&rc.font_inactivewindow);
 	init_font_defaults(&rc.font_menuheader);
 	init_font_defaults(&rc.font_menuitem);
 	init_font_defaults(&rc.font_osd);
-
-	rc.focus_follow_mouse = false;
-	rc.focus_follow_mouse_requires_movement = true;
-	rc.raise_on_focus = false;
 
 	rc.doubleclick_time = 500;
 
@@ -1098,13 +1019,6 @@ rcxml_finish(void)
 	zfree(rc.theme_name);
 	zfree(rc.icon_theme_name);
 	zfree(rc.fallback_app_icon_name);
-
-	struct usable_area_override *area, *area_tmp;
-	wl_list_for_each_safe(area, area_tmp, &rc.usable_area_overrides, link) {
-		wl_list_remove(&area->link);
-		zfree(area->output);
-		zfree(area);
-	}
 
 	struct keybind *k, *k_tmp;
 	wl_list_for_each_safe(k, k_tmp, &rc.keybinds, link) {
