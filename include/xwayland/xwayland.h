@@ -13,41 +13,12 @@
 
 struct wlr_box;
 struct lab_xwm;
+struct wlr_compositor;
 struct wlr_data_source;
 struct wlr_drag;
+struct wlr_seat;
 
-/**
- * Xwayland integration.
- *
- * This includes a utility to start and monitor the Xwayland process (see
- * struct xwayland_server), an implementation of the xwayland_shell_v1
- * Wayland protocol, and a X11 window manager.
- *
- * Compositors are expected to set DISPLAY (see display_name) and listen to the
- * new_surface event.
- *
- * Compositors may want to only expose the xwayland_shell_v1 Wayland global to
- * the Xwayland client. To do so, they can set up a global filter via
- * wl_display_set_global_filter() to ensure the global stored in
- * shell_v1.global is only exposed to the client stored in server.client.
- */
-struct xwayland {
-	struct xwayland_server *server;
-	struct lab_xwm *xwm;
-	struct xwayland_shell_v1 *shell_v1;
-
-	// Value the DISPLAY environment variable should be set to by the compositor
-	const char *display_name;
-
-	struct wl_display *wl_display;
-	struct wlr_compositor *compositor;
-	struct wlr_seat *seat;
-
-	struct {
-		struct wl_listener seat_destroy;
-		struct wl_listener shell_destroy;
-	};
-};
+struct xwayland_server;
 
 enum xwayland_surface_decorations {
 	XWAYLAND_SURFACE_DECORATIONS_ALL = 0,
@@ -203,15 +174,9 @@ struct xwayland_minimize_event {
 	bool minimize;
 };
 
-/** Create an Xwayland server and XWM. */
-struct xwayland *xwayland_create(struct wl_display *wl_display,
-	struct wlr_compositor *compositor);
-
-void xwayland_destroy(struct xwayland *xwayland);
-
-void xwayland_set_cursor(struct xwayland *xwayland,
-	uint8_t *pixels, uint32_t stride, uint32_t width, uint32_t height,
-	int32_t hotspot_x, int32_t hotspot_y);
+void xwayland_set_cursor(struct xwayland_server *server, const uint8_t *pixels,
+	uint32_t stride, uint32_t width, uint32_t height, int32_t hotspot_x,
+	int32_t hotspot_y);
 
 void xwayland_surface_activate(struct xwayland_surface *surface,
 	bool activated);
@@ -240,9 +205,6 @@ void xwayland_surface_set_maximized(struct xwayland_surface *surface,
 
 void xwayland_surface_set_fullscreen(struct xwayland_surface *surface,
 	bool fullscreen);
-
-void xwayland_set_seat(struct xwayland *xwayland,
-	struct wlr_seat *seat);
 
 /**
  * Get a struct xwayland_surface from a struct wlr_surface.
@@ -283,7 +245,7 @@ enum xwayland_icccm_input_model xwayland_surface_icccm_input_model(
  * panels, docks, etc. Unfortunately, it is not possible to specify
  * per-output workareas.
  */
-void xwayland_set_workareas(struct xwayland *xwayland,
+void xwayland_set_workareas(struct xwayland_server *server,
 	const struct wlr_box *workareas, size_t num_workareas);
 
 /**
