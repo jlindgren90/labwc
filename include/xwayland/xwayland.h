@@ -203,13 +203,9 @@ struct xwayland_minimize_event {
 	bool minimize;
 };
 
-/** Create an Xwayland server and XWM.
- *
- * The server supports a lazy mode in which Xwayland is only started when a
- * client tries to connect.
- */
+/** Create an Xwayland server and XWM. */
 struct xwayland *xwayland_create(struct wl_display *wl_display,
-	struct wlr_compositor *compositor, bool lazy);
+	struct wlr_compositor *compositor);
 
 void xwayland_destroy(struct xwayland *xwayland);
 
