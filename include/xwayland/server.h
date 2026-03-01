@@ -11,14 +11,6 @@
 
 struct xwayland;
 
-struct xwayland_server_options {
-	bool lazy;
-	bool enable_wm;
-	bool no_touch_pointer_emulation;
-	bool force_xrandr_emulation;
-	int terminate_delay; // in seconds, 0 to terminate immediately
-};
-
 struct xwayland_server {
 	pid_t pid;
 	struct wl_client *client;
@@ -34,7 +26,6 @@ struct xwayland_server {
 	char display_name[16];
 	int x_fd[2];
 	struct wl_event_source *x_fd_read_event[2];
-	struct xwayland_server_options options;
 	struct xwayland *xwayland;
 
 	struct wl_display *wl_display;
@@ -48,8 +39,8 @@ struct xwayland_server {
 	};
 };
 
-struct xwayland_server *xwayland_server_create(struct wl_display *display,
-	struct xwayland_server_options *options, struct xwayland *xwayland);
+struct xwayland_server *xwayland_server_create(
+	struct wl_display *display, struct xwayland *xwayland);
 void xwayland_server_destroy(struct xwayland_server *server);
 
 // listeners (external)

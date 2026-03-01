@@ -2,6 +2,7 @@
 #define _POSIX_C_SOURCE 200809L
 #include "xwayland-view.h"
 #include <assert.h>
+#include <cairo/cairo.h>
 #include <stdlib.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_output_layout.h>
@@ -10,7 +11,6 @@
 #include <wlr/types/wlr_xcursor_manager.h>
 #include "common/macros.h"
 #include "common/mem.h"
-#include "config/rcxml.h"
 #include "config/session.h"
 #include "labwc.h"
 #include "output.h"
@@ -878,8 +878,7 @@ xwayland_on_ready(void)
 void
 xwayland_server_init(struct wlr_compositor *compositor)
 {
-	g_server.xwayland = xwayland_create(
-		g_server.wl_display, compositor, /* lazy */ false);
+	g_server.xwayland = xwayland_create(g_server.wl_display, compositor);
 	if (!g_server.xwayland) {
 		wlr_log(WLR_ERROR, "cannot create xwayland server");
 		exit(EXIT_FAILURE);

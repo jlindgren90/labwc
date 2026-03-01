@@ -30,11 +30,8 @@ noreturn static void exec_xwayland(struct xwayland_server *server,
 		int notify_fd) {
 	if (!set_cloexec(server->x_fd[0], false) ||
 			!set_cloexec(server->x_fd[1], false) ||
-			!set_cloexec(server->wl_fd[1], false)) {
-		wlr_log(WLR_ERROR, "Failed to unset CLOEXEC on FD");
-		_exit(EXIT_FAILURE);
-	}
-	if (server->options.enable_wm && !set_cloexec(server->wm_fd[1], false)) {
+			!set_cloexec(server->wl_fd[1], false) ||
+			!set_cloexec(server->wm_fd[1], false)) {
 		wlr_log(WLR_ERROR, "Failed to unset CLOEXEC on FD");
 		_exit(EXIT_FAILURE);
 	}
@@ -62,16 +59,9 @@ noreturn static void exec_xwayland(struct xwayland_server *server,
 	argv[i++] = displayfd;
 
 	char wmfd[16];
-	if (server->options.enable_wm) {
-		snprintf(wmfd, sizeof(wmfd), "%d", server->wm_fd[1]);
-		argv[i++] = "-wm";
-		argv[i++] = wmfd;
-	}
-
-	server->options.no_touch_pointer_emulation = false;
-
-	server->options.force_xrandr_emulation = false;
-
+	snprintf(wmfd, sizeof(wmfd), "%d", server->wm_fd[1]);
+	argv[i++] = "-wm";
+	argv[i++] = wmfd;
 	argv[i++] = NULL;
 
 	assert(i <= sizeof(argv) / sizeof(argv[0]));
@@ -168,7 +158,6 @@ static void server_finish_display(struct xwayland_server *server) {
 }
 
 static bool server_start(struct xwayland_server *server);
-static bool server_start_lazy(struct xwayland_server *server);
 
 static void handle_client_destroy(struct wl_listener *listener, void *data) {
 	struct xwayland_server *server =
@@ -186,13 +175,8 @@ static void handle_client_destroy(struct wl_listener *listener, void *data) {
 	server_finish_process(server);
 
 	if (time(NULL) - server->server_start > 5) {
-		if (server->options.lazy) {
-			wlr_log(WLR_INFO, "Restarting Xwayland (lazy)");
-			server_start_lazy(server);
-		} else  {
-			wlr_log(WLR_INFO, "Restarting Xwayland");
-			server_start(server);
-		}
+		wlr_log(WLR_INFO, "Restarting Xwayland");
+		server_start(server);
 	}
 }
 
@@ -304,18 +288,16 @@ static bool server_start(struct xwayland_server *server) {
 		server_finish_process(server);
 		return false;
 	}
-	if (server->options.enable_wm) {
-		if (socketpair(AF_UNIX, SOCK_STREAM, 0, server->wm_fd) != 0) {
-			wlr_log_errno(WLR_ERROR, "socketpair failed");
-			server_finish_process(server);
-			return false;
-		}
-		if (!set_cloexec(server->wm_fd[0], true) ||
-				!set_cloexec(server->wm_fd[1], true)) {
-			wlr_log(WLR_ERROR, "Failed to set O_CLOEXEC on socket");
-			server_finish_process(server);
-			return false;
-		}
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, server->wm_fd) != 0) {
+		wlr_log_errno(WLR_ERROR, "socketpair failed");
+		server_finish_process(server);
+		return false;
+	}
+	if (!set_cloexec(server->wm_fd[0], true) ||
+			!set_cloexec(server->wm_fd[1], true)) {
+		wlr_log(WLR_ERROR, "Failed to set O_CLOEXEC on socket");
+		server_finish_process(server);
+		return false;
 	}
 
 	server->server_start = time(NULL);
@@ -381,36 +363,6 @@ static bool server_start(struct xwayland_server *server) {
 	return true;
 }
 
-static int xwayland_socket_connected(int fd, uint32_t mask, void *data) {
-	struct xwayland_server *server = data;
-
-	wl_event_source_remove(server->x_fd_read_event[0]);
-	wl_event_source_remove(server->x_fd_read_event[1]);
-	server->x_fd_read_event[0] = server->x_fd_read_event[1] = NULL;
-
-	server_start(server);
-
-	return 0;
-}
-
-static bool server_start_lazy(struct xwayland_server *server) {
-	struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
-
-	if (!(server->x_fd_read_event[0] = wl_event_loop_add_fd(loop, server->x_fd[0],
-				WL_EVENT_READABLE, xwayland_socket_connected, server))) {
-		return false;
-	}
-
-	if (!(server->x_fd_read_event[1] = wl_event_loop_add_fd(loop, server->x_fd[1],
-				WL_EVENT_READABLE, xwayland_socket_connected, server))) {
-		wl_event_source_remove(server->x_fd_read_event[0]);
-		server->x_fd_read_event[0] = NULL;
-		return false;
-	}
-
-	return true;
-}
-
 static void handle_idle(void *data) {
 	struct xwayland_server *server = data;
 	server->idle_source = NULL;
@@ -431,9 +383,7 @@ void xwayland_server_destroy(struct xwayland_server *server) {
 }
 
 struct xwayland_server *
-xwayland_server_create(struct wl_display *wl_display,
-		struct xwayland_server_options *options,
-		struct xwayland *xwayland)
+xwayland_server_create(struct wl_display *wl_display, struct xwayland *xwayland)
 {
 	if (!getenv("XWAYLAND") && access(XWAYLAND_PATH, X_OK) != 0) {
 		wlr_log(WLR_ERROR, "Cannot find Xwayland binary \"%s\"", XWAYLAND_PATH);
@@ -446,10 +396,7 @@ xwayland_server_create(struct wl_display *wl_display,
 	}
 
 	server->wl_display = wl_display;
-	server->options = *options;
 	server->xwayland = xwayland;
-
-	server->options.terminate_delay = 0;
 
 	server->x_fd[0] = server->x_fd[1] = -1;
 	server->wl_fd[0] = server->wl_fd[1] = -1;
@@ -459,16 +406,10 @@ xwayland_server_create(struct wl_display *wl_display,
 		goto error_alloc;
 	}
 
-	if (server->options.lazy) {
-		if (!server_start_lazy(server)) {
-			goto error_display;
-		}
-	} else {
-		struct wl_event_loop *loop = wl_display_get_event_loop(wl_display);
-		server->idle_source = wl_event_loop_add_idle(loop, handle_idle, server);
-		if (server->idle_source == NULL) {
-			goto error_display;
-		}
+	struct wl_event_loop *loop = wl_display_get_event_loop(wl_display);
+	server->idle_source = wl_event_loop_add_idle(loop, handle_idle, server);
+	if (server->idle_source == NULL) {
+		goto error_display;
 	}
 
 	return server;
