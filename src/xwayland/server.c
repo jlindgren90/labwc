@@ -15,8 +15,11 @@
 #include <time.h>
 #include <unistd.h>
 #include <wayland-server-core.h>
+#include <wlr/types/wlr_seat.h>
 #include <wlr/util/log.h>
 #include "sockets.h"
+#include "xwayland/shell.h"
+#include "xwayland/xwm.h"
 
 #define XWAYLAND_PATH "/usr/bin/Xwayland"
 
@@ -141,9 +144,6 @@ static void server_finish_display(struct xwayland_server *server) {
 		return;
 	}
 
-	wl_list_remove(&server->display_destroy.link);
-	wl_list_init(&server->display_destroy.link);
-
 	if (server->display == -1) {
 		return;
 	}
@@ -178,19 +178,6 @@ static void handle_client_destroy(struct wl_listener *listener, void *data) {
 		wlr_log(WLR_INFO, "Restarting Xwayland");
 		server_start(server);
 	}
-}
-
-static void handle_display_destroy(struct wl_listener *listener, void *data) {
-	struct xwayland_server *server =
-		wl_container_of(listener, server, display_destroy);
-
-	// Don't call client destroy: the display is being destroyed, it's too late
-	if (server->client) {
-		server->client = NULL;
-		wl_list_remove(&server->client_destroy.link);
-	}
-
-	xwayland_destroy(server->xwayland); // calls xwayland_server_destroy()
 }
 
 static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
@@ -247,7 +234,15 @@ static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
 	server->pipe_source = NULL;
 	server->ready = true;
 
-	xwayland_on_server_ready(server->xwayland);
+	assert(server->wm_fd[0] >= 0);
+	server->xwm = lab_xwm_create(server, server->wm_fd[0]);
+	// lab_xwm_create takes ownership of wm_fd[0] under all circumstances
+	server->wm_fd[0] = -1;
+
+	if (server->xwm) {
+		lab_xwm_set_seat(server->xwm, server->seat);
+		xwayland_on_ready();
+	}
 
 	/* We removed the source, so don't need recheck */
 	return 0;
@@ -260,11 +255,9 @@ error:
 	return 0;
 }
 
-static bool server_start_display(struct xwayland_server *server,
-		struct wl_display *wl_display) {
-	server->display_destroy.notify = handle_display_destroy;
-	wl_display_add_destroy_listener(wl_display, &server->display_destroy);
-
+static bool
+server_start_display(struct xwayland_server *server)
+{
 	server->display = open_display_sockets(server->x_fd);
 	if (server->display < 0) {
 		server_finish_display(server);
@@ -332,7 +325,7 @@ static bool server_start(struct xwayland_server *server) {
 	server->pipe_source = wl_event_loop_add_fd(loop, notify_fd[0],
 		WL_EVENT_READABLE, xserver_handle_ready, server);
 
-	xwayland_on_server_start(server->xwayland);
+	xwayland_shell_v1_set_client(server->shell_v1, server->client);
 
 	server->pid = fork();
 	if (server->pid < 0) {
@@ -379,11 +372,16 @@ void xwayland_server_destroy(struct xwayland_server *server) {
 	}
 	server_finish_process(server);
 	server_finish_display(server);
+
+	xwayland_shell_v1_destroy(server->shell_v1);
+	lab_xwm_destroy(server->xwm);
+
 	free(server);
 }
 
 struct xwayland_server *
-xwayland_server_create(struct wl_display *wl_display, struct xwayland *xwayland)
+xwayland_server_create(struct wl_display *wl_display,
+		struct wlr_compositor *compositor, struct wlr_seat *seat)
 {
 	if (!getenv("XWAYLAND") && access(XWAYLAND_PATH, X_OK) != 0) {
 		wlr_log(WLR_ERROR, "Cannot find Xwayland binary \"%s\"", XWAYLAND_PATH);
@@ -395,15 +393,21 @@ xwayland_server_create(struct wl_display *wl_display, struct xwayland *xwayland)
 		return NULL;
 	}
 
+	server->shell_v1 = xwayland_shell_v1_create(wl_display, 1);
+	if (server->shell_v1 == NULL) {
+		goto error_alloc;
+	}
+
 	server->wl_display = wl_display;
-	server->xwayland = xwayland;
+	server->compositor = compositor;
+	server->seat = seat;
 
 	server->x_fd[0] = server->x_fd[1] = -1;
 	server->wl_fd[0] = server->wl_fd[1] = -1;
 	server->wm_fd[0] = server->wm_fd[1] = -1;
 
-	if (!server_start_display(server, wl_display)) {
-		goto error_alloc;
+	if (!server_start_display(server)) {
+		goto error_shell;
 	}
 
 	struct wl_event_loop *loop = wl_display_get_event_loop(wl_display);
@@ -416,6 +420,8 @@ xwayland_server_create(struct wl_display *wl_display, struct xwayland *xwayland)
 
 error_display:
 	server_finish_display(server);
+error_shell:
+	xwayland_shell_v1_destroy(server->shell_v1);
 error_alloc:
 	free(server);
 	return NULL;

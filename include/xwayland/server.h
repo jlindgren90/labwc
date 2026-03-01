@@ -9,8 +9,6 @@
 #include <time.h>
 #include <wayland-server-core.h>
 
-struct xwayland;
-
 struct xwayland_server {
 	pid_t pid;
 	struct wl_client *client;
@@ -26,26 +24,22 @@ struct xwayland_server {
 	char display_name[16];
 	int x_fd[2];
 	struct wl_event_source *x_fd_read_event[2];
-	struct xwayland *xwayland;
 
 	struct wl_display *wl_display;
 	struct wl_event_source *idle_source;
 
-	void *data;
+	struct wl_listener client_destroy;
 
-	struct {
-		struct wl_listener client_destroy;
-		struct wl_listener display_destroy;
-	};
+	struct lab_xwm *xwm;
+	struct xwayland_shell_v1 *shell_v1;
+
+	struct wlr_compositor *compositor;
+	struct wlr_seat *seat;
 };
 
-struct xwayland_server *xwayland_server_create(
-	struct wl_display *display, struct xwayland *xwayland);
-void xwayland_server_destroy(struct xwayland_server *server);
+struct xwayland_server *xwayland_server_create(struct wl_display *display,
+	struct wlr_compositor *compositor, struct wlr_seat *seat);
 
-// listeners (external)
-void xwayland_on_server_start(struct xwayland *xwayland);
-void xwayland_on_server_ready(struct xwayland *xwayland);
-void xwayland_destroy(struct xwayland *xwayland);
+void xwayland_server_destroy(struct xwayland_server *server);
 
 #endif
