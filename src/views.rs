@@ -92,9 +92,7 @@ impl Views {
                 }
             }
             if was_shown {
-                ul |= self.focus(id, /* raise */ true);
-                // Might be redundant after raise, but be sure
-                self.update_top_layer_visibility();
+                ul |= self.focus(id, /* raise */ true, /* force_restack */ true);
             }
         }
         return ul;
@@ -272,19 +270,19 @@ impl Views {
         }
         if visibility_changed {
             if !minimized {
-                ul |= self.focus(id, /* raise */ true);
+                ul |= self.focus(id, /* raise */ true, /* force_restack */ true);
             } else if !self.is_active_visible() {
                 ul |= self.focus_topmost();
+                self.update_top_layer_visibility();
             }
-            // Might be redundant after raise, but be sure
-            self.update_top_layer_visibility();
         }
         return (visibility_changed, ul);
     }
 
-    pub fn raise(&mut self, id: ViewId) -> UpdateLevel {
+    pub fn raise(&mut self, id: ViewId, force_restack: bool) -> UpdateLevel {
         // Check if view or a sub-view is already in front
-        if let Some(&front) = self.order.last()
+        if !force_restack
+            && let Some(&front) = self.order.last()
             && (id == front || self.get_root_of(front) == id)
         {
             return UpdateLevel::None;
@@ -311,15 +309,31 @@ impl Views {
         }
         self.order.retain(|i| !ids_to_raise.contains(i));
         self.order.append(&mut ids_to_raise);
+        // Keep always-on-top views on top by raising again
+        for v in self.order.iter().filter_map(|i| self.by_id.get(i)) {
+            if v.get_state().always_on_top {
+                v.raise();
+            }
+        }
         self.update_top_layer_visibility();
         return UpdateLevel::Cursor;
     }
 
-    pub fn focus(&mut self, id: ViewId, raise: bool) -> UpdateLevel {
+    pub fn set_always_on_top(&mut self, id: ViewId, always_on_top: bool) -> UpdateLevel {
+        if let Some(view) = self.by_id.get_mut(&id)
+            && view.get_state().always_on_top != always_on_top
+        {
+            view.set_always_on_top(always_on_top);
+            return self.raise(id, /* force_restack */ true);
+        }
+        return UpdateLevel::None;
+    }
+
+    pub fn focus(&mut self, id: ViewId, raise: bool, force_restack: bool) -> UpdateLevel {
         // Focus a modal dialog rather than its parent view
         let id_to_focus = self.get_modal_dialog(id).unwrap_or(id);
         let ul = if raise {
-            self.raise(id_to_focus)
+            self.raise(id_to_focus, force_restack)
         } else {
             UpdateLevel::None
         };
@@ -337,7 +351,7 @@ impl Views {
                 && state.focusable()
                 && !state.minimized
             {
-                return self.focus(i, /* raise */ false);
+                return self.focus(i, /* raise */ false, /* force_restack */ false);
             }
         }
         if unsafe { seat_focus_surface_no_notify(null_mut()) } {
