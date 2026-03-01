@@ -113,9 +113,7 @@ kde_server_decoration_update_default(void)
 {
 	assert(kde_deco_mgr);
 	wlr_server_decoration_manager_set_default_mode(kde_deco_mgr,
-		rc.xdg_shell_server_side_deco
-		? WLR_SERVER_DECORATION_MANAGER_MODE_SERVER
-		: WLR_SERVER_DECORATION_MANAGER_MODE_CLIENT);
+		WLR_SERVER_DECORATION_MANAGER_MODE_SERVER);
 }
 
 void
