@@ -251,7 +251,7 @@ handle_destroy(struct wl_listener *listener, void *data)
 	view->xdg_surface->data = NULL;
 	view->xdg_surface = NULL;
 
-	/* Remove xdg-shell view specific listeners */
+	wl_list_remove(&view->destroy.link);
 	wl_list_remove(&view->request_move.link);
 	wl_list_remove(&view->request_resize.link);
 	wl_list_remove(&view->request_minimize.link);
@@ -270,7 +270,8 @@ handle_destroy(struct wl_listener *listener, void *data)
 		view->pending_configure_timeout = NULL;
 	}
 
-	view_destroy(view);
+	view_remove(view->id);
+	free(view);
 }
 
 static void
@@ -640,7 +641,9 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	struct view *view = znew(*view);
 	view->xdg_surface = xdg_surface;
 
-	view_init(view, /* is_xwayland */ false);
+	view->id = view_add(view, /* is_xwayland */ false);
+	view->st = view_get_state(view->id);
+	assert(view->st);
 
 	xdg_surface->data = (void *)view->id;
 
