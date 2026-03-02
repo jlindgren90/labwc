@@ -572,7 +572,7 @@ handle_focus_in(struct wl_listener *listener, void *data)
 	struct view *view = wl_container_of(listener, view, focus_in);
 	struct wlr_surface *surface = view->xwayland_surface->surface;
 
-	if (!surface) {
+	if (!surface || !surface->mapped) {
 		/*
 		 * It is rare but possible for the focus_in event to be
 		 * received before the map event. This has been seen
@@ -581,12 +581,7 @@ handle_focus_in(struct wl_listener *listener, void *data)
 		 * window instead. (In this case, the focus transfer is
 		 * client-initiated but allowed by wlroots because the
 		 * same PID owns both windows.)
-		 *
-		 * Set a flag to record this condition, and update the
-		 * seat focus later when the view is actually mapped.
 		 */
-		wlr_log(WLR_DEBUG, "focus_in received before map");
-		view->focused_before_map = true;
 		return;
 	}
 
@@ -635,8 +630,7 @@ handle_map(struct wl_listener *listener, void *data)
 	 * In all other cases, it's redundant since view_impl_map()
 	 * results in the view being focused anyway.
 	 */
-	if (view->focused_before_map) {
-		view->focused_before_map = false;
+	if (xwayland_surface_is_focused(view->xwayland_surface)) {
 		seat_focus_surface(view->xwayland_surface->surface);
 	}
 

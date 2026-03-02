@@ -227,6 +227,8 @@ struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
  */
 void xwayland_surface_offer_focus(struct xwayland_surface *xsurface);
 
+bool xwayland_surface_is_focused(struct xwayland_surface *xsurface);
+
 /**
  * Returns true if the surface has the given window type.
  * Note: a surface may have multiple window types set.

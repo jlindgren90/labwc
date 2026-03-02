@@ -383,6 +383,12 @@ void xwayland_surface_offer_focus(struct xwayland_surface *xsurface) {
 	xcb_flush(xwm->xcb_conn);
 }
 
+bool
+xwayland_surface_is_focused(struct xwayland_surface *xsurface)
+{
+	return xsurface && xsurface == xsurface->xwm->focus_surface;
+}
+
 static void lab_xwm_surface_activate(struct lab_xwm *xwm,
 		struct xwayland_surface *xsurface) {
 	if (xsurface && xsurface->override_redirect) {
