@@ -61,6 +61,14 @@ struct view {
 	struct wl_listener set_icon;
 	struct wl_listener focus_in;
 	struct wl_listener map_request;
+
+	/* xwayland-unmanaged fields */
+	struct wlr_scene_node *unmanaged_node;
+
+	struct wl_listener grab_focus;
+	struct wl_listener set_geometry;
+
+	bool ever_grabbed_focus;
 };
 
 ViewId view_from_wlr_surface(struct wlr_surface *surface);
