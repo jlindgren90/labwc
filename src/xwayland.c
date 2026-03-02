@@ -20,11 +20,8 @@
 #include "xwayland/xwayland.h"
 #include "xwayland/xwm.h"
 
-static void handle_map(struct wl_listener *listener, void *data);
-static void handle_unmap(struct wl_listener *listener, void *data);
-
-static void xwayland_view_create(struct xwayland_surface *xsurface, bool mapped);
-static void xwayland_unmanaged_create(struct xwayland_surface *xsurface, bool mapped);
+static void xwayland_view_create(struct xwayland_surface *xsurface);
+static void xwayland_unmanaged_create(struct xwayland_surface *xsurface);
 
 static struct xwayland_surface *
 xwayland_surface_from_view(struct view *view)
@@ -166,19 +163,16 @@ xwayland_view_get_surface_props(struct view *view)
 	};
 }
 
-static void
-handle_commit(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_commit(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, commit);
-
-	if (!view->id) {
-		/* unmanaged surface */
+	const ViewState *view_st = view_get_state(xsurface->view_id);
+	if (!view_st || !xsurface->surface || !xsurface->surface->mapped) {
 		return;
 	}
 
 	/* Must receive commit signal before accessing surface->current* */
-	struct wlr_surface_state *state =
-		&view->xwayland_surface->surface->current;
+	struct wlr_surface_state *state = &xsurface->surface->current;
 
 	/*
 	 * If there is a pending move/resize, wait until the surface
@@ -186,9 +180,9 @@ handle_commit(struct wl_listener *listener, void *data)
 	 * the position and the size of the view at the same time,
 	 * reducing visual glitches.
 	 */
-	if (view->st->current.width != state->width
-			|| view->st->current.height != state->height) {
-		view_commit_geom(view->id, state->width, state->height);
+	if (view_st->current.width != state->width
+			|| view_st->current.height != state->height) {
+		view_commit_geom(xsurface->view_id, state->width, state->height);
 	}
 }
 
@@ -227,22 +221,9 @@ handle_request_resize(struct wl_listener *listener, void *data)
 	interactive_begin(view->id, LAB_INPUT_STATE_RESIZE, event->edges);
 }
 
-static void
-handle_associate(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_associate(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, associate);
-	struct xwayland_surface *xsurface = view->xwayland_surface;
-	assert(xsurface && xsurface->surface);
-
-	CONNECT_SIGNAL(xsurface->surface, view, commit);
-	CONNECT_SIGNAL(xsurface->surface, view, map);
-	CONNECT_SIGNAL(xsurface->surface, view, unmap);
-
-	if (!view->id) {
-		/* unmanaged surface */
-		return;
-	}
-
 	/*
 	 * Empirically, the associate event is always seen just after
 	 * map_request but before surface map. Window properties are
@@ -255,17 +236,8 @@ handle_associate(struct wl_listener *listener, void *data)
 	 * Per the Extended Window Manager Hints (EWMH) spec: "The Window
 	 * Manager SHOULD honor _NET_WM_STATE whenever a withdrawn window
 	 * requests to be mapped."
-	 *
-	 * The following order of operations is intended to reduce the
-	 * number of resize (Configure) events:
-	 *   1. set fullscreen state
-	 *   2. set decorations (depends on fullscreen state)
-	 *   3. set maximized (geometry depends on decorations)
 	 */
-	view_fullscreen(view->id, xsurface->fullscreen, /* output */ NULL);
-	if (!view->st->ever_mapped) {
-		view_enable_ssd(view->id, want_deco(xsurface));
-	}
+	view_fullscreen(xsurface->view_id, xsurface->fullscreen, /* output */ NULL);
 	enum view_axis axis = VIEW_AXIS_NONE;
 	if (xsurface->maximized_horz) {
 		axis |= VIEW_AXIS_HORIZONTAL;
@@ -273,19 +245,9 @@ handle_associate(struct wl_listener *listener, void *data)
 	if (xsurface->maximized_vert) {
 		axis |= VIEW_AXIS_VERTICAL;
 	}
-	view_maximize(view->id, axis);
-	view_set_always_on_top(view->id, xsurface->above);
-	view_set_strut_partial(view->id, xsurface->strut_partial);
-}
-
-static void
-handle_dissociate(struct wl_listener *listener, void *data)
-{
-	struct view *view = wl_container_of(listener, view, dissociate);
-
-	wl_list_remove(&view->commit.link);
-	wl_list_remove(&view->map.link);
-	wl_list_remove(&view->unmap.link);
+	view_maximize(xsurface->view_id, axis);
+	view_set_always_on_top(xsurface->view_id, xsurface->above);
+	view_set_strut_partial(xsurface->view_id, xsurface->strut_partial);
 }
 
 static void
@@ -297,8 +259,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	if (!view->id) {
 		/* unmanaged surface */
 		wl_list_remove(&view->destroy.link);
-		wl_list_remove(&view->associate.link);
-		wl_list_remove(&view->dissociate.link);
 		wl_list_remove(&view->set_override_redirect.link);
 		free(view);
 		return;
@@ -314,8 +274,6 @@ handle_destroy(struct wl_listener *listener, void *data)
 	view->xwayland_surface = NULL;
 
 	/* Remove XWayland view specific listeners */
-	wl_list_remove(&view->associate.link);
-	wl_list_remove(&view->dissociate.link);
 	wl_list_remove(&view->set_override_redirect.link);
 
 	view_destroy(view);
@@ -483,19 +441,18 @@ handle_set_override_redirect(struct wl_listener *listener, void *data)
 		wl_container_of(listener, view, set_override_redirect);
 	struct xwayland_surface *xsurface = view->xwayland_surface;
 
-	bool mapped = xsurface->surface && xsurface->surface->mapped;
-	if (mapped) {
-		handle_unmap(&view->unmap, NULL);
-	}
-	if (xsurface->surface) {
-		handle_dissociate(&view->dissociate, NULL);
+	if (xsurface->surface && xsurface->surface->mapped) {
+		xwayland_surface_on_unmap(xsurface);
 	}
 	handle_destroy(&view->destroy, xsurface);
 	/* view is invalid after this point */
 	if (xsurface->override_redirect) {
-		xwayland_unmanaged_create(xsurface, mapped);
+		xwayland_unmanaged_create(xsurface);
 	} else {
-		xwayland_view_create(xsurface, mapped);
+		xwayland_view_create(xsurface);
+	}
+	if (xsurface->surface && xsurface->surface->mapped) {
+		xwayland_surface_on_map(xsurface);
 	}
 }
 
@@ -571,9 +528,9 @@ xwayland_surface_on_focus_in(struct xwayland_surface *xsurface)
 }
 
 static void
-map_unmanaged_surface(struct view *view)
+map_unmanaged_surface(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *xsurface = view->xwayland_surface;
+	assert(!xsurface->view_id);
 	assert(!xsurface->unmanaged_node);
 
 	if (xsurface->ever_grabbed_focus) {
@@ -591,18 +548,15 @@ map_unmanaged_surface(struct view *view)
 	cursor_update_focus();
 }
 
-static void
-handle_map(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_map(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, map);
-	assert(view->xwayland_surface->surface);
+	assert(xsurface->surface);
 
-	if (!view->id) {
-		map_unmanaged_surface(view);
+	if (xsurface->override_redirect) {
+		map_unmanaged_surface(xsurface);
 		return;
 	}
-
-	assert(view->st && !view->st->mapped);
 
 	/*
 	 * If the view was focused (on the xwayland server side) before
@@ -611,17 +565,17 @@ handle_map(struct wl_listener *listener, void *data)
 	 * In all other cases, it's redundant since view_impl_map()
 	 * results in the view being focused anyway.
 	 */
-	if (xwayland_surface_is_focused(view->xwayland_surface)) {
-		seat_focus_surface(view->xwayland_surface->surface);
+	if (xwayland_surface_is_focused(xsurface)) {
+		seat_focus_surface(xsurface->surface);
 	}
 
-	view_map(view->id);
+	view_map(xsurface->view_id);
 }
 
 static void
-unmap_unmanaged_surface(struct view *view)
+unmap_unmanaged_surface(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *xsurface = view->xwayland_surface;
+	assert(!xsurface->view_id);
 	assert(xsurface->unmanaged_node);
 
 	wlr_scene_node_destroy(xsurface->unmanaged_node);
@@ -633,19 +587,17 @@ unmap_unmanaged_surface(struct view *view)
 	}
 }
 
-static void
-handle_unmap(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, unmap);
+	assert(xsurface->surface);
 
-	if (!view->id) {
-		unmap_unmanaged_surface(view);
+	if (xsurface->unmanaged_node) {
+		unmap_unmanaged_surface(xsurface);
 		return;
 	}
 
-	assert(view->st && view->st->mapped);
-
-	view_unmap(view->id);
+	view_unmap(xsurface->view_id);
 }
 
 void
@@ -699,7 +651,7 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 }
 
 static void
-xwayland_view_create(struct xwayland_surface *xsurface, bool mapped)
+xwayland_view_create(struct xwayland_surface *xsurface)
 {
 	struct view *view = znew(*view);
 	view_init(view, /* is_xwayland */ true);
@@ -723,12 +675,8 @@ xwayland_view_create(struct xwayland_surface *xsurface, bool mapped)
 	CONNECT_SIGNAL(xsurface, view, set_title);
 
 	/* Events specific to XWayland views */
-	CONNECT_SIGNAL(xsurface, view, associate);
-	CONNECT_SIGNAL(xsurface, view, dissociate);
 	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
-
 	if (xsurface->surface) {
-		handle_associate(&view->associate, NULL);
 		/*
 		 * If a surface is already associated, then we've
 		 * missed the various initial set_* events as well.
@@ -736,9 +684,6 @@ xwayland_view_create(struct xwayland_surface *xsurface, bool mapped)
 		handle_set_title(&view->set_title, NULL);
 		xwayland_surface_on_set_class(xsurface);
 		xwayland_surface_on_set_icon(xsurface);
-	}
-	if (mapped) {
-		handle_map(&view->map, NULL);
 	}
 }
 
@@ -766,7 +711,7 @@ xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface)
 }
 
 static void
-xwayland_unmanaged_create(struct xwayland_surface *xsurface, bool mapped)
+xwayland_unmanaged_create(struct xwayland_surface *xsurface)
 {
 	struct view *view = znew(*view);
 	view->xwayland_surface = xsurface;
@@ -774,16 +719,7 @@ xwayland_unmanaged_create(struct xwayland_surface *xsurface, bool mapped)
 	assert(!xsurface->view_id);
 
 	CONNECT_SIGNAL(xsurface, view, destroy);
-	CONNECT_SIGNAL(xsurface, view, associate);
-	CONNECT_SIGNAL(xsurface, view, dissociate);
 	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
-
-	if (xsurface->surface) {
-		handle_associate(&view->associate, NULL);
-	}
-	if (mapped) {
-		handle_map(&view->map, NULL);
-	}
 }
 
 void
@@ -794,9 +730,9 @@ xwayland_on_new_surface(struct xwayland_surface *xsurface)
 	 * but add them to server.unmanaged_surfaces so that we can render them
 	 */
 	if (xsurface->override_redirect) {
-		xwayland_unmanaged_create(xsurface, /* mapped */ false);
+		xwayland_unmanaged_create(xsurface);
 	} else {
-		xwayland_view_create(xsurface, /* mapped */ false);
+		xwayland_view_create(xsurface);
 	}
 }
 
