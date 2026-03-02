@@ -120,13 +120,6 @@ struct xwayland_surface {
 
 	struct {
 		struct wl_signal destroy;
-		struct wl_signal request_move;
-		struct wl_signal request_resize; // struct xwayland_resize_event
-		struct wl_signal request_minimize; // struct xwayland_minimize_event
-		struct wl_signal request_maximize;
-		struct wl_signal request_fullscreen;
-
-		struct wl_signal set_title;
 		struct wl_signal set_override_redirect;
 	} events;
 
@@ -150,16 +143,6 @@ struct xwayland_surface_configure_event {
 	int16_t x, y;
 	uint16_t width, height;
 	uint16_t mask; // xcb_config_window_t
-};
-
-struct xwayland_resize_event {
-	struct xwayland_surface *surface;
-	uint32_t edges;
-};
-
-struct xwayland_minimize_event {
-	struct xwayland_surface *surface;
-	bool minimize;
 };
 
 void xwayland_set_cursor(struct xwayland_server *server, const uint8_t *pixels,
@@ -261,8 +244,14 @@ void xwayland_surface_on_request_activate(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_close(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	const struct xwayland_surface_configure_event *event);
+void xwayland_surface_on_request_fullscreen(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_maximize(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_minimize(struct xwayland_surface *xsurface, bool minimize);
+void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_class(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_title(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_strut_partial(struct xwayland_surface *xsurface);
