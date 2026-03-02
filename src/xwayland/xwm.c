@@ -161,27 +161,15 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_list_init(&surface->unpaired_link);
 
 	wl_signal_init(&surface->events.destroy);
-	wl_signal_init(&surface->events.request_configure);
 	wl_signal_init(&surface->events.request_move);
 	wl_signal_init(&surface->events.request_resize);
 	wl_signal_init(&surface->events.request_minimize);
 	wl_signal_init(&surface->events.request_maximize);
 	wl_signal_init(&surface->events.request_fullscreen);
-	wl_signal_init(&surface->events.request_activate);
-	wl_signal_init(&surface->events.request_close);
-	wl_signal_init(&surface->events.request_above);
 	wl_signal_init(&surface->events.associate);
 	wl_signal_init(&surface->events.dissociate);
-	wl_signal_init(&surface->events.set_class);
 	wl_signal_init(&surface->events.set_title);
-	wl_signal_init(&surface->events.set_decorations);
-	wl_signal_init(&surface->events.set_strut_partial);
 	wl_signal_init(&surface->events.set_override_redirect);
-	wl_signal_init(&surface->events.set_geometry);
-	wl_signal_init(&surface->events.set_icon);
-	wl_signal_init(&surface->events.focus_in);
-	wl_signal_init(&surface->events.grab_focus);
-	wl_signal_init(&surface->events.map_request);
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
@@ -477,27 +465,15 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	wl_signal_emit_mutable(&xsurface->events.destroy, NULL);
 
 	assert(wl_list_empty(&xsurface->events.destroy.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_configure.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_move.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_resize.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_minimize.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_maximize.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_fullscreen.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_activate.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_close.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_above.listener_list));
 	assert(wl_list_empty(&xsurface->events.associate.listener_list));
 	assert(wl_list_empty(&xsurface->events.dissociate.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_class.listener_list));
 	assert(wl_list_empty(&xsurface->events.set_title.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_decorations.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_strut_partial.listener_list));
 	assert(wl_list_empty(&xsurface->events.set_override_redirect.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_geometry.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_icon.listener_list));
-	assert(wl_list_empty(&xsurface->events.focus_in.listener_list));
-	assert(wl_list_empty(&xsurface->events.grab_focus.listener_list));
-	assert(wl_list_empty(&xsurface->events.map_request.listener_list));
 
 	if (xsurface == xsurface->xwm->focus_surface) {
 		lab_xwm_surface_activate(xsurface->xwm, NULL);
@@ -557,7 +533,7 @@ static void read_surface_class(struct lab_xwm *xwm,
 		surface->class = NULL;
 	}
 
-	wl_signal_emit_mutable(&surface->events.set_class, NULL);
+	xwayland_surface_on_set_class(surface);
 }
 
 static void read_surface_title(struct lab_xwm *xwm,
@@ -778,7 +754,7 @@ static void read_surface_motif_hints(struct lab_xwm *xwm,
 		xcb_get_property_reply_t *reply) {
 	if (reply->value_len == 0) {
 		xsurface->decorations = 0;
-		wl_signal_emit_mutable(&xsurface->events.set_decorations, NULL);
+		xwayland_surface_on_set_decorations(xsurface);
 		return;
 	}
 
@@ -801,7 +777,7 @@ static void read_surface_motif_hints(struct lab_xwm *xwm,
 					XWAYLAND_SURFACE_DECORATIONS_NO_TITLE;
 			}
 		}
-		wl_signal_emit_mutable(&xsurface->events.set_decorations, NULL);
+		xwayland_surface_on_set_decorations(xsurface);
 	}
 }
 
@@ -812,7 +788,7 @@ static void read_surface_strut_partial(struct lab_xwm *xwm,
 	xsurface->strut_partial = NULL;
 
 	if (reply->type == XCB_ATOM_NONE) {
-		wl_signal_emit_mutable(&xsurface->events.set_strut_partial, NULL);
+		xwayland_surface_on_set_strut_partial(xsurface);
 		return;
 	}
 
@@ -828,7 +804,7 @@ static void read_surface_strut_partial(struct lab_xwm *xwm,
 		return;
 	}
 	xcb_ewmh_get_wm_strut_partial_from_reply(xsurface->strut_partial, reply);
-	wl_signal_emit_mutable(&xsurface->events.set_strut_partial, NULL);
+	xwayland_surface_on_set_strut_partial(xsurface);
 }
 
 static void read_surface_net_wm_state(struct lab_xwm *xwm,
@@ -883,7 +859,7 @@ static void read_surface_property(struct lab_xwm *xwm,
 	} else if (property == xwm->atoms[NET_WM_WINDOW_TYPE]) {
 		read_surface_window_type(xwm, xsurface, reply);
 	} else if (property == xwm->atoms[NET_WM_ICON]) {
-		wl_signal_emit_mutable(&xsurface->events.set_icon, NULL);
+		xwayland_surface_on_set_icon(xsurface);
 	} else if (property == xwm->atoms[WM_PROTOCOLS]) {
 		read_surface_protocols(xwm, xsurface, reply);
 	} else if (property == xwm->atoms[NET_WM_STATE]) {
@@ -1059,7 +1035,6 @@ static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
 	}
 
 	struct xwayland_surface_configure_event wlr_event = {
-		.surface = surface,
 		.x = mask & XCB_CONFIG_WINDOW_X ? ev->x : surface->x,
 		.y = mask & XCB_CONFIG_WINDOW_Y ? ev->y : surface->y,
 		.width = mask & XCB_CONFIG_WINDOW_WIDTH ? ev->width : surface->width,
@@ -1067,7 +1042,7 @@ static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
 		.mask = mask,
 	};
 
-	wl_signal_emit_mutable(&surface->events.request_configure, &wlr_event);
+	xwayland_surface_on_request_configure(surface, &wlr_event);
 }
 
 static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
@@ -1107,7 +1082,7 @@ static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,
 	lab_xwm_update_override_redirect(xsurface, ev->override_redirect);
 
 	if (geometry_changed) {
-		wl_signal_emit_mutable(&xsurface->events.set_geometry, NULL);
+		xwayland_surface_on_set_geometry(xsurface);
 	}
 }
 
@@ -1188,7 +1163,7 @@ static void lab_xwm_handle_map_request(struct lab_xwm *xwm,
 		return;
 	}
 
-	wl_signal_emit_mutable(&xsurface->events.map_request, NULL);
+	xwayland_surface_on_map_request(xsurface);
 	xcb_map_window(xwm->xcb_conn, ev->window);
 }
 
@@ -1450,7 +1425,7 @@ static void lab_xwm_handle_net_wm_state_message(struct lab_xwm *xwm,
 	}
 
 	if (above != xsurface->above) {
-		wl_signal_emit_mutable(&xsurface->events.request_above, NULL);
+		xwayland_surface_on_request_above(xsurface);
 	}
 }
 
@@ -1460,7 +1435,7 @@ static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 	if (surface == NULL) {
 		return;
 	}
-	wl_signal_emit_mutable(&surface->events.request_activate, NULL);
+	xwayland_surface_on_request_activate(surface);
 }
 
 static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
@@ -1469,7 +1444,7 @@ static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
 	if (surface == NULL) {
 		return;
 	}
-	wl_signal_emit_mutable(&surface->events.request_close, NULL);
+	xwayland_surface_on_request_close(surface);
 }
 
 static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
@@ -1546,7 +1521,7 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->event);
 	if (ev->mode == XCB_NOTIFY_MODE_GRAB) {
 		if (xsurface) {
-			wl_signal_emit_mutable(&xsurface->events.grab_focus, NULL);
+			xwayland_surface_on_grab_focus(xsurface);
 		}
 		return;
 	}
@@ -1564,7 +1539,7 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 
 	if (xsurface) {
 		lab_xwm_set_focused_window(xwm, xsurface);
-		wl_signal_emit_mutable(&xsurface->events.focus_in, NULL);
+		xwayland_surface_on_focus_in(xsurface);
 	}
 }
 
