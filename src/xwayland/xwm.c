@@ -889,6 +889,9 @@ static void xwayland_surface_handle_map(struct wl_listener *listener, void *data
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_map);
 	lab_xwm_set_net_client_list(xsurface->xwm);
 	xwayland_surface_on_map(xsurface);
+	if (xsurface == xsurface->xwm->focus_surface) {
+		xwayland_surface_on_focus_in(xsurface);
+	}
 }
 
 static void xwayland_surface_handle_unmap(struct wl_listener *listener, void *data) {
@@ -1538,7 +1541,9 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 
 	if (xsurface) {
 		lab_xwm_set_focused_window(xwm, xsurface);
-		xwayland_surface_on_focus_in(xsurface);
+		if (xsurface->surface && xsurface->surface->mapped) {
+			xwayland_surface_on_focus_in(xsurface);
+		}
 	}
 }
 

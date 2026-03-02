@@ -144,7 +144,6 @@ struct xwayland_surface {
 
 	/* ViewId or 0 if unmanaged */
 	unsigned long view_id;
-	bool focused_before_map;
 
 	/* for unmanaged surfaces */
 	bool ever_grabbed_focus;

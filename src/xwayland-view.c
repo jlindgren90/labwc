@@ -482,25 +482,6 @@ void
 xwayland_surface_on_focus_in(struct xwayland_surface *xsurface)
 {
 	struct wlr_surface *surface = xsurface->surface;
-
-	if (!surface) {
-		/*
-		 * It is rare but possible for the focus_in event to be
-		 * received before the map event. This has been seen
-		 * during CLion startup, when focus is initially offered
-		 * to the splash screen but accepted later by the main
-		 * window instead. (In this case, the focus transfer is
-		 * client-initiated but allowed by wlroots because the
-		 * same PID owns both windows.)
-		 *
-		 * Set a flag to record this condition, and update the
-		 * seat focus later when the view is actually mapped.
-		 */
-		wlr_log(WLR_DEBUG, "focus_in received before map");
-		xsurface->focused_before_map = true;
-		return;
-	}
-
 	if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
 		seat_focus_surface(surface);
 	}
@@ -579,19 +560,6 @@ xwayland_surface_on_map(struct xwayland_surface *xsurface)
 	 * explicitly (calling it twice is harmless).
 	 */
 	xwayland_surface_on_map_request(xsurface);
-
-	/*
-	 * If the view was focused (on the xwayland server side) before
-	 * being mapped, update the seat focus now. Note that this only
-	 * really matters in the case of Globally Active input windows.
-	 * In all other cases, it's redundant since view_impl_map()
-	 * results in the view being focused anyway.
-	 */
-	if (xsurface->focused_before_map) {
-		xsurface->focused_before_map = false;
-		seat_focus_surface(xsurface->surface);
-	}
-
 	view_map_common(xsurface->view_id, xwayland_view_focus_mode(xsurface));
 	if (xsurface->strut_partial) {
 		output_update_all_usable_areas(false);
