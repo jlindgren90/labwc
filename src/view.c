@@ -68,31 +68,6 @@ view_inhibits_actions(ViewId view_id, struct wl_list *actions)
 		&& !actions_contain_toggle_keybinds(actions);
 }
 
-void
-view_init(struct view *view, bool is_xwayland)
-{
-	assert(view);
-
-	view->id = view_add(view, is_xwayland);
-	view->st = view_get_state(view->id);
-	assert(view->st);
-}
-
-void
-view_destroy(struct view *view)
-{
-	assert(view);
-
-	wl_list_remove(&view->destroy.link);
-
-	menu_on_view_destroy(view->id);
-
-	view_remove(view->id);
-	free(view);
-
-	cursor_update_focus();
-}
-
 struct wlr_scene_tree *
 view_scene_tree_create(ViewId id)
 {

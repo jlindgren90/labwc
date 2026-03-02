@@ -35,6 +35,8 @@ pub extern "C" fn view_add(c_ptr: *mut CView, is_xwayland: bool) -> ViewId {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_remove(id: ViewId) {
     views_mut().remove(id);
+    unsafe { menu_on_view_destroy(id) };
+    unsafe { cursor_update_focus() };
 }
 
 #[unsafe(no_mangle)]
