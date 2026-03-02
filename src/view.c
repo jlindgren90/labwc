@@ -35,7 +35,7 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	struct xwayland_surface *xsurface =
 		xwayland_surface_try_from_wlr_surface(surface);
 	if (xsurface) {
-		return (ViewId)xsurface->data;
+		return xsurface->view_id;
 	}
 
 	return 0;
