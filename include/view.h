@@ -46,7 +46,6 @@ struct view {
 
 	/* xwayland view fields */
 	struct xwayland_surface *xwayland_surface;
-	bool focused_before_map;
 
 	/* Events unique to XWayland views */
 	struct wl_listener associate;
