@@ -130,9 +130,6 @@ struct xwayland_surface {
 		struct wl_signal request_close;
 		struct wl_signal request_above;
 
-		struct wl_signal associate;
-		struct wl_signal dissociate;
-
 		struct wl_signal set_title;
 		struct wl_signal set_override_redirect;
 	} events;
@@ -260,6 +257,9 @@ void xwayland_on_new_surface(struct xwayland_surface *xsurface);
 void xwayland_on_ready(void);
 
 void xwayland_surface_on_map_request(struct xwayland_surface *xsurface);
+void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
+void xwayland_surface_on_map(struct xwayland_surface *xsurface);
+void xwayland_surface_on_unmap(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_class(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);

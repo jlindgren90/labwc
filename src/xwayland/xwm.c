@@ -170,8 +170,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_signal_init(&surface->events.request_activate);
 	wl_signal_init(&surface->events.request_close);
 	wl_signal_init(&surface->events.request_above);
-	wl_signal_init(&surface->events.associate);
-	wl_signal_init(&surface->events.dissociate);
 	wl_signal_init(&surface->events.set_title);
 	wl_signal_init(&surface->events.set_override_redirect);
 
@@ -435,7 +433,6 @@ static void xsurface_set_net_wm_state(struct xwayland_surface *xsurface) {
 static void xwayland_surface_dissociate(struct xwayland_surface *xsurface) {
 	if (xsurface->surface != NULL) {
 		wlr_surface_unmap(xsurface->surface);
-		wl_signal_emit_mutable(&xsurface->events.dissociate, NULL);
 
 		wl_list_remove(&xsurface->surface_commit.link);
 		wl_list_remove(&xsurface->surface_map.link);
@@ -472,8 +469,6 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	assert(wl_list_empty(&xsurface->events.request_activate.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_close.listener_list));
 	assert(wl_list_empty(&xsurface->events.request_above.listener_list));
-	assert(wl_list_empty(&xsurface->events.associate.listener_list));
-	assert(wl_list_empty(&xsurface->events.dissociate.listener_list));
 	assert(wl_list_empty(&xsurface->events.set_title.listener_list));
 	assert(wl_list_empty(&xsurface->events.set_override_redirect.listener_list));
 
@@ -887,16 +882,19 @@ static void xwayland_surface_handle_commit(struct wl_listener *listener, void *d
 	if (wlr_surface_has_buffer(xsurface->surface)) {
 		wlr_surface_map(xsurface->surface);
 	}
+	xwayland_surface_on_commit(xsurface);
 }
 
 static void xwayland_surface_handle_map(struct wl_listener *listener, void *data) {
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_map);
 	lab_xwm_set_net_client_list(xsurface->xwm);
+	xwayland_surface_on_map(xsurface);
 }
 
 static void xwayland_surface_handle_unmap(struct wl_listener *listener, void *data) {
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_unmap);
 	lab_xwm_set_net_client_list(xsurface->xwm);
+	xwayland_surface_on_unmap(xsurface);
 }
 
 static void xwayland_surface_handle_addon_destroy(struct wlr_addon *addon) {
@@ -993,8 +991,6 @@ static void xwayland_surface_associate(struct lab_xwm *xwm,
 		read_surface_property(xwm, xsurface, props[i], reply);
 		free(reply);
 	}
-
-	wl_signal_emit_mutable(&xsurface->events.associate, NULL);
 }
 
 static void lab_xwm_handle_create_notify(struct lab_xwm *xwm,
