@@ -121,7 +121,6 @@ struct xwayland_surface {
 
 	struct {
 		struct wl_signal destroy;
-		struct wl_signal set_override_redirect;
 	} events;
 
 	struct {
@@ -235,6 +234,7 @@ bool xwayland_surface_fetch_icon(
 void xwayland_on_new_surface(struct xwayland_surface *xsurface);
 void xwayland_on_ready(void);
 
+void xwayland_surface_on_destroy(struct xwayland_surface *xsurface);
 void xwayland_surface_on_associate(struct xwayland_surface *xsurface);
 void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
 void xwayland_surface_on_map(struct xwayland_surface *xsurface);
@@ -254,6 +254,7 @@ void xwayland_surface_on_set_class(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_title(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_strut_partial(struct xwayland_surface *xsurface);
 void xwayland_surface_on_focus_in(struct xwayland_surface *xsurface);
 void xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface);

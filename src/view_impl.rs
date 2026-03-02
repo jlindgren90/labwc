@@ -16,7 +16,7 @@ pub trait ViewImpl {
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
-    fn configure(&self, geom: Rect, commit_move: *mut bool);
+    fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool);
     fn raise(&self);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn offer_focus(&self);
@@ -36,18 +36,18 @@ pub trait ViewImpl {
 }
 
 pub struct XView {
-    c_ptr: *mut CView,
+    xsurface: *mut XSurface,
 }
 
 impl XView {
-    pub fn new(c_ptr: *mut CView) -> Self {
-        Self { c_ptr }
+    pub fn new(xsurface: *mut XSurface) -> Self {
+        Self { xsurface }
     }
 }
 
 impl ViewImpl for XView {
     fn get_surface(&self) -> *mut WlrSurface {
-        unsafe { xwayland_view_get_surface(self.c_ptr) }
+        unsafe { xwayland_view_get_surface(self.xsurface) }
     }
 
     fn get_parent(&self) -> ViewId {
@@ -55,31 +55,31 @@ impl ViewImpl for XView {
     }
 
     fn get_root_id(&self) -> ViewId {
-        unsafe { xwayland_view_get_root_id(self.c_ptr) }
+        unsafe { xwayland_view_get_root_id(self.xsurface) }
     }
 
     fn is_modal_dialog(&self) -> bool {
-        unsafe { xwayland_view_is_modal_dialog(self.c_ptr) }
+        unsafe { xwayland_view_is_modal_dialog(self.xsurface) }
     }
 
     fn get_size_hints(&self) -> ViewSizeHints {
-        unsafe { xwayland_view_get_size_hints(self.c_ptr) }
+        unsafe { xwayland_view_get_size_hints(self.xsurface) }
     }
 
     fn get_surface_props(&self) -> Option<XSurfaceProps> {
-        Some(unsafe { xwayland_view_get_surface_props(self.c_ptr) })
+        Some(unsafe { xwayland_view_get_surface_props(self.xsurface) })
     }
 
     fn set_active(&self, active: bool) {
-        unsafe { xwayland_view_set_active(self.c_ptr, active) };
+        unsafe { xwayland_view_set_active(self.xsurface, active) };
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
-        unsafe { xwayland_view_set_fullscreen(self.c_ptr, fullscreen) };
+        unsafe { xwayland_view_set_fullscreen(self.xsurface, fullscreen) };
     }
 
     fn set_maximized(&self, maximized: ViewAxis) {
-        unsafe { xwayland_view_maximize(self.c_ptr, maximized) };
+        unsafe { xwayland_view_maximize(self.xsurface, maximized) };
     }
 
     fn notify_tiled(&self) {
@@ -87,29 +87,29 @@ impl ViewImpl for XView {
     }
 
     fn set_minimized(&self, minimized: bool) {
-        unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
+        unsafe { xwayland_view_minimize(self.xsurface, minimized) };
     }
 
-    fn configure(&self, geom: Rect, commit_move: *mut bool) {
+    fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool) {
         unsafe {
-            xwayland_view_configure(self.c_ptr, geom, commit_move);
+            xwayland_view_configure(self.xsurface, current, geom, commit_move);
         }
     }
 
     fn raise(&self) {
-        unsafe { xwayland_view_raise(self.c_ptr) };
+        unsafe { xwayland_view_raise(self.xsurface) };
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
-        unsafe { xwayland_view_get_focus_mode(self.c_ptr) }
+        unsafe { xwayland_view_get_focus_mode(self.xsurface) }
     }
 
     fn offer_focus(&self) {
-        unsafe { xwayland_view_offer_focus(self.c_ptr) };
+        unsafe { xwayland_view_offer_focus(self.xsurface) };
     }
 
     fn close(&self) {
-        unsafe { xwayland_view_close(self.c_ptr) };
+        unsafe { xwayland_view_close(self.xsurface) };
     }
 
     fn create_scene(&self, scene: &mut ViewScene, id: ViewId) {
@@ -205,7 +205,7 @@ impl ViewImpl for XdgView {
         // not supported
     }
 
-    fn configure(&self, geom: Rect, commit_move: *mut bool) {
+    fn configure(&self, _current: Rect, geom: Rect, commit_move: *mut bool) {
         unsafe {
             xdg_toplevel_view_configure(self.c_ptr, geom, commit_move);
         }
