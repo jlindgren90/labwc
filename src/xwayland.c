@@ -19,23 +19,16 @@
 #include "xwayland/server.h"
 #include "xwayland/xwayland.h"
 
-static struct xwayland_surface *
-xwayland_surface_from_view(struct view *view)
-{
-	assert(view->xwayland_surface);
-	return view->xwayland_surface;
-}
-
 struct wlr_surface *
-xwayland_view_get_surface(struct view *view)
+xwayland_view_get_surface(struct xwayland_surface *xsurface)
 {
-	return xwayland_surface_from_view(view)->surface;
+	return xsurface->surface;
 }
 
 struct view_size_hints
-xwayland_view_get_size_hints(struct view *view)
+xwayland_view_get_size_hints(struct xwayland_surface *xsurface)
 {
-	xcb_size_hints_t *hints = xwayland_surface_from_view(view)->size_hints;
+	xcb_size_hints_t *hints = xsurface->size_hints;
 	if (!hints) {
 		return (struct view_size_hints){0};
 	}
@@ -50,11 +43,8 @@ xwayland_view_get_size_hints(struct view *view)
 }
 
 enum view_focus_mode
-xwayland_view_get_focus_mode(struct view *view)
+xwayland_view_get_focus_mode(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *xsurface =
-		xwayland_surface_from_view(view);
-
 	switch (xwayland_surface_icccm_input_model(xsurface)) {
 	/*
 	 * Abbreviated from ICCCM section 4.1.7 (Input Focus):
@@ -112,22 +102,21 @@ xwayland_view_get_focus_mode(struct view *view)
 }
 
 void
-xwayland_view_raise(struct view *view)
+xwayland_view_raise(struct xwayland_surface *xsurface)
 {
-	xwayland_surface_restack(view->xwayland_surface, NULL,
-		XCB_STACK_MODE_ABOVE);
+	xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_ABOVE);
 }
 
 void
-xwayland_view_offer_focus(struct view *view)
+xwayland_view_offer_focus(struct xwayland_surface *xsurface)
 {
-	xwayland_surface_offer_focus(xwayland_surface_from_view(view));
+	xwayland_surface_offer_focus(xsurface);
 }
 
 static struct xwayland_surface *
-top_parent_of(struct view *view)
+top_parent_of(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *s = xwayland_surface_from_view(view);
+	struct xwayland_surface *s = xsurface;
 	while (s->parent) {
 		s = s->parent;
 	}
@@ -142,10 +131,8 @@ want_deco(struct xwayland_surface *xwayland_surface)
 }
 
 XSurfaceProps
-xwayland_view_get_surface_props(struct view *view)
+xwayland_view_get_surface_props(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *xsurface = xwayland_surface_from_view(view);
-
 	bool has_position = xsurface->size_hints && (xsurface->size_hints->flags
 		& (XCB_ICCCM_SIZE_HINT_US_POSITION | XCB_ICCCM_SIZE_HINT_P_POSITION));
 
@@ -214,49 +201,21 @@ xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t e
 	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_RESIZE, edges);
 }
 
-static void
-xwayland_view_init_managed(struct view *view)
+void
+xwayland_surface_on_destroy(struct xwayland_surface *xsurface)
 {
-	assert(!view->id);
-	view->id = view_add(view, /* is_xwayland */ true);
-	view->xwayland_surface->view_id = view->id;
-	view->st = view_get_state(view->id);
-	assert(view->st);
-}
-
-static void
-xwayland_view_deinit_managed(struct view *view)
-{
-	assert(view->id);
-	view_remove(view->id);
-	view->id = 0;
-	view->xwayland_surface->view_id = 0;
-	view->st = NULL;
-}
-
-static void
-handle_destroy(struct wl_listener *listener, void *data)
-{
-	struct view *view = wl_container_of(listener, view, destroy);
-	assert(view->xwayland_surface);
-
-	wl_list_remove(&view->destroy.link);
-	wl_list_remove(&view->set_override_redirect.link);
-
-	if (view->xwayland_surface->override_redirect) {
-		assert(!view->id);
+	if (xsurface->override_redirect) {
+		assert(!xsurface->view_id);
 	} else {
-		xwayland_view_deinit_managed(view);
+		view_remove(xsurface->view_id);
 	}
-
-	free(view);
 }
 
 void
-xwayland_view_configure(struct view *view, struct wlr_box geo, bool *commit_move)
+xwayland_view_configure(struct xwayland_surface *xsurface,
+		struct wlr_box current, struct wlr_box geo, bool *commit_move)
 {
-	xwayland_surface_configure(xwayland_surface_from_view(view),
-		geo.x, geo.y, geo.width, geo.height);
+	xwayland_surface_configure(xsurface, geo.x, geo.y, geo.width, geo.height);
 
 	/*
 	 * For unknown reasons, XWayland surfaces that are completely
@@ -265,13 +224,13 @@ xwayland_view_configure(struct view *view, struct wlr_box geo, bool *commit_move
 	 * (since we wait for a commit event that never occurs). As a
 	 * workaround, move offscreen surfaces immediately.
 	 */
-	bool is_offscreen = !wlr_box_empty(&view->st->current)
+	bool is_offscreen = !wlr_box_empty(&current)
 		&& !wlr_output_layout_intersects(g_server.output_layout, NULL,
-			&view->st->current);
+			&current);
 
 	/* If not resizing, process the move immediately */
-	if (is_offscreen || (view->st->current.width == geo.width
-			&& view->st->current.height == geo.height)) {
+	if (is_offscreen || (current.width == geo.width
+			&& current.height == geo.height)) {
 		*commit_move = true;
 	}
 }
@@ -388,9 +347,9 @@ xwayland_surface_on_set_class(struct xwayland_surface *xsurface)
 }
 
 void
-xwayland_view_close(struct view *view)
+xwayland_view_close(struct xwayland_surface *xsurface)
 {
-	xwayland_surface_close(xwayland_surface_from_view(view));
+	xwayland_surface_close(xsurface);
 }
 
 void
@@ -399,21 +358,19 @@ xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface)
 	view_enable_ssd(xsurface->view_id, want_deco(xsurface));
 }
 
-static void
-handle_set_override_redirect(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 {
-	struct view *view =
-		wl_container_of(listener, view, set_override_redirect);
-	struct xwayland_surface *xsurface = view->xwayland_surface;
-
 	if (xsurface->surface && xsurface->surface->mapped) {
 		xwayland_surface_on_unmap(xsurface);
 	}
 
 	if (xsurface->override_redirect) {
-		xwayland_view_deinit_managed(view);
+		view_remove(xsurface->view_id);
+		xsurface->view_id = 0;
 	} else {
-		xwayland_view_init_managed(view);
+		assert(!xsurface->view_id);
+		xsurface->view_id = view_add(NULL, xsurface);
 		/*
 		 * If a surface is already associated, then we've
 		 * missed the various initial set_* events.
@@ -609,16 +566,16 @@ xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 }
 
 void
-xwayland_view_maximize(struct view *view, enum view_axis maximized)
+xwayland_view_maximize(struct xwayland_surface *xsurface, enum view_axis maximized)
 {
-	xwayland_surface_set_maximized(xwayland_surface_from_view(view),
-		maximized & VIEW_AXIS_HORIZONTAL, maximized & VIEW_AXIS_VERTICAL);
+	xwayland_surface_set_maximized(xsurface,
+		maximized & VIEW_AXIS_HORIZONTAL,
+		maximized & VIEW_AXIS_VERTICAL);
 }
 
 void
-xwayland_view_minimize(struct view *view, bool minimized)
+xwayland_view_minimize(struct xwayland_surface *xsurface, bool minimized)
 {
-	struct xwayland_surface *xsurface = xwayland_surface_from_view(view);
 	xwayland_surface_set_minimized(xsurface, minimized);
 	if (minimized) {
 		xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_BELOW);
@@ -626,9 +583,9 @@ xwayland_view_minimize(struct view *view, bool minimized)
 }
 
 ViewId
-xwayland_view_get_root_id(struct view *view)
+xwayland_view_get_root_id(struct xwayland_surface *xsurface)
 {
-	struct xwayland_surface *root = top_parent_of(view);
+	struct xwayland_surface *root = top_parent_of(xsurface);
 
 	/*
 	 * The case of root->data == NULL is unlikely, but has been reported
@@ -636,26 +593,25 @@ xwayland_view_get_root_id(struct view *view)
 	 * believed to be caused by setting override-redirect on the root
 	 * xwayland_surface making it not be associated with a view anymore.
 	 */
-	return (root && root->view_id) ? root->view_id : view->id;
+	return (root && root->view_id) ? root->view_id : xsurface->view_id;
 }
 
 bool
-xwayland_view_is_modal_dialog(struct view *self)
+xwayland_view_is_modal_dialog(struct xwayland_surface *xsurface)
 {
-	return xwayland_surface_from_view(self)->modal;
+	return xsurface->modal;
 }
 
 void
-xwayland_view_set_active(struct view *view, bool active)
+xwayland_view_set_active(struct xwayland_surface *xsurface, bool active)
 {
-	xwayland_surface_activate(xwayland_surface_from_view(view), active);
+	xwayland_surface_activate(xsurface, active);
 }
 
 void
-xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
+xwayland_view_set_fullscreen(struct xwayland_surface *xsurface, bool fullscreen)
 {
-	xwayland_surface_set_fullscreen(xwayland_surface_from_view(view),
-		fullscreen);
+	xwayland_surface_set_fullscreen(xsurface, fullscreen);
 }
 
 void
@@ -684,15 +640,9 @@ xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface)
 void
 xwayland_on_new_surface(struct xwayland_surface *xsurface)
 {
-	struct view *view = znew(*view);
-	view->xwayland_surface = xsurface;
-
 	if (!xsurface->override_redirect) {
-		xwayland_view_init_managed(view);
+		xsurface->view_id = view_add(NULL, xsurface);
 	}
-
-	CONNECT_SIGNAL(xsurface, view, destroy);
-	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
 }
 
 void

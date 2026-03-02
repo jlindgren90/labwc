@@ -32,5 +32,6 @@ typedef struct wlr_scene_node WlrSceneNode;
 typedef struct wlr_scene_rect WlrSceneRect;
 typedef struct wlr_scene_tree WlrSceneTree;
 typedef struct wlr_surface WlrSurface;
+typedef struct xwayland_surface XSurface;
 
 #endif // LABWC_RS_TYPES_H

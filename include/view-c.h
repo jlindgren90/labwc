@@ -115,20 +115,21 @@ void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
 void xdg_toplevel_view_close(CView *view);
 
-WlrSurface *xwayland_view_get_surface(CView *view);
-ViewId xwayland_view_get_root_id(CView *view);
-_Bool xwayland_view_is_modal_dialog(CView *view);
-ViewSizeHints xwayland_view_get_size_hints(CView *view);
-XSurfaceProps xwayland_view_get_surface_props(CView *view);
-void xwayland_view_set_active(CView *view, _Bool active);
-void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
-void xwayland_view_maximize(CView *view, ViewAxis maximized);
-void xwayland_view_minimize(CView *view, _Bool minimized);
-void xwayland_view_configure(CView *view, Rect geom, _Bool *commit_move);
-void xwayland_view_raise(CView *view);
-ViewFocusMode xwayland_view_get_focus_mode(CView *view);
-void xwayland_view_offer_focus(CView *view);
-void xwayland_view_close(CView *view);
+WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
+ViewId xwayland_view_get_root_id(XSurface *xsurface);
+_Bool xwayland_view_is_modal_dialog(XSurface *xsurface);
+ViewSizeHints xwayland_view_get_size_hints(XSurface *xsurface);
+XSurfaceProps xwayland_view_get_surface_props(XSurface *xsurface);
+void xwayland_view_set_active(XSurface *xsurface, _Bool active);
+void xwayland_view_set_fullscreen(XSurface *xsurface, _Bool fullscreen);
+void xwayland_view_maximize(XSurface *xsurface, ViewAxis maximized);
+void xwayland_view_minimize(XSurface *xsurface, _Bool minimized);
+void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
+	_Bool *commit_move);
+void xwayland_view_raise(XSurface *xsurface);
+ViewFocusMode xwayland_view_get_focus_mode(XSurface *xsurface);
+void xwayland_view_offer_focus(XSurface *xsurface);
+void xwayland_view_close(XSurface *xsurface);
 
 // from cursor.h
 void cursor_update_focus(void);

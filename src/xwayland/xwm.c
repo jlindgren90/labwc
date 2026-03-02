@@ -161,7 +161,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_list_init(&surface->unpaired_link);
 
 	wl_signal_init(&surface->events.destroy);
-	wl_signal_init(&surface->events.set_override_redirect);
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
@@ -452,11 +451,11 @@ static void xwayland_surface_dissociate(struct xwayland_surface *xsurface) {
 
 static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	xwayland_surface_dissociate(xsurface);
+	xwayland_surface_on_destroy(xsurface);
 
 	wl_signal_emit_mutable(&xsurface->events.destroy, NULL);
 
 	assert(wl_list_empty(&xsurface->events.destroy.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_override_redirect.listener_list));
 
 	if (xsurface == xsurface->xwm->focus_surface) {
 		lab_xwm_surface_activate(xsurface->xwm, NULL);
@@ -1042,7 +1041,7 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 		lab_xwm_set_net_client_list_stacking(xsurface->xwm);
 	}
 
-	wl_signal_emit_mutable(&xsurface->events.set_override_redirect, NULL);
+	xwayland_surface_on_set_override_redirect(xsurface);
 }
 
 static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,
