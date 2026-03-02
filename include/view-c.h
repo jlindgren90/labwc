@@ -152,6 +152,9 @@ WlrBuffer *scaled_icon_buffer_load(const char *app_id,
 void seat_focus_override_end(_Bool restore_focus);
 void seat_focus_surface_no_notify(WlrSurface *surface);
 
+// from menu.h
+void menu_on_view_destroy(ViewId view_id);
+
 // from ssd.h
 Border ssd_get_margin(const ViewState *view_st);
 

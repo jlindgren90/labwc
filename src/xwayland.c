@@ -19,9 +19,6 @@
 #include "xwayland/server.h"
 #include "xwayland/xwayland.h"
 
-static void xwayland_view_create(struct xwayland_surface *xsurface);
-static void xwayland_unmanaged_create(struct xwayland_surface *xsurface);
-
 static struct xwayland_surface *
 xwayland_surface_from_view(struct view *view)
 {
@@ -218,32 +215,41 @@ xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t e
 }
 
 static void
+xwayland_view_init_managed(struct view *view)
+{
+	assert(!view->id);
+	view->id = view_add(view, /* is_xwayland */ true);
+	view->xwayland_surface->view_id = view->id;
+	view->st = view_get_state(view->id);
+	assert(view->st);
+}
+
+static void
+xwayland_view_deinit_managed(struct view *view)
+{
+	assert(view->id);
+	view_remove(view->id);
+	view->id = 0;
+	view->xwayland_surface->view_id = 0;
+	view->st = NULL;
+}
+
+static void
 handle_destroy(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, destroy);
 	assert(view->xwayland_surface);
 
-	if (!view->id) {
-		/* unmanaged surface */
-		wl_list_remove(&view->destroy.link);
-		wl_list_remove(&view->set_override_redirect.link);
-		free(view);
-		return;
-	}
-
-	/*
-	 * Break view <-> xsurface association.  Note that the xsurface
-	 * may not actually be destroyed at this point; it may become an
-	 * "unmanaged" surface instead (in that case it is important
-	 * that xsurface->data not point to the destroyed view).
-	 */
-	view->xwayland_surface->view_id = 0;
-	view->xwayland_surface = NULL;
-
-	/* Remove XWayland view specific listeners */
+	wl_list_remove(&view->destroy.link);
 	wl_list_remove(&view->set_override_redirect.link);
 
-	view_destroy(view);
+	if (view->xwayland_surface->override_redirect) {
+		assert(!view->id);
+	} else {
+		xwayland_view_deinit_managed(view);
+	}
+
+	free(view);
 }
 
 void
@@ -403,13 +409,22 @@ handle_set_override_redirect(struct wl_listener *listener, void *data)
 	if (xsurface->surface && xsurface->surface->mapped) {
 		xwayland_surface_on_unmap(xsurface);
 	}
-	handle_destroy(&view->destroy, xsurface);
-	/* view is invalid after this point */
+
 	if (xsurface->override_redirect) {
-		xwayland_unmanaged_create(xsurface);
+		xwayland_view_deinit_managed(view);
 	} else {
-		xwayland_view_create(xsurface);
+		xwayland_view_init_managed(view);
+		/*
+		 * If a surface is already associated, then we've
+		 * missed the various initial set_* events.
+		 */
+		if (xsurface->surface) {
+			xwayland_surface_on_set_title(xsurface);
+			xwayland_surface_on_set_class(xsurface);
+			xwayland_surface_on_set_icon(xsurface);
+		}
 	}
+
 	if (xsurface->surface && xsurface->surface->mapped) {
 		xwayland_surface_on_map(xsurface);
 	}
@@ -643,35 +658,6 @@ xwayland_view_set_fullscreen(struct view *view, bool fullscreen)
 		fullscreen);
 }
 
-static void
-xwayland_view_create(struct xwayland_surface *xsurface)
-{
-	struct view *view = znew(*view);
-	view_init(view, /* is_xwayland */ true);
-
-	/*
-	 * Set two-way view <-> xsurface association.  Usually the association
-	 * remains until the xsurface is destroyed (which also destroys the
-	 * view).  The only exception is caused by setting override-redirect on
-	 * the xsurface, which removes it from the view (destroying the view)
-	 * and makes it an "unmanaged" surface.
-	 */
-	view->xwayland_surface = xsurface;
-	xsurface->view_id = view->id;
-
-	CONNECT_SIGNAL(xsurface, view, destroy);
-	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
-	if (xsurface->surface) {
-		/*
-		 * If a surface is already associated, then we've
-		 * missed the various initial set_* events as well.
-		 */
-		xwayland_surface_on_set_title(xsurface);
-		xwayland_surface_on_set_class(xsurface);
-		xwayland_surface_on_set_icon(xsurface);
-	}
-}
-
 void
 xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface)
 {
@@ -695,30 +681,18 @@ xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface)
 	}
 }
 
-static void
-xwayland_unmanaged_create(struct xwayland_surface *xsurface)
+void
+xwayland_on_new_surface(struct xwayland_surface *xsurface)
 {
 	struct view *view = znew(*view);
 	view->xwayland_surface = xsurface;
 
-	assert(!xsurface->view_id);
+	if (!xsurface->override_redirect) {
+		xwayland_view_init_managed(view);
+	}
 
 	CONNECT_SIGNAL(xsurface, view, destroy);
 	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
-}
-
-void
-xwayland_on_new_surface(struct xwayland_surface *xsurface)
-{
-	/*
-	 * We do not create 'views' for xwayland override_redirect surfaces,
-	 * but add them to server.unmanaged_surfaces so that we can render them
-	 */
-	if (xsurface->override_redirect) {
-		xwayland_unmanaged_create(xsurface);
-	} else {
-		xwayland_view_create(xsurface);
-	}
 }
 
 void

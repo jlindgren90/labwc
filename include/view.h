@@ -55,9 +55,6 @@ ViewId view_from_wlr_surface(struct wlr_surface *surface);
 
 bool view_inhibits_actions(ViewId view_id, struct wl_list *actions);
 
-void view_init(struct view *view, bool is_xwayland);
-void view_destroy(struct view *view);
-
 enum view_axis view_axis_parse(const char *direction);
 
 #endif /* LABWC_VIEW_H */
