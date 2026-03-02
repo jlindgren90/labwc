@@ -50,25 +50,7 @@ struct view {
 	/* Events unique to XWayland views */
 	struct wl_listener associate;
 	struct wl_listener dissociate;
-	struct wl_listener request_above;
-	struct wl_listener request_activate;
-	struct wl_listener request_close;
-	struct wl_listener request_configure;
-	struct wl_listener set_class;
-	struct wl_listener set_decorations;
 	struct wl_listener set_override_redirect;
-	struct wl_listener set_strut_partial;
-	struct wl_listener set_icon;
-	struct wl_listener focus_in;
-	struct wl_listener map_request;
-
-	/* xwayland-unmanaged fields */
-	struct wlr_scene_node *unmanaged_node;
-
-	struct wl_listener grab_focus;
-	struct wl_listener set_geometry;
-
-	bool ever_grabbed_focus;
 };
 
 ViewId view_from_wlr_surface(struct wlr_surface *surface);

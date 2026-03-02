@@ -120,33 +120,18 @@ struct xwayland_surface {
 
 	struct {
 		struct wl_signal destroy;
-		struct wl_signal request_configure; // struct xwayland_surface_configure_event
 		struct wl_signal request_move;
 		struct wl_signal request_resize; // struct xwayland_resize_event
 		struct wl_signal request_minimize; // struct xwayland_minimize_event
 		struct wl_signal request_maximize;
 		struct wl_signal request_fullscreen;
-		struct wl_signal request_activate;
-		struct wl_signal request_close;
-		struct wl_signal request_above;
 
 		struct wl_signal associate;
 		struct wl_signal dissociate;
 
 		struct wl_signal set_title;
-		struct wl_signal set_class;
-		struct wl_signal set_decorations;
-		struct wl_signal set_strut_partial;
 		struct wl_signal set_override_redirect;
-		struct wl_signal set_geometry;
-		struct wl_signal set_icon;
-		struct wl_signal focus_in;
-		struct wl_signal grab_focus;
-		/* can be used to set initial maximized/fullscreen geometry */
-		struct wl_signal map_request;
 	} events;
-
-	void *data;
 
 	struct {
 		char *wm_name, *net_wm_name;
@@ -155,10 +140,16 @@ struct xwayland_surface {
 		struct wl_listener surface_map;
 		struct wl_listener surface_unmap;
 	};
+
+	/* ViewId or 0 if unmanaged */
+	unsigned long view_id;
+
+	/* for unmanaged surfaces */
+	bool ever_grabbed_focus;
+	struct wlr_scene_node *unmanaged_node;
 };
 
 struct xwayland_surface_configure_event {
-	struct xwayland_surface *surface;
 	int16_t x, y;
 	uint16_t width, height;
 	uint16_t mask; // xcb_config_window_t
@@ -261,7 +252,21 @@ bool xwayland_surface_fetch_icon(
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
 
 /* listeners (external) */
-void xwayland_on_new_surface(struct xwayland_surface *surface);
+void xwayland_on_new_surface(struct xwayland_surface *xsurface);
 void xwayland_on_ready(void);
+
+void xwayland_surface_on_map_request(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_above(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_activate(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_close(struct xwayland_surface *xsurface);
+void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
+	const struct xwayland_surface_configure_event *event);
+void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_class(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_strut_partial(struct xwayland_surface *xsurface);
+void xwayland_surface_on_focus_in(struct xwayland_surface *xsurface);
+void xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface);
 
 #endif
