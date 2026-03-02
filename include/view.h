@@ -43,12 +43,6 @@ struct view {
 	struct wl_listener set_app_id;
 	struct wl_listener request_show_window_menu;
 	struct wl_listener new_popup;
-
-	/* xwayland view fields */
-	struct xwayland_surface *xwayland_surface;
-
-	/* Events unique to XWayland views */
-	struct wl_listener set_override_redirect;
 };
 
 ViewId view_from_wlr_surface(struct wlr_surface *surface);

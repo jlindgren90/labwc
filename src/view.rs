@@ -84,11 +84,11 @@ pub struct View {
 }
 
 impl View {
-    pub fn new(id: ViewId, c_ptr: *mut CView, is_xwayland: bool) -> Self {
+    pub fn new(id: ViewId, c_ptr: *mut CView, xsurface: *mut XSurface) -> Self {
         let mut view = View {
             id: id,
-            v: if is_xwayland {
-                Box::new(XView::new(c_ptr))
+            v: if !xsurface.is_null() {
+                Box::new(XView::new(xsurface))
             } else {
                 Box::new(XdgView::new(c_ptr))
             },
@@ -299,7 +299,7 @@ impl View {
             return UpdateLevel::None;
         }
         let mut commit_move = false;
-        self.v.configure(geom, &mut commit_move);
+        self.v.configure(self.state.current, geom, &mut commit_move);
         self.state.pending = geom;
         if self.state.floating() {
             // Moving a floating view also sets the output
