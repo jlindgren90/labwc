@@ -85,12 +85,6 @@ view_destroy(struct view *view)
 {
 	assert(view);
 
-	wl_list_remove(&view->request_move.link);
-	wl_list_remove(&view->request_resize.link);
-	wl_list_remove(&view->request_minimize.link);
-	wl_list_remove(&view->request_maximize.link);
-	wl_list_remove(&view->request_fullscreen.link);
-	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->destroy.link);
 
 	menu_on_view_destroy(view->id);

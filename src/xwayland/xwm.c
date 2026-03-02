@@ -163,12 +163,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_list_init(&surface->unpaired_link);
 
 	wl_signal_init(&surface->events.destroy);
-	wl_signal_init(&surface->events.request_move);
-	wl_signal_init(&surface->events.request_resize);
-	wl_signal_init(&surface->events.request_minimize);
-	wl_signal_init(&surface->events.request_maximize);
-	wl_signal_init(&surface->events.request_fullscreen);
-	wl_signal_init(&surface->events.set_title);
 	wl_signal_init(&surface->events.set_override_redirect);
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
@@ -464,12 +458,6 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	wl_signal_emit_mutable(&xsurface->events.destroy, NULL);
 
 	assert(wl_list_empty(&xsurface->events.destroy.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_move.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_resize.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_minimize.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_maximize.listener_list));
-	assert(wl_list_empty(&xsurface->events.request_fullscreen.listener_list));
-	assert(wl_list_empty(&xsurface->events.set_title.listener_list));
 	assert(wl_list_empty(&xsurface->events.set_override_redirect.listener_list));
 
 	if (xsurface == xsurface->xwm->focus_surface) {
@@ -567,7 +555,7 @@ static void read_surface_title(struct lab_xwm *xwm,
 	} else {
 		xsurface->title = NULL;
 	}
-	wl_signal_emit_mutable(&xsurface->events.set_title, NULL);
+	xwayland_surface_on_set_title(xsurface);
 }
 
 static bool has_parent(struct xwayland_surface *parent,
@@ -1308,7 +1296,7 @@ static void lab_xwm_handle_net_wm_moveresize_message(struct lab_xwm *xwm,
 	int detail = ev->data.data32[2];
 	switch (detail) {
 	case _NET_WM_MOVERESIZE_MOVE:
-		wl_signal_emit_mutable(&xsurface->events.request_move, NULL);
+		xwayland_surface_on_request_move(xsurface);
 		break;
 	case _NET_WM_MOVERESIZE_SIZE_TOPLEFT:
 	case _NET_WM_MOVERESIZE_SIZE_TOP:
@@ -1317,12 +1305,8 @@ static void lab_xwm_handle_net_wm_moveresize_message(struct lab_xwm *xwm,
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT:
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOM:
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT:
-	case _NET_WM_MOVERESIZE_SIZE_LEFT:;
-		struct xwayland_resize_event resize_event = {
-			.surface = xsurface,
-			.edges = net_wm_edges_to_wlr(detail),
-		};
-		wl_signal_emit_mutable(&xsurface->events.request_resize, &resize_event);
+	case _NET_WM_MOVERESIZE_SIZE_LEFT:
+		xwayland_surface_on_request_resize(xsurface, net_wm_edges_to_wlr(detail));
 		break;
 	case _NET_WM_MOVERESIZE_CANCEL:
 		// handled by the compositor
@@ -1406,20 +1390,16 @@ static void lab_xwm_handle_net_wm_state_message(struct lab_xwm *xwm,
 	// all other values are set to 0
 
 	if (fullscreen != xsurface->fullscreen) {
-		wl_signal_emit_mutable(&xsurface->events.request_fullscreen, NULL);
+		xwayland_surface_on_request_fullscreen(xsurface);
 	}
 
 	if (maximized_vert != xsurface->maximized_vert
 			|| maximized_horz != xsurface->maximized_horz) {
-		wl_signal_emit_mutable(&xsurface->events.request_maximize, NULL);
+		xwayland_surface_on_request_maximize(xsurface);
 	}
 
 	if (minimized != xsurface->minimized) {
-		struct xwayland_minimize_event minimize_event = {
-			.surface = xsurface,
-			.minimize = xsurface->minimized,
-		};
-		wl_signal_emit_mutable(&xsurface->events.request_minimize, &minimize_event);
+		xwayland_surface_on_request_minimize(xsurface, xsurface->minimized);
 	}
 
 	if (above != xsurface->above) {
@@ -1464,11 +1444,7 @@ static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
 		return;
 	}
 
-	struct xwayland_minimize_event minimize_event = {
-		.surface = xsurface,
-		.minimize = minimize,
-	};
-	wl_signal_emit_mutable(&xsurface->events.request_minimize, &minimize_event);
+	xwayland_surface_on_request_minimize(xsurface, minimize);
 }
 
 static void lab_xwm_handle_client_message(struct lab_xwm *xwm,

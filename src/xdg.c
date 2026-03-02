@@ -251,6 +251,12 @@ handle_destroy(struct wl_listener *listener, void *data)
 	view->xdg_surface = NULL;
 
 	/* Remove xdg-shell view specific listeners */
+	wl_list_remove(&view->request_move.link);
+	wl_list_remove(&view->request_resize.link);
+	wl_list_remove(&view->request_minimize.link);
+	wl_list_remove(&view->request_maximize.link);
+	wl_list_remove(&view->request_fullscreen.link);
+	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->set_app_id.link);
 	wl_list_remove(&view->request_show_window_menu.link);
 	wl_list_remove(&view->new_popup.link);

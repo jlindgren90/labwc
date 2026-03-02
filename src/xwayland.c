@@ -186,8 +186,8 @@ xwayland_surface_on_commit(struct xwayland_surface *xsurface)
 	}
 }
 
-static void
-handle_request_move(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_request_move(struct xwayland_surface *xsurface)
 {
 	/*
 	 * This event is raised when a client would like to begin an interactive
@@ -199,12 +199,11 @@ handle_request_move(struct wl_listener *listener, void *data)
 	 *
 	 * Note: interactive_begin() checks that view == server.grabbed_view.
 	 */
-	struct view *view = wl_container_of(listener, view, request_move);
-	interactive_begin(view->id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
+	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 }
 
-static void
-handle_request_resize(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges)
 {
 	/*
 	 * This event is raised when a client would like to begin an interactive
@@ -216,9 +215,7 @@ handle_request_resize(struct wl_listener *listener, void *data)
 	 *
 	 * Note: interactive_begin() checks that view == server.grabbed_view.
 	 */
-	struct xwayland_resize_event *event = data;
-	struct view *view = wl_container_of(listener, view, request_resize);
-	interactive_begin(view->id, LAB_INPUT_STATE_RESIZE, event->edges);
+	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_RESIZE, edges);
 }
 
 void
@@ -368,43 +365,35 @@ xwayland_surface_on_request_close(struct xwayland_surface *xsurface)
 	view_close(xsurface->view_id);
 }
 
-static void
-handle_request_minimize(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_request_minimize(struct xwayland_surface *xsurface, bool minimize)
 {
-	struct xwayland_minimize_event *event = data;
-	struct view *view = wl_container_of(listener, view, request_minimize);
-	view_minimize(view->id, event->minimize);
+	view_minimize(xsurface->view_id, minimize);
 }
 
-static void
-handle_request_maximize(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_request_maximize(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, request_maximize);
-	struct xwayland_surface *surf = xwayland_surface_from_view(view);
-
 	enum view_axis maximize = VIEW_AXIS_NONE;
-	if (surf->maximized_vert) {
+	if (xsurface->maximized_vert) {
 		maximize |= VIEW_AXIS_VERTICAL;
 	}
-	if (surf->maximized_horz) {
+	if (xsurface->maximized_horz) {
 		maximize |= VIEW_AXIS_HORIZONTAL;
 	}
-	view_maximize(view->id, maximize);
+	view_maximize(xsurface->view_id, maximize);
 }
 
-static void
-handle_request_fullscreen(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_request_fullscreen(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, request_fullscreen);
-	view_fullscreen(view->id, xwayland_surface_from_view(view)->fullscreen,
-		/* output */ NULL);
+	view_fullscreen(xsurface->view_id, xsurface->fullscreen, /* output */ NULL);
 }
 
-static void
-handle_set_title(struct wl_listener *listener, void *data)
+void
+xwayland_surface_on_set_title(struct xwayland_surface *xsurface)
 {
-	struct view *view = wl_container_of(listener, view, set_title);
-	view_set_title(view->id, view->xwayland_surface->title);
+	view_set_title(xsurface->view_id, xsurface->title);
 }
 
 void
@@ -667,21 +656,13 @@ xwayland_view_create(struct xwayland_surface *xsurface)
 	xsurface->view_id = view->id;
 
 	CONNECT_SIGNAL(xsurface, view, destroy);
-	CONNECT_SIGNAL(xsurface, view, request_minimize);
-	CONNECT_SIGNAL(xsurface, view, request_maximize);
-	CONNECT_SIGNAL(xsurface, view, request_fullscreen);
-	CONNECT_SIGNAL(xsurface, view, request_move);
-	CONNECT_SIGNAL(xsurface, view, request_resize);
-	CONNECT_SIGNAL(xsurface, view, set_title);
-
-	/* Events specific to XWayland views */
 	CONNECT_SIGNAL(xsurface, view, set_override_redirect);
 	if (xsurface->surface) {
 		/*
 		 * If a surface is already associated, then we've
 		 * missed the various initial set_* events as well.
 		 */
-		handle_set_title(&view->set_title, NULL);
+		xwayland_surface_on_set_title(xsurface);
 		xwayland_surface_on_set_class(xsurface);
 		xwayland_surface_on_set_icon(xsurface);
 	}
