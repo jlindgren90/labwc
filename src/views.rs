@@ -133,13 +133,13 @@ impl Views {
         }
     }
 
-    pub fn commit_size(&mut self, id: ViewId, width: i32, height: i32) {
+    pub fn commit_geom(&mut self, id: ViewId, width: i32, height: i32) {
         let mut resize_edges = LAB_EDGE_NONE;
         if id == self.resizing_id {
             resize_edges = self.grab.get_resize_edges();
         }
         if let Some(view) = self.by_id.get_mut(&id) {
-            view.commit_size(width, height, resize_edges);
+            view.commit_geom(width, height, resize_edges);
         }
     }
 
