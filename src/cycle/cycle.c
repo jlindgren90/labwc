@@ -151,7 +151,7 @@ cycle_finish(bool switch_focus)
 	cursor_update_focus();
 
 	if (switch_focus && selected_view) {
-		desktop_focus_view(selected_view, /*raise*/ true);
+		view_focus(selected_view->id, /*raise*/ true);
 	}
 }
 

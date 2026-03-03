@@ -12,6 +12,7 @@ pub trait ViewImpl {
     fn set_minimized(&self, minimized: bool);
     fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect);
     fn get_focus_mode(&self) -> ViewFocusMode;
+    fn focus(&self) -> bool;
     fn offer_focus(&self);
 }
 
@@ -22,6 +23,10 @@ pub struct XView {
 impl XView {
     pub fn new(c_ptr: *mut CView) -> Self {
         Self { c_ptr }
+    }
+
+    fn get_surface(&self) -> *mut WlrSurface {
+        unsafe { xwayland_view_get_surface(self.c_ptr) }
     }
 }
 
@@ -64,6 +69,10 @@ impl ViewImpl for XView {
         unsafe { xwayland_view_get_focus_mode(self.c_ptr) }
     }
 
+    fn focus(&self) -> bool {
+        unsafe { seat_focus_surface_no_notify(self.get_surface()) }
+    }
+
     fn offer_focus(&self) {
         unsafe { xwayland_view_offer_focus(self.c_ptr) };
     }
@@ -76,6 +85,10 @@ pub struct XdgView {
 impl XdgView {
     pub fn new(c_ptr: *mut CView) -> Self {
         Self { c_ptr: c_ptr }
+    }
+
+    fn get_surface(&self) -> *mut WlrSurface {
+        unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
     }
 }
 
@@ -116,6 +129,10 @@ impl ViewImpl for XdgView {
 
     fn get_focus_mode(&self) -> ViewFocusMode {
         VIEW_FOCUS_MODE_ALWAYS
+    }
+
+    fn focus(&self) -> bool {
+        unsafe { seat_focus_surface_no_notify(self.get_surface()) }
     }
 
     fn offer_focus(&self) {
