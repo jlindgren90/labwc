@@ -434,7 +434,7 @@ handle_popup_destroy(struct wl_listener *listener, void *data)
 		if (popup->parent_was_focused && popup->wlr_popup->parent) {
 			seat_force_focus_surface(popup->wlr_popup->parent);
 		} else {
-			desktop_focus_topmost_view();
+			view_focus_topmost();
 		}
 	}
 	cursor_update_focus();

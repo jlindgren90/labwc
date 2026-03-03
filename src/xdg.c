@@ -37,6 +37,12 @@ xdg_toplevel_from_view(struct view *view)
 	return xdg_surface->toplevel;
 }
 
+struct wlr_surface *
+xdg_toplevel_view_get_surface(struct view *view)
+{
+	return xdg_surface_from_view(view)->surface;
+}
+
 static struct view *
 xdg_toplevel_view_get_parent(struct view *view)
 {
@@ -745,7 +751,7 @@ handle_xdg_activation_request(struct wl_listener *listener, void *data)
 	 */
 
 	wlr_log(WLR_DEBUG, "Activating surface");
-	desktop_focus_view(view, /*raise*/ true);
+	view_focus(view->id, /*raise*/ true);
 }
 
 /*
