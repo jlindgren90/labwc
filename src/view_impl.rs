@@ -3,6 +3,7 @@
 use crate::bindings::*;
 
 pub trait ViewImpl {
+    fn get_surface(&self) -> *mut WlrSurface;
     fn get_root_id(&self) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
     fn set_active(&self, active: bool);
@@ -26,6 +27,10 @@ impl XView {
 }
 
 impl ViewImpl for XView {
+    fn get_surface(&self) -> *mut WlrSurface {
+        unsafe { xwayland_view_get_surface(self.c_ptr) }
+    }
+
     fn get_root_id(&self) -> ViewId {
         unsafe { xwayland_view_get_root_id(self.c_ptr) }
     }
@@ -80,6 +85,10 @@ impl XdgView {
 }
 
 impl ViewImpl for XdgView {
+    fn get_surface(&self) -> *mut WlrSurface {
+        unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
+    }
+
     fn get_root_id(&self) -> ViewId {
         unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
     }

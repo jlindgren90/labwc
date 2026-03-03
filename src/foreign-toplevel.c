@@ -87,7 +87,7 @@ toplevel_handle_activate(struct wl_client *client, struct wl_resource *resource,
 {
 	struct view *view = view_try_from_handle(resource);
 	if (view) {
-		desktop_focus_view(view, /*raise*/ true);
+		view_focus(view->id, /*raise*/ true);
 	}
 }
 

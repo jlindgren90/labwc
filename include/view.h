@@ -132,8 +132,6 @@ struct view {
  */
 struct view *view_from_wlr_surface(struct wlr_surface *surface);
 
-struct wlr_surface *view_get_surface(struct view *view);
-
 void view_toggle_keybinds(struct view *view);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
