@@ -363,8 +363,22 @@ impl View {
         unsafe { view_raise_impl(self.c_ptr) };
     }
 
-    pub fn offer_focus(&self) {
-        self.v.offer_focus();
+    // Returns true if focus was (immediately) changed
+    pub fn focus(&self) -> bool {
+        if self.state.mapped {
+            if self.state.focus_mode == VIEW_FOCUS_MODE_ALWAYS {
+                return self.v.focus();
+            } else if self.state.focus_mode == VIEW_FOCUS_MODE_UNLIKELY
+                || self.state.focus_mode == VIEW_FOCUS_MODE_LIKELY
+            {
+                self.v.offer_focus();
+            }
+        }
+        return false;
+    }
+
+    pub fn refocus(&self) {
+        self.v.focus();
     }
 
     pub fn add_foreign_toplevel(&mut self, client: *mut WlResource) {
