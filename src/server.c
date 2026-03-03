@@ -385,7 +385,6 @@ server_init(void)
 	}
 
 	wl_list_init(&g_server.views);
-	wl_list_init(&g_server.unmanaged_surfaces);
 	wl_list_init(&g_server.cycle.views);
 	wl_list_init(&g_server.cycle.osd_outputs);
 
