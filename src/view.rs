@@ -199,16 +199,6 @@ impl View {
         }
     }
 
-    pub fn set_current_pos(&mut self, x: i32, y: i32) {
-        self.state.current.x = x;
-        self.state.current.y = y;
-    }
-
-    pub fn set_current_size(&mut self, width: i32, height: i32) {
-        self.state.current.width = width;
-        self.state.current.height = height;
-    }
-
     pub fn set_pending_geom(&mut self, geom: Rect) {
         self.state.pending = geom;
     }
@@ -217,8 +207,9 @@ impl View {
         if rect_equals(self.state.pending, geom) {
             return;
         }
-        self.v
-            .configure(geom, &mut self.state.pending, &mut self.state.current);
+        let mut commit_move = false;
+        self.v.configure(geom, &mut commit_move);
+        self.state.pending = geom;
         if self.state.floating() {
             // Moving a floating view also sets the output
             self.state.output = nearest_output_to_geom(self.state.pending);
@@ -228,9 +219,17 @@ impl View {
             self.d.saved_geom = Rect::default();
             self.d.lost_output = false;
         }
+        if commit_move {
+            self.commit_move(geom.x, geom.y);
+        }
     }
 
-    pub fn commit_size(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
+    pub fn commit_move(&mut self, x: i32, y: i32) {
+        (self.state.current.x, self.state.current.y) = self.v.adjust_scene_pos(&self.state, x, y);
+        unsafe { view_move_impl(self.c_ptr) };
+    }
+
+    pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
         let (x, y) = compute_display_position(
             self.state.current,
             self.state.pending,
@@ -238,12 +237,9 @@ impl View {
             height,
             resize_edges,
         );
-        self.state.current = Rect {
-            x: x,
-            y: y,
-            width: width,
-            height: height,
-        };
+        self.state.current.width = width;
+        self.state.current.height = height;
+        self.commit_move(x, y);
     }
 
     pub fn set_fallback_natural_geom(&mut self) {
