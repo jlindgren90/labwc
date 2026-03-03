@@ -137,7 +137,6 @@ struct server {
 
 	/* front to back order */
 	struct wl_list views;
-	struct wl_list unmanaged_surfaces;
 
 	struct wlr_scene *scene;
 	struct wlr_scene_output_layout *scene_layout;
