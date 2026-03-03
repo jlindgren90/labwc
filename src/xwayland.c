@@ -31,6 +31,12 @@ xwayland_surface_from_view(struct view *view)
 	return view->xwayland_surface;
 }
 
+struct wlr_surface *
+xwayland_view_get_surface(struct view *view)
+{
+	return xwayland_surface_from_view(view)->surface;
+}
+
 static struct view_size_hints
 xwayland_view_get_size_hints(struct view *view)
 {
@@ -416,7 +422,7 @@ static void
 handle_request_activate(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, request_activate);
-	desktop_focus_view(view, /*raise*/ true);
+	view_focus(view->id, /*raise*/ true);
 }
 
 static void
