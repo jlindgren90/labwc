@@ -45,18 +45,6 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	return NULL;
 }
 
-struct wlr_surface *
-view_get_surface(struct view *view)
-{
-	if (view->xdg_surface) {
-		return view->xdg_surface->surface;
-	}
-	if (view->xwayland_surface) {
-		return view->xwayland_surface->surface;
-	}
-	return NULL;
-}
-
 void
 view_notify_active(struct view *view)
 {
@@ -153,26 +141,6 @@ view_adjust_size(struct view *view, int *w, int *h)
 	}
 	*w = MAX(*w, hints.min_width);
 	*h = MAX(*h, hints.min_height);
-}
-
-void
-view_notify_minimize(struct view *view, bool minimized)
-{
-	assert(view);
-
-	/*
-	 * Update focus only at the end to avoid repeated focus changes.
-	 * desktop_focus_view() will raise all sibling views together.
-	 */
-	if (minimized) {
-		// Check if active view was minimized (even by a sibling)
-		struct view *active_view = view_get_active();
-		if (active_view && active_view->st->minimized) {
-			desktop_focus_topmost_view();
-		}
-	} else {
-		desktop_focus_view(view, /* raise */ true);
-	}
 }
 
 void
