@@ -11,7 +11,6 @@ struct wlr_output_layout;
 struct xwayland_unmanaged {
 	struct wlr_xwayland_surface *xwayland_surface;
 	struct wlr_scene_node *node;
-	struct wl_list link;
 
 	struct wl_listener associate;
 	struct wl_listener dissociate;

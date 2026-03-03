@@ -57,9 +57,6 @@ handle_map(struct wl_listener *listener, void *data)
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	assert(!unmanaged->node);
 
-	/* Stack new surface on top */
-	wl_list_append(&server.unmanaged_surfaces, &unmanaged->link);
-
 	CONNECT_SIGNAL(xsurface, unmanaged, set_geometry);
 
 	if (unmanaged->ever_grabbed_focus) {
@@ -76,46 +73,6 @@ handle_map(struct wl_listener *listener, void *data)
 }
 
 static void
-focus_next_surface(struct wlr_xwayland_surface *xsurface)
-{
-	/* Try to focus on last created unmanaged xwayland surface */
-	struct xwayland_unmanaged *u;
-	struct wl_list *list = &server.unmanaged_surfaces;
-	wl_list_for_each_reverse(u, list, link) {
-		struct wlr_xwayland_surface *prev = u->xwayland_surface;
-		if (u->ever_grabbed_focus) {
-			seat_focus_surface(prev->surface);
-			return;
-		}
-	}
-
-	/*
-	 * Unmanaged surfaces do not clear the active view when mapped.
-	 * Therefore, we can simply give the focus back to the active
-	 * view when the last unmanaged surface is unmapped.
-	 *
-	 * Also note that resetting the focus here is only on the
-	 * compositor side. On the xwayland server side, focus is never
-	 * given to unmanaged surfaces to begin with - keyboard grabs
-	 * are used instead.
-	 *
-	 * In the case of Globally Active input windows, calling
-	 * view_offer_focus() at this point is both unnecessary and
-	 * insufficient, since it doesn't update the seat focus
-	 * immediately and ultimately results in a loss of focus.
-	 *
-	 * For the above reasons, we avoid calling desktop_focus_view()
-	 * here and instead call seat_focus_surface() directly.
-	 *
-	 * If modifying this logic, please test for regressions with
-	 * menus/tooltips in JetBrains CLion or similar.
-	 */
-	if (server.active_view) {
-		seat_focus_surface(view_get_surface(server.active_view));
-	}
-}
-
-static void
 handle_unmap(struct wl_listener *listener, void *data)
 {
 	struct xwayland_unmanaged *unmanaged =
@@ -123,7 +80,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 	struct wlr_xwayland_surface *xsurface = unmanaged->xwayland_surface;
 	assert(unmanaged->node);
 
-	wl_list_remove(&unmanaged->link);
 	wl_list_remove(&unmanaged->set_geometry.link);
 
 	/*
@@ -136,8 +92,9 @@ handle_unmap(struct wl_listener *listener, void *data)
 
 	cursor_update_focus();
 
-	if (g_seat.wlr_seat->keyboard_state.focused_surface == xsurface->surface) {
-		focus_next_surface(xsurface);
+	if (g_seat.wlr_seat->keyboard_state.focused_surface == xsurface->surface
+			&& server.active_view) {
+		seat_focus_surface(view_get_surface(server.active_view));
 	}
 }
 
