@@ -388,7 +388,6 @@ server_init(void)
 	}
 
 	wl_list_init(&server.views);
-	wl_list_init(&server.unmanaged_surfaces);
 	wl_list_init(&server.cycle.views);
 	wl_list_init(&server.cycle.osd_outputs);
 
