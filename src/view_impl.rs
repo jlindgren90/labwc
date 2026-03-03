@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
 use crate::bindings::*;
+use crate::rect::*;
 
 pub trait ViewImpl {
     fn get_root_id(&self) -> ViewId;
@@ -12,11 +13,14 @@ pub trait ViewImpl {
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
-    fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect);
+    fn configure(&self, geom: Rect, commit_move: *mut bool);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn focus(&self) -> bool;
     fn offer_focus(&self);
     fn close(&self);
+
+    // scene-tree helpers
+    fn adjust_scene_pos(&mut self, state: &ViewState, x: i32, y: i32) -> (i32, i32);
 }
 
 pub struct XView {
@@ -70,9 +74,9 @@ impl ViewImpl for XView {
         unsafe { xwayland_view_minimize(self.c_ptr, minimized) };
     }
 
-    fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect) {
+    fn configure(&self, geom: Rect, commit_move: *mut bool) {
         unsafe {
-            xwayland_view_configure(self.c_ptr, geom, pending, current);
+            xwayland_view_configure(self.c_ptr, geom, commit_move);
         }
     }
 
@@ -90,6 +94,10 @@ impl ViewImpl for XView {
 
     fn close(&self) {
         unsafe { xwayland_view_close(self.c_ptr) };
+    }
+
+    fn adjust_scene_pos(&mut self, _state: &ViewState, x: i32, y: i32) -> (i32, i32) {
+        (x, y)
     }
 }
 
@@ -144,9 +152,9 @@ impl ViewImpl for XdgView {
         // not supported
     }
 
-    fn configure(&self, geom: Rect, pending: *mut Rect, current: *mut Rect) {
+    fn configure(&self, geom: Rect, commit_move: *mut bool) {
         unsafe {
-            xdg_toplevel_view_configure(self.c_ptr, geom, pending, current);
+            xdg_toplevel_view_configure(self.c_ptr, geom, commit_move);
         }
     }
 
@@ -164,5 +172,25 @@ impl ViewImpl for XdgView {
 
     fn close(&self) {
         unsafe { xdg_toplevel_view_close(self.c_ptr) };
+    }
+
+    fn adjust_scene_pos(&mut self, state: &ViewState, x: i32, y: i32) -> (i32, i32) {
+        if !state.fullscreen {
+            return (x, y);
+        }
+        let output_geom = unsafe { output_layout_coords(state.output) };
+        if rect_empty(output_geom) {
+            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+            return (x, y);
+        }
+        // Center fullscreen views smaller than output and add black background
+        let mut geom = rect_center(state.current.width, state.current.height, output_geom);
+        rect_move_within(&mut geom, output_geom);
+        if geom.width < output_geom.width || geom.height < output_geom.height {
+            unsafe { xdg_toplevel_view_enable_fullscreen_bg(self.c_ptr, output_geom) };
+        } else {
+            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+        }
+        return (geom.x, geom.y);
     }
 }
