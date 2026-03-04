@@ -75,7 +75,6 @@ struct xwayland_surface {
 	uint64_t serial;
 
 	struct wl_list link;
-	struct wl_list stack_link;
 	struct wl_list unpaired_link;
 
 	struct wlr_surface *surface;
@@ -149,7 +148,7 @@ void xwayland_surface_read_properties(struct xwayland_surface *xsurface);
  * of the stack (depending on the mode).
  */
 void xwayland_surface_restack(struct xwayland_surface *surface,
-	struct xwayland_surface *sibling, enum xcb_stack_mode_t mode);
+	xcb_window_t sibling, enum xcb_stack_mode_t mode);
 
 void xwayland_surface_configure(struct xwayland_surface *surface,
 	int16_t x, int16_t y, uint16_t width, uint16_t height);

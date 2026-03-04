@@ -158,7 +158,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	surface->height = height;
 	surface->override_redirect = override_redirect;
 	wl_list_init(&surface->children);
-	wl_list_init(&surface->stack_link);
 	wl_list_init(&surface->parent_link);
 	wl_list_init(&surface->unpaired_link);
 
@@ -248,25 +247,6 @@ static void lab_xwm_set_net_client_list(struct lab_xwm *xwm) {
 	xcb_change_property(xwm->xcb_conn, XCB_PROP_MODE_REPLACE,
 			xwm->screen->root, xwm->atoms[NET_CLIENT_LIST],
 			XCB_ATOM_WINDOW, 32, mapped_surfaces, windows);
-	free(windows);
-}
-
-static void lab_xwm_set_net_client_list_stacking(struct lab_xwm *xwm) {
-	size_t num_surfaces = wl_list_length(&xwm->surfaces_in_stack_order);
-	xcb_window_t *windows = malloc(sizeof(xcb_window_t) * num_surfaces);
-	if (!windows) {
-		return;
-	}
-
-	size_t i = 0;
-	struct xwayland_surface *xsurface;
-	wl_list_for_each(xsurface, &xwm->surfaces_in_stack_order, stack_link) {
-		windows[i++] = xsurface->window_id;
-	}
-
-	xcb_change_property(xwm->xcb_conn, XCB_PROP_MODE_REPLACE, xwm->screen->root,
-			xwm->atoms[NET_CLIENT_LIST_STACKING], XCB_ATOM_WINDOW, 32, num_surfaces,
-			windows);
 	free(windows);
 }
 
@@ -444,10 +424,6 @@ static void xwayland_surface_dissociate(struct xwayland_surface *xsurface) {
 	wl_list_init(&xsurface->unpaired_link);
 	xsurface->surface_id = 0;
 	xsurface->serial = 0;
-
-	wl_list_remove(&xsurface->stack_link);
-	wl_list_init(&xsurface->stack_link);
-	lab_xwm_set_net_client_list_stacking(xsurface->xwm);
 }
 
 static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
@@ -1023,13 +999,6 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 		return;
 	}
 	xsurface->override_redirect = override_redirect;
-
-	if (override_redirect) {
-		wl_list_remove(&xsurface->stack_link);
-		wl_list_init(&xsurface->stack_link);
-		lab_xwm_set_net_client_list_stacking(xsurface->xwm);
-	}
-
 	xwayland_surface_on_set_override_redirect(xsurface);
 }
 
@@ -1079,8 +1048,10 @@ static void xsurface_set_wm_state(struct xwayland_surface *xsurface) {
 		sizeof(property) / sizeof(property[0]), property);
 }
 
-void xwayland_surface_restack(struct xwayland_surface *xsurface,
-		struct xwayland_surface *sibling, enum xcb_stack_mode_t mode) {
+void
+xwayland_surface_restack(struct xwayland_surface *xsurface,
+		xcb_window_t sibling, enum xcb_stack_mode_t mode)
+{
 	struct lab_xwm *xwm = xsurface->xwm;
 	uint32_t values[2];
 	size_t idx = 0;
@@ -1088,43 +1059,17 @@ void xwayland_surface_restack(struct xwayland_surface *xsurface,
 
 	assert(!xsurface->override_redirect);
 
-	// X11 clients expect their override_redirect windows to stay on top.
-	// Avoid interfering by restacking above the topmost managed surface.
-	if (mode == XCB_STACK_MODE_ABOVE && !sibling) {
-		sibling = wl_container_of(xwm->surfaces_in_stack_order.prev, sibling, stack_link);
-	}
-
-	if (sibling == xsurface) {
+	if (sibling == xsurface->window_id) {
 		return;
 	}
 
-	if (sibling != NULL) {
-		values[idx++] = sibling->window_id;
+	if (sibling != XCB_NONE) {
+		values[idx++] = sibling;
 		flags |= XCB_CONFIG_WINDOW_SIBLING;
 	}
 	values[idx++] = mode;
 
 	xcb_configure_window(xwm->xcb_conn, xsurface->window_id, flags, values);
-
-	wl_list_remove(&xsurface->stack_link);
-
-	struct wl_list *node;
-	if (mode == XCB_STACK_MODE_ABOVE) {
-		node = &sibling->stack_link;
-	} else if (mode == XCB_STACK_MODE_BELOW) {
-		if (sibling) {
-			node = sibling->stack_link.prev;
-		} else {
-			node = &xwm->surfaces_in_stack_order;
-		}
-	} else {
-		// Not implementing XCB_STACK_MODE_TOP_IF | XCB_STACK_MODE_BOTTOM_IF |
-		// XCB_STACK_MODE_OPPOSITE.
-		abort();
-	}
-
-	wl_list_insert(node, &xsurface->stack_link);
-	lab_xwm_set_net_client_list_stacking(xwm);
 	xcb_flush(xwm->xcb_conn);
 }
 
@@ -2028,7 +1973,6 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 
 	xwm->server = server;
 	wl_list_init(&xwm->surfaces);
-	wl_list_init(&xwm->surfaces_in_stack_order);
 	wl_list_init(&xwm->unpaired_surfaces);
 	wl_list_init(&xwm->seat_drag_source_destroy.link);
 
