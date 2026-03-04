@@ -110,6 +110,10 @@ impl View {
         &self.scene
     }
 
+    pub fn get_xid(&self) -> XId {
+        self.v.get_xid()
+    }
+
     pub fn get_parent(&self) -> ViewId {
         self.v.get_parent()
     }
@@ -272,10 +276,15 @@ impl View {
     }
 
     // Note: call raise() after unminimize to ensure stacking order consistency
-    pub fn set_minimized(&mut self, minimized: bool, visibility_changed: &mut bool) -> UpdateLevel {
+    pub fn set_minimized(
+        &mut self,
+        minimized: bool,
+        visibility_changed: &mut bool,
+        x_stacking: &mut Vec<XId>,
+    ) -> UpdateLevel {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
-            self.v.set_minimized(minimized);
+            self.v.set_minimized(minimized, x_stacking);
             self.send_foreign_toplevel_state();
             if self.state.mapped {
                 unsafe { view_scene_tree_set_visible(self.scene.scene_tree, !minimized) };
@@ -564,10 +573,10 @@ impl View {
         }
     }
 
-    pub fn raise(&self) {
+    pub fn raise(&self, x_stacking: &mut Vec<XId>) {
         unsafe { view_scene_tree_raise(self.scene.scene_tree) };
         if self.state.visible() {
-            self.v.raise();
+            self.v.raise(x_stacking);
         }
     }
 
