@@ -126,8 +126,6 @@ struct lab_xwm {
 
 	// Surfaces in creation order
 	struct wl_list surfaces; // xwayland_surface.link
-	// Surfaces in bottom-to-top stacking order, for _NET_CLIENT_LIST_STACKING
-	struct wl_list surfaces_in_stack_order; // xwayland_surface.stack_link
 	struct wl_list unpaired_surfaces; // xwayland_surface.unpaired_link
 
 	struct wlr_drag *drag;

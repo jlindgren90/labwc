@@ -116,6 +116,7 @@ void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
 void xdg_toplevel_view_close(CView *view);
 
 WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
+XId xwayland_view_get_xid(XSurface *xsurface);
 ViewId xwayland_view_get_root_id(XSurface *xsurface);
 _Bool xwayland_view_is_modal_dialog(XSurface *xsurface);
 ViewSizeHints xwayland_view_get_size_hints(XSurface *xsurface);
@@ -126,7 +127,7 @@ void xwayland_view_maximize(XSurface *xsurface, ViewAxis maximized);
 void xwayland_view_minimize(XSurface *xsurface, _Bool minimized);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
-void xwayland_view_raise(XSurface *xsurface);
+void xwayland_view_raise_above(XSurface *xsurface, XId sibling);
 ViewFocusMode xwayland_view_get_focus_mode(XSurface *xsurface);
 void xwayland_view_offer_focus(XSurface *xsurface);
 void xwayland_view_close(XSurface *xsurface);

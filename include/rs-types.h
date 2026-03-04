@@ -20,6 +20,8 @@ typedef struct {
 // Unique (never re-used) ID for each view. 0 means none/invalid.
 typedef unsigned long ViewId;
 
+typedef unsigned XId; // Window/XID/xcb_window_t
+
 // Other Rust-friendly typedefs
 typedef struct view CView;
 typedef struct output Output;

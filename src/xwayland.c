@@ -25,6 +25,12 @@ xwayland_view_get_surface(struct xwayland_surface *xsurface)
 	return xsurface->surface;
 }
 
+XId
+xwayland_view_get_xid(struct xwayland_surface *xsurface)
+{
+	return xsurface->window_id;
+}
+
 struct view_size_hints
 xwayland_view_get_size_hints(struct xwayland_surface *xsurface)
 {
@@ -102,9 +108,9 @@ xwayland_view_get_focus_mode(struct xwayland_surface *xsurface)
 }
 
 void
-xwayland_view_raise(struct xwayland_surface *xsurface)
+xwayland_view_raise_above(struct xwayland_surface *xsurface, XId sibling)
 {
-	xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_ABOVE);
+	xwayland_surface_restack(xsurface, sibling, XCB_STACK_MODE_ABOVE);
 }
 
 void
@@ -556,7 +562,7 @@ xwayland_view_minimize(struct xwayland_surface *xsurface, bool minimized)
 {
 	xwayland_surface_set_minimized(xsurface, minimized);
 	if (minimized) {
-		xwayland_surface_restack(xsurface, NULL, XCB_STACK_MODE_BELOW);
+		xwayland_surface_restack(xsurface, XCB_NONE, XCB_STACK_MODE_BELOW);
 	}
 }
 
