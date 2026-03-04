@@ -6,6 +6,7 @@ use std::ptr::null_mut;
 
 pub trait ViewImpl {
     fn get_surface(&self) -> *mut WlrSurface;
+    fn get_xid(&self) -> XId;
     fn get_parent(&self) -> ViewId;
     fn get_root_id(&self) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
@@ -15,9 +16,9 @@ pub trait ViewImpl {
     fn set_fullscreen(&mut self, fullscreen: bool);
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
-    fn set_minimized(&self, minimized: bool);
+    fn set_minimized(&self, minimized: bool, x_stacking: &mut Vec<XId>);
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool);
-    fn raise(&self);
+    fn raise(&self, x_stacking: &mut Vec<XId>);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn offer_focus(&self);
     fn close(&self);
@@ -48,6 +49,10 @@ impl XView {
 impl ViewImpl for XView {
     fn get_surface(&self) -> *mut WlrSurface {
         unsafe { xwayland_view_get_surface(self.xsurface) }
+    }
+
+    fn get_xid(&self) -> XId {
+        unsafe { xwayland_view_get_xid(self.xsurface) }
     }
 
     fn get_parent(&self) -> ViewId {
@@ -86,8 +91,14 @@ impl ViewImpl for XView {
         // not supported
     }
 
-    fn set_minimized(&self, minimized: bool) {
+    fn set_minimized(&self, minimized: bool, x_stacking: &mut Vec<XId>) {
         unsafe { xwayland_view_minimize(self.xsurface, minimized) };
+        if minimized {
+            // minimized views are restacked to bottom
+            let xid = self.get_xid();
+            x_stacking.retain(|&x| x != xid);
+            x_stacking.insert(0, xid);
+        }
     }
 
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool) {
@@ -96,8 +107,15 @@ impl ViewImpl for XView {
         }
     }
 
-    fn raise(&self) {
-        unsafe { xwayland_view_raise(self.xsurface) };
+    fn raise(&self, x_stacking: &mut Vec<XId>) {
+        let xid = self.get_xid();
+        if let Some(&prev) = x_stacking.last()
+            && prev != xid
+        {
+            unsafe { xwayland_view_raise_above(self.xsurface, prev) };
+        }
+        x_stacking.retain(|&x| x != xid);
+        x_stacking.push(xid);
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
@@ -162,6 +180,10 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
     }
 
+    fn get_xid(&self) -> XId {
+        0 // None
+    }
+
     fn get_parent(&self) -> ViewId {
         unsafe { xdg_toplevel_view_get_parent(self.c_ptr) }
     }
@@ -201,7 +223,7 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_notify_tiled(self.c_ptr) };
     }
 
-    fn set_minimized(&self, _minimized: bool) {
+    fn set_minimized(&self, _minimized: bool, _x_stacking: &mut Vec<XId>) {
         // not supported
     }
 
@@ -211,7 +233,7 @@ impl ViewImpl for XdgView {
         }
     }
 
-    fn raise(&self) {
+    fn raise(&self, _x_stacking: &mut Vec<XId>) {
         // not supported
     }
 
