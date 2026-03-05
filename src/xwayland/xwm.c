@@ -134,6 +134,12 @@ static struct xwayland_surface *lookup_surface(struct lab_xwm *xwm,
 	return NULL;
 }
 
+struct xwayland_surface *
+xwayland_surface_get_parent(struct xwayland_surface *surface)
+{
+	return lookup_surface(surface->xwm, surface->parent);
+}
+
 static struct xwayland_surface *xwayland_surface_create(
 		struct lab_xwm *xwm, xcb_window_t window_id, int16_t x, int16_t y,
 		uint16_t width, uint16_t height, bool override_redirect) {
@@ -157,8 +163,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	surface->width = width;
 	surface->height = height;
 	surface->override_redirect = override_redirect;
-	wl_list_init(&surface->children);
-	wl_list_init(&surface->parent_link);
 	wl_list_init(&surface->unpaired_link);
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
@@ -445,15 +449,6 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	}
 
 	wl_list_remove(&xsurface->link);
-	wl_list_remove(&xsurface->parent_link);
-
-	struct xwayland_surface *child, *next;
-	wl_list_for_each_safe(child, next, &xsurface->children, parent_link) {
-		wl_list_remove(&child->parent_link);
-		wl_list_init(&child->parent_link);
-		child->parent = NULL;
-	}
-
 	wl_list_remove(&xsurface->unpaired_link);
 
 	free(xsurface->window_type);
@@ -513,19 +508,6 @@ static void read_surface_title(struct lab_xwm *xwm,
 	free(title);
 }
 
-static bool has_parent(struct xwayland_surface *parent,
-		struct xwayland_surface *child) {
-	while (parent) {
-		if (child == parent) {
-			return true;
-		}
-
-		parent = parent->parent;
-	}
-
-	return false;
-}
-
 static void read_surface_parent(struct lab_xwm *xwm,
 		struct xwayland_surface *xsurface,
 		xcb_get_property_reply_t *reply) {
@@ -534,25 +516,11 @@ static void read_surface_parent(struct lab_xwm *xwm,
 		return;
 	}
 
-	struct xwayland_surface *found_parent = NULL;
 	xcb_window_t *xid = xcb_get_property_value(reply);
 	if (reply->type != XCB_ATOM_NONE && xid != NULL) {
-		found_parent = lookup_surface(xwm, *xid);
-		if (!has_parent(found_parent, xsurface)) {
-			xsurface->parent = found_parent;
-		} else {
-			wlr_log(WLR_INFO, "%p with %p would create a loop", xsurface,
-						found_parent);
-		}
+		xsurface->parent = *xid;
 	} else {
-		xsurface->parent = NULL;
-	}
-
-	wl_list_remove(&xsurface->parent_link);
-	if (xsurface->parent != NULL) {
-		wl_list_insert(&xsurface->parent->children, &xsurface->parent_link);
-	} else {
-		wl_list_init(&xsurface->parent_link);
+		xsurface->parent = XCB_NONE;
 	}
 }
 

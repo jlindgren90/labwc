@@ -124,8 +124,9 @@ static struct xwayland_surface *
 top_parent_of(struct xwayland_surface *xsurface)
 {
 	struct xwayland_surface *s = xsurface;
-	while (s->parent) {
-		s = s->parent;
+	struct xwayland_surface *parent;
+	while ((parent = xwayland_surface_get_parent(s))) {
+		s = parent;
 	}
 	return s;
 }
