@@ -83,9 +83,7 @@ struct xwayland_surface {
 	uint16_t width, height;
 	bool override_redirect;
 
-	struct wl_list children; // xwayland_surface.parent_link
-	struct xwayland_surface *parent;
-	struct wl_list parent_link; // xwayland_surface.children
+	xcb_window_t parent;
 
 	xcb_atom_t *window_type;
 	size_t window_type_len;
@@ -175,6 +173,9 @@ void xwayland_surface_set_fullscreen(struct xwayland_surface *surface,
  */
 struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 	struct wlr_surface *surface);
+
+struct xwayland_surface *xwayland_surface_get_parent(
+	struct xwayland_surface *surface);
 
 /**
  * Offer focus by sending WM_TAKE_FOCUS to a client window supporting it.
