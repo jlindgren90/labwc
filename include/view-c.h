@@ -121,16 +121,9 @@ ViewId xwayland_view_get_root_id(XSurface *xsurface);
 _Bool xwayland_view_is_modal_dialog(XSurface *xsurface);
 ViewSizeHints xwayland_view_get_size_hints(XSurface *xsurface);
 XSurfaceProps xwayland_view_get_surface_props(XSurface *xsurface);
-void xwayland_view_set_active(XSurface *xsurface, _Bool active);
-void xwayland_view_set_fullscreen(XSurface *xsurface, _Bool fullscreen);
-void xwayland_view_maximize(XSurface *xsurface, ViewAxis maximized);
-void xwayland_view_minimize(XSurface *xsurface, _Bool minimized);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
-void xwayland_view_raise_above(XSurface *xsurface, XId sibling);
 ViewFocusMode xwayland_view_get_focus_mode(XSurface *xsurface);
-void xwayland_view_offer_focus(XSurface *xsurface);
-void xwayland_view_close(XSurface *xsurface);
 
 // from cursor.h
 void cursor_update_focus(void);
@@ -162,5 +155,14 @@ Border ssd_get_margin(const ViewState *view_st);
 
 void top_layer_show_all(void);
 void top_layer_hide_on_output(Output *output);
+
+// from xwayland.h
+void xwayland_surface_activate(XSurface *xsurface, _Bool active);
+void xwayland_surface_close(XSurface *xsurface);
+void xwayland_surface_offer_focus(XSurface *xsurface);
+void xwayland_surface_set_fullscreen(XSurface *xsurface, _Bool fullscreen);
+void xwayland_surface_set_maximized(XSurface *xsurface, _Bool horizontal, _Bool vertical);
+void xwayland_surface_set_minimized(XSurface *xsurface, _Bool minimized);
+void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);
 
 #endif // LABWC_VIEW_C_H
