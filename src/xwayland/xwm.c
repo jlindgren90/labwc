@@ -18,6 +18,7 @@
 #include <xcb/composite.h>
 #include <xcb/render.h>
 #include <xcb/xfixes.h>
+#include "view.h"
 #include "xwayland/server.h"
 #include "xwayland/shell.h"
 #include "xwayland/xwayland.h"
@@ -167,8 +168,10 @@ static struct xwayland_surface *xwayland_surface_create(
 
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
-	xwayland_on_new_surface(surface);
-	xwayland_surface_read_properties(surface);
+	if (!surface->override_redirect) {
+		surface->view_id = view_add(NULL, surface);
+		xwayland_surface_read_properties(surface);
+	}
 
 	return surface;
 }
@@ -432,7 +435,12 @@ static void xwayland_surface_dissociate(struct xwayland_surface *xsurface) {
 
 static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	xwayland_surface_dissociate(xsurface);
-	xwayland_surface_on_destroy(xsurface);
+
+	if (xsurface->override_redirect) {
+		assert(!xsurface->view_id);
+	} else {
+		view_remove(xsurface->view_id);
+	}
 
 	if (xsurface == xsurface->xwm->drag_focus) {
 		lab_xwm_set_drag_focus(xsurface->xwm, NULL);
@@ -475,7 +483,7 @@ static void read_surface_class(struct lab_xwm *xwm,
 
 	// Use first string ("instance") for the app_id
 	char *instance = strndup(class, len);
-	xwayland_surface_on_set_app_id(surface, instance);
+	view_set_app_id(surface->view_id, instance);
 	free(instance);
 }
 
@@ -504,7 +512,7 @@ static void read_surface_title(struct lab_xwm *xwm,
 	}
 
 	char *title = strndup(title_buffer, len);
-	xwayland_surface_on_set_title(xsurface, title);
+	view_set_title(xsurface->view_id, title);
 	free(title);
 }
 
@@ -695,7 +703,7 @@ static void read_surface_strut_partial(struct lab_xwm *xwm,
 	xsurface->strut_partial = NULL;
 
 	if (reply->type == XCB_ATOM_NONE) {
-		xwayland_surface_on_set_strut_partial(xsurface);
+		view_set_strut_partial(xsurface->view_id, NULL);
 		return;
 	}
 
@@ -711,7 +719,7 @@ static void read_surface_strut_partial(struct lab_xwm *xwm,
 		return;
 	}
 	xcb_ewmh_get_wm_strut_partial_from_reply(xsurface->strut_partial, reply);
-	xwayland_surface_on_set_strut_partial(xsurface);
+	view_set_strut_partial(xsurface->view_id, xsurface->strut_partial);
 }
 
 static void read_surface_net_wm_state(struct lab_xwm *xwm,
@@ -1017,8 +1025,8 @@ static void xsurface_set_wm_state(struct xwayland_surface *xsurface) {
 }
 
 void
-xwayland_surface_restack(struct xwayland_surface *xsurface,
-		xcb_window_t sibling, enum xcb_stack_mode_t mode)
+xwayland_surface_stack_above(struct xwayland_surface *xsurface,
+		xcb_window_t sibling)
 {
 	struct lab_xwm *xwm = xsurface->xwm;
 	uint32_t values[2];
@@ -1033,9 +1041,11 @@ xwayland_surface_restack(struct xwayland_surface *xsurface,
 
 	if (sibling != XCB_NONE) {
 		values[idx++] = sibling;
+		values[idx++] = XCB_STACK_MODE_ABOVE;
 		flags |= XCB_CONFIG_WINDOW_SIBLING;
+	} else {
+		values[idx++] = XCB_STACK_MODE_BELOW;
 	}
-	values[idx++] = mode;
 
 	xcb_configure_window(xwm->xcb_conn, xsurface->window_id, flags, values);
 	xcb_flush(xwm->xcb_conn);
@@ -1288,20 +1298,28 @@ static void lab_xwm_handle_net_wm_state_message(struct lab_xwm *xwm,
 	// all other values are set to 0
 
 	if (fullscreen != xsurface->fullscreen) {
-		xwayland_surface_on_request_fullscreen(xsurface);
+		view_fullscreen(xsurface->view_id, xsurface->fullscreen,
+			/* output */ NULL);
 	}
 
 	if (maximized_vert != xsurface->maximized_vert
 			|| maximized_horz != xsurface->maximized_horz) {
-		xwayland_surface_on_request_maximize(xsurface);
+		enum view_axis maximize = VIEW_AXIS_NONE;
+		if (xsurface->maximized_vert) {
+			maximize |= VIEW_AXIS_VERTICAL;
+		}
+		if (xsurface->maximized_horz) {
+			maximize |= VIEW_AXIS_HORIZONTAL;
+		}
+		view_maximize(xsurface->view_id, maximize);
 	}
 
 	if (minimized != xsurface->minimized) {
-		xwayland_surface_on_request_minimize(xsurface, xsurface->minimized);
+		view_minimize(xsurface->view_id, xsurface->minimized);
 	}
 
 	if (above != xsurface->above) {
-		xwayland_surface_on_request_above(xsurface);
+		view_set_always_on_top(xsurface->view_id, xsurface->above);
 	}
 }
 
@@ -1317,10 +1335,9 @@ static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
 	struct xwayland_surface *surface = lookup_surface(xwm, ev->window);
-	if (surface == NULL) {
-		return;
+	if (surface) {
+		view_close(surface->view_id);
 	}
-	xwayland_surface_on_request_close(surface);
 }
 
 static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
@@ -1342,7 +1359,7 @@ static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
 		return;
 	}
 
-	xwayland_surface_on_request_minimize(xsurface, minimize);
+	view_minimize(xsurface->view_id, minimize);
 }
 
 static void lab_xwm_handle_client_message(struct lab_xwm *xwm,
