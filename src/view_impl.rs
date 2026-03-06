@@ -76,15 +76,21 @@ impl ViewImpl for XView {
     }
 
     fn set_active(&self, active: bool) {
-        unsafe { xwayland_view_set_active(self.xsurface, active) };
+        unsafe { xwayland_surface_activate(self.xsurface, active) };
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
-        unsafe { xwayland_view_set_fullscreen(self.xsurface, fullscreen) };
+        unsafe { xwayland_surface_set_fullscreen(self.xsurface, fullscreen) };
     }
 
     fn set_maximized(&self, maximized: ViewAxis) {
-        unsafe { xwayland_view_maximize(self.xsurface, maximized) };
+        unsafe {
+            xwayland_surface_set_maximized(
+                self.xsurface,
+                maximized & VIEW_AXIS_HORIZONTAL != 0,
+                maximized & VIEW_AXIS_VERTICAL != 0,
+            )
+        };
     }
 
     fn notify_tiled(&self) {
@@ -92,9 +98,12 @@ impl ViewImpl for XView {
     }
 
     fn set_minimized(&self, minimized: bool, x_stacking: &mut Vec<XId>) {
-        unsafe { xwayland_view_minimize(self.xsurface, minimized) };
+        unsafe { xwayland_surface_set_minimized(self.xsurface, minimized) };
         if minimized {
-            // minimized views are restacked to bottom
+            // restack minimized view to bottom
+            unsafe {
+                xwayland_surface_stack_above(self.xsurface, 0 /* None */)
+            };
             let xid = self.get_xid();
             x_stacking.retain(|&x| x != xid);
             x_stacking.insert(0, xid);
@@ -112,7 +121,7 @@ impl ViewImpl for XView {
         if let Some(&prev) = x_stacking.last()
             && prev != xid
         {
-            unsafe { xwayland_view_raise_above(self.xsurface, prev) };
+            unsafe { xwayland_surface_stack_above(self.xsurface, prev) };
         }
         x_stacking.retain(|&x| x != xid);
         x_stacking.push(xid);
@@ -123,11 +132,11 @@ impl ViewImpl for XView {
     }
 
     fn offer_focus(&self) {
-        unsafe { xwayland_view_offer_focus(self.xsurface) };
+        unsafe { xwayland_surface_offer_focus(self.xsurface) };
     }
 
     fn close(&self) {
-        unsafe { xwayland_view_close(self.xsurface) };
+        unsafe { xwayland_surface_close(self.xsurface) };
     }
 
     fn create_scene(&self, scene: &mut ViewScene, id: ViewId) {

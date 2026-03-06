@@ -141,12 +141,12 @@ void xwayland_surface_activate(struct xwayland_surface *surface,
 void xwayland_surface_read_properties(struct xwayland_surface *xsurface);
 
 /**
- * Restack surface relative to sibling.
- * If sibling is NULL, then the surface is moved to the top or the bottom
- * of the stack (depending on the mode).
+ * Restack surface above sibling.
+ * If sibling is None, then the surface is moved to the bottom
+ * of the stack.
  */
-void xwayland_surface_restack(struct xwayland_surface *surface,
-	xcb_window_t sibling, enum xcb_stack_mode_t mode);
+void xwayland_surface_stack_above(struct xwayland_surface *surface,
+	xcb_window_t sibling);
 
 void xwayland_surface_configure(struct xwayland_surface *surface,
 	int16_t x, int16_t y, uint16_t width, uint16_t height);
@@ -223,31 +223,21 @@ bool xwayland_surface_fetch_icon(
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
 
 /* listeners (external) */
-void xwayland_on_new_surface(struct xwayland_surface *xsurface);
 void xwayland_on_ready(void);
 
-void xwayland_surface_on_destroy(struct xwayland_surface *xsurface);
 void xwayland_surface_on_associate(struct xwayland_surface *xsurface);
 void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
 void xwayland_surface_on_map(struct xwayland_surface *xsurface);
 void xwayland_surface_on_unmap(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_above(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_activate(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_close(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	const struct xwayland_surface_configure_event *event);
-void xwayland_surface_on_request_fullscreen(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_maximize(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_minimize(struct xwayland_surface *xsurface, bool minimize);
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
-void xwayland_surface_on_set_app_id(struct xwayland_surface *xsurface, const char *app_id);
-void xwayland_surface_on_set_title(struct xwayland_surface *xsurface, const char *title);
 void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
-void xwayland_surface_on_set_strut_partial(struct xwayland_surface *xsurface);
 void xwayland_surface_on_focus_in(struct xwayland_surface *xsurface);
 void xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface);
 

@@ -107,18 +107,6 @@ xwayland_view_get_focus_mode(struct xwayland_surface *xsurface)
 	return VIEW_FOCUS_MODE_NEVER;
 }
 
-void
-xwayland_view_raise_above(struct xwayland_surface *xsurface, XId sibling)
-{
-	xwayland_surface_restack(xsurface, sibling, XCB_STACK_MODE_ABOVE);
-}
-
-void
-xwayland_view_offer_focus(struct xwayland_surface *xsurface)
-{
-	xwayland_surface_offer_focus(xsurface);
-}
-
 static struct xwayland_surface *
 top_parent_of(struct xwayland_surface *xsurface)
 {
@@ -238,16 +226,6 @@ xwayland_surface_on_associate(struct xwayland_surface *xsurface)
 }
 
 void
-xwayland_surface_on_destroy(struct xwayland_surface *xsurface)
-{
-	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
-	} else {
-		view_remove(xsurface->view_id);
-	}
-}
-
-void
 xwayland_view_configure(struct xwayland_surface *xsurface,
 		struct wlr_box current, struct wlr_box geo, bool *commit_move)
 {
@@ -312,12 +290,6 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 }
 
 void
-xwayland_surface_on_request_above(struct xwayland_surface *xsurface)
-{
-	view_set_always_on_top(xsurface->view_id, xsurface->above);
-}
-
-void
 xwayland_surface_on_request_activate(struct xwayland_surface *xsurface)
 {
 	if (xsurface->override_redirect) {
@@ -328,55 +300,6 @@ xwayland_surface_on_request_activate(struct xwayland_surface *xsurface)
 	} else {
 		view_focus(xsurface->view_id, /* raise */ true);
 	}
-}
-
-void
-xwayland_surface_on_request_close(struct xwayland_surface *xsurface)
-{
-	view_close(xsurface->view_id);
-}
-
-void
-xwayland_surface_on_request_minimize(struct xwayland_surface *xsurface, bool minimize)
-{
-	view_minimize(xsurface->view_id, minimize);
-}
-
-void
-xwayland_surface_on_request_maximize(struct xwayland_surface *xsurface)
-{
-	enum view_axis maximize = VIEW_AXIS_NONE;
-	if (xsurface->maximized_vert) {
-		maximize |= VIEW_AXIS_VERTICAL;
-	}
-	if (xsurface->maximized_horz) {
-		maximize |= VIEW_AXIS_HORIZONTAL;
-	}
-	view_maximize(xsurface->view_id, maximize);
-}
-
-void
-xwayland_surface_on_request_fullscreen(struct xwayland_surface *xsurface)
-{
-	view_fullscreen(xsurface->view_id, xsurface->fullscreen, /* output */ NULL);
-}
-
-void
-xwayland_surface_on_set_title(struct xwayland_surface *xsurface, const char *title)
-{
-	view_set_title(xsurface->view_id, title);
-}
-
-void
-xwayland_surface_on_set_app_id(struct xwayland_surface *xsurface, const char *app_id)
-{
-	view_set_app_id(xsurface->view_id, app_id);
-}
-
-void
-xwayland_view_close(struct xwayland_surface *xsurface)
-{
-	xwayland_surface_close(xsurface);
 }
 
 void
@@ -405,12 +328,6 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 	if (xsurface->surface && xsurface->surface->mapped) {
 		xwayland_surface_on_map(xsurface);
 	}
-}
-
-void
-xwayland_surface_on_set_strut_partial(struct xwayland_surface *xsurface)
-{
-	view_set_strut_partial(xsurface->view_id, xsurface->strut_partial);
 }
 
 void
@@ -550,23 +467,6 @@ xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 	view_unmap(xsurface->view_id);
 }
 
-void
-xwayland_view_maximize(struct xwayland_surface *xsurface, enum view_axis maximized)
-{
-	xwayland_surface_set_maximized(xsurface,
-		maximized & VIEW_AXIS_HORIZONTAL,
-		maximized & VIEW_AXIS_VERTICAL);
-}
-
-void
-xwayland_view_minimize(struct xwayland_surface *xsurface, bool minimized)
-{
-	xwayland_surface_set_minimized(xsurface, minimized);
-	if (minimized) {
-		xwayland_surface_restack(xsurface, XCB_NONE, XCB_STACK_MODE_BELOW);
-	}
-}
-
 ViewId
 xwayland_view_get_root_id(struct xwayland_surface *xsurface)
 {
@@ -585,18 +485,6 @@ bool
 xwayland_view_is_modal_dialog(struct xwayland_surface *xsurface)
 {
 	return xsurface->modal;
-}
-
-void
-xwayland_view_set_active(struct xwayland_surface *xsurface, bool active)
-{
-	xwayland_surface_activate(xsurface, active);
-}
-
-void
-xwayland_view_set_fullscreen(struct xwayland_surface *xsurface, bool fullscreen)
-{
-	xwayland_surface_set_fullscreen(xsurface, fullscreen);
 }
 
 void
@@ -619,14 +507,6 @@ xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface)
 		wlr_scene_node_set_position(xsurface->unmanaged_node,
 			xsurface->x, xsurface->y);
 		cursor_update_focus();
-	}
-}
-
-void
-xwayland_on_new_surface(struct xwayland_surface *xsurface)
-{
-	if (!xsurface->override_redirect) {
-		xsurface->view_id = view_add(NULL, xsurface);
 	}
 }
 
