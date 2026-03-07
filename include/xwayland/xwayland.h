@@ -82,9 +82,8 @@ struct xwayland_surface_configure_event {
 	uint16_t mask; // xcb_config_window_t
 };
 
-void xwayland_set_cursor(struct xwayland_server *server, const uint8_t *pixels,
-	uint32_t stride, uint32_t width, uint32_t height, int32_t hotspot_x,
-	int32_t hotspot_y);
+void xwayland_set_cursor(const uint8_t *pixels, uint32_t stride,
+	uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
 
 void xwayland_surface_activate(struct xwayland_surface *surface,
 	bool activated);
@@ -149,8 +148,7 @@ bool xwayland_surface_is_focused(struct xwayland_surface *xsurface);
  * panels, docks, etc. Unfortunately, it is not possible to specify
  * per-output workareas.
  */
-void xwayland_set_workareas(struct xwayland_server *server,
-	const struct wlr_box *workareas, size_t num_workareas);
+void xwayland_set_workareas(const struct wlr_box *workareas, size_t num_workareas);
 
 /**
  * Fetches the icon set via the _NET_WM_ICON property.

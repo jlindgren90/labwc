@@ -30,8 +30,6 @@
 #include <wlr/types/wlr_xdg_foreign_registry.h>
 #include <wlr/types/wlr_xdg_foreign_v1.h>
 #include <wlr/types/wlr_xdg_foreign_v2.h>
-#include "xwayland/server.h"
-#include "xwayland/xwayland.h"
 
 #include "action.h"
 #include "common/mem.h"
@@ -51,8 +49,9 @@
 #include "session-lock.h"
 #include "theme.h"
 #include "view.h"
-#include "xwayland.h"
 #include "xwayland-shell-v1-protocol.h"
+#include "xwayland/server.h"
+#include "xwayland/xwayland.h"
 
 #define LAB_EXT_DATA_CONTROL_VERSION 1
 #define LAB_WLR_COMPOSITOR_VERSION 6
@@ -112,8 +111,7 @@ handle_sigchld(int signal, void *data)
 	}
 
 	/* Ensure that we do not break xwayland lazy initialization */
-	if (server.xwayland_server
-			&& info.si_pid == server.xwayland_server->pid) {
+	if (info.si_pid == g_xserver.pid) {
 		return 0;
 	}
 
@@ -168,11 +166,8 @@ server_global_filter(const struct wl_client *client, const struct wl_global *glo
 {
 	const struct wl_interface *iface = wl_global_get_interface(global);
 
-	struct wl_client *xwayland_client = server.xwayland_server
-		? server.xwayland_server->client
-		: NULL;
-
-	if (client != xwayland_client && !strcmp(iface->name, xwayland_shell_v1_interface.name)) {
+	if (client != g_xserver.client && !strcmp(iface->name,
+			xwayland_shell_v1_interface.name)) {
 		/* Filter out the xwayland shell for usual clients */
 		return false;
 	}
@@ -515,7 +510,10 @@ server_init(void)
 	wlr_xdg_foreign_v2_create(server.wl_display, registry);
 
 	desktop_entry_init();
-	xwayland_server_init(server.compositor);
+	if (!xwayland_server_create(server.wl_display,
+			server.compositor, g_seat.wlr_seat)) {
+		wlr_log(WLR_ERROR, "failed to start xwayland");
+	}
 }
 
 void
@@ -547,7 +545,7 @@ server_start(void)
 void
 server_finish(void)
 {
-	xwayland_server_finish();
+	xwayland_server_destroy();
 	desktop_entry_finish();
 
 	wl_event_source_remove(server.sighup_source);

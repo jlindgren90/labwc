@@ -37,9 +37,11 @@ struct xwayland_server {
 	struct wlr_seat *seat;
 };
 
-struct xwayland_server *xwayland_server_create(struct wl_display *display,
+extern struct xwayland_server g_xserver;
+
+bool xwayland_server_create(struct wl_display *display,
 	struct wlr_compositor *compositor, struct wlr_seat *seat);
 
-void xwayland_server_destroy(struct xwayland_server *server);
+void xwayland_server_destroy(void);
 
 #endif
