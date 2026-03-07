@@ -227,38 +227,17 @@ static void lab_xwm_send_wm_message(struct xwayland_surface *surface,
 	xcb_flush(xwm->xcb_conn);
 }
 
-static void lab_xwm_set_net_client_list(struct lab_xwm *xwm) {
-	// FIXME: _NET_CLIENT_LIST is expected to be ordered by map time, but the
-	// order of surfaces in `xwm->surfaces` is by creation time. The order of
-	// windows _NET_CLIENT_LIST exposed by wlroots is wrong.
-
-	size_t mapped_surfaces = 0;
-	struct xwayland_surface *surface;
-	wl_list_for_each(surface, &xwm->surfaces, link) {
-		if (surface->surface != NULL && surface->surface->mapped) {
-			mapped_surfaces++;
-		}
-	}
-
-	xcb_window_t *windows = NULL;
-	if (mapped_surfaces > 0) {
-		windows = malloc(sizeof(*windows) * mapped_surfaces);
-		if (!windows) {
-			return;
-		}
-
-		size_t index = 0;
-		wl_list_for_each(surface, &xwm->surfaces, link) {
-			if (surface->surface != NULL && surface->surface->mapped) {
-				windows[index++] = surface->window_id;
-			}
-		}
+void
+xwayland_set_net_client_list(const xcb_window_t *xids, unsigned num_xids)
+{
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return;
 	}
 
 	xcb_change_property(xwm->xcb_conn, XCB_PROP_MODE_REPLACE,
 			xwm->screen->root, xwm->atoms[NET_CLIENT_LIST],
-			XCB_ATOM_WINDOW, 32, mapped_surfaces, windows);
-	free(windows);
+			XCB_ATOM_WINDOW, 32, num_xids, xids);
 }
 
 static void xsurface_set_net_wm_state(struct xwayland_surface *xsurface);
@@ -774,13 +753,11 @@ static void xwayland_surface_handle_commit(struct wl_listener *listener, void *d
 
 static void xwayland_surface_handle_map(struct wl_listener *listener, void *data) {
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_map);
-	lab_xwm_set_net_client_list(xsurface->xwm);
 	xwayland_surface_on_map(xsurface);
 }
 
 static void xwayland_surface_handle_unmap(struct wl_listener *listener, void *data) {
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_unmap);
-	lab_xwm_set_net_client_list(xsurface->xwm);
 	xwayland_surface_on_unmap(xsurface);
 }
 
