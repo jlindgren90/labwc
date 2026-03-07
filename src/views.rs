@@ -92,6 +92,7 @@ impl Views {
                 ul |= self.focus(id, /* raise */ true, /* force_restack */ true);
             }
         }
+        self.update_net_client_list();
         return ul;
     }
 
@@ -108,7 +109,19 @@ impl Views {
                 }
             }
         }
+        self.update_net_client_list();
         return ul;
+    }
+
+    fn update_net_client_list(&self) {
+        let mut xids = Vec::new();
+        for v in self.by_id.values() {
+            let xid = v.get_xid();
+            if xid != 0 && v.get_state().mapped {
+                xids.push(xid);
+            }
+        }
+        unsafe { xwayland_set_net_client_list(xids.as_ptr(), xids.len() as u32) };
     }
 
     pub fn get_active(&self) -> ViewId {
