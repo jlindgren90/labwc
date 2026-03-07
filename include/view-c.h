@@ -158,6 +158,7 @@ Border ssd_get_margin(const ViewState *view_st);
 void top_layer_show_all(void);
 void top_layer_hide_on_output(Output *output);
 
+void xwayland_set_net_client_list(const XId *xids, unsigned num_xids);
 void xwayland_surface_activate(XSurface *xsurface, _Bool active);
 void xwayland_surface_close(XSurface *xsurface);
 XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
