@@ -23,6 +23,8 @@
 
 #define XWAYLAND_PATH "/usr/bin/Xwayland"
 
+struct xwayland_server g_xserver;
+
 static void safe_close(int fd) {
 	if (fd >= 0) {
 		close(fd);
@@ -362,8 +364,11 @@ static void handle_idle(void *data) {
 	server_start(server);
 }
 
-void xwayland_server_destroy(struct xwayland_server *server) {
-	if (!server) {
+void
+xwayland_server_destroy(void)
+{
+	struct xwayland_server *server = &g_xserver;
+	if (!server->shell_v1) {
 		return;
 	}
 
@@ -376,22 +381,20 @@ void xwayland_server_destroy(struct xwayland_server *server) {
 	xwayland_shell_v1_destroy(server->shell_v1);
 	lab_xwm_destroy(server->xwm);
 
-	free(server);
+	*server = (struct xwayland_server){0};
 }
 
-struct xwayland_server *
+bool
 xwayland_server_create(struct wl_display *wl_display,
 		struct wlr_compositor *compositor, struct wlr_seat *seat)
 {
 	if (!getenv("XWAYLAND") && access(XWAYLAND_PATH, X_OK) != 0) {
 		wlr_log(WLR_ERROR, "Cannot find Xwayland binary \"%s\"", XWAYLAND_PATH);
-		return NULL;
+		return false;
 	}
 
-	struct xwayland_server *server = calloc(1, sizeof(*server));
-	if (!server) {
-		return NULL;
-	}
+	struct xwayland_server *server = &g_xserver;
+	assert(!server->shell_v1);
 
 	server->shell_v1 = xwayland_shell_v1_create(wl_display, 1);
 	if (server->shell_v1 == NULL) {
@@ -416,13 +419,14 @@ xwayland_server_create(struct wl_display *wl_display,
 		goto error_display;
 	}
 
-	return server;
+	setenv("DISPLAY", server->display_name, true);
+	return true;
 
 error_display:
 	server_finish_display(server);
 error_shell:
 	xwayland_shell_v1_destroy(server->shell_v1);
 error_alloc:
-	free(server);
-	return NULL;
+	*server = (struct xwayland_server){0};
+	return false;
 }
