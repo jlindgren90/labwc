@@ -2,11 +2,6 @@
 #ifndef LABWC_XWAYLAND_H
 #define LABWC_XWAYLAND_H
 
-struct wlr_compositor;
-
-void xwayland_server_init(struct wlr_compositor *compositor);
-void xwayland_server_finish(void);
-
 void xwayland_update_workarea(void);
 
 #endif /* LABWC_XWAYLAND_H */

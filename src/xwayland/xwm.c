@@ -1853,11 +1853,13 @@ static void lab_xwm_get_render_format(struct lab_xwm *xwm) {
 }
 
 void
-xwayland_set_cursor(struct xwayland_server *server, struct wlr_buffer *buffer,
+xwayland_set_cursor(struct wlr_buffer *buffer,
 		int32_t hotspot_x, int32_t hotspot_y)
 {
-	struct lab_xwm *xwm = server->xwm;
-	assert(xwm && xwm->xcb_conn);
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return;
+	}
 
 	if (!xwm->render_format_id) {
 		wlr_log(WLR_ERROR, "Cannot set xwm cursor: no render format available");
@@ -2074,11 +2076,12 @@ bool lab_xwm_atoms_contains(struct lab_xwm *xwm, xcb_atom_t *atoms,
 }
 
 void
-xwayland_set_workareas(struct xwayland_server *server,
-		const struct wlr_box *workareas, size_t num_workareas)
+xwayland_set_workareas(const struct wlr_box *workareas, size_t num_workareas)
 {
-	struct lab_xwm *xwm = server->xwm;
-	assert(xwm && xwm->xcb_conn);
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return;
+	}
 
 	uint32_t *data = malloc(4 * sizeof(uint32_t) * num_workareas);
 	if (!data) {

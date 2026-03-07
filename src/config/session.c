@@ -27,6 +27,7 @@
 #endif
 
 static const char *const env_vars[] = {
+	"DISPLAY",
 	"WAYLAND_DISPLAY",
 	"XDG_CURRENT_DESKTOP",
 	"XCURSOR_SIZE",
@@ -251,12 +252,6 @@ update_activation_env(bool initialize)
 
 	free(env_keys);
 	free(env_unset_keys);
-
-	if (server.xwayland_server) {
-		// DISPLAY is only set if xwayland was initialized successfully,
-		// so we only update the env in that case
-		execute_update("DISPLAY", "DISPLAY=", initialize);
-	}
 }
 
 void
