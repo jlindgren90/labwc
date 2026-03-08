@@ -15,7 +15,6 @@
 #include "config/session.h"
 #include "labwc.h"
 #include "output.h"
-#include "view.h"
 #include "xwayland/server.h"
 #include "xwayland/xwayland.h"
 
@@ -31,82 +30,6 @@ xwayland_view_get_xid(struct xwayland_surface *xsurface)
 	return xsurface->window_id;
 }
 
-struct view_size_hints
-xwayland_view_get_size_hints(struct xwayland_surface *xsurface)
-{
-	xcb_size_hints_t *hints = xsurface->size_hints;
-	if (!hints) {
-		return (struct view_size_hints){0};
-	}
-	return (struct view_size_hints){
-		.min_width = hints->min_width,
-		.min_height = hints->min_height,
-		.width_inc = hints->width_inc,
-		.height_inc = hints->height_inc,
-		.base_width = hints->base_width,
-		.base_height = hints->base_height,
-	};
-}
-
-enum view_focus_mode
-xwayland_view_get_focus_mode(struct xwayland_surface *xsurface)
-{
-	switch (xwayland_surface_icccm_input_model(xsurface)) {
-	/*
-	 * Abbreviated from ICCCM section 4.1.7 (Input Focus):
-	 *
-	 * Passive Input - The client expects keyboard input but never
-	 * explicitly sets the input focus.
-	 * Locally Active Input - The client expects keyboard input and
-	 * explicitly sets the input focus, but it only does so when one
-	 * of its windows already has the focus.
-	 *
-	 * Passive and Locally Active clients set the input field of
-	 * WM_HINTS to True, which indicates that they require window
-	 * manager assistance in acquiring the input focus.
-	 */
-	case WLR_ICCCM_INPUT_MODEL_PASSIVE:
-	case WLR_ICCCM_INPUT_MODEL_LOCAL:
-		return VIEW_FOCUS_MODE_ALWAYS;
-
-	/*
-	 * Globally Active Input - The client expects keyboard input and
-	 * explicitly sets the input focus, even when it is in windows
-	 * the client does not own. ... It wants to prevent the window
-	 * manager from setting the input focus to any of its windows
-	 * [because it may or may not want focus].
-	 *
-	 * Globally Active client windows may receive a WM_TAKE_FOCUS
-	 * message from the window manager. If they want the focus, they
-	 * should respond with a SetInputFocus request.
-	 */
-	case WLR_ICCCM_INPUT_MODEL_GLOBAL:
-		/*
-		 * Assume that NORMAL and DIALOG windows are likely to
-		 * want focus. These window types should show up in the
-		 * Alt-Tab switcher and be automatically focused when
-		 * they become topmost.
-		 */
-		return (xwayland_surface_has_window_type(xsurface,
-				XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL)
-			|| xwayland_surface_has_window_type(xsurface,
-				XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG))
-			? VIEW_FOCUS_MODE_LIKELY : VIEW_FOCUS_MODE_UNLIKELY;
-
-	/*
-	 * No Input - The client never expects keyboard input.
-	 *
-	 * No Input and Globally Active clients set the input field to
-	 * False, which requests that the window manager not set the
-	 * input focus to their top-level window.
-	 */
-	case WLR_ICCCM_INPUT_MODEL_NONE:
-		break;
-	}
-
-	return VIEW_FOCUS_MODE_NEVER;
-}
-
 static struct xwayland_surface *
 top_parent_of(struct xwayland_surface *xsurface)
 {
@@ -116,29 +39,6 @@ top_parent_of(struct xwayland_surface *xsurface)
 		s = parent;
 	}
 	return s;
-}
-
-static bool
-want_deco(struct xwayland_surface *xwayland_surface)
-{
-	return xwayland_surface->decorations ==
-		XWAYLAND_SURFACE_DECORATIONS_ALL;
-}
-
-XSurfaceProps
-xwayland_view_get_surface_props(struct xwayland_surface *xsurface)
-{
-	bool has_position = xsurface->size_hints && (xsurface->size_hints->flags
-		& (XCB_ICCCM_SIZE_HINT_US_POSITION | XCB_ICCCM_SIZE_HINT_P_POSITION));
-
-	return (XSurfaceProps){
-		.geom.x = xsurface->x,
-		.geom.y = xsurface->y,
-		.geom.width = xsurface->width,
-		.geom.height = xsurface->height,
-		.position_hint = has_position,
-		.decorated = want_deco(xsurface)
-	};
 }
 
 void
@@ -229,7 +129,7 @@ void
 xwayland_view_configure(struct xwayland_surface *xsurface,
 		struct wlr_box current, struct wlr_box geo, bool *commit_move)
 {
-	xwayland_surface_configure(xsurface, geo.x, geo.y, geo.width, geo.height);
+	xwayland_surface_configure(xsurface, geo);
 
 	/*
 	 * For unknown reasons, XWayland surfaces that are completely
@@ -255,11 +155,10 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 {
 	if (xsurface->override_redirect) {
 		assert(!xsurface->view_id);
-		xwayland_surface_configure(xsurface, event->x, event->y,
-			event->width, event->height);
+		xwayland_surface_configure(xsurface, event->geom);
 		if (xsurface->unmanaged_node) {
 			wlr_scene_node_set_position(xsurface->unmanaged_node,
-				event->x, event->y);
+				event->geom.x, event->geom.y);
 			cursor_update_focus();
 		}
 		return;
@@ -272,8 +171,7 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 
 	if (view_is_floating(view_st)) {
 		/* Honor client configure requests for floating views */
-		struct wlr_box box = {.x = event->x, .y = event->y,
-			.width = event->width, .height = event->height};
+		struct wlr_box box = event->geom;
 		view_adjust_size(xsurface->view_id, &box.width, &box.height);
 		view_move_resize(xsurface->view_id, box);
 	} else {
@@ -283,9 +181,7 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 		 * views. Ignore the client request and send back a
 		 * ConfigureNotify event with the computed geometry.
 		 */
-		const struct wlr_box *pending = &view_st->pending;
-		xwayland_surface_configure(xsurface, pending->x, pending->y,
-			pending->width, pending->height);
+		xwayland_surface_configure(xsurface, view_st->pending);
 	}
 }
 
@@ -300,12 +196,6 @@ xwayland_surface_on_request_activate(struct xwayland_surface *xsurface)
 	} else {
 		view_focus(xsurface->view_id, /* raise */ true);
 	}
-}
-
-void
-xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface)
-{
-	view_enable_ssd(xsurface->view_id, want_deco(xsurface));
 }
 
 void
@@ -411,7 +301,7 @@ map_unmanaged_surface(struct xwayland_surface *xsurface)
 
 	xsurface->unmanaged_node = &scene_surface->buffer->node;
 	wlr_scene_node_set_position(xsurface->unmanaged_node,
-		xsurface->x, xsurface->y);
+		xsurface->props.geom.x, xsurface->props.geom.y);
 	cursor_update_focus();
 }
 
@@ -505,7 +395,7 @@ xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface)
 {
 	if (xsurface->unmanaged_node) {
 		wlr_scene_node_set_position(xsurface->unmanaged_node,
-			xsurface->x, xsurface->y);
+			xsurface->props.geom.x, xsurface->props.geom.y);
 		cursor_update_focus();
 	}
 }

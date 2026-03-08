@@ -87,8 +87,13 @@ typedef struct ViewScene {
 
 typedef struct XSurfaceProps {
 	Rect geom;
+	ViewSizeHints size_hints;
 	_Bool position_hint;
-	_Bool decorated;
+	_Bool is_normal;
+	_Bool is_dialog;
+	_Bool supports_delete;
+	_Bool supports_take_focus;
+	_Bool no_input_hint;
 } XSurfaceProps;
 
 WlrSceneTree *view_scene_tree_create(ViewId id);
@@ -119,11 +124,8 @@ WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
 XId xwayland_view_get_xid(XSurface *xsurface);
 ViewId xwayland_view_get_root_id(XSurface *xsurface);
 _Bool xwayland_view_is_modal_dialog(XSurface *xsurface);
-ViewSizeHints xwayland_view_get_size_hints(XSurface *xsurface);
-XSurfaceProps xwayland_view_get_surface_props(XSurface *xsurface);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
-ViewFocusMode xwayland_view_get_focus_mode(XSurface *xsurface);
 
 // from cursor.h
 void cursor_update_focus(void);
@@ -156,9 +158,9 @@ Border ssd_get_margin(const ViewState *view_st);
 void top_layer_show_all(void);
 void top_layer_hide_on_output(Output *output);
 
-// from xwayland.h
 void xwayland_surface_activate(XSurface *xsurface, _Bool active);
 void xwayland_surface_close(XSurface *xsurface);
+XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
 void xwayland_surface_offer_focus(XSurface *xsurface);
 void xwayland_surface_set_fullscreen(XSurface *xsurface, _Bool fullscreen);
 void xwayland_surface_set_maximized(XSurface *xsurface, _Bool horizontal, _Bool vertical);

@@ -68,11 +68,11 @@ impl ViewImpl for XView {
     }
 
     fn get_size_hints(&self) -> ViewSizeHints {
-        unsafe { xwayland_view_get_size_hints(self.xsurface) }
+        unsafe { xwayland_surface_get_props(self.xsurface).size_hints }
     }
 
     fn get_surface_props(&self) -> Option<XSurfaceProps> {
-        Some(unsafe { xwayland_view_get_surface_props(self.xsurface) })
+        Some(unsafe { xwayland_surface_get_props(self.xsurface) })
     }
 
     fn set_active(&self, active: bool) {
@@ -128,7 +128,23 @@ impl ViewImpl for XView {
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
-        unsafe { xwayland_view_get_focus_mode(self.xsurface) }
+        let props = unsafe { xwayland_surface_get_props(self.xsurface) };
+        if !props.no_input_hint {
+            // Input hint set in WM_HINTS -> WM sets input focus.
+            // Assuming this case also if WM_HINTS is missing altogether.
+            return VIEW_FOCUS_MODE_ALWAYS;
+        }
+        if props.supports_take_focus {
+            // WM_TAKE_FOCUS set in WM_PROTOCOLS -> client sets focus.
+            // Guessing whether it wants focus based on window type.
+            if props.is_normal || props.is_dialog {
+                return VIEW_FOCUS_MODE_LIKELY;
+            } else {
+                return VIEW_FOCUS_MODE_UNLIKELY;
+            }
+        }
+        // client doesn't want input focus at all
+        return VIEW_FOCUS_MODE_NEVER;
     }
 
     fn offer_focus(&self) {

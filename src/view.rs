@@ -182,13 +182,12 @@ impl View {
                 geom.width = FALLBACK_WIDTH;
                 geom.height = FALLBACK_HEIGHT;
             }
-            // Also set initial output and SSD state at this point
+            // Also set initial output at this point
             if props.position_hint {
                 self.state.output = nearest_output_to_geom(geom)
             } else {
                 self.state.output = unsafe { output_nearest_to_cursor() };
             }
-            self.state.ssd_enabled = props.decorated;
             compute_default_geom(
                 &*self.state,
                 &mut geom,
