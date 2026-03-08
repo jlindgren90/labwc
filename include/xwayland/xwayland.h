@@ -6,10 +6,11 @@
 
 #include <stdbool.h>
 #include <wayland-server-core.h>
+#include <wlr/util/addon.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_ewmh.h>
 #include <xcb/xcb_icccm.h>
-#include <wlr/util/addon.h>
+#include "view.h"
 
 struct wlr_box;
 struct wlr_buffer;
@@ -20,45 +21,6 @@ struct wlr_drag;
 struct wlr_seat;
 
 struct xwayland_server;
-
-enum xwayland_surface_decorations {
-	XWAYLAND_SURFACE_DECORATIONS_ALL = 0,
-	XWAYLAND_SURFACE_DECORATIONS_NO_BORDER = 1,
-	XWAYLAND_SURFACE_DECORATIONS_NO_TITLE = 2,
-};
-
-/**
- * This represents the input focus described as follows:
- *
- * https://www.x.org/releases/X11R7.6/doc/xorg-docs/specs/ICCCM/icccm.html#input_focus
- */
-enum xwayland_icccm_input_model {
-	WLR_ICCCM_INPUT_MODEL_NONE = 0,
-	WLR_ICCCM_INPUT_MODEL_PASSIVE = 1,
-	WLR_ICCCM_INPUT_MODEL_LOCAL = 2,
-	WLR_ICCCM_INPUT_MODEL_GLOBAL = 3,
-};
-
-/**
- * The type of window (_NET_WM_WINDOW_TYPE). See:
- * https://specifications.freedesktop.org/wm-spec/latest/
- */
-enum xwayland_net_wm_window_type {
-	XWAYLAND_NET_WM_WINDOW_TYPE_DESKTOP = 0,
-	XWAYLAND_NET_WM_WINDOW_TYPE_DOCK,
-	XWAYLAND_NET_WM_WINDOW_TYPE_TOOLBAR,
-	XWAYLAND_NET_WM_WINDOW_TYPE_MENU,
-	XWAYLAND_NET_WM_WINDOW_TYPE_UTILITY,
-	XWAYLAND_NET_WM_WINDOW_TYPE_SPLASH,
-	XWAYLAND_NET_WM_WINDOW_TYPE_DIALOG,
-	XWAYLAND_NET_WM_WINDOW_TYPE_DROPDOWN_MENU,
-	XWAYLAND_NET_WM_WINDOW_TYPE_POPUP_MENU,
-	XWAYLAND_NET_WM_WINDOW_TYPE_TOOLTIP,
-	XWAYLAND_NET_WM_WINDOW_TYPE_NOTIFICATION,
-	XWAYLAND_NET_WM_WINDOW_TYPE_COMBO,
-	XWAYLAND_NET_WM_WINDOW_TYPE_DND,
-	XWAYLAND_NET_WM_WINDOW_TYPE_NORMAL,
-};
 
 /**
  * An Xwayland user interface component. It has an absolute position in
@@ -80,21 +42,11 @@ struct xwayland_surface {
 	struct wlr_surface *surface;
 	struct wlr_addon surface_addon;
 
-	int16_t x, y;
-	uint16_t width, height;
+	XSurfaceProps props;
 	bool override_redirect;
 
 	xcb_window_t parent;
 
-	xcb_atom_t *window_type;
-	size_t window_type_len;
-
-	xcb_atom_t *protocols;
-	size_t protocols_len;
-
-	uint32_t decorations;
-	xcb_icccm_wm_hints_t *hints;
-	xcb_size_hints_t *size_hints;
 	/*
 	 * _NET_WM_STRUT_PARTIAL (used by e.g. XWayland panels).
 	 * Note that right/bottom values are offsets from the lower
@@ -127,8 +79,7 @@ struct xwayland_surface {
 };
 
 struct xwayland_surface_configure_event {
-	int16_t x, y;
-	uint16_t width, height;
+	struct wlr_box geom;
 	uint16_t mask; // xcb_config_window_t
 };
 
@@ -149,7 +100,7 @@ void xwayland_surface_stack_above(struct xwayland_surface *surface,
 	xcb_window_t sibling);
 
 void xwayland_surface_configure(struct xwayland_surface *surface,
-	int16_t x, int16_t y, uint16_t width, uint16_t height);
+	struct wlr_box geom);
 
 void xwayland_surface_close(struct xwayland_surface *surface);
 
@@ -192,17 +143,6 @@ void xwayland_surface_offer_focus(struct xwayland_surface *xsurface);
 bool xwayland_surface_is_focused(struct xwayland_surface *xsurface);
 
 /**
- * Returns true if the surface has the given window type.
- * Note: a surface may have multiple window types set.
- */
-bool xwayland_surface_has_window_type(
-	const struct xwayland_surface *xsurface,
-	enum xwayland_net_wm_window_type window_type);
-
-enum xwayland_icccm_input_model xwayland_surface_icccm_input_model(
-	const struct xwayland_surface *xsurface);
-
-/**
  * Sets the _NET_WORKAREA root window property. The compositor should set
  * one workarea per virtual desktop. This indicates the usable geometry
  * (relative to the virtual desktop viewport) that is not covered by
@@ -235,7 +175,6 @@ void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
-void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
 void xwayland_surface_on_focus_in(struct xwayland_surface *xsurface);

@@ -275,8 +275,9 @@ static void seat_handle_drag_motion(struct wl_listener *listener, void *data) {
 		return; // No xwayland surface focused
 	}
 
-	lab_xwm_dnd_send_position(xwm, event->time, surface->x + (int16_t)event->sx,
-		surface->y + (int16_t)event->sy);
+	lab_xwm_dnd_send_position(xwm, event->time,
+		surface->props.geom.x + (int16_t)event->sx,
+		surface->props.geom.y + (int16_t)event->sy);
 }
 
 static void seat_handle_drag_drop(struct wl_listener *listener, void *data) {
