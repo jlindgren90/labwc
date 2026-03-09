@@ -85,9 +85,6 @@ struct xwayland_surface_configure_event {
 void xwayland_set_cursor(const uint8_t *pixels, uint32_t stride,
 	uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
 
-void xwayland_surface_activate(struct xwayland_surface *surface,
-	bool activated);
-
 void xwayland_surface_read_properties(struct xwayland_surface *xsurface);
 
 /**
