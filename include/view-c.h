@@ -91,6 +91,7 @@ typedef struct XSurfaceProps {
 	_Bool position_hint;
 	_Bool is_normal;
 	_Bool is_dialog;
+	_Bool is_modal;
 	_Bool supports_delete;
 	_Bool supports_take_focus;
 	_Bool no_input_hint;
@@ -123,7 +124,6 @@ void xdg_toplevel_view_close(CView *view);
 WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
 XId xwayland_view_get_xid(XSurface *xsurface);
 ViewId xwayland_view_get_root_id(XSurface *xsurface);
-_Bool xwayland_view_is_modal_dialog(XSurface *xsurface);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
 
@@ -163,9 +163,7 @@ void xwayland_surface_activate(XSurface *xsurface); // allows NULL xsurface
 void xwayland_surface_close(XSurface *xsurface);
 XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
 void xwayland_surface_offer_focus(XSurface *xsurface);
-void xwayland_surface_set_fullscreen(XSurface *xsurface, _Bool fullscreen);
-void xwayland_surface_set_maximized(XSurface *xsurface, _Bool horizontal, _Bool vertical);
-void xwayland_surface_set_minimized(XSurface *xsurface, _Bool minimized);
+void xwayland_surface_publish_state(XSurface *xsurface, const ViewState *state);
 void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);
 
 #endif // LABWC_VIEW_C_H

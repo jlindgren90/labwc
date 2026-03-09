@@ -12,11 +12,12 @@ pub trait ViewImpl {
     fn is_modal_dialog(&self) -> bool;
     fn get_size_hints(&self) -> ViewSizeHints;
     fn get_surface_props(&self) -> Option<XSurfaceProps>;
-    fn set_active(&self, active: bool);
-    fn set_fullscreen(&mut self, fullscreen: bool);
-    fn set_maximized(&self, maximized: ViewAxis);
+    fn notify_mapped(&self, state: &ViewState);
+    fn set_active(&self, state: &ViewState);
+    fn set_fullscreen(&mut self, state: &ViewState);
+    fn set_maximized(&self, state: &ViewState);
     fn notify_tiled(&self);
-    fn set_minimized(&self, minimized: bool, x_stacking: &mut Vec<XId>);
+    fn set_minimized(&self, state: &ViewState, x_stacking: &mut Vec<XId>);
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool);
     fn raise(&self, x_stacking: &mut Vec<XId>);
     fn get_focus_mode(&self) -> ViewFocusMode;
@@ -64,7 +65,7 @@ impl ViewImpl for XView {
     }
 
     fn is_modal_dialog(&self) -> bool {
-        unsafe { xwayland_view_is_modal_dialog(self.xsurface) }
+        unsafe { xwayland_surface_get_props(self.xsurface).is_modal }
     }
 
     fn get_size_hints(&self) -> ViewSizeHints {
@@ -75,33 +76,32 @@ impl ViewImpl for XView {
         Some(unsafe { xwayland_surface_get_props(self.xsurface) })
     }
 
-    fn set_active(&self, active: bool) {
-        if active {
+    fn notify_mapped(&self, state: &ViewState) {
+        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
+    }
+
+    fn set_active(&self, state: &ViewState) {
+        if state.active {
             unsafe { xwayland_surface_activate(self.xsurface) };
         }
+        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
     }
 
-    fn set_fullscreen(&mut self, fullscreen: bool) {
-        unsafe { xwayland_surface_set_fullscreen(self.xsurface, fullscreen) };
+    fn set_fullscreen(&mut self, state: &ViewState) {
+        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
     }
 
-    fn set_maximized(&self, maximized: ViewAxis) {
-        unsafe {
-            xwayland_surface_set_maximized(
-                self.xsurface,
-                maximized & VIEW_AXIS_HORIZONTAL != 0,
-                maximized & VIEW_AXIS_VERTICAL != 0,
-            )
-        };
+    fn set_maximized(&self, state: &ViewState) {
+        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
     }
 
     fn notify_tiled(&self) {
         // not supported
     }
 
-    fn set_minimized(&self, minimized: bool, x_stacking: &mut Vec<XId>) {
-        unsafe { xwayland_surface_set_minimized(self.xsurface, minimized) };
-        if minimized {
+    fn set_minimized(&self, state: &ViewState, x_stacking: &mut Vec<XId>) {
+        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
+        if state.minimized {
             // restack minimized view to bottom
             unsafe {
                 xwayland_surface_stack_above(self.xsurface, 0 /* None */)
@@ -231,26 +231,30 @@ impl ViewImpl for XdgView {
         None // not supported
     }
 
-    fn set_active(&self, active: bool) {
-        unsafe { xdg_toplevel_view_set_active(self.c_ptr, active) };
+    fn notify_mapped(&self, _state: &ViewState) {
+        // no-op
     }
 
-    fn set_fullscreen(&mut self, fullscreen: bool) {
-        unsafe { xdg_toplevel_view_set_fullscreen(self.c_ptr, fullscreen) };
-        if !fullscreen {
+    fn set_active(&self, state: &ViewState) {
+        unsafe { xdg_toplevel_view_set_active(self.c_ptr, state.active) };
+    }
+
+    fn set_fullscreen(&mut self, state: &ViewState) {
+        unsafe { xdg_toplevel_view_set_fullscreen(self.c_ptr, state.fullscreen) };
+        if !state.fullscreen {
             self.hide_fullscreen_bg();
         }
     }
 
-    fn set_maximized(&self, maximized: ViewAxis) {
-        unsafe { xdg_toplevel_view_maximize(self.c_ptr, maximized) };
+    fn set_maximized(&self, state: &ViewState) {
+        unsafe { xdg_toplevel_view_maximize(self.c_ptr, state.maximized) };
     }
 
     fn notify_tiled(&self) {
         unsafe { xdg_toplevel_view_notify_tiled(self.c_ptr) };
     }
 
-    fn set_minimized(&self, _minimized: bool, _x_stacking: &mut Vec<XId>) {
+    fn set_minimized(&self, _state: &ViewState, _x_stacking: &mut Vec<XId>) {
         // not supported
     }
 

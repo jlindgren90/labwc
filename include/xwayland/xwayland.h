@@ -45,24 +45,6 @@ struct xwayland_surface {
 	bool override_redirect;
 
 	xcb_window_t parent;
-
-	/*
-	 * _NET_WM_STRUT_PARTIAL (used by e.g. XWayland panels).
-	 * Note that right/bottom values are offsets from the lower
-	 * right corner of the X11 screen, and the exact relation
-	 * between X11 screen coordinates and the wlr_output_layout
-	 * depends on the XWayland implementation.
-	 */
-	xcb_ewmh_wm_strut_partial_t *strut_partial;
-
-	// _NET_WM_STATE
-	bool modal;
-	bool fullscreen;
-	bool maximized_vert, maximized_horz;
-	bool minimized;
-	bool withdrawn;
-	bool above;
-
 	bool has_net_wm_name;
 
 	struct wl_listener surface_commit;
@@ -99,18 +81,6 @@ void xwayland_surface_configure(struct xwayland_surface *surface,
 	struct wlr_box geom);
 
 void xwayland_surface_close(struct xwayland_surface *surface);
-
-void xwayland_surface_set_withdrawn(struct xwayland_surface *surface,
-	bool withdrawn);
-
-void xwayland_surface_set_minimized(struct xwayland_surface *surface,
-	bool minimized);
-
-void xwayland_surface_set_maximized(struct xwayland_surface *surface,
-	bool maximized_horz, bool maximized_vert);
-
-void xwayland_surface_set_fullscreen(struct xwayland_surface *surface,
-	bool fullscreen);
 
 /**
  * Get a struct xwayland_surface from a struct wlr_surface.
@@ -160,7 +130,6 @@ bool xwayland_surface_fetch_icon(
 /* listeners (external) */
 void xwayland_on_ready(void);
 
-void xwayland_surface_on_map_request(struct xwayland_surface *xsurface);
 void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
 void xwayland_surface_on_map(struct xwayland_surface *xsurface);
 void xwayland_surface_on_unmap(struct xwayland_surface *xsurface);
