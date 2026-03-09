@@ -336,8 +336,14 @@ xwayland_surface_is_focused(struct xwayland_surface *xsurface)
 	return xsurface && xsurface == xsurface->xwm->focus_surface;
 }
 
-static void lab_xwm_surface_activate(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface) {
+void
+xwayland_surface_activate(struct xwayland_surface *xsurface) // may be NULL
+{
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return;
+	}
+
 	if (xsurface && xsurface->override_redirect) {
 		return;
 	}
@@ -432,7 +438,7 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	}
 
 	if (xsurface == xsurface->xwm->focus_surface) {
-		lab_xwm_surface_activate(xsurface->xwm, NULL);
+		xwayland_surface_activate(NULL);
 	}
 	if (xsurface == xsurface->xwm->offered_focus) {
 		xsurface->xwm->offered_focus = NULL;
@@ -1562,16 +1568,6 @@ static void handle_shell_v1_destroy(struct wl_listener *listener,
 	wl_list_remove(&xwm->shell_v1_destroy.link);
 	wl_list_init(&xwm->shell_v1_new_surface.link);
 	wl_list_init(&xwm->shell_v1_destroy.link);
-}
-
-void xwayland_surface_activate(struct xwayland_surface *xsurface,
-		bool activated) {
-	struct xwayland_surface *focused = xsurface->xwm->focus_surface;
-	if (activated) {
-		lab_xwm_surface_activate(xsurface->xwm, xsurface);
-	} else if (focused == xsurface) {
-		lab_xwm_surface_activate(xsurface->xwm, NULL);
-	}
 }
 
 void

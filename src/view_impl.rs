@@ -76,7 +76,9 @@ impl ViewImpl for XView {
     }
 
     fn set_active(&self, active: bool) {
-        unsafe { xwayland_surface_activate(self.xsurface, active) };
+        if active {
+            unsafe { xwayland_surface_activate(self.xsurface) };
+        }
     }
 
     fn set_fullscreen(&mut self, fullscreen: bool) {
