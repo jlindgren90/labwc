@@ -3,7 +3,6 @@
 #include "xwayland.h"
 #include <assert.h>
 #include <cairo.h>
-#include <stdlib.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
@@ -255,33 +254,6 @@ xwayland_surface_on_focus_in(struct xwayland_surface *xsurface)
 	}
 }
 
-/*
- * Sets the initial geometry of maximized/fullscreen views before
- * actually mapping them, so that they can do their initial layout and
- * drawing with the correct geometry. This avoids visual glitches and
- * also avoids undesired layout changes with some apps (e.g. HomeBank).
- */
-void
-xwayland_surface_on_map_request(struct xwayland_surface *xsurface)
-{
-	/*
-	 * Per the Extended Window Manager Hints (EWMH) spec: "The Window
-	 * Manager SHOULD honor _NET_WM_STATE whenever a withdrawn window
-	 * requests to be mapped."
-	 */
-	view_fullscreen(xsurface->view_id, xsurface->fullscreen, /* output */ NULL);
-	enum view_axis axis = VIEW_AXIS_NONE;
-	if (xsurface->maximized_horz) {
-		axis |= VIEW_AXIS_HORIZONTAL;
-	}
-	if (xsurface->maximized_vert) {
-		axis |= VIEW_AXIS_VERTICAL;
-	}
-	view_maximize(xsurface->view_id, axis);
-	view_set_always_on_top(xsurface->view_id, xsurface->above);
-	view_set_strut_partial(xsurface->view_id, xsurface->strut_partial);
-}
-
 static void
 map_unmanaged_surface(struct xwayland_surface *xsurface)
 {
@@ -312,14 +284,6 @@ xwayland_surface_on_map(struct xwayland_surface *xsurface)
 		map_unmanaged_surface(xsurface);
 		return;
 	}
-
-	/*
-	 * The map_request event may not be received when an unmanaged
-	 * (override-redirect) surface becomes managed. To make sure we
-	 * have valid geometry in that case, call handle_map_request()
-	 * explicitly (calling it twice is harmless).
-	 */
-	xwayland_surface_on_map_request(xsurface);
 
 	/*
 	 * If the view was focused (on the xwayland server side) before
@@ -375,12 +339,6 @@ xwayland_view_get_root_id(struct xwayland_surface *xsurface)
 	 * xwayland_surface making it not be associated with a view anymore.
 	 */
 	return (root && root->view_id) ? root->view_id : xsurface->view_id;
-}
-
-bool
-xwayland_view_is_modal_dialog(struct xwayland_surface *xsurface)
-{
-	return xsurface->modal;
 }
 
 void
