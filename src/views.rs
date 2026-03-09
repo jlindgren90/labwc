@@ -136,12 +136,18 @@ impl Views {
     pub fn set_active(&mut self, id: ViewId) {
         if id != self.active_id {
             let prev_id = self.active_id;
+            let mut active_xid = 0;
             self.active_id = id;
             if let Some(prev) = self.by_id.get_mut(&prev_id) {
                 prev.set_active(false);
             }
             if let Some(view) = self.by_id.get_mut(&id) {
                 view.set_active(true);
+                active_xid = view.get_xid();
+            }
+            if active_xid == 0 {
+                // clear xwayland focus if xdg-shell view is active
+                unsafe { xwayland_surface_activate(null_mut()) };
             }
         }
     }
