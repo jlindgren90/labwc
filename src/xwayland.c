@@ -3,7 +3,6 @@
 #include "xwayland.h"
 #include <assert.h>
 #include <cairo.h>
-#include <stdlib.h>
 #include <wlr/types/wlr_compositor.h>
 #include <wlr/types/wlr_output_layout.h>
 #include <wlr/types/wlr_scene.h>
@@ -94,35 +93,6 @@ xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t e
 	 * Note: interactive_begin() checks that view == server.grabbed_view.
 	 */
 	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_RESIZE, edges);
-}
-
-void
-xwayland_surface_on_associate(struct xwayland_surface *xsurface)
-{
-	/*
-	 * Empirically, the associate event is always seen just after
-	 * map_request but before surface map. Window properties are
-	 * also read by wlroots just before emitting associate. So after
-	 * some trial and error, this seems to be the best place to set
-	 * initial view states and compute initial placement.
-	 */
-
-	/*
-	 * Per the Extended Window Manager Hints (EWMH) spec: "The Window
-	 * Manager SHOULD honor _NET_WM_STATE whenever a withdrawn window
-	 * requests to be mapped."
-	 */
-	view_fullscreen(xsurface->view_id, xsurface->fullscreen, /* output */ NULL);
-	enum view_axis axis = VIEW_AXIS_NONE;
-	if (xsurface->maximized_horz) {
-		axis |= VIEW_AXIS_HORIZONTAL;
-	}
-	if (xsurface->maximized_vert) {
-		axis |= VIEW_AXIS_VERTICAL;
-	}
-	view_maximize(xsurface->view_id, axis);
-	view_set_always_on_top(xsurface->view_id, xsurface->above);
-	view_set_strut_partial(xsurface->view_id, xsurface->strut_partial);
 }
 
 void
@@ -369,12 +339,6 @@ xwayland_view_get_root_id(struct xwayland_surface *xsurface)
 	 * xwayland_surface making it not be associated with a view anymore.
 	 */
 	return (root && root->view_id) ? root->view_id : xsurface->view_id;
-}
-
-bool
-xwayland_view_is_modal_dialog(struct xwayland_surface *xsurface)
-{
-	return xsurface->modal;
 }
 
 void

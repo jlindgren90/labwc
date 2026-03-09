@@ -219,6 +219,7 @@ impl View {
         // Map at pending position to reduce flicker
         ul |= self.commit_move(self.state.pending.x, self.state.pending.y);
         self.v.map_scene_surface(&mut self.scene);
+        self.v.notify_mapped(&*self.state);
         // Create SSD if needed
         ul |= self.update_ssd();
         return ul;
@@ -245,7 +246,7 @@ impl View {
     pub fn set_active(&mut self, active: bool) {
         if self.state.active != active {
             self.state.active = active;
-            self.v.set_active(active);
+            self.v.set_active(&self.state);
             self.d.ssd.set_active(active);
             self.send_foreign_toplevel_state();
         }
@@ -254,7 +255,7 @@ impl View {
     fn set_fullscreen(&mut self, fullscreen: bool) {
         if self.state.fullscreen != fullscreen {
             self.state.fullscreen = fullscreen;
-            self.v.set_fullscreen(fullscreen);
+            self.v.set_fullscreen(&self.state);
             self.send_foreign_toplevel_state();
         }
     }
@@ -262,7 +263,7 @@ impl View {
     pub fn set_maximized(&mut self, maximized: ViewAxis) {
         if self.state.maximized != maximized {
             self.state.maximized = maximized;
-            self.v.set_maximized(maximized);
+            self.v.set_maximized(&self.state);
             self.send_foreign_toplevel_state();
         }
     }
@@ -283,7 +284,7 @@ impl View {
     ) -> UpdateLevel {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
-            self.v.set_minimized(minimized, x_stacking);
+            self.v.set_minimized(&self.state, x_stacking);
             self.send_foreign_toplevel_state();
             if self.state.mapped {
                 unsafe { view_scene_tree_set_visible(self.scene.scene_tree, !minimized) };
