@@ -38,12 +38,16 @@ pub trait ViewImpl {
 }
 
 pub struct XView {
+    xid: XId,
     xsurface: *mut XSurface,
 }
 
 impl XView {
-    pub fn new(xsurface: *mut XSurface) -> Self {
-        Self { xsurface }
+    pub fn new(xid: XId, xsurface: *mut XSurface) -> Self {
+        Self {
+            xid: xid,
+            xsurface: xsurface,
+        }
     }
 }
 
@@ -53,7 +57,7 @@ impl ViewImpl for XView {
     }
 
     fn get_xid(&self) -> XId {
-        unsafe { xwayland_view_get_xid(self.xsurface) }
+        self.xid
     }
 
     fn get_parent(&self) -> ViewId {
