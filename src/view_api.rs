@@ -28,8 +28,13 @@ fn do_update(level: UpdateLevel) {
 lazy_static!(VIEWS, Views, Views::default(), views, views_mut);
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_add(c_ptr: *mut CView, xsurface: *mut XSurface) -> ViewId {
-    views_mut().add(c_ptr, xsurface)
+pub extern "C" fn view_add_xdg(c_ptr: *mut CView) -> ViewId {
+    views_mut().add(ViewSpec::Xdg(c_ptr))
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_add_xwayland(xid: XId, xsurface: *mut XSurface) -> ViewId {
+    views_mut().add(ViewSpec::Xwayland(xid, xsurface))
 }
 
 #[unsafe(no_mangle)]

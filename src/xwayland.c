@@ -23,12 +23,6 @@ xwayland_view_get_surface(struct xwayland_surface *xsurface)
 	return xsurface->surface;
 }
 
-XId
-xwayland_view_get_xid(struct xwayland_surface *xsurface)
-{
-	return xsurface->window_id;
-}
-
 static struct xwayland_surface *
 top_parent_of(struct xwayland_surface *xsurface)
 {
@@ -180,7 +174,7 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 		xsurface->view_id = 0;
 	} else {
 		assert(!xsurface->view_id);
-		xsurface->view_id = view_add(NULL, xsurface);
+		xsurface->view_id = view_add_xwayland(xsurface->window_id, xsurface);
 		// Re-read properties after unmanaged surface becomes managed
 		xwayland_surface_read_properties(xsurface);
 	}

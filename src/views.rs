@@ -27,10 +27,10 @@ pub struct Views {
 }
 
 impl Views {
-    pub fn add(&mut self, c_ptr: *mut CView, xsurface: *mut XSurface) -> ViewId {
+    pub fn add(&mut self, spec: ViewSpec) -> ViewId {
         self.max_used_id += 1;
         let id = self.max_used_id;
-        self.by_id.insert(id, View::new(id, c_ptr, xsurface));
+        self.by_id.insert(id, View::new(id, spec));
         self.order.push(id);
         return id;
     }
