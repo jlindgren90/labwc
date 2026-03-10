@@ -122,7 +122,6 @@ void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
 void xdg_toplevel_view_close(CView *view);
 
 WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
-XId xwayland_view_get_xid(XSurface *xsurface);
 ViewId xwayland_view_get_root_id(XSurface *xsurface);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);

@@ -640,7 +640,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 	struct view *view = znew(*view);
 	view->xdg_surface = xdg_surface;
 
-	view->id = view_add(view, /* xsurface */ NULL);
+	view->id = view_add_xdg(view);
 	view->st = view_get_state(view->id);
 	assert(view->st);
 

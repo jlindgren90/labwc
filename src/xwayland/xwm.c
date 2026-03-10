@@ -151,7 +151,7 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
 	if (!surface->override_redirect) {
-		surface->view_id = view_add(NULL, surface);
+		surface->view_id = view_add_xwayland(surface->window_id, surface);
 		xwayland_surface_read_properties(surface);
 	}
 
