@@ -2,6 +2,7 @@
 //
 use crate::bindings::*;
 use crate::rect::*;
+use crate::xwm::*;
 use std::ptr::null_mut;
 
 pub trait ViewImpl {
@@ -17,9 +18,9 @@ pub trait ViewImpl {
     fn set_fullscreen(&mut self, state: &ViewState);
     fn set_maximized(&self, state: &ViewState);
     fn notify_tiled(&self);
-    fn set_minimized(&self, state: &ViewState, x_stacking: &mut Vec<XId>);
+    fn set_minimized(&self, state: &ViewState, xwm: &mut Xwm);
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool);
-    fn raise(&self, x_stacking: &mut Vec<XId>);
+    fn raise(&self, xwm: &mut Xwm);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn focus(&self, focus_mode: ViewFocusMode) -> bool;
     fn close(&self);
@@ -103,17 +104,8 @@ impl ViewImpl for XView {
         // not supported
     }
 
-    fn set_minimized(&self, state: &ViewState, x_stacking: &mut Vec<XId>) {
-        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
-        if state.minimized {
-            // restack minimized view to bottom
-            unsafe {
-                xwayland_surface_stack_above(self.xsurface, 0 /* None */)
-            };
-            let xid = self.get_xid();
-            x_stacking.retain(|&x| x != xid);
-            x_stacking.insert(0, xid);
-        }
+    fn set_minimized(&self, state: &ViewState, xwm: &mut Xwm) {
+        xwm.set_minimized(self.xid, self.xsurface, state);
     }
 
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool) {
@@ -122,15 +114,8 @@ impl ViewImpl for XView {
         }
     }
 
-    fn raise(&self, x_stacking: &mut Vec<XId>) {
-        let xid = self.get_xid();
-        if let Some(&prev) = x_stacking.last()
-            && prev != xid
-        {
-            unsafe { xwayland_surface_stack_above(self.xsurface, prev) };
-        }
-        x_stacking.retain(|&x| x != xid);
-        x_stacking.push(xid);
+    fn raise(&self, xwm: &mut Xwm) {
+        xwm.raise(self.xid, self.xsurface);
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
@@ -269,7 +254,7 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_notify_tiled(self.c_ptr) };
     }
 
-    fn set_minimized(&self, _state: &ViewState, _x_stacking: &mut Vec<XId>) {
+    fn set_minimized(&self, _state: &ViewState, _xwm: &mut Xwm) {
         // not supported
     }
 
@@ -279,7 +264,7 @@ impl ViewImpl for XdgView {
         }
     }
 
-    fn raise(&self, _x_stacking: &mut Vec<XId>) {
+    fn raise(&self, _xwm: &mut Xwm) {
         // not supported
     }
 
