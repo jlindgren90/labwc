@@ -34,6 +34,11 @@ impl BitOrAssign for UpdateLevel {
     }
 }
 
+pub enum ViewSpec {
+    Xdg(*mut CView),
+    Xwayland(XId, *mut XSurface),
+}
+
 impl ViewState {
     pub fn visible(&self) -> bool {
         self.mapped && !self.minimized
@@ -84,13 +89,12 @@ pub struct View {
 }
 
 impl View {
-    pub fn new(id: ViewId, c_ptr: *mut CView, xsurface: *mut XSurface) -> Self {
+    pub fn new(id: ViewId, spec: ViewSpec) -> Self {
         let mut view = View {
             id: id,
-            v: if !xsurface.is_null() {
-                Box::new(XView::new(xsurface))
-            } else {
-                Box::new(XdgView::new(c_ptr))
+            v: match spec {
+                ViewSpec::Xdg(c_ptr) => Box::new(XdgView::new(c_ptr)),
+                ViewSpec::Xwayland(xid, xsurface) => Box::new(XView::new(xid, xsurface)),
             },
             d: ViewData::default(),
             state: Box::default(),
