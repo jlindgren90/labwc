@@ -63,6 +63,7 @@ struct output *output_get_adjacent(struct output *output,
 	enum lab_edge edge, bool wrap);
 
 bool output_is_usable(struct output *output);
+struct wlr_box output_layout_coords(struct output *output);
 void output_update_usable_area(struct output *output);
 void output_update_all_usable_areas(bool layout_changed);
 struct wlr_box output_usable_area_in_layout_coords(struct output *output);

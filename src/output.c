@@ -983,6 +983,17 @@ output_is_usable(struct output *output)
 	return output && output->wlr_output->enabled && output->scene_output;
 }
 
+struct wlr_box
+output_layout_coords(struct output *output)
+{
+	struct wlr_box box = {0};
+	if (output_is_usable(output)) {
+		wlr_output_layout_get_box(g_server.output_layout,
+			output->wlr_output, &box);
+	}
+	return box;
+}
+
 /* returns true if usable area changed */
 static bool
 update_usable_area(struct output *output)
