@@ -3,6 +3,7 @@
 use crate::bindings::*;
 use crate::lazy_static;
 use crate::util::*;
+use crate::view_geom::*;
 use crate::views::*;
 use std::ffi::c_char;
 use std::ptr::null;
@@ -109,6 +110,26 @@ pub extern "C" fn view_set_tiled(id: ViewId, tiled: LabEdge) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_ensure_geom_onscreen(view_st: &ViewState, geom: &mut Rect) {
+    ensure_geom_onscreen(view_st, geom);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_compute_default_geom(
+    view_st: &ViewState,
+    geom: &mut Rect,
+    rel_to: Option<&Rect>,
+    keep_position: bool,
+) {
+    compute_default_geom(
+        view_st,
+        geom,
+        *rel_to.unwrap_or(&Rect::default()),
+        keep_position,
+    );
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_set_current_pos(id: ViewId, x: i32, y: i32) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_current_pos(x, y);
@@ -137,9 +158,9 @@ pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_set_natural_geom(id: ViewId, geom: Rect) {
+pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
     if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_natural_geom(geom);
+        view.set_fallback_natural_geom();
     }
 }
 

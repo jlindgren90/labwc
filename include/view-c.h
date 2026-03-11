@@ -77,5 +77,10 @@ void cursor_update_focus(void);
 
 // from output.h
 Output *output_nearest_to(int lx, int ly);
+Rect output_layout_coords(Output *output);
+Rect output_usable_area_in_layout_coords(Output *output);
+
+// from ssd.h
+Border ssd_get_margin(const ViewState *view_st);
 
 #endif // LABWC_VIEW_C_H

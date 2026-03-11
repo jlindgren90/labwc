@@ -2,6 +2,13 @@
 #ifndef LABWC_RS_TYPES_H
 #define LABWC_RS_TYPES_H
 
+typedef struct border {
+	int top;
+	int right;
+	int bottom;
+	int left;
+} Border;
+
 // Compatible with wlr_box
 #ifndef Rect
 typedef struct {

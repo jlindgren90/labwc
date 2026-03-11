@@ -20,6 +20,8 @@ struct view;
 struct wlr_scene;
 struct wlr_scene_node;
 
+typedef struct ViewState ViewState;
+
 /*
  * Public SSD API
  *
@@ -30,7 +32,7 @@ struct wlr_scene_node;
  * NULL scene/view arguments are not allowed.
  */
 struct ssd *ssd_create(struct view *view, bool active);
-struct border ssd_get_margin(struct view *view);
+struct border ssd_get_margin(const ViewState *view_st);
 void ssd_set_active(struct ssd *ssd, bool active);
 void ssd_update_title(struct ssd *ssd);
 void ssd_update_icon(struct ssd *ssd);
