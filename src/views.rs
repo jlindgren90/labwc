@@ -2,6 +2,7 @@
 //
 use crate::bindings::*;
 use crate::view::*;
+use crate::view_geom::*;
 use crate::view_grab::*;
 use std::collections::{BTreeMap, HashSet};
 use std::ptr::null_mut;
@@ -147,6 +148,39 @@ impl Views {
             return view.commit_geom(width, height, resize_edges);
         } else {
             return UpdateLevel::None;
+        }
+    }
+
+    // Called from xdg-shell commit handler
+    pub fn set_initial_commit_size(
+        &mut self,
+        id: ViewId,
+        width: i32,
+        height: i32,
+        rel_to: Rect,
+        cursor_x: i32,
+        cursor_y: i32,
+    ) {
+        if let Some(view) = self.by_id.get_mut(&id)
+            && view.get_state().floating()
+        {
+            let state = view.get_state();
+            let mut geom = state.pending;
+            (geom.width, geom.height) = (width, height);
+            if id == self.moving_id {
+                self.grab.adjust_move_origin(width, height);
+                (geom.x, geom.y) = self.grab.compute_move_position(cursor_x, cursor_y);
+            } else {
+                compute_default_geom(state, &mut geom, rel_to, false);
+            }
+            // Update pending geometry directly unless size was changed
+            if geom.width == width && geom.height == height {
+                view.set_pending_geom(geom);
+            } else {
+                // Ignore UpdateLevel due to being inside commit handler.
+                // Updates are handled by commit_move() later if needed.
+                _ = view.move_resize(geom);
+            }
         }
     }
 
@@ -359,19 +393,6 @@ impl Views {
             return true;
         }
         return false;
-    }
-
-    pub fn get_moving(&self) -> *mut CView {
-        let moving = self.by_id.get(&self.moving_id);
-        return moving.map_or(null_mut(), View::get_c_ptr);
-    }
-
-    pub fn adjust_move_origin(&mut self, width: i32, height: i32) {
-        self.grab.adjust_move_origin(width, height);
-    }
-
-    pub fn compute_move_position(&self, cursor_x: i32, cursor_y: i32) -> (i32, i32) {
-        self.grab.compute_move_position(cursor_x, cursor_y)
     }
 
     pub fn continue_move(&mut self, cursor_x: i32, cursor_y: i32) -> UpdateLevel {

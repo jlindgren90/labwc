@@ -12,6 +12,8 @@ use std::ffi::CString;
 use std::ops::BitOrAssign;
 use std::ptr::null_mut;
 
+const FALLBACK_X: i32 = 100;
+const FALLBACK_Y: i32 = 100;
 const FALLBACK_WIDTH: i32 = 640;
 const FALLBACK_HEIGHT: i32 = 480;
 
@@ -265,6 +267,23 @@ impl View {
         self.state.current.width = width;
         self.state.current.height = height;
         return self.commit_move(x, y);
+    }
+
+    // Used only for xdg-shell views
+    pub fn commit_resize_timeout(&mut self) -> UpdateLevel {
+        if !self.state.mapped {
+            return UpdateLevel::None;
+        }
+        if rect_empty(self.state.pending) {
+            // Pending geometry is invalid, set fallback position
+            let usable = unsafe { output_usable_area_in_layout_coords(self.state.output) };
+            self.state.pending.x = usable.x + FALLBACK_X;
+            self.state.pending.y = usable.y + FALLBACK_Y;
+        }
+        // Commit pending position but reset size to current
+        self.state.pending.width = self.state.current.width;
+        self.state.pending.height = self.state.current.height;
+        return self.commit_move(self.state.pending.x, self.state.pending.y);
     }
 
     pub fn set_fallback_natural_geom(&mut self) {
