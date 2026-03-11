@@ -204,11 +204,10 @@ ensure_initial_geometry_and_output(struct view *view)
 	}
 
 	view_set_ssd_enabled(view->id, want_deco(xsurface));
-	view_constrain_size_to_that_of_usable_area(view);
 
-	if (!has_position) {
-		view_center(view, NULL);
-	}
+	struct wlr_box geom = view->st->pending;
+	view_compute_default_geom(view->st, &geom, NULL, has_position);
+	view_move_resize(view->id, geom);
 }
 
 static void
@@ -630,8 +629,7 @@ check_natural_geometry(struct view *view)
 	if (!view_is_floating(view->st)
 			&& (view->st->natural_geom.width < LAB_MIN_VIEW_WIDTH
 			|| view->st->natural_geom.height < LAB_MIN_VIEW_HEIGHT)) {
-		view_set_natural_geom(view->id,
-			view_get_fallback_natural_geometry(view));
+		view_set_fallback_natural_geom(view->id);
 	}
 }
 

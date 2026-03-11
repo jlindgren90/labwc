@@ -3,7 +3,6 @@
 #define LABWC_SSD_INTERNAL_H
 
 #include <wlr/util/box.h>
-#include "common/border.h"
 #include "theme.h"
 #include "view.h"
 
