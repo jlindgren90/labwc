@@ -6,9 +6,11 @@
 #include <stdint.h>
 #include <wayland-util.h>
 #include <wlr/util/box.h>
+#include <xcb/xcb_ewmh.h>
 #include <xkbcommon/xkbcommon.h>
 
 #define Rect struct wlr_box
+#define ViewStrutPartial xcb_ewmh_wm_strut_partial_t
 #include "view-c.h"
 #include "view_api.h"
 

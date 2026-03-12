@@ -42,6 +42,24 @@ typedef struct view_size_hints {
 	int base_height;
 } ViewSizeHints;
 
+// Compatible with xcb_ewmh_wm_strut_partial_t
+#ifndef ViewStrutPartial
+typedef struct ViewStrutPartial {
+	unsigned left;
+	unsigned right;
+	unsigned top;
+	unsigned bottom;
+	unsigned left_start_y;
+	unsigned left_end_y;
+	unsigned right_start_y;
+	unsigned right_end_y;
+	unsigned top_start_x;
+	unsigned top_end_x;
+	unsigned bottom_start_x;
+	unsigned bottom_end_x;
+} ViewStrutPartial;
+#endif
+
 typedef struct ViewState {
 	const char *app_id;
 	const char *title;
@@ -102,8 +120,6 @@ ViewId xwayland_view_get_root_id(CView *view);
 _Bool xwayland_view_is_modal_dialog(CView *view);
 ViewSizeHints xwayland_view_get_size_hints(CView *view);
 XSurfaceProps xwayland_view_get_surface_props(CView *view);
-_Bool xwayland_view_has_strut_partial(CView *view);
-void xwayland_view_adjust_usable_area(CView *view, Output *output);
 void xwayland_view_set_active(CView *view, _Bool active);
 void xwayland_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xwayland_view_maximize(CView *view, ViewAxis maximized);
@@ -122,6 +138,11 @@ Output *output_nearest_to_cursor(void);
 _Bool output_is_usable(Output *output);
 Rect output_layout_coords(Output *output);
 Rect output_usable_area_in_layout_coords(Output *output);
+void output_update_all_usable_areas(_Bool layout_changed);
+
+// defined in xwayland.c
+void output_adjust_usable_area_for_strut_partial(Output *output,
+	const ViewStrutPartial *strut);
 
 WlrBuffer *scaled_icon_buffer_load(const char *app_id,
 	CairoSurface *icon_surface);

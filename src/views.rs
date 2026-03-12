@@ -217,7 +217,11 @@ impl Views {
 
     pub fn adjust_usable_area(&self, output: *mut Output) {
         for v in self.by_id.values() {
-            v.adjust_usable_area(output);
+            if v.get_state().mapped
+                && let Some(strut) = v.get_strut_partial()
+            {
+                unsafe { output_adjust_usable_area_for_strut_partial(output, strut) };
+            }
         }
     }
 

@@ -15,6 +15,11 @@ pub extern "C" fn view_is_floating(state: &ViewState) -> bool {
 }
 
 fn do_update(level: UpdateLevel) {
+    if level >= UpdateLevel::UsableArea {
+        unsafe {
+            output_update_all_usable_areas(/* layout_changed */ false)
+        };
+    }
     if level >= UpdateLevel::Cursor {
         unsafe { cursor_update_focus() };
     }
@@ -62,6 +67,16 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_title(cstring(title));
     }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_set_strut_partial(id: ViewId, strut_partial: Option<&ViewStrutPartial>) {
+    let ul = if let Some(view) = views_mut().get_view_mut(id) {
+        view.set_strut_partial(strut_partial)
+    } else {
+        return;
+    };
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]

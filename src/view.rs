@@ -23,7 +23,8 @@ const FALLBACK_HEIGHT: i32 = 480;
 #[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
 pub enum UpdateLevel {
     None,
-    Cursor, // i.e. cursor_update_focus()
+    Cursor,     // i.e. cursor_update_focus()
+    UsableArea, // i.e. output_update_all_usable_areas()
 }
 
 impl BitOrAssign for UpdateLevel {
@@ -65,6 +66,7 @@ struct ViewData {
     app_id: CString,
     title: CString,
     ssd: Ssd,
+    strut_partial: Option<ViewStrutPartial>,
     foreign_toplevels: Vec<ForeignToplevel>,
     icon_surfaces: Vec<CairoSurfacePtr>,
     icon_buffer: Option<WlrBufferPtr>,
@@ -124,10 +126,6 @@ impl View {
         self.v.get_size_hints()
     }
 
-    pub fn has_strut_partial(&self) -> bool {
-        self.v.has_strut_partial()
-    }
-
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
@@ -150,6 +148,18 @@ impl View {
                 toplevel.send_done();
             }
         }
+    }
+
+    pub fn set_strut_partial(&mut self, strut_partial: Option<&ViewStrutPartial>) -> UpdateLevel {
+        self.d.strut_partial = strut_partial.copied();
+        if self.state.mapped {
+            return UpdateLevel::UsableArea;
+        }
+        return UpdateLevel::None;
+    }
+
+    pub fn get_strut_partial(&self) -> Option<&ViewStrutPartial> {
+        self.d.strut_partial.as_ref()
     }
 
     fn get_initial_floating_geom(&mut self, enforce_min: bool) -> Option<Rect> {
@@ -200,6 +210,9 @@ impl View {
             *was_shown = true;
             ul |= UpdateLevel::Cursor;
         }
+        if self.d.strut_partial.is_some() {
+            ul |= UpdateLevel::UsableArea;
+        }
         // Map at pending position to reduce flicker
         ul |= self.commit_move(self.state.pending.x, self.state.pending.y);
         self.v.map_scene_surface(&mut self.scene);
@@ -215,6 +228,9 @@ impl View {
             unsafe { view_scene_tree_set_visible(self.scene.scene_tree, false) };
             *was_hidden = true;
             ul |= UpdateLevel::Cursor;
+        }
+        if self.d.strut_partial.is_some() {
+            ul |= UpdateLevel::UsableArea;
         }
         self.v.unmap_scene_surface(&mut self.scene);
         for resource in self.d.foreign_toplevels.drain(..) {
@@ -417,7 +433,7 @@ impl View {
         }
         let ul = if !is_floating {
             self.apply_special_geom()
-        } else if self.has_strut_partial() {
+        } else if self.d.strut_partial.is_some() {
             // Do not move panels etc. out of their own reserved area
             UpdateLevel::None
         } else {
@@ -428,12 +444,6 @@ impl View {
         };
         self.d.in_layout_change = false;
         return ul;
-    }
-
-    pub fn adjust_usable_area(&self, output: *mut Output) {
-        if self.state.mapped {
-            self.v.adjust_usable_area(output);
-        }
     }
 
     fn update_ssd(&mut self) -> UpdateLevel {

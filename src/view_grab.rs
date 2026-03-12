@@ -69,7 +69,7 @@ impl ViewGrab {
 
     pub fn start_move(&self, view: &mut View) -> bool {
         // Prevent moving panels etc. and fullscreen views
-        if view.has_strut_partial() || view.get_state().fullscreen {
+        if view.get_strut_partial().is_some() || view.get_state().fullscreen {
             return false;
         }
         // Store natural geometry at start of move
@@ -123,7 +123,10 @@ impl ViewGrab {
     pub fn start_resize(&mut self, view: &mut View, edges: LabEdge) -> bool {
         let state = view.get_state();
         // Prevent resizing panels and fullscreen/fully maximized views
-        if view.has_strut_partial() || state.fullscreen || state.maximized == VIEW_AXIS_BOTH {
+        if view.get_strut_partial().is_some()
+            || state.fullscreen
+            || state.maximized == VIEW_AXIS_BOTH
+        {
             return false;
         }
         // Override resize_edges if specified explicitly
