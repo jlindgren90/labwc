@@ -36,7 +36,7 @@ attach_ssd_button(enum lab_node_type type, struct wlr_scene_tree *parent,
 
 	if (type == LAB_NODE_BUTTON_WINDOW_ICON) {
 		struct wlr_scene_buffer *icon_buffer =
-			wlr_scene_buffer_create(root, NULL);
+			lab_wlr_scene_buffer_create(root, NULL);
 		int icon_size = g_theme.window_icon_size;
 		wlr_scene_buffer_set_dest_size(icon_buffer,
 			icon_size, icon_size);

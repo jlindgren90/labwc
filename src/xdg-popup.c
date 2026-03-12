@@ -11,6 +11,7 @@
 #include <wlr/types/wlr_xdg_shell.h>
 #include "common/macros.h"
 #include "common/mem.h"
+#include "common/scene-helpers.h"
 #include "labwc.h"
 #include "node.h"
 #include "output.h"
@@ -147,9 +148,10 @@ xdg_popup_create(ViewId view_id, struct wlr_xdg_surface *toplevel,
 	CONNECT_SIGNAL(wlr_popup->base->surface, popup, commit);
 	CONNECT_SIGNAL(wlr_popup, popup, reposition);
 
-	popup->scene_tree = wlr_scene_tree_create(parent_tree);
+	popup->scene_tree = lab_wlr_scene_tree_create(parent_tree);
 	popup->surface_tree = wlr_scene_subsurface_tree_create(
 		popup->scene_tree, wlr_popup->base->surface);
+	die_if_null(popup->surface_tree);
 
 	node_descriptor_create(&popup->scene_tree->node,
 		LAB_NODE_XDG_POPUP, view_id, /*data*/ NULL);

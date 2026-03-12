@@ -37,7 +37,7 @@ create_fields_scene(ViewId view_id, struct wlr_scene_tree *parent,
 		int icon_size = MIN(field_width, g_theme.window_icon_size);
 
 		struct wlr_scene_buffer *scene_buffer =
-			wlr_scene_buffer_create(parent, NULL);
+			lab_wlr_scene_buffer_create(parent, NULL);
 		wlr_scene_buffer_set_dest_size(scene_buffer, icon_size, icon_size);
 		struct wlr_buffer *buffer = view_get_icon_buffer(view_id);
 		wlr_scene_buffer_set_buffer(scene_buffer, buffer);
