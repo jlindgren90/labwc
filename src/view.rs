@@ -587,16 +587,10 @@ impl View {
     // Returns true if focus was (immediately) changed
     pub fn focus(&self) -> bool {
         if self.state.mapped {
-            if self.state.focus_mode == VIEW_FOCUS_MODE_ALWAYS {
-                unsafe { seat_focus_surface_no_notify(self.v.get_surface()) };
-                return true;
-            } else if self.state.focus_mode == VIEW_FOCUS_MODE_UNLIKELY
-                || self.state.focus_mode == VIEW_FOCUS_MODE_LIKELY
-            {
-                self.v.offer_focus();
-            }
+            self.v.focus(self.state.focus_mode)
+        } else {
+            false
         }
-        return false;
     }
 
     pub fn refocus(&self) {
