@@ -279,17 +279,6 @@ xwayland_surface_on_map(struct xwayland_surface *xsurface)
 		return;
 	}
 
-	/*
-	 * If the view was focused (on the xwayland server side) before
-	 * being mapped, update the seat focus now. Note that this only
-	 * really matters in the case of Globally Active input windows.
-	 * In all other cases, it's redundant since view_impl_map()
-	 * results in the view being focused anyway.
-	 */
-	if (xwayland_surface_is_focused(xsurface)) {
-		seat_focus_surface(xsurface->surface);
-	}
-
 	view_map(xsurface->view_id);
 }
 

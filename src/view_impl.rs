@@ -21,7 +21,7 @@ pub trait ViewImpl {
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool);
     fn raise(&self, x_stacking: &mut Vec<XId>);
     fn get_focus_mode(&self) -> ViewFocusMode;
-    fn offer_focus(&self);
+    fn focus(&self, focus_mode: ViewFocusMode) -> bool;
     fn close(&self);
 
     // scene-tree helpers
@@ -153,8 +153,19 @@ impl ViewImpl for XView {
         return VIEW_FOCUS_MODE_NEVER;
     }
 
-    fn offer_focus(&self) {
-        unsafe { xwayland_surface_offer_focus(self.xsurface) };
+    fn focus(&self, focus_mode: ViewFocusMode) -> bool {
+        // Set seat focus directly if input hint is set OR if surface
+        // already has server-side focus (which can happen before map).
+        // Server-side focus is updated later via set_active().
+        if focus_mode == VIEW_FOCUS_MODE_ALWAYS
+            || unsafe { xwayland_surface_is_focused(self.xsurface) }
+        {
+            unsafe { seat_focus_surface_no_notify(self.get_surface()) };
+            return true;
+        } else if focus_mode == VIEW_FOCUS_MODE_UNLIKELY || focus_mode == VIEW_FOCUS_MODE_LIKELY {
+            unsafe { xwayland_surface_offer_focus(self.xsurface) };
+        }
+        return false;
     }
 
     fn close(&self) {
@@ -276,8 +287,9 @@ impl ViewImpl for XdgView {
         VIEW_FOCUS_MODE_ALWAYS
     }
 
-    fn offer_focus(&self) {
-        // not supported
+    fn focus(&self, _focus_mode: ViewFocusMode) -> bool {
+        unsafe { seat_focus_surface_no_notify(self.get_surface()) };
+        return true;
     }
 
     fn close(&self) {
