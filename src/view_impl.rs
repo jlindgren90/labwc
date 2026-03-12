@@ -10,14 +10,12 @@ pub trait ViewImpl {
     fn is_modal_dialog(&self) -> bool;
     fn get_size_hints(&self) -> ViewSizeHints;
     fn get_surface_props(&self) -> Option<XSurfaceProps>;
-    fn has_strut_partial(&self) -> bool;
     fn set_active(&self, active: bool);
     fn set_fullscreen(&mut self, fullscreen: bool);
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
     fn configure(&self, geom: Rect, commit_move: *mut bool);
-    fn adjust_usable_area(&self, output: *mut Output);
     fn get_focus_mode(&self) -> ViewFocusMode;
     fn focus(&self) -> bool;
     fn offer_focus(&self);
@@ -71,10 +69,6 @@ impl ViewImpl for XView {
         Some(unsafe { xwayland_view_get_surface_props(self.c_ptr) })
     }
 
-    fn has_strut_partial(&self) -> bool {
-        unsafe { xwayland_view_has_strut_partial(self.c_ptr) }
-    }
-
     fn set_active(&self, active: bool) {
         unsafe { xwayland_view_set_active(self.c_ptr, active) };
     }
@@ -99,10 +93,6 @@ impl ViewImpl for XView {
         unsafe {
             xwayland_view_configure(self.c_ptr, geom, commit_move);
         }
-    }
-
-    fn adjust_usable_area(&self, output: *mut Output) {
-        unsafe { xwayland_view_adjust_usable_area(self.c_ptr, output) };
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
@@ -191,10 +181,6 @@ impl ViewImpl for XdgView {
         None // not supported
     }
 
-    fn has_strut_partial(&self) -> bool {
-        false
-    }
-
     fn set_active(&self, active: bool) {
         unsafe { xdg_toplevel_view_set_active(self.c_ptr, active) };
     }
@@ -222,10 +208,6 @@ impl ViewImpl for XdgView {
         unsafe {
             xdg_toplevel_view_configure(self.c_ptr, geom, commit_move);
         }
-    }
-
-    fn adjust_usable_area(&self, _output: *mut Output) {
-        // not supported
     }
 
     fn get_focus_mode(&self) -> ViewFocusMode {
