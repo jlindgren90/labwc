@@ -116,14 +116,6 @@ xwayland_view_get_focus_mode(struct view *view)
 	return VIEW_FOCUS_MODE_NEVER;
 }
 
-bool
-xwayland_view_has_strut_partial(struct view *view)
-{
-	struct wlr_xwayland_surface *xsurface =
-		xwayland_surface_from_view(view);
-	return (bool)xsurface->strut_partial;
-}
-
 void
 xwayland_view_offer_focus(struct view *view)
 {
@@ -269,6 +261,7 @@ handle_associate(struct wl_listener *listener, void *data)
 	}
 	view_maximize(view->id, axis);
 	view_set_always_on_top(view->id, xsurface->above);
+	view_set_strut_partial(view->id, xsurface->strut_partial);
 }
 
 static void
@@ -519,9 +512,7 @@ handle_set_strut_partial(struct wl_listener *listener, void *data)
 {
 	struct view *view = wl_container_of(listener, view, set_strut_partial);
 
-	if (view->st->mapped) {
-		output_update_all_usable_areas(false);
-	}
+	view_set_strut_partial(view->id, view->xwayland_surface->strut_partial);
 }
 
 static void
@@ -642,9 +633,6 @@ handle_map(struct wl_listener *listener, void *data)
 	}
 
 	view_map(view->id);
-	if (xwayland_view_has_strut_partial(view)) {
-		output_update_all_usable_areas(false);
-	}
 }
 
 static void
@@ -675,9 +663,6 @@ handle_unmap(struct wl_listener *listener, void *data)
 	assert(view->st && view->st->mapped);
 
 	view_unmap(view->id);
-	if (xwayland_view_has_strut_partial(view)) {
-		output_update_all_usable_areas(false);
-	}
 }
 
 void
@@ -986,20 +971,11 @@ intervals_overlap(int start_a, int end_a, int start_b, int end_b)
  * area of the output based on _NET_WM_STRUT_PARTIAL property.
  */
 void
-xwayland_view_adjust_usable_area(struct view *view, struct output *output)
+output_adjust_usable_area_for_strut_partial(struct output *output,
+		const xcb_ewmh_wm_strut_partial_t *strut)
 {
-	assert(view);
 	assert(output);
-
-	if (!view->xwayland_surface) {
-		return;
-	}
-
-	xcb_ewmh_wm_strut_partial_t *strut =
-		xwayland_surface_from_view(view)->strut_partial;
-	if (!strut) {
-		return;
-	}
+	assert(strut);
 
 	/* these are layout coordinates */
 	struct wlr_box lb = { 0 };
