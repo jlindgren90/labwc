@@ -15,16 +15,16 @@ static void destroy_resource(struct wl_client *client,
 static const struct xwayland_shell_v1_interface shell_impl;
 static const struct xwayland_surface_v1_interface xwl_surface_impl;
 
-static void xwl_surface_destroy(struct wlr_xwayland_surface_v1 *xwl_surface) {
+static void xwl_surface_destroy(struct xwayland_surface_v1 *xwl_surface) {
 	wl_list_remove(&xwl_surface->link);
 	wl_resource_set_user_data(xwl_surface->resource, NULL); // make inert
 	free(xwl_surface);
 }
 
 /**
- * Get a struct wlr_xwayland_shell_v1 from a resource.
+ * Get a struct xwayland_shell_v1 from a resource.
  */
-static struct wlr_xwayland_shell_v1 *shell_from_resource(
+static struct xwayland_shell_v1 *shell_from_resource(
 		struct wl_resource *resource) {
 	assert(wl_resource_instance_of(resource,
 		&xwayland_shell_v1_interface, &shell_impl));
@@ -32,11 +32,11 @@ static struct wlr_xwayland_shell_v1 *shell_from_resource(
 }
 
 /**
- * Get a struct wlr_xwayland_surface_v1 from a resource.
+ * Get a struct xwayland_surface_v1 from a resource.
  *
  * Returns NULL if the Xwayland surface is inert.
  */
-static struct wlr_xwayland_surface_v1 *xwl_surface_from_resource(
+static struct xwayland_surface_v1 *xwl_surface_from_resource(
 		struct wl_resource *resource) {
 	assert(wl_resource_instance_of(resource,
 		&xwayland_surface_v1_interface, &xwl_surface_impl));
@@ -44,7 +44,7 @@ static struct wlr_xwayland_surface_v1 *xwl_surface_from_resource(
 }
 
 static void xwl_surface_role_commit(struct wlr_surface *surface) {
-	struct wlr_xwayland_surface_v1 *xwl_surface = xwl_surface_from_resource(surface->role_resource);
+	struct xwayland_surface_v1 *xwl_surface = xwl_surface_from_resource(surface->role_resource);
 	if (xwl_surface == NULL) {
 		return;
 	}
@@ -57,7 +57,7 @@ static void xwl_surface_role_commit(struct wlr_surface *surface) {
 }
 
 static void xwl_surface_role_destroy(struct wlr_surface *surface) {
-	struct wlr_xwayland_surface_v1 *xwl_surface = xwl_surface_from_resource(surface->role_resource);
+	struct xwayland_surface_v1 *xwl_surface = xwl_surface_from_resource(surface->role_resource);
 	if (xwl_surface == NULL) {
 		return;
 	}
@@ -73,7 +73,7 @@ static const struct wlr_surface_role xwl_surface_role = {
 
 static void xwl_surface_handle_set_serial(struct wl_client *client,
 		struct wl_resource *resource, uint32_t serial_lo, uint32_t serial_hi) {
-	struct wlr_xwayland_surface_v1 *xwl_surface =
+	struct xwayland_surface_v1 *xwl_surface =
 		xwl_surface_from_resource(resource);
 	if (xwl_surface == NULL) {
 		return;
@@ -97,10 +97,10 @@ static const struct xwayland_surface_v1_interface xwl_surface_impl = {
 static void shell_handle_get_xwayland_surface(struct wl_client *client,
 		struct wl_resource *shell_resource, uint32_t id,
 		struct wl_resource *surface_resource) {
-	struct wlr_xwayland_shell_v1 *shell = shell_from_resource(shell_resource);
+	struct xwayland_shell_v1 *shell = shell_from_resource(shell_resource);
 	struct wlr_surface *surface = wlr_surface_from_resource(surface_resource);
 
-	struct wlr_xwayland_surface_v1 *xwl_surface = calloc(1, sizeof(*xwl_surface));
+	struct xwayland_surface_v1 *xwl_surface = calloc(1, sizeof(*xwl_surface));
 	if (xwl_surface == NULL) {
 		wl_client_post_no_memory(client);
 		return;
@@ -138,7 +138,7 @@ static const struct xwayland_shell_v1_interface shell_impl = {
 
 static void shell_bind(struct wl_client *client, void *data, uint32_t version,
 		uint32_t id) {
-	struct wlr_xwayland_shell_v1 *shell = data;
+	struct xwayland_shell_v1 *shell = data;
 
 	if (client != shell->client) {
 		wl_client_post_implementation_error(client,
@@ -156,16 +156,16 @@ static void shell_bind(struct wl_client *client, void *data, uint32_t version,
 }
 
 static void handle_display_destroy(struct wl_listener *listener, void *data) {
-	struct wlr_xwayland_shell_v1 *shell =
+	struct xwayland_shell_v1 *shell =
 		wl_container_of(listener, shell, display_destroy);
-	wlr_xwayland_shell_v1_destroy(shell);
+	xwayland_shell_v1_destroy(shell);
 }
 
-struct wlr_xwayland_shell_v1 *wlr_xwayland_shell_v1_create(
+struct xwayland_shell_v1 *xwayland_shell_v1_create(
 		struct wl_display *display, uint32_t version) {
 	assert(version <= SHELL_VERSION);
 
-	struct wlr_xwayland_shell_v1 *shell = calloc(1, sizeof(*shell));
+	struct xwayland_shell_v1 *shell = calloc(1, sizeof(*shell));
 	if (shell == NULL) {
 		return NULL;
 	}
@@ -190,7 +190,7 @@ struct wlr_xwayland_shell_v1 *wlr_xwayland_shell_v1_create(
 	return shell;
 }
 
-void wlr_xwayland_shell_v1_destroy(struct wlr_xwayland_shell_v1 *shell) {
+void xwayland_shell_v1_destroy(struct xwayland_shell_v1 *shell) {
 	if (shell == NULL) {
 		return;
 	}
@@ -200,7 +200,7 @@ void wlr_xwayland_shell_v1_destroy(struct wlr_xwayland_shell_v1 *shell) {
 	assert(wl_list_empty(&shell->events.new_surface.listener_list));
 	assert(wl_list_empty(&shell->events.destroy.listener_list));
 
-	struct wlr_xwayland_surface_v1 *xwl_surface, *tmp;
+	struct xwayland_surface_v1 *xwl_surface, *tmp;
 	wl_list_for_each_safe(xwl_surface, tmp, &shell->surfaces, link) {
 		xwl_surface_destroy(xwl_surface);
 	}
@@ -212,12 +212,12 @@ void wlr_xwayland_shell_v1_destroy(struct wlr_xwayland_shell_v1 *shell) {
 }
 
 static void shell_handle_client_destroy(struct wl_listener *listener, void *data) {
-	struct wlr_xwayland_shell_v1 *shell =
+	struct xwayland_shell_v1 *shell =
 		wl_container_of(listener, shell, client_destroy);
-	wlr_xwayland_shell_v1_set_client(shell, NULL);
+	xwayland_shell_v1_set_client(shell, NULL);
 }
 
-void wlr_xwayland_shell_v1_set_client(struct wlr_xwayland_shell_v1 *shell,
+void xwayland_shell_v1_set_client(struct xwayland_shell_v1 *shell,
 		struct wl_client *client) {
 	wl_list_remove(&shell->client_destroy.link);
 	shell->client = client;
@@ -229,9 +229,9 @@ void wlr_xwayland_shell_v1_set_client(struct wlr_xwayland_shell_v1 *shell,
 	}
 }
 
-struct wlr_surface *wlr_xwayland_shell_v1_surface_from_serial(
-		struct wlr_xwayland_shell_v1 *shell, uint64_t serial) {
-	struct wlr_xwayland_surface_v1 *xwl_surface;
+struct wlr_surface *xwayland_shell_v1_surface_from_serial(
+		struct xwayland_shell_v1 *shell, uint64_t serial) {
+	struct xwayland_surface_v1 *xwl_surface;
 	wl_list_for_each(xwl_surface, &shell->surfaces, link) {
 		if (xwl_surface->serial == serial) {
 			return xwl_surface->surface;

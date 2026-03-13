@@ -6,8 +6,8 @@
 #error "Add -DWLR_USE_UNSTABLE to enable unstable wlroots features"
 #endif
 
-#ifndef WLR_XWAYLAND_SERVER_H
-#define WLR_XWAYLAND_SERVER_H
+#ifndef XWAYLAND_SERVER_H
+#define XWAYLAND_SERVER_H
 
 #include <stdbool.h>
 #include <sys/types.h>
@@ -18,7 +18,7 @@
 extern "C" {
 #endif
 
-struct wlr_xwayland_server_options {
+struct xwayland_server_options {
 	bool lazy;
 	bool enable_wm;
 	bool no_touch_pointer_emulation;
@@ -26,7 +26,7 @@ struct wlr_xwayland_server_options {
 	int terminate_delay; // in seconds, 0 to terminate immediately
 };
 
-struct wlr_xwayland_server {
+struct xwayland_server {
 	pid_t pid;
 	struct wl_client *client;
 	struct wl_event_source *pipe_source;
@@ -41,7 +41,7 @@ struct wlr_xwayland_server {
 	char display_name[16];
 	int x_fd[2];
 	struct wl_event_source *x_fd_read_event[2];
-	struct wlr_xwayland_server_options options;
+	struct xwayland_server_options options;
 
 	struct wl_display *wl_display;
 	struct wl_event_source *idle_source;
@@ -60,14 +60,14 @@ struct wlr_xwayland_server {
 	} WLR_PRIVATE;
 };
 
-struct wlr_xwayland_server_ready_event {
-	struct wlr_xwayland_server *server;
+struct xwayland_server_ready_event {
+	struct xwayland_server *server;
 	int wm_fd;
 };
 
-struct wlr_xwayland_server *wlr_xwayland_server_create(
-	struct wl_display *display, struct wlr_xwayland_server_options *options);
-void wlr_xwayland_server_destroy(struct wlr_xwayland_server *server);
+struct xwayland_server *xwayland_server_create(
+	struct wl_display *display, struct xwayland_server_options *options);
+void xwayland_server_destroy(struct xwayland_server *server);
 
 #ifdef __cplusplus
 }
