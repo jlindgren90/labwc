@@ -8,6 +8,7 @@ use std::ptr::null_mut;
 struct XSurfaceData {
     // boxed because XSurface points back to XSurfaceInfo
     info: Box<XSurfaceInfo>,
+    unmanaged_node: *mut WlrSceneNode,
 }
 
 #[derive(Default)]
@@ -114,6 +115,33 @@ impl Xwm {
             };
             self.stacking.retain(|&x| x != xid);
             self.stacking.insert(0, xid);
+        }
+    }
+
+    pub fn map_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) {
+        if let Some(surf) = self.surfaces.get_mut(&xid) {
+            if surf.unmanaged_node.is_null() {
+                surf.unmanaged_node = unsafe { xwayland_create_unmanaged_node(surface) };
+            }
+            let props = unsafe { xwayland_surface_get_props(surf.info.xsurface) };
+            unsafe { wlr_scene_node_set_position(surf.unmanaged_node, props.geom.x, props.geom.y) };
+        }
+    }
+
+    pub fn unmap_unmanaged(&mut self, xid: XId) {
+        if let Some(surf) = self.surfaces.get_mut(&xid)
+            && !surf.unmanaged_node.is_null()
+        {
+            unsafe { wlr_scene_node_destroy(surf.unmanaged_node) };
+            surf.unmanaged_node = null_mut();
+        }
+    }
+
+    pub fn move_unmanaged(&self, xid: XId, x: i32, y: i32) {
+        if let Some(surf) = self.surfaces.get(&xid)
+            && !surf.unmanaged_node.is_null()
+        {
+            unsafe { wlr_scene_node_set_position(surf.unmanaged_node, x, y) };
         }
     }
 }

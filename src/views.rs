@@ -570,4 +570,19 @@ impl Views {
     pub fn set_xsurface_surface_id(&mut self, xid: XId, surface_id: u32) {
         self.xwm.set_surface_id(xid, surface_id);
     }
+
+    pub fn map_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
+        self.xwm.map_unmanaged(xid, surface);
+        return UpdateLevel::Cursor;
+    }
+
+    pub fn unmap_unmanaged(&mut self, xid: XId) -> UpdateLevel {
+        self.xwm.unmap_unmanaged(xid);
+        return UpdateLevel::Cursor;
+    }
+
+    pub fn move_unmanaged(&self, xid: XId, x: i32, y: i32) -> UpdateLevel {
+        self.xwm.move_unmanaged(xid, x, y);
+        return UpdateLevel::Cursor;
+    }
 }

@@ -891,8 +891,9 @@ static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,
 
 	lab_xwm_update_override_redirect(xsurface, ev->override_redirect);
 
-	if (geometry_changed) {
-		xwayland_surface_on_set_geometry(xsurface);
+	if (geometry_changed && xsurface->override_redirect) {
+		xsurface_move_unmanaged(xsurface->window_id,
+			xsurface->props.geom.x, xsurface->props.geom.y);
 	}
 }
 
