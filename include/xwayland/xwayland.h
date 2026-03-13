@@ -49,7 +49,6 @@ struct xwayland_surface {
 
 	/* for unmanaged surfaces */
 	bool ever_grabbed_focus;
-	struct wlr_scene_node *unmanaged_node;
 };
 
 struct xwayland_surface_configure_event {
@@ -128,7 +127,6 @@ void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	const struct xwayland_surface_configure_event *event);
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
-void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
 void xwayland_surface_on_focus_in(struct xwayland_surface *xsurface);
