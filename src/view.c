@@ -57,7 +57,6 @@ view_move_impl(struct view *view)
 	wlr_scene_node_set_position(&view->scene_tree->node,
 		view->st->current.x, view->st->current.y);
 	ssd_update_geometry(view->ssd);
-	cursor_update_focus();
 }
 
 void
@@ -164,13 +163,6 @@ view_notify_fullscreen(struct view *view)
 			decorate(view);
 		}
 	}
-
-	/*
-	 * Entering/leaving fullscreen might result in a different
-	 * scene node ending up under the cursor even if view_moved()
-	 * isn't called. Update cursor focus explicitly for that case.
-	 */
-	cursor_update_focus();
 }
 
 enum view_axis

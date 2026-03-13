@@ -101,7 +101,7 @@ impl ViewGrab {
         return (x, y);
     }
 
-    pub fn continue_move(&mut self, view: &mut View, cursor_x: i32, cursor_y: i32) {
+    pub fn continue_move(&mut self, view: &mut View, cursor_x: i32, cursor_y: i32) -> UpdateLevel {
         let state = view.get_state();
         let mut geom = state.pending;
         (geom.x, geom.y) = self.compute_move_position(cursor_x, cursor_y);
@@ -117,7 +117,7 @@ impl ViewGrab {
             view.set_maximized(VIEW_AXIS_NONE);
             view.set_tiled(LAB_EDGE_NONE);
         }
-        view.move_resize(geom);
+        return view.move_resize(geom);
     }
 
     pub fn start_resize(&mut self, view: &mut View, edges: LabEdge) -> bool {
@@ -144,7 +144,12 @@ impl ViewGrab {
         return true;
     }
 
-    pub fn continue_resize(&mut self, view: &mut View, cursor_x: i32, cursor_y: i32) {
+    pub fn continue_resize(
+        &mut self,
+        view: &mut View,
+        cursor_x: i32,
+        cursor_y: i32,
+    ) -> UpdateLevel {
         let mut geom = view.get_state().pending;
         let dx = cursor_x - self.origin_cursor_x;
         let dy = cursor_y - self.origin_cursor_y;
@@ -168,7 +173,7 @@ impl ViewGrab {
         if (self.resize_edges & LAB_EDGE_LEFT) != 0 {
             geom.x = self.origin_geom.x + self.origin_geom.width - geom.width;
         }
-        view.move_resize(geom);
+        return view.move_resize(geom);
     }
 }
 
