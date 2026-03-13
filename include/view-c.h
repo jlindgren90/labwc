@@ -125,6 +125,8 @@ WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
 
+WlrSceneNode *xwayland_create_unmanaged_node(WlrSurface *surface);
+
 // from cursor.h
 void cursor_update_focus(void);
 

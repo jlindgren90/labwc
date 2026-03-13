@@ -18,5 +18,7 @@ void cairo_surface_destroy(CairoSurface *surface);
 
 // minimal wlroots bindings
 void wlr_buffer_drop(WlrBuffer *buffer);
+void wlr_scene_node_destroy(WlrSceneNode *node);
+void wlr_scene_node_set_position(WlrSceneNode *node, int x, int y);
 
 #endif // LABWC_RS_BINDINGS_H

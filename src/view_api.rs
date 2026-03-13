@@ -469,3 +469,21 @@ pub extern "C" fn xsurface_set_serial(xid: XId, serial: u64) {
 pub extern "C" fn xsurface_set_surface_id(xid: XId, surface_id: u32) {
     views_mut().set_xsurface_surface_id(xid, surface_id);
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_map_unmanaged(xid: XId, surface: *mut WlrSurface) {
+    let ul = views_mut().map_unmanaged(xid, surface);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_unmap_unmanaged(xid: XId) {
+    let ul = views_mut().unmap_unmanaged(xid);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_move_unmanaged(xid: XId, x: i32, y: i32) {
+    let ul = views().move_unmanaged(xid, x, y);
+    do_update(ul);
+}
