@@ -38,6 +38,11 @@ pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_get_scene(id: ViewId) -> *const ViewScene {
+    views().get_view(id).map_or(null(), |v| v.get_scene())
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_adjust_size(id: ViewId, width: &mut i32, height: &mut i32) {
     if let Some(view) = views().get_view(id) {
         let hints = view.get_size_hints();
@@ -60,14 +65,14 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_map_common(id: ViewId) {
-    let ul = views_mut().map_common(id);
+pub extern "C" fn view_map(id: ViewId) {
+    let ul = views_mut().map(id);
     do_update(ul);
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_unmap_common(id: ViewId) {
-    let ul = views_mut().unmap_common(id);
+pub extern "C" fn view_unmap(id: ViewId) {
+    let ul = views_mut().unmap(id);
     do_update(ul);
 }
 
@@ -213,13 +218,6 @@ pub extern "C" fn view_enable_ssd(id: ViewId, enabled: bool) {
         return;
     };
     do_update(ul);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_destroy_ssd(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.destroy_ssd();
-    }
 }
 
 #[unsafe(no_mangle)]

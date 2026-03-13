@@ -19,6 +19,13 @@ enum ssd_active_state {
 typedef struct ssd CSsd;
 typedef struct ViewState ViewState;
 
+typedef struct ssd_create_params {
+	ViewId view_id;
+	const ViewState *state;
+	WlrSceneTree *scene_tree;
+	WlrBuffer *icon_buffer;
+} SsdCreateParams;
+
 /*
  * Public SSD API
  *
@@ -28,7 +35,7 @@ typedef struct ViewState ViewState;
  *
  * NULL scene/view arguments are not allowed.
  */
-CSsd *ssd_create(CView *view, WlrBuffer *icon_buffer);
+CSsd *ssd_create(const SsdCreateParams *params);
 Border ssd_get_margin(const ViewState *view_st);
 void ssd_set_active(CSsd *ssd, _Bool active);
 void ssd_update_title(CSsd *ssd, const ViewState *view_st);
