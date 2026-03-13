@@ -62,9 +62,22 @@ typedef struct ViewState {
 	Output *output;
 } ViewState;
 
-void view_set_visible(CView *view, _Bool visible);
-void view_move_impl(CView *view);
-void view_raise_impl(CView *view);
+typedef struct ViewScene {
+	WlrSceneTree *scene_tree;
+	WlrSceneTree *surface_tree; // child of scene_tree
+} ViewScene;
+
+WlrSceneTree *view_scene_tree_create(ViewId id);
+void view_scene_tree_destroy(WlrSceneTree *scene_tree);
+void view_scene_tree_move(WlrSceneTree *scene_tree, int x, int y);
+void view_scene_tree_raise(WlrSceneTree *scene_tree);
+void view_scene_tree_set_visible(WlrSceneTree *scene_tree, _Bool visible);
+
+WlrSceneTree *view_surface_tree_create(WlrSceneTree *parent, WlrSurface *surface);
+
+WlrSceneRect *view_fullscreen_bg_create(WlrSceneTree *scene_tree);
+void view_fullscreen_bg_show_at(WlrSceneRect *fullscreen_bg, Rect rel_geom);
+void view_fullscreen_bg_hide(WlrSceneRect *fullscreen_bg);
 
 WlrSurface *xdg_toplevel_view_get_surface(CView *view);
 ViewId xdg_toplevel_view_get_root_id(CView *view);
@@ -75,8 +88,6 @@ void xdg_toplevel_view_set_fullscreen(CView *view, _Bool fullscreen);
 void xdg_toplevel_view_maximize(CView *view, ViewAxis maximized);
 void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
-void xdg_toplevel_view_enable_fullscreen_bg(CView *view, Rect output_geom);
-void xdg_toplevel_view_disable_fullscreen_bg(CView *view);
 void xdg_toplevel_view_close(CView *view);
 
 WlrSurface *xwayland_view_get_surface(CView *view);
