@@ -18,7 +18,6 @@
 #include "node.h"
 #include "ssd-internal.h"
 #include "theme.h"
-#include "view.h"
 
 /*
  * Space between the extremities of the view's wlr_surface
@@ -130,20 +129,19 @@ ssd_get_resizing_type(const ViewState *view_st, struct wlr_cursor *cursor)
 }
 
 struct ssd *
-ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
+ssd_create(const struct ssd_create_params *params)
 {
-	assert(view);
 	struct ssd *ssd = znew(*ssd);
 
-	ssd->view_id = view->id;
-	ssd->tree = lab_wlr_scene_tree_create(view->scene_tree);
+	ssd->view_id = params->view_id;
+	ssd->tree = lab_wlr_scene_tree_create(params->scene_tree);
 
 	/*
 	 * Attach node_descriptor to the root node so that get_cursor_context()
 	 * detect cursor hovering on borders and extents.
 	 */
-	node_descriptor_create(&ssd->tree->node,
-		LAB_NODE_SSD_ROOT, view->id, /*data*/ NULL);
+	node_descriptor_create(&ssd->tree->node, LAB_NODE_SSD_ROOT,
+		params->view_id, /*data*/ NULL);
 
 	wlr_scene_node_lower_to_bottom(&ssd->tree->node);
 	ssd->titlebar.height = g_theme.titlebar_height;
@@ -153,10 +151,10 @@ ssd_create(struct view *view, struct wlr_buffer *icon_buffer)
 	 * TODO: Set the state here instead so the order does not matter
 	 * anymore.
 	 */
-	ssd_titlebar_create(ssd, view->st, icon_buffer);
-	ssd_border_create(ssd, view->st);
-	ssd_set_active(ssd, view->st->active);
-	ssd->state.geometry = view->st->current;
+	ssd_titlebar_create(ssd, params->state, params->icon_buffer);
+	ssd_border_create(ssd, params->state);
+	ssd_set_active(ssd, params->state->active);
+	ssd->state.geometry = params->state->current;
 
 	return ssd;
 }

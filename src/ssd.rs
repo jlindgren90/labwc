@@ -9,9 +9,9 @@ pub struct Ssd {
 }
 
 impl Ssd {
-    pub fn create(&mut self, view_ptr: *mut CView, icon_buffer: *mut WlrBuffer) {
+    pub fn create(&mut self, params: &SsdCreateParams) {
         if self.c_ptr.is_null() {
-            self.c_ptr = unsafe { ssd_create(view_ptr, icon_buffer) };
+            self.c_ptr = unsafe { ssd_create(params) };
         }
     }
 

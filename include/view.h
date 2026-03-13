@@ -26,9 +26,6 @@ struct view {
 	ViewId id;
 	const ViewState *st;
 
-	struct wlr_scene_tree *scene_tree;
-	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
-
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
 	struct wl_event_source *pending_configure_timeout;
@@ -46,9 +43,6 @@ struct view {
 
 	/* xdg-shell view fields */
 	struct wlr_xdg_surface *xdg_surface;
-
-	/* Optional black background fill behind fullscreen view */
-	struct wlr_scene_rect *fullscreen_bg;
 
 	/* Events unique to xdg-toplevel views */
 	struct wl_listener set_app_id;
@@ -89,8 +83,5 @@ void view_init(struct view *view, bool is_xwayland);
 void view_destroy(struct view *view);
 
 enum view_axis view_axis_parse(const char *direction);
-
-/* xdg.c */
-struct wlr_xdg_surface *xdg_surface_from_view(struct view *view);
 
 #endif /* LABWC_VIEW_H */
