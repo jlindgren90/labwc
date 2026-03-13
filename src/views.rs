@@ -25,7 +25,7 @@ impl Views {
     pub fn add(&mut self, c_ptr: *mut CView, is_xwayland: bool) -> ViewId {
         self.max_used_id += 1;
         let id = self.max_used_id;
-        self.by_id.insert(id, View::new(c_ptr, is_xwayland));
+        self.by_id.insert(id, View::new(id, c_ptr, is_xwayland));
         self.order.push(id);
         return id;
     }
@@ -68,11 +68,11 @@ impl Views {
         return None;
     }
 
-    pub fn map_common(&mut self, id: ViewId) -> UpdateLevel {
+    pub fn map(&mut self, id: ViewId) -> UpdateLevel {
         let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&id) {
             let mut was_shown = false;
-            ul |= view.set_mapped(&mut was_shown);
+            ul |= view.map(&mut was_shown);
             // Only focusable views should be shown in taskbars etc.
             if view.get_state().focusable() {
                 for &client in &self.foreign_toplevel_clients {
@@ -86,11 +86,11 @@ impl Views {
         return ul;
     }
 
-    pub fn unmap_common(&mut self, id: ViewId) -> UpdateLevel {
+    pub fn unmap(&mut self, id: ViewId) -> UpdateLevel {
         let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&id) {
             let mut was_hidden = false;
-            ul |= view.set_unmapped(&mut was_hidden);
+            ul |= view.unmap(&mut was_hidden);
             if was_hidden {
                 self.update_top_layer_visibility();
                 ul |= self.reset_grab_for(Some(id));

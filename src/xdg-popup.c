@@ -17,7 +17,8 @@
 #include "view.h"
 
 struct xdg_popup {
-	struct view *parent_view;
+	ViewId view_id;
+	struct wlr_xdg_surface *toplevel;
 	struct wlr_xdg_popup *wlr_popup;
 
 	struct wlr_scene_tree *scene_tree;
@@ -32,7 +33,10 @@ struct xdg_popup {
 static void
 popup_unconstrain(struct xdg_popup *popup)
 {
-	struct view *view = popup->parent_view;
+	const ViewState *view_st = view_get_state(popup->view_id);
+	if (!view_st) {
+		return;
+	}
 
 	/* Get position of parent toplevel/popup */
 	int parent_lx, parent_ly;
@@ -53,20 +57,13 @@ popup_unconstrain(struct xdg_popup *popup)
 	struct wlr_box usable = output_usable_area_in_layout_coords(output);
 
 	/* Get offset of toplevel window from its surface */
-	int toplevel_dx = 0;
-	int toplevel_dy = 0;
-	struct wlr_xdg_surface *toplevel_surface = xdg_surface_from_view(view);
-	if (toplevel_surface) {
-		toplevel_dx = toplevel_surface->current.geometry.x;
-		toplevel_dy = toplevel_surface->current.geometry.y;
-	} else {
-		wlr_log(WLR_ERROR, "toplevel is not valid XDG surface");
-	}
+	int toplevel_dx = popup->toplevel->current.geometry.x;
+	int toplevel_dy = popup->toplevel->current.geometry.y;
 
 	/* Geometry of usable area relative to toplevel surface */
 	struct wlr_box output_toplevel_box = {
-		.x = usable.x - (view->st->current.x - toplevel_dx),
-		.y = usable.y - (view->st->current.y - toplevel_dy),
+		.x = usable.x - (view_st->current.x - toplevel_dx),
+		.y = usable.y - (view_st->current.y - toplevel_dy),
 		.width = usable.width,
 		.height = usable.height,
 	};
@@ -124,11 +121,13 @@ handle_new_popup(struct wl_listener *listener, void *data)
 {
 	struct xdg_popup *popup = wl_container_of(listener, popup, new_popup);
 	struct wlr_xdg_popup *wlr_popup = data;
-	xdg_popup_create(popup->parent_view, wlr_popup, popup->scene_tree);
+	xdg_popup_create(popup->view_id, popup->toplevel,
+		wlr_popup, popup->scene_tree);
 }
 
 void
-xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup,
+xdg_popup_create(ViewId view_id, struct wlr_xdg_surface *toplevel,
+		struct wlr_xdg_popup *wlr_popup,
 		struct wlr_scene_tree *parent_tree)
 {
 	struct wlr_xdg_surface *parent =
@@ -139,7 +138,8 @@ xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup,
 	}
 
 	struct xdg_popup *popup = znew(*popup);
-	popup->parent_view = view;
+	popup->view_id = view_id;
+	popup->toplevel = toplevel;
 	popup->wlr_popup = wlr_popup;
 
 	CONNECT_SIGNAL(wlr_popup, popup, destroy);
@@ -152,5 +152,5 @@ xdg_popup_create(struct view *view, struct wlr_xdg_popup *wlr_popup,
 		popup->scene_tree, wlr_popup->base->surface);
 
 	node_descriptor_create(&popup->scene_tree->node,
-		LAB_NODE_XDG_POPUP, view->id, /*data*/ NULL);
+		LAB_NODE_XDG_POPUP, view_id, /*data*/ NULL);
 }

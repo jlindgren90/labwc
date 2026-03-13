@@ -2,6 +2,7 @@
 //
 use crate::bindings::*;
 use crate::rect::*;
+use std::ptr::null_mut;
 
 pub trait ViewImpl {
     fn get_root_id(&self) -> ViewId;
@@ -9,7 +10,7 @@ pub trait ViewImpl {
     fn get_size_hints(&self) -> ViewSizeHints;
     fn has_strut_partial(&self) -> bool;
     fn set_active(&self, active: bool);
-    fn set_fullscreen(&self, fullscreen: bool);
+    fn set_fullscreen(&mut self, fullscreen: bool);
     fn set_maximized(&self, maximized: ViewAxis);
     fn notify_tiled(&self);
     fn set_minimized(&self, minimized: bool);
@@ -21,7 +22,16 @@ pub trait ViewImpl {
     fn close(&self);
 
     // scene-tree helpers
-    fn adjust_scene_pos(&mut self, state: &ViewState, x: i32, y: i32) -> (i32, i32);
+    fn create_scene(&self, scene: &mut ViewScene, id: ViewId);
+    fn map_scene_surface(&self, scene: &mut ViewScene);
+    fn unmap_scene_surface(&self, scene: &mut ViewScene);
+    fn adjust_scene_pos(
+        &mut self,
+        state: &ViewState,
+        scene: &ViewScene,
+        x: i32,
+        y: i32,
+    ) -> (i32, i32);
 }
 
 pub struct XView {
@@ -59,7 +69,7 @@ impl ViewImpl for XView {
         unsafe { xwayland_view_set_active(self.c_ptr, active) };
     }
 
-    fn set_fullscreen(&self, fullscreen: bool) {
+    fn set_fullscreen(&mut self, fullscreen: bool) {
         unsafe { xwayland_view_set_fullscreen(self.c_ptr, fullscreen) };
     }
 
@@ -101,22 +111,52 @@ impl ViewImpl for XView {
         unsafe { xwayland_view_close(self.c_ptr) };
     }
 
-    fn adjust_scene_pos(&mut self, _state: &ViewState, x: i32, y: i32) -> (i32, i32) {
+    fn create_scene(&self, scene: &mut ViewScene, id: ViewId) {
+        scene.scene_tree = unsafe { view_scene_tree_create(id) };
+    }
+
+    fn map_scene_surface(&self, scene: &mut ViewScene) {
+        scene.surface_tree =
+            unsafe { view_surface_tree_create(scene.scene_tree, self.get_surface()) };
+    }
+
+    fn unmap_scene_surface(&self, scene: &mut ViewScene) {
+        unsafe { view_scene_tree_destroy(scene.surface_tree) };
+        scene.surface_tree = null_mut();
+    }
+
+    fn adjust_scene_pos(
+        &mut self,
+        _state: &ViewState,
+        _scene: &ViewScene,
+        x: i32,
+        y: i32,
+    ) -> (i32, i32) {
         (x, y)
     }
 }
 
 pub struct XdgView {
     c_ptr: *mut CView,
+    fullscreen_bg: *mut WlrSceneRect,
 }
 
 impl XdgView {
     pub fn new(c_ptr: *mut CView) -> Self {
-        Self { c_ptr: c_ptr }
+        Self {
+            c_ptr: c_ptr,
+            fullscreen_bg: null_mut(),
+        }
     }
 
     fn get_surface(&self) -> *mut WlrSurface {
         unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
+    }
+
+    fn hide_fullscreen_bg(&mut self) {
+        if !self.fullscreen_bg.is_null() {
+            unsafe { view_fullscreen_bg_hide(self.fullscreen_bg) };
+        }
     }
 }
 
@@ -141,8 +181,11 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_set_active(self.c_ptr, active) };
     }
 
-    fn set_fullscreen(&self, fullscreen: bool) {
+    fn set_fullscreen(&mut self, fullscreen: bool) {
         unsafe { xdg_toplevel_view_set_fullscreen(self.c_ptr, fullscreen) };
+        if !fullscreen {
+            self.hide_fullscreen_bg();
+        }
     }
 
     fn set_maximized(&self, maximized: ViewAxis) {
@@ -183,22 +226,50 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_close(self.c_ptr) };
     }
 
-    fn adjust_scene_pos(&mut self, state: &ViewState, x: i32, y: i32) -> (i32, i32) {
+    fn create_scene(&self, scene: &mut ViewScene, id: ViewId) {
+        scene.scene_tree = unsafe { view_scene_tree_create(id) };
+        scene.surface_tree =
+            unsafe { view_surface_tree_create(scene.scene_tree, self.get_surface()) };
+    }
+
+    fn map_scene_surface(&self, _scene: &mut ViewScene) {
+        // no-op
+    }
+
+    fn unmap_scene_surface(&self, _scene: &mut ViewScene) {
+        // no-op
+    }
+
+    fn adjust_scene_pos(
+        &mut self,
+        state: &ViewState,
+        scene: &ViewScene,
+        x: i32,
+        y: i32,
+    ) -> (i32, i32) {
         if !state.fullscreen {
             return (x, y);
         }
         let output_geom = unsafe { output_layout_coords(state.output) };
         if rect_empty(output_geom) {
-            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+            self.hide_fullscreen_bg();
             return (x, y);
         }
         // Center fullscreen views smaller than output and add black background
         let mut geom = rect_center(state.current.width, state.current.height, output_geom);
         rect_move_within(&mut geom, output_geom);
         if geom.width < output_geom.width || geom.height < output_geom.height {
-            unsafe { xdg_toplevel_view_enable_fullscreen_bg(self.c_ptr, output_geom) };
+            if self.fullscreen_bg.is_null() {
+                self.fullscreen_bg = unsafe { view_fullscreen_bg_create(scene.scene_tree) };
+            }
+            let rel_geom = Rect {
+                x: output_geom.x - geom.x,
+                y: output_geom.y - geom.y,
+                ..output_geom
+            };
+            unsafe { view_fullscreen_bg_show_at(self.fullscreen_bg, rel_geom) };
         } else {
-            unsafe { xdg_toplevel_view_disable_fullscreen_bg(self.c_ptr) };
+            self.hide_fullscreen_bg();
         }
         return (geom.x, geom.y);
     }

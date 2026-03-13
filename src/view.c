@@ -11,9 +11,12 @@
 #include <wlr/util/log.h>
 #include <wlr/xwayland.h>
 #include "action.h"
+#include "common/mem.h"
+#include "common/scene-helpers.h"
 #include "cycle.h"
 #include "labwc.h"
 #include "menu/menu.h"
+#include "node.h"
 #include "session-lock.h"
 
 ViewId
@@ -38,14 +41,6 @@ view_from_wlr_surface(struct wlr_surface *surface)
 	}
 
 	return 0;
-}
-
-void
-view_move_impl(struct view *view)
-{
-	assert(view);
-	wlr_scene_node_set_position(&view->scene_tree->node,
-		view->st->current.x, view->st->current.y);
 }
 
 void
@@ -101,25 +96,12 @@ view_axis_parse(const char *direction)
 	}
 }
 
-void
-view_raise_impl(struct view *view)
-{
-	wlr_scene_node_raise_to_top(&view->scene_tree->node);
-}
-
 bool
 view_inhibits_actions(ViewId view_id, struct wl_list *actions)
 {
 	const ViewState *view_st = view_get_state(view_id);
 	return view_st && view_st->inhibits_keybinds
 		&& !actions_contain_toggle_keybinds(actions);
-}
-
-/* Used in both (un)map and (un)minimize */
-void
-view_set_visible(struct view *view, bool visible)
-{
-	wlr_scene_node_set_enabled(&view->scene_tree->node, visible);
 }
 
 void
@@ -145,22 +127,81 @@ view_destroy(struct view *view)
 	wl_list_remove(&view->set_title.link);
 	wl_list_remove(&view->destroy.link);
 
-	/* Must come before destroying view->scene_tree */
-	view_destroy_ssd(view->id);
 	menu_on_view_destroy(view->id);
-
-	/*
-	 * Destroy the view's scene tree. View methods assume this is non-NULL,
-	 * so we should avoid any calls to those between this and freeing the
-	 * view.
-	 */
-	if (view->scene_tree) {
-		wlr_scene_node_destroy(&view->scene_tree->node);
-		view->scene_tree = NULL;
-	}
 
 	view_remove(view->id);
 	free(view);
 
 	cursor_update_focus();
+}
+
+struct wlr_scene_tree *
+view_scene_tree_create(ViewId id)
+{
+	struct wlr_scene_tree *scene_tree =
+		lab_wlr_scene_tree_create(g_server.view_tree);
+
+	node_descriptor_create(&scene_tree->node,
+		LAB_NODE_VIEW, id, /* data */ NULL);
+	wlr_scene_node_set_enabled(&scene_tree->node, false);
+
+	return scene_tree;
+}
+
+void
+view_scene_tree_destroy(struct wlr_scene_tree *scene_tree)
+{
+	wlr_scene_node_destroy(&scene_tree->node);
+}
+
+void
+view_scene_tree_move(struct wlr_scene_tree *scene_tree, int x, int y)
+{
+	wlr_scene_node_set_position(&scene_tree->node, x, y);
+}
+
+void
+view_scene_tree_raise(struct wlr_scene_tree *scene_tree)
+{
+	wlr_scene_node_raise_to_top(&scene_tree->node);
+}
+
+void
+view_scene_tree_set_visible(struct wlr_scene_tree *scene_tree, bool visible)
+{
+	wlr_scene_node_set_enabled(&scene_tree->node, visible);
+}
+
+struct wlr_scene_tree *
+view_surface_tree_create(struct wlr_scene_tree *parent, struct wlr_surface *surface)
+{
+	struct wlr_scene_tree *surface_tree =
+		wlr_scene_subsurface_tree_create(parent, surface);
+	die_if_null(surface_tree);
+	return surface_tree;
+}
+
+struct wlr_scene_rect *
+view_fullscreen_bg_create(struct wlr_scene_tree *scene_tree)
+{
+	const float black[4] = {0, 0, 0, 1};
+	struct wlr_scene_rect *fullscreen_bg =
+		lab_wlr_scene_rect_create(scene_tree, 0, 0, black);
+	wlr_scene_node_lower_to_bottom(&fullscreen_bg->node);
+	return fullscreen_bg;
+}
+
+void
+view_fullscreen_bg_show_at(struct wlr_scene_rect *fullscreen_bg,
+		struct wlr_box rel_geom)
+{
+	wlr_scene_node_set_position(&fullscreen_bg->node, rel_geom.x, rel_geom.y);
+	wlr_scene_rect_set_size(fullscreen_bg, rel_geom.width, rel_geom.height);
+	wlr_scene_node_set_enabled(&fullscreen_bg->node, true);
+}
+
+void
+view_fullscreen_bg_hide(struct wlr_scene_rect *fullscreen_bg)
+{
+	wlr_scene_node_set_enabled(&fullscreen_bg->node, false);
 }
