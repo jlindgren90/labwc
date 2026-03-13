@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -248,14 +249,14 @@ struct x11_data_source {
 
 static const struct wlr_data_source_impl data_source_impl;
 
-bool data_source_is_xwayland(
+bool lab_data_source_is_xwayland(
 		struct wlr_data_source *wlr_source) {
 	return wlr_source->impl == &data_source_impl;
 }
 
 static struct x11_data_source *data_source_from_wlr_data_source(
 		struct wlr_data_source *wlr_source) {
-	assert(data_source_is_xwayland(wlr_source));
+	assert(lab_data_source_is_xwayland(wlr_source));
 	struct x11_data_source *source = wl_container_of(wlr_source, source, base);
 	return source;
 }
@@ -291,7 +292,7 @@ struct x11_primary_selection_source {
 static const struct wlr_primary_selection_source_impl
 	primary_selection_source_impl;
 
-bool primary_selection_source_is_xwayland(
+bool lab_primary_selection_source_is_xwayland(
 		struct wlr_primary_selection_source *wlr_source) {
 	return wlr_source->impl == &primary_selection_source_impl;
 }

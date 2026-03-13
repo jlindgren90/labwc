@@ -35,7 +35,7 @@ struct xwayland_shell_v1 {
 
 		struct wl_listener display_destroy;
 		struct wl_listener client_destroy;
-	} WLR_PRIVATE;
+	};
 };
 
 /**
@@ -50,7 +50,7 @@ struct xwayland_surface_v1 {
 		struct wl_list link;
 		struct xwayland_shell_v1 *shell;
 		bool added;
-	} WLR_PRIVATE;
+	};
 };
 
 /**
