@@ -74,15 +74,17 @@ struct ViewData {
 }
 
 pub struct View {
+    id: ViewId,
     v: Box<dyn ViewImpl>,
     d: ViewData,
     state: Box<ViewState>,
-    c_ptr: *mut CView, // TODO: remove
+    scene: Box<ViewScene>,
 }
 
 impl View {
-    pub fn new(c_ptr: *mut CView, is_xwayland: bool) -> Self {
+    pub fn new(id: ViewId, c_ptr: *mut CView, is_xwayland: bool) -> Self {
         let mut view = View {
+            id: id,
             v: if is_xwayland {
                 Box::new(XView::new(c_ptr))
             } else {
@@ -90,15 +92,20 @@ impl View {
             },
             d: ViewData::default(),
             state: Box::default(),
-            c_ptr: c_ptr,
+            scene: Box::default(),
         };
         view.state.app_id = view.d.app_id.as_ptr(); // for C interop
         view.state.title = view.d.title.as_ptr(); // for C interop
+        view.v.create_scene(&mut view.scene, id);
         return view;
     }
 
     pub fn get_state(&self) -> &ViewState {
         &self.state
+    }
+
+    pub fn get_scene(&self) -> &ViewScene {
+        &self.scene
     }
 
     pub fn get_root_id(&self) -> ViewId {
@@ -141,29 +148,31 @@ impl View {
         }
     }
 
-    pub fn set_mapped(&mut self, was_shown: &mut bool) -> UpdateLevel {
+    pub fn map(&mut self, was_shown: &mut bool) -> UpdateLevel {
         let mut ul = UpdateLevel::None;
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.focus_mode = self.v.get_focus_mode();
         if !self.state.minimized {
-            unsafe { view_set_visible(self.c_ptr, true) };
+            unsafe { view_scene_tree_set_visible(self.scene.scene_tree, true) };
             *was_shown = true;
             ul |= UpdateLevel::Cursor;
         }
-        // Create SSD at map (if needed)
+        self.v.map_scene_surface(&mut self.scene);
+        // Create SSD if needed
         ul |= self.update_ssd();
         return ul;
     }
 
-    pub fn set_unmapped(&mut self, was_hidden: &mut bool) -> UpdateLevel {
+    pub fn unmap(&mut self, was_hidden: &mut bool) -> UpdateLevel {
         let mut ul = UpdateLevel::None;
         self.state.mapped = false;
         if !self.state.minimized {
-            unsafe { view_set_visible(self.c_ptr, false) };
+            unsafe { view_scene_tree_set_visible(self.scene.scene_tree, false) };
             *was_hidden = true;
             ul |= UpdateLevel::Cursor;
         }
+        self.v.unmap_scene_surface(&mut self.scene);
         for resource in self.d.foreign_toplevels.drain(..) {
             resource.close();
         }
@@ -209,7 +218,7 @@ impl View {
             self.v.set_minimized(minimized);
             self.send_foreign_toplevel_state();
             if self.state.mapped {
-                unsafe { view_set_visible(self.c_ptr, !minimized) };
+                unsafe { view_scene_tree_set_visible(self.scene.scene_tree, !minimized) };
                 *visibility_changed = true;
                 return UpdateLevel::Cursor;
             }
@@ -248,8 +257,15 @@ impl View {
     }
 
     pub fn commit_move(&mut self, x: i32, y: i32) -> UpdateLevel {
-        (self.state.current.x, self.state.current.y) = self.v.adjust_scene_pos(&self.state, x, y);
-        unsafe { view_move_impl(self.c_ptr) };
+        (self.state.current.x, self.state.current.y) =
+            self.v.adjust_scene_pos(&self.state, &self.scene, x, y);
+        unsafe {
+            view_scene_tree_move(
+                self.scene.scene_tree,
+                self.state.current.x,
+                self.state.current.y,
+            )
+        };
         self.d.ssd.update_geom(&*self.state);
         if self.state.visible() {
             return UpdateLevel::Cursor;
@@ -375,8 +391,13 @@ impl View {
 
     fn update_ssd(&mut self) -> UpdateLevel {
         if self.state.ssd_enabled && !self.state.fullscreen {
-            let icon_buffer = self.get_icon_buffer();
-            self.d.ssd.create(self.c_ptr, icon_buffer);
+            let params = SsdCreateParams {
+                view_id: self.id,
+                state: &*self.state,
+                scene_tree: self.scene.scene_tree,
+                icon_buffer: self.get_icon_buffer(),
+            };
+            self.d.ssd.create(&params);
         } else {
             self.d.ssd.destroy();
         }
@@ -401,10 +422,6 @@ impl View {
             }
         }
         return ul;
-    }
-
-    pub fn destroy_ssd(&mut self) {
-        self.d.ssd.destroy();
     }
 
     // Returns >= UpdateLevel::Cursor if visible and state changed
@@ -469,7 +486,7 @@ impl View {
     }
 
     pub fn raise(&self) {
-        unsafe { view_raise_impl(self.c_ptr) };
+        unsafe { view_scene_tree_raise(self.scene.scene_tree) };
     }
 
     // Returns true if focus was (immediately) changed
@@ -571,5 +588,12 @@ impl View {
             return self.update_ssd();
         }
         return UpdateLevel::None;
+    }
+}
+
+impl Drop for View {
+    fn drop(&mut self) {
+        self.d.ssd.destroy(); // must come before view_scene_tree_destroy()
+        unsafe { view_scene_tree_destroy(self.scene.scene_tree) };
     }
 }
