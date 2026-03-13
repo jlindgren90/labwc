@@ -110,11 +110,8 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	if (xsurface->override_redirect) {
 		assert(!xsurface->view_id);
 		xwayland_surface_configure(xsurface, event->geom);
-		if (xsurface->unmanaged_node) {
-			wlr_scene_node_set_position(xsurface->unmanaged_node,
-				event->geom.x, event->geom.y);
-			cursor_update_focus();
-		}
+		xsurface_move_unmanaged(xsurface->window_id,
+			event->geom.x, event->geom.y);
 		return;
 	}
 
@@ -242,21 +239,12 @@ static void
 map_unmanaged_surface(struct xwayland_surface *xsurface)
 {
 	assert(!xsurface->view_id);
-	assert(!xsurface->unmanaged_node);
 
 	if (xsurface->ever_grabbed_focus) {
 		seat_focus_surface(xsurface->surface);
 	}
 
-	struct wlr_scene_surface *scene_surface =
-		wlr_scene_surface_create(server.unmanaged_tree,
-			xsurface->surface);
-	die_if_null(scene_surface);
-
-	xsurface->unmanaged_node = &scene_surface->buffer->node;
-	wlr_scene_node_set_position(xsurface->unmanaged_node,
-		xsurface->props.geom.x, xsurface->props.geom.y);
-	cursor_update_focus();
+	xsurface_map_unmanaged(xsurface->window_id, xsurface->surface);
 }
 
 void
@@ -276,11 +264,8 @@ static void
 unmap_unmanaged_surface(struct xwayland_surface *xsurface)
 {
 	assert(!xsurface->view_id);
-	assert(xsurface->unmanaged_node);
 
-	wlr_scene_node_destroy(xsurface->unmanaged_node);
-	xsurface->unmanaged_node = NULL;
-	cursor_update_focus();
+	xsurface_unmap_unmanaged(xsurface->window_id);
 
 	if (g_seat.wlr_seat->keyboard_state.focused_surface == xsurface->surface) {
 		view_refocus_active();
@@ -292,7 +277,7 @@ xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 {
 	assert(xsurface->surface);
 
-	if (xsurface->unmanaged_node) {
+	if (xsurface->override_redirect) {
 		unmap_unmanaged_surface(xsurface);
 		return;
 	}
@@ -309,17 +294,6 @@ xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface)
 		if (xsurface->surface && xsurface->surface->mapped) {
 			seat_focus_surface(xsurface->surface);
 		}
-	}
-}
-
-/* for unmanaged surface only */
-void
-xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface)
-{
-	if (xsurface->unmanaged_node) {
-		wlr_scene_node_set_position(xsurface->unmanaged_node,
-			xsurface->props.geom.x, xsurface->props.geom.y);
-		cursor_update_focus();
 	}
 }
 
@@ -498,4 +472,13 @@ xwayland_update_workarea(void)
 		.height = workarea_bottom - workarea_top,
 	};
 	xwayland_set_workareas(&workarea, 1);
+}
+
+struct wlr_scene_node *
+xwayland_create_unmanaged_node(struct wlr_surface *surface)
+{
+	struct wlr_scene_surface *scene_surface =
+		wlr_scene_surface_create(server.unmanaged_tree, surface);
+	die_if_null(scene_surface);
+	return &scene_surface->buffer->node;
 }
