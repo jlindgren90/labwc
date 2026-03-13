@@ -10,18 +10,18 @@
 #include "xwayland/selection.h"
 #include "xwayland/xwm.h"
 
-static struct wlr_xwm_selection_transfer *
-xwm_selection_transfer_create_incoming(struct wlr_xwm_selection *selection) {
-	struct wlr_xwm_selection_transfer *transfer = calloc(1, sizeof(*transfer));
+static struct lab_xwm_selection_transfer *
+lab_xwm_selection_transfer_create_incoming(struct lab_xwm_selection *selection) {
+	struct lab_xwm_selection_transfer *transfer = calloc(1, sizeof(*transfer));
 	if (!transfer) {
 		return NULL;
 	}
 
-	xwm_selection_transfer_init(transfer, selection);
+	lab_xwm_selection_transfer_init(transfer, selection);
 
 	wl_list_insert(&selection->incoming, &transfer->link);
 
-	struct wlr_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = selection->xwm;
 	transfer->incoming_window = xcb_generate_id(xwm->xcb_conn);
 	xcb_create_window(
 		xwm->xcb_conn,
@@ -37,15 +37,15 @@ xwm_selection_transfer_create_incoming(struct wlr_xwm_selection *selection) {
 			XCB_EVENT_MASK_SUBSTRUCTURE_NOTIFY | XCB_EVENT_MASK_PROPERTY_CHANGE
 		}
 	);
-	xwm_schedule_flush(xwm);
+	lab_xwm_schedule_flush(xwm);
 
 	return transfer;
 }
 
-struct wlr_xwm_selection_transfer *
-xwm_selection_find_incoming_transfer_by_window(
-		struct wlr_xwm_selection *selection, xcb_window_t window) {
-	struct wlr_xwm_selection_transfer *transfer;
+struct lab_xwm_selection_transfer *
+lab_xwm_selection_find_incoming_transfer_by_window(
+		struct lab_xwm_selection *selection, xcb_window_t window) {
+	struct lab_xwm_selection_transfer *transfer;
 	wl_list_for_each(transfer, &selection->incoming, link) {
 		if (transfer->incoming_window == window) {
 			return transfer;
@@ -55,9 +55,9 @@ xwm_selection_find_incoming_transfer_by_window(
 	return NULL;
 }
 
-static bool xwm_selection_transfer_get_incoming_selection_property(
-		struct wlr_xwm_selection_transfer *transfer, bool delete) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+static bool lab_xwm_selection_transfer_get_incoming_selection_property(
+		struct lab_xwm_selection_transfer *transfer, bool delete) {
+	struct lab_xwm *xwm = transfer->selection->xwm;
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(
 		xwm->xcb_conn,
@@ -81,18 +81,18 @@ static bool xwm_selection_transfer_get_incoming_selection_property(
 	return true;
 }
 
-static void xwm_notify_ready_for_next_incr_chunk(
-		struct wlr_xwm_selection_transfer *transfer) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+static void lab_xwm_notify_ready_for_next_incr_chunk(
+		struct lab_xwm_selection_transfer *transfer) {
+	struct lab_xwm *xwm = transfer->selection->xwm;
 	assert(transfer->incr);
 
 	wlr_log(WLR_DEBUG, "deleting property");
 	xcb_delete_property(xwm->xcb_conn, transfer->incoming_window,
 		xwm->atoms[WL_SELECTION]);
-	xwm_schedule_flush(xwm);
+	lab_xwm_schedule_flush(xwm);
 
-	xwm_selection_transfer_remove_event_source(transfer);
-	xwm_selection_transfer_destroy_property_reply(transfer);
+	lab_xwm_selection_transfer_remove_event_source(transfer);
+	lab_xwm_selection_transfer_destroy_property_reply(transfer);
 }
 
 /**
@@ -101,7 +101,7 @@ static void xwm_notify_ready_for_next_incr_chunk(
  */
 static int write_selection_property_to_wl_client(int fd, uint32_t mask,
 		void *data) {
-	struct wlr_xwm_selection_transfer *transfer = data;
+	struct lab_xwm_selection_transfer *transfer = data;
 
 	char *property = xcb_get_property_value(transfer->property_reply);
 	int remainder = xcb_get_property_value_length(transfer->property_reply) -
@@ -110,7 +110,7 @@ static int write_selection_property_to_wl_client(int fd, uint32_t mask,
 	ssize_t len = write(fd, property + transfer->property_start, remainder);
 	if (len == -1) {
 		wlr_log_errno(WLR_ERROR, "write error to target fd %d", fd);
-		xwm_selection_transfer_destroy(transfer);
+		lab_xwm_selection_transfer_destroy(transfer);
 		return 0;
 	}
 
@@ -123,21 +123,21 @@ static int write_selection_property_to_wl_client(int fd, uint32_t mask,
 		transfer->property_start += len;
 		return 1;
 	} else if (transfer->incr) {
-		xwm_notify_ready_for_next_incr_chunk(transfer);
+		lab_xwm_notify_ready_for_next_incr_chunk(transfer);
 	} else {
 		wlr_log(WLR_DEBUG, "transfer complete");
-		xwm_selection_transfer_destroy(transfer);
+		lab_xwm_selection_transfer_destroy(transfer);
 	}
 
 	return 0;
 }
 
-static void xwm_write_selection_property_to_wl_client(
-		struct wlr_xwm_selection_transfer *transfer) {
+static void lab_xwm_write_selection_property_to_wl_client(
+		struct lab_xwm_selection_transfer *transfer) {
 	if (transfer->incr && transfer->wl_client_fd < 0) {
 		// Wayland client closed its pipe prematurely before the X11 client finished
 		// its incremental transfer. Continue draining the X11 client.
-		xwm_notify_ready_for_next_incr_chunk(transfer);
+		lab_xwm_notify_ready_for_next_incr_chunk(transfer);
 		return;
 	}
 
@@ -155,48 +155,48 @@ static void xwm_write_selection_property_to_wl_client(
 	}
 }
 
-void xwm_get_incr_chunk(struct wlr_xwm_selection_transfer *transfer) {
-	wlr_log(WLR_DEBUG, "xwm_get_incr_chunk");
+void lab_xwm_get_incr_chunk(struct lab_xwm_selection_transfer *transfer) {
+	wlr_log(WLR_DEBUG, "lab_xwm_get_incr_chunk");
 
 	if (transfer->property_reply) {
 		wlr_log(WLR_ERROR, "X11 client offered a new property before we deleted");
 		return;
 	}
 
-	if (!xwm_selection_transfer_get_incoming_selection_property(transfer, false)) {
+	if (!lab_xwm_selection_transfer_get_incoming_selection_property(transfer, false)) {
 		return;
 	}
 
 	if (xcb_get_property_value_length(transfer->property_reply) > 0) {
-		xwm_write_selection_property_to_wl_client(transfer);
+		lab_xwm_write_selection_property_to_wl_client(transfer);
 	} else {
 		wlr_log(WLR_DEBUG, "incremental transfer complete");
-		xwm_selection_transfer_destroy(transfer);
+		lab_xwm_selection_transfer_destroy(transfer);
 	}
 }
 
-static void xwm_selection_transfer_get_data(
-		struct wlr_xwm_selection_transfer *transfer) {
-	struct wlr_xwm *xwm = transfer->selection->xwm;
+static void lab_xwm_selection_transfer_get_data(
+		struct lab_xwm_selection_transfer *transfer) {
+	struct lab_xwm *xwm = transfer->selection->xwm;
 
-	if (!xwm_selection_transfer_get_incoming_selection_property(transfer, true)) {
+	if (!lab_xwm_selection_transfer_get_incoming_selection_property(transfer, true)) {
 		return;
 	}
 
 	if (transfer->property_reply->type == xwm->atoms[INCR]) {
 		transfer->incr = true;
-		xwm_selection_transfer_destroy_property_reply(transfer);
+		lab_xwm_selection_transfer_destroy_property_reply(transfer);
 	} else {
 		// Reply's ownership is transferred to wm, which is responsible for freeing
 		// it.
-		xwm_write_selection_property_to_wl_client(transfer);
+		lab_xwm_write_selection_property_to_wl_client(transfer);
 	}
 }
 
-static void source_send(struct wlr_xwm_selection *selection,
+static void source_send(struct lab_xwm_selection *selection,
 		struct wl_array *mime_types, struct wl_array *mime_types_atoms,
 		const char *requested_mime_type, int fd) {
-	struct wlr_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = selection->xwm;
 
 	xcb_atom_t *atoms = mime_types_atoms->data;
 	bool found = false;
@@ -219,8 +219,8 @@ static void source_send(struct wlr_xwm_selection *selection,
 		return;
 	}
 
-	struct wlr_xwm_selection_transfer *transfer =
-		xwm_selection_transfer_create_incoming(selection);
+	struct lab_xwm_selection_transfer *transfer =
+		lab_xwm_selection_transfer_create_incoming(selection);
 	if (!transfer) {
 		wlr_log(WLR_ERROR, "Cannot create transfer");
 		close(fd);
@@ -234,7 +234,7 @@ static void source_send(struct wlr_xwm_selection *selection,
 		xwm->atoms[WL_SELECTION],
 		XCB_TIME_CURRENT_TIME);
 
-	xwm_schedule_flush(xwm);
+	lab_xwm_schedule_flush(xwm);
 
 	fcntl(fd, F_SETFL, O_WRONLY | O_NONBLOCK);
 	transfer->wl_client_fd = fd;
@@ -242,7 +242,7 @@ static void source_send(struct wlr_xwm_selection *selection,
 
 struct x11_data_source {
 	struct wlr_data_source base;
-	struct wlr_xwm_selection *selection;
+	struct lab_xwm_selection *selection;
 	struct wl_array mime_types_atoms;
 };
 
@@ -264,7 +264,7 @@ static void data_source_send(struct wlr_data_source *wlr_source,
 		const char *mime_type, int32_t fd) {
 	struct x11_data_source *source =
 		data_source_from_wlr_data_source(wlr_source);
-	struct wlr_xwm_selection *selection = source->selection;
+	struct lab_xwm_selection *selection = source->selection;
 
 	source_send(selection, &wlr_source->mime_types, &source->mime_types_atoms,
 		mime_type, fd);
@@ -284,7 +284,7 @@ static const struct wlr_data_source_impl data_source_impl = {
 
 struct x11_primary_selection_source {
 	struct wlr_primary_selection_source base;
-	struct wlr_xwm_selection *selection;
+	struct lab_xwm_selection *selection;
 	struct wl_array mime_types_atoms;
 };
 
@@ -300,7 +300,7 @@ static void primary_selection_source_send(
 		struct wlr_primary_selection_source *wlr_source,
 		const char *mime_type, int fd) {
 	struct x11_primary_selection_source *source = wl_container_of(wlr_source, source, base);
-	struct wlr_xwm_selection *selection = source->selection;
+	struct lab_xwm_selection *selection = source->selection;
 
 	source_send(selection, &wlr_source->mime_types, &source->mime_types_atoms,
 		mime_type, fd);
@@ -319,9 +319,9 @@ static const struct wlr_primary_selection_source_impl
 	.destroy = primary_selection_source_destroy,
 };
 
-static bool source_get_targets(struct wlr_xwm_selection *selection,
+static bool source_get_targets(struct lab_xwm_selection *selection,
 		struct wl_array *mime_types, struct wl_array *mime_types_atoms) {
-	struct wlr_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = selection->xwm;
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(xwm->xcb_conn,
 		1, // delete
@@ -398,9 +398,9 @@ static bool source_get_targets(struct wlr_xwm_selection *selection,
 	return true;
 }
 
-static void xwm_selection_get_targets(struct wlr_xwm_selection *selection) {
+static void lab_xwm_selection_get_targets(struct lab_xwm_selection *selection) {
 	// set the wayland selection to the X11 selection
-	struct wlr_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = selection->xwm;
 
 	if (selection == &xwm->clipboard_selection) {
 		struct x11_data_source *source = calloc(1, sizeof(*source));
@@ -444,25 +444,25 @@ static void xwm_selection_get_targets(struct wlr_xwm_selection *selection) {
 	}
 }
 
-void xwm_handle_selection_notify(struct wlr_xwm *xwm,
+void lab_xwm_handle_selection_notify(struct lab_xwm *xwm,
 		xcb_selection_notify_event_t *event) {
 	wlr_log(WLR_DEBUG, "XCB_SELECTION_NOTIFY (selection=%u, property=%u, target=%u)",
 		event->selection, event->property,
 		event->target);
 
-	struct wlr_xwm_selection *selection =
-		xwm_get_selection(xwm, event->selection);
+	struct lab_xwm_selection *selection =
+		lab_xwm_get_selection(xwm, event->selection);
 	if (selection == NULL) {
 		return;
 	}
 
-	struct wlr_xwm_selection_transfer *transfer =
-		xwm_selection_find_incoming_transfer_by_window(selection, event->requestor);
+	struct lab_xwm_selection_transfer *transfer =
+		lab_xwm_selection_find_incoming_transfer_by_window(selection, event->requestor);
 
 	if (event->property == XCB_ATOM_NONE) {
 		if (transfer) {
 			wlr_log(WLR_ERROR, "convert selection failed");
-			xwm_selection_transfer_destroy(transfer);
+			lab_xwm_selection_transfer_destroy(transfer);
 		}
 	} else if (event->target == xwm->atoms[TARGETS]) {
 		// No xwayland surface focused, deny access to clipboard
@@ -473,19 +473,19 @@ void xwm_handle_selection_notify(struct wlr_xwm *xwm,
 		}
 
 		// This sets the Wayland clipboard (by calling wlr_seat_set_selection)
-		xwm_selection_get_targets(selection);
+		lab_xwm_selection_get_targets(selection);
 	} else if (transfer) {
-		xwm_selection_transfer_get_data(transfer);
+		lab_xwm_selection_transfer_get_data(transfer);
 	}
 }
 
-int xwm_handle_xfixes_selection_notify(struct wlr_xwm *xwm,
+int lab_xwm_handle_xfixes_selection_notify(struct lab_xwm *xwm,
 		xcb_xfixes_selection_notify_event_t *event) {
 	wlr_log(WLR_DEBUG, "XCB_XFIXES_SELECTION_NOTIFY (selection=%u, owner=%u)",
 		event->selection, event->owner);
 
-	struct wlr_xwm_selection *selection =
-		xwm_get_selection(xwm, event->selection);
+	struct lab_xwm_selection *selection =
+		lab_xwm_get_selection(xwm, event->selection);
 	if (selection == NULL) {
 		return 0;
 	}
@@ -535,7 +535,7 @@ int xwm_handle_xfixes_selection_notify(struct wlr_xwm *xwm,
 		xwm->atoms[WL_SELECTION],
 		event->timestamp
 	);
-	xwm_schedule_flush(xwm);
+	lab_xwm_schedule_flush(xwm);
 
 	return 1;
 }
