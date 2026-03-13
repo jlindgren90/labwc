@@ -23,7 +23,7 @@ static void safe_close(int fd) {
 	}
 }
 
-noreturn static void exec_xwayland(struct wlr_xwayland_server *server,
+noreturn static void exec_xwayland(struct xwayland_server *server,
 		int notify_fd) {
 	if (!set_cloexec(server->x_fd[0], false) ||
 			!set_cloexec(server->x_fd[1], false) ||
@@ -120,9 +120,9 @@ noreturn static void exec_xwayland(struct wlr_xwayland_server *server,
 		dup2(devnull, STDERR_FILENO);
 	}
 
-	const char *xwayland_path = getenv("WLR_XWAYLAND");
+	const char *xwayland_path = getenv("XWAYLAND");
 	if (xwayland_path) {
-		wlr_log(WLR_INFO, "Using Xwayland binary '%s' due to WLR_XWAYLAND",
+		wlr_log(WLR_INFO, "Using Xwayland binary '%s' due to XWAYLAND",
 			xwayland_path);
 	} else {
 		xwayland_path = XWAYLAND_PATH;
@@ -136,7 +136,7 @@ noreturn static void exec_xwayland(struct wlr_xwayland_server *server,
 	_exit(EXIT_FAILURE);
 }
 
-static void server_finish_process(struct wlr_xwayland_server *server) {
+static void server_finish_process(struct xwayland_server *server) {
 	if (!server || server->display == -1) {
 		return;
 	}
@@ -160,7 +160,7 @@ static void server_finish_process(struct wlr_xwayland_server *server) {
 	safe_close(server->wl_fd[1]);
 	safe_close(server->wm_fd[0]);
 	safe_close(server->wm_fd[1]);
-	memset(server, 0, offsetof(struct wlr_xwayland_server, display));
+	memset(server, 0, offsetof(struct xwayland_server, display));
 	server->wl_fd[0] = server->wl_fd[1] = -1;
 	server->wm_fd[0] = server->wm_fd[1] = -1;
 
@@ -170,7 +170,7 @@ static void server_finish_process(struct wlr_xwayland_server *server) {
 	 */
 }
 
-static void server_finish_display(struct wlr_xwayland_server *server) {
+static void server_finish_display(struct xwayland_server *server) {
 	if (!server) {
 		return;
 	}
@@ -191,11 +191,11 @@ static void server_finish_display(struct wlr_xwayland_server *server) {
 	server->display_name[0] = '\0';
 }
 
-static bool server_start(struct wlr_xwayland_server *server);
-static bool server_start_lazy(struct wlr_xwayland_server *server);
+static bool server_start(struct xwayland_server *server);
+static bool server_start_lazy(struct xwayland_server *server);
 
 static void handle_client_destroy(struct wl_listener *listener, void *data) {
-	struct wlr_xwayland_server *server =
+	struct xwayland_server *server =
 		wl_container_of(listener, server, client_destroy);
 
 	if (server->pipe_source) {
@@ -221,7 +221,7 @@ static void handle_client_destroy(struct wl_listener *listener, void *data) {
 }
 
 static void handle_display_destroy(struct wl_listener *listener, void *data) {
-	struct wlr_xwayland_server *server =
+	struct xwayland_server *server =
 		wl_container_of(listener, server, display_destroy);
 
 	// Don't call client destroy: the display is being destroyed, it's too late
@@ -230,11 +230,11 @@ static void handle_display_destroy(struct wl_listener *listener, void *data) {
 		wl_list_remove(&server->client_destroy.link);
 	}
 
-	wlr_xwayland_server_destroy(server);
+	xwayland_server_destroy(server);
 }
 
 static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
-	struct wlr_xwayland_server *server = data;
+	struct xwayland_server *server = data;
 
 	if (mask & WL_EVENT_READABLE) {
 		/* Xwayland writes to the pipe twice, so if we close it too early
@@ -287,7 +287,7 @@ static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
 	server->pipe_source = NULL;
 	server->ready = true;
 
-	struct wlr_xwayland_server_ready_event event = {
+	struct xwayland_server_ready_event event = {
 		.server = server,
 		.wm_fd = server->wm_fd[0],
 	};
@@ -304,7 +304,7 @@ error:
 	return 0;
 }
 
-static bool server_start_display(struct wlr_xwayland_server *server,
+static bool server_start_display(struct xwayland_server *server,
 		struct wl_display *wl_display) {
 	server->display_destroy.notify = handle_display_destroy;
 	wl_display_add_destroy_listener(wl_display, &server->display_destroy);
@@ -320,7 +320,7 @@ static bool server_start_display(struct wlr_xwayland_server *server,
 	return true;
 }
 
-static bool server_start(struct wlr_xwayland_server *server) {
+static bool server_start(struct xwayland_server *server) {
 	if (socketpair(AF_UNIX, SOCK_STREAM, 0, server->wl_fd) != 0) {
 		wlr_log_errno(WLR_ERROR, "socketpair failed");
 		server_finish_process(server);
@@ -410,7 +410,7 @@ static bool server_start(struct wlr_xwayland_server *server) {
 }
 
 static int xwayland_socket_connected(int fd, uint32_t mask, void *data) {
-	struct wlr_xwayland_server *server = data;
+	struct xwayland_server *server = data;
 
 	wl_event_source_remove(server->x_fd_read_event[0]);
 	wl_event_source_remove(server->x_fd_read_event[1]);
@@ -421,7 +421,7 @@ static int xwayland_socket_connected(int fd, uint32_t mask, void *data) {
 	return 0;
 }
 
-static bool server_start_lazy(struct wlr_xwayland_server *server) {
+static bool server_start_lazy(struct xwayland_server *server) {
 	struct wl_event_loop *loop = wl_display_get_event_loop(server->wl_display);
 
 	if (!(server->x_fd_read_event[0] = wl_event_loop_add_fd(loop, server->x_fd[0],
@@ -440,12 +440,12 @@ static bool server_start_lazy(struct wlr_xwayland_server *server) {
 }
 
 static void handle_idle(void *data) {
-	struct wlr_xwayland_server *server = data;
+	struct xwayland_server *server = data;
 	server->idle_source = NULL;
 	server_start(server);
 }
 
-void wlr_xwayland_server_destroy(struct wlr_xwayland_server *server) {
+void xwayland_server_destroy(struct xwayland_server *server) {
 	if (!server) {
 		return;
 	}
@@ -465,15 +465,15 @@ void wlr_xwayland_server_destroy(struct wlr_xwayland_server *server) {
 	free(server);
 }
 
-struct wlr_xwayland_server *wlr_xwayland_server_create(
+struct xwayland_server *xwayland_server_create(
 		struct wl_display *wl_display,
-		struct wlr_xwayland_server_options *options) {
-	if (!getenv("WLR_XWAYLAND") && access(XWAYLAND_PATH, X_OK) != 0) {
+		struct xwayland_server_options *options) {
+	if (!getenv("XWAYLAND") && access(XWAYLAND_PATH, X_OK) != 0) {
 		wlr_log(WLR_ERROR, "Cannot find Xwayland binary \"%s\"", XWAYLAND_PATH);
 		return NULL;
 	}
 
-	struct wlr_xwayland_server *server = calloc(1, sizeof(*server));
+	struct xwayland_server *server = calloc(1, sizeof(*server));
 	if (!server) {
 		return NULL;
 	}
