@@ -3,10 +3,10 @@
 
 #include <wayland-server-core.h>
 #include <wlr/config.h>
-#include <wlr/xwayland.h>
 #include <xcb/render.h>
 #include "config.h"
 #include "xwayland/selection.h"
+#include "xwayland/xwayland.h"
 
 #if HAVE_XCB_ERRORS
 #include <xcb/xcb_errors.h>

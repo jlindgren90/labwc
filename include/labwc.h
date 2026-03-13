@@ -124,7 +124,7 @@ struct server {
 	struct wl_listener new_xdg_toplevel;
 	struct wl_listener new_layer_surface;
 
-	struct wlr_xwayland *xwayland;
+	struct xwayland *xwayland;
 	struct wl_listener xwayland_server_ready;
 	struct wl_listener xwayland_xwm_ready;
 	struct wl_listener xwayland_new_surface;
