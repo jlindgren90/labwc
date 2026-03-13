@@ -6,11 +6,29 @@ use crate::rect::*;
 use crate::util::*;
 use crate::view_geom::*;
 use crate::view_impl::*;
+use std::cmp::max;
 use std::ffi::CString;
+use std::ops::BitOrAssign;
 use std::ptr::null_mut;
 
 const FALLBACK_WIDTH: i32 = 640;
 const FALLBACK_HEIGHT: i32 = 480;
+
+// Returned to indicate a "post-processing" update is needed.
+// Levels are cumulative: each level also implies the previous.
+#[must_use]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord)]
+pub enum UpdateLevel {
+    None,
+    Cursor, // i.e. cursor_update_focus()
+}
+
+impl BitOrAssign for UpdateLevel {
+    // unfortunately this counts as "using" self
+    fn bitor_assign(&mut self, other: Self) {
+        *self = max(*self, other);
+    }
+}
 
 impl ViewState {
     pub fn visible(&self) -> bool {
@@ -125,25 +143,30 @@ impl View {
         }
     }
 
-    pub fn set_mapped(&mut self, was_shown: &mut bool) {
+    pub fn set_mapped(&mut self, was_shown: &mut bool) -> UpdateLevel {
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.focus_mode = self.v.get_focus_mode();
         if !self.state.minimized {
             unsafe { view_set_visible(self.c_ptr, true) };
             *was_shown = true;
+            return UpdateLevel::Cursor;
         }
+        return UpdateLevel::None;
     }
 
-    pub fn set_unmapped(&mut self, was_hidden: &mut bool) {
+    pub fn set_unmapped(&mut self, was_hidden: &mut bool) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         self.state.mapped = false;
         if !self.state.minimized {
             unsafe { view_set_visible(self.c_ptr, false) };
             *was_hidden = true;
+            ul = UpdateLevel::Cursor;
         }
         for resource in self.d.foreign_toplevels.drain(..) {
             resource.close();
         }
+        return ul;
     }
 
     pub fn set_active(&mut self, active: bool) {
@@ -187,7 +210,7 @@ impl View {
         }
     }
 
-    pub fn set_minimized(&mut self, minimized: bool, visibility_changed: &mut bool) {
+    pub fn set_minimized(&mut self, minimized: bool, visibility_changed: &mut bool) -> UpdateLevel {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
             self.v.set_minimized(minimized);
@@ -195,17 +218,19 @@ impl View {
             if self.state.mapped {
                 unsafe { view_set_visible(self.c_ptr, !minimized) };
                 *visibility_changed = true;
+                return UpdateLevel::Cursor;
             }
         }
+        return UpdateLevel::None;
     }
 
     pub fn set_pending_geom(&mut self, geom: Rect) {
         self.state.pending = geom;
     }
 
-    pub fn move_resize(&mut self, geom: Rect) {
+    pub fn move_resize(&mut self, geom: Rect) -> UpdateLevel {
         if rect_equals(self.state.pending, geom) {
-            return;
+            return UpdateLevel::None;
         }
         let mut commit_move = false;
         self.v.configure(geom, &mut commit_move);
@@ -220,16 +245,21 @@ impl View {
             self.d.lost_output = false;
         }
         if commit_move {
-            self.commit_move(geom.x, geom.y);
+            return self.commit_move(geom.x, geom.y);
         }
+        return UpdateLevel::None;
     }
 
-    pub fn commit_move(&mut self, x: i32, y: i32) {
+    pub fn commit_move(&mut self, x: i32, y: i32) -> UpdateLevel {
         (self.state.current.x, self.state.current.y) = self.v.adjust_scene_pos(&self.state, x, y);
         unsafe { view_move_impl(self.c_ptr) };
+        if self.state.visible() {
+            return UpdateLevel::Cursor;
+        }
+        return UpdateLevel::None;
     }
 
-    pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) {
+    pub fn commit_geom(&mut self, width: i32, height: i32, resize_edges: LabEdge) -> UpdateLevel {
         let (x, y) = compute_display_position(
             self.state.current,
             self.state.pending,
@@ -239,7 +269,7 @@ impl View {
         );
         self.state.current.width = width;
         self.state.current.height = height;
-        self.commit_move(x, y);
+        return self.commit_move(x, y);
     }
 
     pub fn set_fallback_natural_geom(&mut self) {
@@ -268,13 +298,13 @@ impl View {
         }
     }
 
-    fn apply_natural_geom(&mut self) {
+    fn apply_natural_geom(&mut self) -> UpdateLevel {
         let mut natural = self.state.natural_geom;
         ensure_geom_onscreen(&*self.state, &mut natural);
-        self.move_resize(natural);
+        return self.move_resize(natural);
     }
 
-    pub fn apply_special_geom(&mut self) {
+    pub fn apply_special_geom(&mut self) -> UpdateLevel {
         let geom;
         if self.state.fullscreen {
             geom = unsafe { output_layout_coords(self.state.output) };
@@ -283,18 +313,19 @@ impl View {
         } else if self.state.tiled != 0 {
             geom = compute_tiled_geom(&*self.state);
         } else {
-            return; // defensive
+            return UpdateLevel::None; // defensive
         }
-        if !rect_empty(geom) {
-            self.move_resize(geom);
+        if rect_empty(geom) {
+            return UpdateLevel::None;
         }
+        return self.move_resize(geom);
     }
 
     pub fn set_output(&mut self, output: *mut Output) {
         self.state.output = output;
     }
 
-    pub fn adjust_for_layout_change(&mut self) {
+    pub fn adjust_for_layout_change(&mut self) -> UpdateLevel {
         // Save user geometry prior to first layout-change adjustment
         if rect_empty(self.d.saved_geom) {
             self.d.saved_geom = self.state.pending;
@@ -306,39 +337,43 @@ impl View {
         if is_floating || self.d.lost_output {
             self.state.output = nearest_output_to_geom(self.d.saved_geom);
         }
-        if !is_floating {
-            self.apply_special_geom();
+        let ul = if !is_floating {
+            self.apply_special_geom()
         } else if self.has_strut_partial() {
             // Do not move panels etc. out of their own reserved area
+            UpdateLevel::None
         } else {
             // Restore saved geometry, ensuring view is on-screen
             let mut geom = self.d.saved_geom;
             ensure_geom_onscreen(&*self.state, &mut geom);
-            self.move_resize(geom);
-        }
+            self.move_resize(geom)
+        };
         self.d.in_layout_change = false;
+        return ul;
     }
 
     // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, fullscreen: bool) -> *mut CView {
+    pub fn fullscreen(&mut self, fullscreen: bool) -> (*mut CView, UpdateLevel) {
         if self.state.fullscreen == fullscreen {
-            return null_mut();
+            return (null_mut(), UpdateLevel::None);
         }
         if fullscreen {
             self.store_natural_geom();
         }
         self.set_fullscreen(fullscreen);
+        // Cursor focus update is needed in case fullscreen bg was toggled
+        let mut ul = UpdateLevel::Cursor;
         if self.state.floating() {
-            self.apply_natural_geom();
+            ul |= self.apply_natural_geom();
         } else {
-            self.apply_special_geom();
+            ul |= self.apply_special_geom();
         }
-        return self.c_ptr;
+        return (self.c_ptr, ul);
     }
 
-    pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) {
+    pub fn maximize(&mut self, axis: ViewAxis, is_moving: bool) -> UpdateLevel {
         if self.state.maximized == axis {
-            return;
+            return UpdateLevel::None;
         }
         // In snap-to-maximize case, natural geometry was already stored
         if !is_moving {
@@ -354,15 +389,15 @@ impl View {
         }
         self.set_maximized(axis);
         if self.state.floating() {
-            self.apply_natural_geom();
+            return self.apply_natural_geom();
         } else {
-            self.apply_special_geom();
+            return self.apply_special_geom();
         }
     }
 
-    pub fn tile(&mut self, edge: LabEdge, is_moving: bool) {
+    pub fn tile(&mut self, edge: LabEdge, is_moving: bool) -> UpdateLevel {
         if self.state.tiled == edge {
-            return;
+            return UpdateLevel::None;
         }
         // In snap-to-tile case, natural geometry was already stored
         if !is_moving {
@@ -370,9 +405,9 @@ impl View {
         }
         self.set_tiled(edge);
         if self.state.floating() {
-            self.apply_natural_geom();
+            return self.apply_natural_geom();
         } else {
-            self.apply_special_geom();
+            return self.apply_special_geom();
         }
     }
 

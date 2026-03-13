@@ -79,10 +79,11 @@ impl Views {
         return None;
     }
 
-    pub fn map_common(&mut self, id: ViewId) {
+    pub fn map_common(&mut self, id: ViewId) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&id) {
             let mut was_shown = false;
-            view.set_mapped(&mut was_shown);
+            ul |= view.set_mapped(&mut was_shown);
             // Only focusable views should be shown in taskbars etc.
             if view.get_state().focusable() {
                 for &client in &self.foreign_toplevel_clients {
@@ -90,24 +91,28 @@ impl Views {
                 }
             }
             if was_shown {
+                ul |= self.focus(id, /* raise */ true);
+                // Might be redundant after raise, but be sure
                 self.update_top_layer_visibility();
-                self.focus(id, /* raise */ true);
             }
         }
+        return ul;
     }
 
-    pub fn unmap_common(&mut self, id: ViewId) {
+    pub fn unmap_common(&mut self, id: ViewId) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&id) {
             let mut was_hidden = false;
-            view.set_unmapped(&mut was_hidden);
+            ul |= view.set_unmapped(&mut was_hidden);
             if was_hidden {
                 self.update_top_layer_visibility();
-                self.reset_grab_for(Some(id));
+                ul |= self.reset_grab_for(Some(id));
                 if !self.is_active_visible() {
-                    self.focus_topmost();
+                    ul |= self.focus_topmost();
                 }
             }
         }
+        return ul;
     }
 
     pub fn get_active(&self) -> *mut CView {
@@ -133,16 +138,19 @@ impl Views {
         }
     }
 
-    pub fn commit_geom(&mut self, id: ViewId, width: i32, height: i32) {
+    pub fn commit_geom(&mut self, id: ViewId, width: i32, height: i32) -> UpdateLevel {
         let mut resize_edges = LAB_EDGE_NONE;
         if id == self.resizing_id {
             resize_edges = self.grab.get_resize_edges();
         }
         if let Some(view) = self.by_id.get_mut(&id) {
-            view.commit_geom(width, height, resize_edges);
+            return view.commit_geom(width, height, resize_edges);
+        } else {
+            return UpdateLevel::None;
         }
     }
 
+    // Assuming any caller already sets UpdateLevel::Cursor
     fn update_top_layer_visibility(&self) {
         unsafe { top_layer_show_all() };
         let mut outputs_seen = HashSet::new();
@@ -161,50 +169,57 @@ impl Views {
         }
     }
 
-    pub fn adjust_for_layout_change(&mut self) {
+    pub fn adjust_for_layout_change(&mut self) -> UpdateLevel {
+        let mut ul = UpdateLevel::Cursor;
         for v in self.by_id.values_mut() {
-            v.adjust_for_layout_change();
+            ul |= v.adjust_for_layout_change();
         }
         self.update_top_layer_visibility();
+        return ul;
     }
 
     // Returns CView pointer to pass to view_notify_fullscreen()
-    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) -> *mut CView {
+    pub fn fullscreen(&mut self, id: ViewId, fullscreen: bool) -> (*mut CView, UpdateLevel) {
         let Some(view) = self.by_id.get_mut(&id) else {
-            return null_mut();
+            return (null_mut(), UpdateLevel::None);
         };
-        let view_ptr = view.fullscreen(fullscreen);
+        let (view_ptr, mut ul) = view.fullscreen(fullscreen);
         if !view_ptr.is_null() {
             // Entering/leaving fullscreen ends any interactive move/resize
-            self.reset_grab_for(Some(id));
+            ul |= self.reset_grab_for(Some(id));
             self.update_top_layer_visibility();
         }
-        return view_ptr;
+        return (view_ptr, ul);
     }
 
-    pub fn maximize(&mut self, id: ViewId, axis: ViewAxis) {
+    pub fn maximize(&mut self, id: ViewId, axis: ViewAxis) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&id)
             && view.get_state().maximized != axis
         {
-            view.maximize(axis, id == self.moving_id);
+            ul |= view.maximize(axis, id == self.moving_id);
             // Maximizing/unmaximizing ends any interactive move/resize
-            self.reset_grab_for(Some(id));
+            ul |= self.reset_grab_for(Some(id));
         }
+        return ul;
     }
 
-    pub fn tile(&mut self, id: ViewId, edge: LabEdge) {
+    pub fn tile(&mut self, id: ViewId, edge: LabEdge) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&id)
             && view.get_state().tiled != edge
         {
-            view.tile(edge, id == self.moving_id);
+            ul |= view.tile(edge, id == self.moving_id);
             // Tiling/untiling ends any interactive move/resize
-            self.reset_grab_for(Some(id));
+            ul |= self.reset_grab_for(Some(id));
         }
+        return ul;
     }
 
     // Returns true if visibility of any view changed
-    pub fn minimize(&mut self, id: ViewId, minimized: bool) -> bool {
+    pub fn minimize(&mut self, id: ViewId, minimized: bool) -> (bool, UpdateLevel) {
         let mut visibility_changed = false;
+        let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get(&id)
             && view.get_state().minimized != minimized
         {
@@ -213,36 +228,36 @@ impl Views {
             let mut reset_grab = false;
             for (&i, v) in &mut self.by_id {
                 if v.get_root_id() == root {
-                    v.set_minimized(minimized, &mut visibility_changed);
+                    ul |= v.set_minimized(minimized, &mut visibility_changed);
                     reset_grab |= i == self.grabbed_id;
                 }
             }
             // Minimize ends any interactive move/resize
             if reset_grab {
-                self.reset_grab_for(None);
+                ul |= self.reset_grab_for(None);
             }
         }
         if visibility_changed {
             if !minimized {
-                self.focus(id, /* raise */ true);
+                ul |= self.focus(id, /* raise */ true);
             } else if !self.is_active_visible() {
-                self.focus_topmost();
+                ul |= self.focus_topmost();
             }
             // Might be redundant after raise, but be sure
             self.update_top_layer_visibility();
         }
-        return visibility_changed;
+        return (visibility_changed, ul);
     }
 
-    pub fn raise(&mut self, id: ViewId) {
+    pub fn raise(&mut self, id: ViewId) -> UpdateLevel {
         // Check if view or a sub-view is already in front
         if let Some(&front) = self.order.last()
             && (id == front || self.get_root_of(front) == id)
         {
-            return;
+            return UpdateLevel::None;
         }
         let Some(view) = self.by_id.get(&id) else {
-            return;
+            return UpdateLevel::None;
         };
         let mut ids_to_raise = Vec::new();
         // Raise root parent view first
@@ -264,33 +279,37 @@ impl Views {
         self.order.retain(|i| !ids_to_raise.contains(i));
         self.order.append(&mut ids_to_raise);
         self.update_top_layer_visibility();
+        return UpdateLevel::Cursor;
     }
 
-    pub fn focus(&mut self, id: ViewId, raise: bool) {
+    pub fn focus(&mut self, id: ViewId, raise: bool) -> UpdateLevel {
         // Focus a modal dialog rather than its parent view
         let id_to_focus = self.get_modal_dialog(id).unwrap_or(id);
-        if raise {
-            self.raise(id_to_focus);
-        }
+        let ul = if raise {
+            self.raise(id_to_focus)
+        } else {
+            UpdateLevel::None
+        };
         if let Some(view) = self.by_id.get_mut(&id_to_focus)
             && view.focus()
         {
             self.set_active(id_to_focus);
         }
+        return ul;
     }
 
-    pub fn focus_topmost(&mut self) {
+    pub fn focus_topmost(&mut self) -> UpdateLevel {
         for &i in self.order.iter().rev() {
             if let Some(state) = self.by_id.get(&i).map(View::get_state)
                 && state.focusable()
                 && !state.minimized
             {
-                self.focus(i, /* raise */ false);
-                return;
+                return self.focus(i, /* raise */ false);
             }
         }
         unsafe { seat_focus_surface_no_notify(null_mut()) };
         self.set_active(0);
+        return UpdateLevel::None;
     }
 
     // Called after closing XWayland override-redirect window. Updates
@@ -348,10 +367,11 @@ impl Views {
         self.grab.compute_move_position(cursor_x, cursor_y)
     }
 
-    pub fn continue_move(&mut self, cursor_x: i32, cursor_y: i32) {
+    pub fn continue_move(&mut self, cursor_x: i32, cursor_y: i32) -> UpdateLevel {
         if let Some(view) = self.by_id.get_mut(&self.moving_id) {
-            self.grab.continue_move(view, cursor_x, cursor_y);
+            return self.grab.continue_move(view, cursor_x, cursor_y);
         }
+        return UpdateLevel::None;
     }
 
     pub fn start_resize(&mut self, id: ViewId, edges: LabEdge) -> bool {
@@ -369,13 +389,15 @@ impl Views {
         self.grab.get_resize_edges()
     }
 
-    pub fn continue_resize(&mut self, cursor_x: i32, cursor_y: i32) {
+    pub fn continue_resize(&mut self, cursor_x: i32, cursor_y: i32) -> UpdateLevel {
         if let Some(view) = self.by_id.get_mut(&self.resizing_id) {
-            self.grab.continue_resize(view, cursor_x, cursor_y);
+            return self.grab.continue_resize(view, cursor_x, cursor_y);
         }
+        return UpdateLevel::None;
     }
 
-    pub fn snap_to_edge(&mut self, cursor_x: i32, cursor_y: i32) {
+    pub fn snap_to_edge(&mut self, cursor_x: i32, cursor_y: i32) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         if let Some(view) = self.by_id.get_mut(&self.moving_id)
             && view.get_state().floating()
         {
@@ -383,21 +405,23 @@ impl Views {
             if edges != LAB_EDGE_NONE {
                 view.set_output(output);
                 if edges == LAB_EDGE_TOP {
-                    view.maximize(VIEW_AXIS_BOTH, /* is_moving */ true);
+                    ul |= view.maximize(VIEW_AXIS_BOTH, /* is_moving */ true);
                 } else if edges == LAB_EDGE_BOTTOM {
                     // Minimize but restore position from start of drag
                     // (or natural geometry if view was maximized/tiled)
-                    view.move_resize(view.get_state().natural_geom);
-                    self.minimize(self.moving_id, true);
+                    ul |= view.move_resize(view.get_state().natural_geom);
+                    ul |= self.minimize(self.moving_id, true).1;
                 } else {
-                    view.tile(edges, /* is_moving */ true);
+                    ul |= view.tile(edges, /* is_moving */ true);
                 }
             }
         }
+        return ul;
     }
 
     // Resets grab for any view if id is None
-    pub fn reset_grab_for(&mut self, id: Option<ViewId>) {
+    pub fn reset_grab_for(&mut self, id: Option<ViewId>) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
         if id == Some(self.grabbed_id) || id.is_none() {
             // Focus was only overridden if move/resize was actually started
             // FIXME: seat_focus_override_begin() is still called from C code
@@ -405,12 +429,14 @@ impl Views {
                 unsafe {
                     seat_focus_override_end(/* restore_focus */ true)
                 };
+                ul |= UpdateLevel::Cursor;
             }
             self.grabbed_id = 0;
             self.moving_id = 0;
             self.resizing_id = 0;
             self.grab = ViewGrab::default();
         }
+        return ul;
     }
 
     pub fn build_cycle_list(&mut self) {

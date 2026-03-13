@@ -3,6 +3,7 @@
 use crate::bindings::*;
 use crate::lazy_static;
 use crate::util::*;
+use crate::view::*;
 use crate::view_geom::*;
 use crate::views::*;
 use std::ffi::c_char;
@@ -11,6 +12,12 @@ use std::ptr::{null, null_mut};
 #[unsafe(no_mangle)]
 pub extern "C" fn view_is_floating(state: &ViewState) -> bool {
     state.floating()
+}
+
+fn do_update(level: UpdateLevel) {
+    if level >= UpdateLevel::Cursor {
+        unsafe { cursor_update_focus() };
+    }
 }
 
 lazy_static!(VIEWS, Views, Views::default(), views, views_mut);
@@ -68,14 +75,14 @@ pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_map_common(id: ViewId) {
-    views_mut().map_common(id);
-    unsafe { cursor_update_focus() };
+    let ul = views_mut().map_common(id);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_unmap_common(id: ViewId) {
-    views_mut().unmap_common(id);
-    unsafe { cursor_update_focus() };
+    let ul = views_mut().unmap_common(id);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
@@ -123,21 +130,28 @@ pub extern "C" fn view_set_pending_geom(id: ViewId, geom: Rect) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_move_resize(id: ViewId, geom: Rect) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.move_resize(geom);
-    }
+    let ul = if let Some(view) = views_mut().get_view_mut(id) {
+        view.move_resize(geom)
+    } else {
+        return;
+    };
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_commit_move(id: ViewId, x: i32, y: i32) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.commit_move(x, y);
-    }
+    let ul = if let Some(view) = views_mut().get_view_mut(id) {
+        view.commit_move(x, y)
+    } else {
+        return;
+    };
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
-    views_mut().commit_geom(id, width, height);
+    let ul = views_mut().commit_geom(id, width, height);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
@@ -149,9 +163,12 @@ pub extern "C" fn view_set_fallback_natural_geom(id: ViewId) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_apply_special_geom(id: ViewId) {
-    if let Some(view) = views_mut().get_view_mut(id) {
-        view.apply_special_geom();
-    }
+    let ul = if let Some(view) = views_mut().get_view_mut(id) {
+        view.apply_special_geom()
+    } else {
+        return;
+    };
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
@@ -163,56 +180,62 @@ pub extern "C" fn view_set_output(id: ViewId, output: *mut Output) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn views_adjust_for_layout_change() {
-    views_mut().adjust_for_layout_change();
+    let ul = views_mut().adjust_for_layout_change();
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_fullscreen(id: ViewId, fullscreen: bool) {
-    let view_ptr = views_mut().fullscreen(id, fullscreen);
+    let (view_ptr, ul) = views_mut().fullscreen(id, fullscreen);
     if !view_ptr.is_null() {
         unsafe { view_notify_fullscreen(view_ptr) };
     }
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_maximize(id: ViewId, axis: ViewAxis) {
-    views_mut().maximize(id, axis);
+    let ul = views_mut().maximize(id, axis);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_tile(id: ViewId, edge: LabEdge) {
-    let mut views = views_mut();
+    let mut ul = UpdateLevel::None;
     if edge != LAB_EDGE_NONE {
         // Unmaximize, otherwise tiling will have no effect
-        views.maximize(id, VIEW_AXIS_NONE);
+        ul |= views_mut().maximize(id, VIEW_AXIS_NONE);
     }
-    views.tile(id, edge);
+    ul |= views_mut().tile(id, edge);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
-    views_mut().minimize(id, minimized);
-    unsafe { cursor_update_focus() };
+    let ul = views_mut().minimize(id, minimized).1;
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_raise(id: ViewId) {
-    views_mut().raise(id);
-    unsafe { cursor_update_focus() };
+    let ul = views_mut().raise(id);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_focus(id: ViewId, raise: bool) {
     // Unminimizing also focuses (and raises) the view
-    if !views_mut().minimize(id, false) {
-        views_mut().focus(id, raise);
+    let (was_shown, mut ul) = views_mut().minimize(id, false);
+    if !was_shown {
+        ul |= views_mut().focus(id, raise);
     }
-    unsafe { cursor_update_focus() };
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_focus_topmost() {
-    views_mut().focus_topmost();
+    let ul = views_mut().focus_topmost();
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
@@ -316,7 +339,8 @@ pub extern "C" fn view_compute_move_position(
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_continue_move(cursor_x: i32, cursor_y: i32) {
-    views_mut().continue_move(cursor_x, cursor_y);
+    let ul = views_mut().continue_move(cursor_x, cursor_y);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
@@ -331,19 +355,21 @@ pub extern "C" fn view_get_resize_edges() -> LabEdge {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_continue_resize(cursor_x: i32, cursor_y: i32) {
-    views_mut().continue_resize(cursor_x, cursor_y);
+    let ul = views_mut().continue_resize(cursor_x, cursor_y);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_finish_grab(cursor_x: i32, cursor_y: i32) {
-    let mut views = views_mut();
-    views.snap_to_edge(cursor_x, cursor_y);
-    views.reset_grab_for(None);
+    let mut ul = views_mut().snap_to_edge(cursor_x, cursor_y);
+    ul |= views_mut().reset_grab_for(None);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_reset_grab() {
-    views_mut().reset_grab_for(None);
+    let ul = views_mut().reset_grab_for(None);
+    do_update(ul);
 }
 
 #[unsafe(no_mangle)]
