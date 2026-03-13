@@ -77,7 +77,7 @@ struct xwayland {
 		struct wl_listener server_destroy;
 		struct wl_listener seat_destroy;
 		struct wl_listener shell_destroy;
-	} WLR_PRIVATE;
+	};
 };
 
 enum xwayland_surface_decorations {
@@ -243,7 +243,7 @@ struct xwayland_surface {
 		struct wl_listener surface_commit;
 		struct wl_listener surface_map;
 		struct wl_listener surface_unmap;
-	} WLR_PRIVATE;
+	};
 };
 
 struct xwayland_surface_configure_event {
@@ -425,7 +425,7 @@ bool xwayland_surface_fetch_icon(
  * invalid on xwayland_server.events.destroy. In that case, NULL is
  * returned.
  */
-xcb_connection_t *xwayland_get_lab_xwm_connection(
+xcb_connection_t *xwayland_get_xwm_connection(
 	struct xwayland *xwayland);
 
 #ifdef __cplusplus

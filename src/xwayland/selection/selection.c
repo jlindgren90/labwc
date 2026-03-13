@@ -1,3 +1,4 @@
+#define _POSIX_C_SOURCE 200809L
 #include <assert.h>
 #include <fcntl.h>
 #include <stdlib.h>
@@ -288,7 +289,7 @@ static void handle_seat_set_selection(struct wl_listener *listener,
 		wl_container_of(listener, xwm, seat_set_selection);
 	struct wlr_data_source *source = seat->selection_source;
 
-	if (source != NULL && data_source_is_xwayland(source)) {
+	if (source != NULL && lab_data_source_is_xwayland(source)) {
 		return;
 	}
 
@@ -303,7 +304,7 @@ static void handle_seat_set_primary_selection(struct wl_listener *listener,
 	struct wlr_primary_selection_source *source =
 		seat->primary_selection_source;
 
-	if (source != NULL && primary_selection_source_is_xwayland(source)) {
+	if (source != NULL && lab_primary_selection_source_is_xwayland(source)) {
 		return;
 	}
 
