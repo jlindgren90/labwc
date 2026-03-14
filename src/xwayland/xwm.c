@@ -23,6 +23,8 @@
 #include "xwayland/shell.h"
 #include "xwayland/xwayland.h"
 
+#define IS_UNMANAGED(xsurface) (!(xsurface)->view_id)
+
 static const char *const atom_map[ATOM_LAST] = {
 	[WL_SURFACE_ID] = "WL_SURFACE_ID",
 	[WL_SURFACE_SERIAL] = "WL_SURFACE_SERIAL",
@@ -133,11 +135,10 @@ static struct xwayland_surface *xwayland_surface_create(
 	surface->props.geom.y = y;
 	surface->props.geom.width = width;
 	surface->props.geom.height = height;
-	surface->override_redirect = override_redirect;
 
 	xsurface_add(window_id, surface);
 
-	if (!surface->override_redirect) {
+	if (!override_redirect) {
 		xsurface_set_managed(window_id, true);
 		xwayland_surface_read_properties(surface);
 	}
@@ -223,7 +224,7 @@ static void lab_xwm_focus_window(struct lab_xwm *xwm,
 		return;
 	}
 
-	if (xsurface->override_redirect) {
+	if (IS_UNMANAGED(xsurface)) {
 		return;
 	}
 
@@ -249,7 +250,7 @@ static void lab_xwm_set_focused_window(struct lab_xwm *xwm,
 		struct xwayland_surface *xsurface) {
 	struct xwayland_surface *unfocus_surface = xwm->focus_surface;
 
-	if (xsurface && xsurface->override_redirect) {
+	if (xsurface && IS_UNMANAGED(xsurface)) {
 		return;
 	}
 
@@ -269,7 +270,7 @@ static void lab_xwm_set_focused_window(struct lab_xwm *xwm,
 }
 
 void xwayland_surface_offer_focus(struct xwayland_surface *xsurface) {
-	if (!xsurface || xsurface->override_redirect) {
+	if (!xsurface || IS_UNMANAGED(xsurface)) {
 		return;
 	}
 
@@ -302,7 +303,7 @@ xwayland_surface_activate(struct xwayland_surface *xsurface) // may be NULL
 		return;
 	}
 
-	if (xsurface && xsurface->override_redirect) {
+	if (xsurface && IS_UNMANAGED(xsurface)) {
 		return;
 	}
 
@@ -869,7 +870,7 @@ static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
 
 static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 		bool override_redirect) {
-	if (xsurface->override_redirect == override_redirect) {
+	if (IS_UNMANAGED(xsurface) == override_redirect) {
 		return;
 	}
 
@@ -878,7 +879,6 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 		xsurface_unmap(xsurface->window_id, xsurface->surface);
 	}
 
-	xsurface->override_redirect = override_redirect;
 	xsurface_set_managed(xsurface->window_id, !override_redirect);
 
 	// Re-read properties after unmanaged surface becomes managed
@@ -913,7 +913,7 @@ static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,
 
 	lab_xwm_update_override_redirect(xsurface, ev->override_redirect);
 
-	if (geometry_changed && xsurface->override_redirect) {
+	if (geometry_changed && IS_UNMANAGED(xsurface)) {
 		xsurface_move_unmanaged(xsurface->window_id,
 			xsurface->props.geom.x, xsurface->props.geom.y);
 	}
@@ -943,7 +943,7 @@ xwayland_surface_stack_above(struct xwayland_surface *xsurface,
 	size_t idx = 0;
 	uint32_t flags = XCB_CONFIG_WINDOW_STACK_MODE;
 
-	assert(!xsurface->override_redirect);
+	assert(!IS_UNMANAGED(xsurface));
 
 	if (sibling == xsurface->window_id) {
 		return;
@@ -990,7 +990,7 @@ static void lab_xwm_handle_unmap_notify(struct lab_xwm *xwm,
 
 	xwayland_surface_dissociate(xsurface);
 
-	if (!xsurface->override_redirect) {
+	if (!IS_UNMANAGED(xsurface)) {
 		// EWMH says to remove _NET_WM_STATE if the window is withdrawn
 		xcb_delete_property(xwm->xcb_conn, xsurface->window_id,
 			xwm->atoms[NET_WM_STATE]);
@@ -1294,7 +1294,7 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	// keyboard grabs to "steal" focus for e.g. popup menus.
 	struct xwayland_surface *xsurface = xsurface_lookup(ev->event);
 	if (ev->mode == XCB_NOTIFY_MODE_GRAB) {
-		if (xsurface && xsurface->override_redirect) {
+		if (xsurface && IS_UNMANAGED(xsurface)) {
 			xsurface_focus(xsurface->window_id, xsurface->surface,
 				/* raise */ false);
 		}
@@ -1528,7 +1528,7 @@ xwayland_surface_configure(struct xwayland_surface *xsurface, struct wlr_box geo
 	// we are supposed to send a synthetic event. See ICCCM part
 	// 4.1.5. But we ignore override-redirect windows as ICCCM does
 	// not apply to them.
-	if (geom.width == old_w && geom.height == old_h && !xsurface->override_redirect) {
+	if (geom.width == old_w && geom.height == old_h && !IS_UNMANAGED(xsurface)) {
 		xcb_configure_notify_event_t configure_notify = {
 			.response_type = XCB_CONFIGURE_NOTIFY,
 			.event = xsurface->window_id,
