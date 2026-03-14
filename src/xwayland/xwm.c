@@ -706,12 +706,12 @@ static void xwayland_surface_handle_commit(struct wl_listener *listener, void *d
 
 static void xwayland_surface_handle_map(struct wl_listener *listener, void *data) {
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_map);
-	xwayland_surface_on_map(xsurface);
+	xsurface_map(xsurface->window_id, xsurface->surface);
 }
 
 static void xwayland_surface_handle_unmap(struct wl_listener *listener, void *data) {
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_unmap);
-	xwayland_surface_on_unmap(xsurface);
+	xsurface_unmap(xsurface->window_id, xsurface->surface);
 }
 
 static void xwayland_surface_handle_addon_destroy(struct wlr_addon *addon) {
