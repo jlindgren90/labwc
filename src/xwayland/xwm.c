@@ -163,6 +163,7 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
 	xwayland_on_new_surface(surface);
+	xwayland_surface_read_properties(surface);
 
 	return surface;
 }
@@ -477,10 +478,6 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 
 	wl_list_remove(&xsurface->unpaired_link);
 
-	free(xsurface->wm_name);
-	free(xsurface->net_wm_name);
-	free(xsurface->class);
-	free(xsurface->instance);
 	free(xsurface->window_type);
 	free(xsurface->protocols);
 	free(xsurface->hints);
@@ -499,24 +496,14 @@ static void read_surface_class(struct lab_xwm *xwm,
 
 	size_t len = xcb_get_property_value_length(reply);
 	char *class = xcb_get_property_value(reply);
-
-	// Unpack two sequentially stored strings: instance, class
-	size_t instance_len = strnlen(class, len);
-	free(surface->instance);
-	if (len > 0 && instance_len < len) {
-		surface->instance = strndup(class, instance_len);
-		class += instance_len + 1;
-	} else {
-		surface->instance = NULL;
-	}
-	free(surface->class);
-	if (len > 0) {
-		surface->class = strndup(class, len);
-	} else {
-		surface->class = NULL;
+	if (!len) {
+		return;
 	}
 
-	xwayland_surface_on_set_class(surface);
+	// Use first string ("instance") for the app_id
+	char *instance = strndup(class, len);
+	xwayland_surface_on_set_app_id(surface, instance);
+	free(instance);
 }
 
 static void read_surface_title(struct lab_xwm *xwm,
@@ -528,33 +515,24 @@ static void read_surface_title(struct lab_xwm *xwm,
 		return;
 	}
 
+	// Prefer _NET_WM_NAME over WM_NAME if available
+	if (property == XCB_ATOM_WM_NAME && xsurface->has_net_wm_name) {
+		return;
+	}
+
 	size_t len = xcb_get_property_value_length(reply);
 	const char *title_buffer = xcb_get_property_value(reply);
-	char *title = NULL;
-	if (len > 0) {
-		title = strndup(title_buffer, len);
+	if (!len) {
+		return;
 	}
 
-	if (property == XCB_ATOM_WM_NAME) {
-		free(xsurface->wm_name);
-		xsurface->wm_name = title;
-	} else if (property == xwm->atoms[NET_WM_NAME]) {
-		free(xsurface->net_wm_name);
-		xsurface->net_wm_name = title;
-	} else {
-		abort(); // unreachable
+	if (property == xwm->atoms[NET_WM_NAME]) {
+		xsurface->has_net_wm_name = true;
 	}
 
-	// Prefer _NET_WM_NAME over WM_NAME if available
-	if (xsurface->net_wm_name != NULL) {
-		xsurface->title = xsurface->net_wm_name;
-	} else if (xsurface->wm_name != NULL) {
-		xsurface->title = xsurface->wm_name;
-	} else {
-		xsurface->title = NULL;
-	}
-
-	xwayland_surface_on_set_title(xsurface);
+	char *title = strndup(title_buffer, len);
+	xwayland_surface_on_set_title(xsurface, title);
+	free(title);
 }
 
 static bool has_parent(struct xwayland_surface *parent,
@@ -944,8 +922,14 @@ static void xwayland_surface_associate(struct lab_xwm *xwm,
 
 	xsurface->surface_unmap.notify = xwayland_surface_handle_unmap;
 	wl_signal_add(&surface->events.unmap, &xsurface->surface_unmap);
+}
 
-	// read all surface properties
+void
+xwayland_surface_read_properties(struct xwayland_surface *xsurface)
+{
+	struct lab_xwm *xwm = xsurface->xwm;
+	xsurface->has_net_wm_name = false;
+
 	const xcb_atom_t props[] = {
 		XCB_ATOM_WM_CLASS,
 		XCB_ATOM_WM_NAME,

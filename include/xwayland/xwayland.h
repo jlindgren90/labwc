@@ -84,10 +84,6 @@ struct xwayland_surface {
 	uint16_t width, height;
 	bool override_redirect;
 
-	char *title;
-	char *class;
-	char *instance;
-
 	struct wl_list children; // xwayland_surface.parent_link
 	struct xwayland_surface *parent;
 	struct wl_list parent_link; // xwayland_surface.children
@@ -118,13 +114,11 @@ struct xwayland_surface {
 	bool withdrawn;
 	bool above;
 
-	struct {
-		char *wm_name, *net_wm_name;
+	bool has_net_wm_name;
 
-		struct wl_listener surface_commit;
-		struct wl_listener surface_map;
-		struct wl_listener surface_unmap;
-	};
+	struct wl_listener surface_commit;
+	struct wl_listener surface_map;
+	struct wl_listener surface_unmap;
 
 	/* ViewId or 0 if unmanaged */
 	unsigned long view_id;
@@ -146,6 +140,8 @@ void xwayland_set_cursor(struct xwayland_server *server, const uint8_t *pixels,
 
 void xwayland_surface_activate(struct xwayland_surface *surface,
 	bool activated);
+
+void xwayland_surface_read_properties(struct xwayland_surface *xsurface);
 
 /**
  * Restack surface relative to sibling.
@@ -246,8 +242,8 @@ void xwayland_surface_on_request_minimize(struct xwayland_surface *xsurface, boo
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_geometry(struct xwayland_surface *xsurface);
-void xwayland_surface_on_set_class(struct xwayland_surface *xsurface);
-void xwayland_surface_on_set_title(struct xwayland_surface *xsurface);
+void xwayland_surface_on_set_app_id(struct xwayland_surface *xsurface, const char *app_id);
+void xwayland_surface_on_set_title(struct xwayland_surface *xsurface, const char *title);
 void xwayland_surface_on_set_decorations(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
