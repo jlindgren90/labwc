@@ -12,6 +12,7 @@ struct XSurfaceData {
     view_id: ViewId,
     parent_xid: XId,
     unmanaged_node: *mut WlrSceneNode,
+    unmanaged_focused: bool,
 }
 
 #[derive(Default)]
@@ -131,6 +132,10 @@ impl Xwm {
             }
             let props = unsafe { xwayland_surface_get_props(surf.xsurface) };
             unsafe { wlr_scene_node_set_position(surf.unmanaged_node, props.geom.x, props.geom.y) };
+            // Set seat focus at map if previously focused
+            if surf.unmanaged_focused {
+                unsafe { seat_focus_surface_no_notify(surface) };
+            }
         }
     }
 
@@ -148,6 +153,16 @@ impl Xwm {
             && !surf.unmanaged_node.is_null()
         {
             unsafe { wlr_scene_node_set_position(surf.unmanaged_node, x, y) };
+        }
+    }
+
+    pub fn focus_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) {
+        if let Some(surf) = self.surfaces.get_mut(&xid) {
+            surf.unmanaged_focused = true;
+            // Set seat focus now if already mapped, otherwise wait
+            if !surf.unmanaged_node.is_null() {
+                unsafe { seat_focus_surface_no_notify(surface) };
+            }
         }
     }
 }

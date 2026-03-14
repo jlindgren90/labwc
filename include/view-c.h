@@ -148,6 +148,7 @@ WlrBuffer *scaled_icon_buffer_load(const char *app_id,
 // from labwc.h
 void seat_focus_override_end(_Bool restore_focus);
 void seat_focus_surface_no_notify(WlrSurface *surface);
+WlrSurface *seat_get_focused_surface(void);
 
 // from menu.h
 void menu_on_view_destroy(ViewId view_id);

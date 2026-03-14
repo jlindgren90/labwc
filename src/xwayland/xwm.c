@@ -1198,7 +1198,7 @@ static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 	if (surface == NULL) {
 		return;
 	}
-	xwayland_surface_on_request_activate(surface);
+	xsurface_focus(surface->window_id, surface->surface, /* raise */ true);
 }
 
 static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
@@ -1278,8 +1278,9 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	// keyboard grabs to "steal" focus for e.g. popup menus.
 	struct xwayland_surface *xsurface = xsurface_lookup(ev->event);
 	if (ev->mode == XCB_NOTIFY_MODE_GRAB) {
-		if (xsurface) {
-			xwayland_surface_on_grab_focus(xsurface);
+		if (xsurface && xsurface->override_redirect) {
+			xsurface_focus(xsurface->window_id, xsurface->surface,
+				/* raise */ false);
 		}
 		return;
 	}
@@ -1297,7 +1298,8 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 
 	if (xsurface) {
 		lab_xwm_set_focused_window(xwm, xsurface);
-		xwayland_surface_on_focus_in(xsurface);
+		xsurface_focus(xsurface->window_id, xsurface->surface,
+			/* raise */ false);
 	}
 }
 
