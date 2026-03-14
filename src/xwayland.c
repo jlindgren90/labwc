@@ -23,21 +23,10 @@ xwayland_view_get_surface(struct xwayland_surface *xsurface)
 	return xsurface->surface;
 }
 
-static struct xwayland_surface *
-top_parent_of(struct xwayland_surface *xsurface)
-{
-	struct xwayland_surface *s = xsurface;
-	struct xwayland_surface *parent;
-	while ((parent = xwayland_surface_get_parent(s))) {
-		s = parent;
-	}
-	return s;
-}
-
 void
 xwayland_surface_on_commit(struct xwayland_surface *xsurface)
 {
-	const ViewState *view_st = view_get_state(xsurface->view_id);
+	const ViewState *view_st = view_get_state(xsurface->info->view_id);
 	if (!view_st || !xsurface->surface || !xsurface->surface->mapped) {
 		return;
 	}
@@ -53,7 +42,7 @@ xwayland_surface_on_commit(struct xwayland_surface *xsurface)
 	 */
 	if (view_st->current.width != state->width
 			|| view_st->current.height != state->height) {
-		view_commit_geom(xsurface->view_id, state->width, state->height);
+		view_commit_geom(xsurface->info->view_id, state->width, state->height);
 	}
 }
 
@@ -70,7 +59,7 @@ xwayland_surface_on_request_move(struct xwayland_surface *xsurface)
 	 *
 	 * Note: interactive_begin() checks that view == g_server.grabbed_view.
 	 */
-	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
+	interactive_begin(xsurface->info->view_id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 }
 
 void
@@ -86,7 +75,7 @@ xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t e
 	 *
 	 * Note: interactive_begin() checks that view == g_server.grabbed_view.
 	 */
-	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_RESIZE, edges);
+	interactive_begin(xsurface->info->view_id, LAB_INPUT_STATE_RESIZE, edges);
 }
 
 void
@@ -118,7 +107,7 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 		const struct xwayland_surface_configure_event *event)
 {
 	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
+		assert(!xsurface->info->view_id);
 		xwayland_surface_configure(xsurface, event->geom);
 		if (xsurface->unmanaged_node) {
 			wlr_scene_node_set_position(xsurface->unmanaged_node,
@@ -128,7 +117,7 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 		return;
 	}
 
-	const ViewState *view_st = view_get_state(xsurface->view_id);
+	const ViewState *view_st = view_get_state(xsurface->info->view_id);
 	if (!view_st) {
 		return;
 	}
@@ -136,8 +125,8 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	if (view_is_floating(view_st)) {
 		/* Honor client configure requests for floating views */
 		struct wlr_box box = event->geom;
-		view_adjust_size(xsurface->view_id, &box.width, &box.height);
-		view_move_resize(xsurface->view_id, box);
+		view_adjust_size(xsurface->info->view_id, &box.width, &box.height);
+		view_move_resize(xsurface->info->view_id, box);
 	} else {
 		/*
 		 * Do not allow clients to request geometry other than
@@ -153,12 +142,12 @@ void
 xwayland_surface_on_request_activate(struct xwayland_surface *xsurface)
 {
 	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
+		assert(!xsurface->info->view_id);
 		if (xsurface->surface && xsurface->surface->mapped) {
 			seat_focus_surface(xsurface->surface);
 		}
 	} else {
-		view_focus(xsurface->view_id, /* raise */ true);
+		view_focus(xsurface->info->view_id, /* raise */ true);
 	}
 }
 
@@ -170,11 +159,10 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 	}
 
 	if (xsurface->override_redirect) {
-		view_remove(xsurface->view_id);
-		xsurface->view_id = 0;
+		view_remove(xsurface->info->view_id);
 	} else {
-		assert(!xsurface->view_id);
-		xsurface->view_id = view_add_xwayland(xsurface->window_id, xsurface);
+		assert(!xsurface->info->view_id);
+		view_add_xwayland(xsurface->window_id, xsurface);
 		// Re-read properties after unmanaged surface becomes managed
 		xwayland_surface_read_properties(xsurface);
 	}
@@ -187,7 +175,7 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 void
 xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
 {
-	view_clear_icon_surfaces(xsurface->view_id);
+	view_clear_icon_surfaces(xsurface->info->view_id);
 
 	xcb_ewmh_get_wm_icon_reply_t icon_reply = {0};
 	if (!xwayland_surface_fetch_icon(xsurface, &icon_reply)) {
@@ -217,11 +205,11 @@ xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
 		}
 
 		cairo_surface_mark_dirty(surface);
-		view_add_icon_surface(xsurface->view_id, surface);
+		view_add_icon_surface(xsurface->info->view_id, surface);
 	}
 
 out:
-	view_update_icon(xsurface->view_id);
+	view_update_icon(xsurface->info->view_id);
 	xcb_ewmh_get_wm_icon_reply_wipe(&icon_reply);
 }
 
@@ -251,7 +239,7 @@ xwayland_surface_on_focus_in(struct xwayland_surface *xsurface)
 static void
 map_unmanaged_surface(struct xwayland_surface *xsurface)
 {
-	assert(!xsurface->view_id);
+	assert(!xsurface->info->view_id);
 	assert(!xsurface->unmanaged_node);
 
 	if (xsurface->ever_grabbed_focus) {
@@ -279,13 +267,13 @@ xwayland_surface_on_map(struct xwayland_surface *xsurface)
 		return;
 	}
 
-	view_map(xsurface->view_id);
+	view_map(xsurface->info->view_id);
 }
 
 static void
 unmap_unmanaged_surface(struct xwayland_surface *xsurface)
 {
-	assert(!xsurface->view_id);
+	assert(!xsurface->info->view_id);
 	assert(xsurface->unmanaged_node);
 
 	wlr_scene_node_destroy(xsurface->unmanaged_node);
@@ -307,28 +295,14 @@ xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 		return;
 	}
 
-	view_unmap(xsurface->view_id);
-}
-
-ViewId
-xwayland_view_get_root_id(struct xwayland_surface *xsurface)
-{
-	struct xwayland_surface *root = top_parent_of(xsurface);
-
-	/*
-	 * The case of root->data == NULL is unlikely, but has been reported
-	 * when starting XWayland games (for example 'Fall Guys'). It is
-	 * believed to be caused by setting override-redirect on the root
-	 * xwayland_surface making it not be associated with a view anymore.
-	 */
-	return (root && root->view_id) ? root->view_id : xsurface->view_id;
+	view_unmap(xsurface->info->view_id);
 }
 
 void
 xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface)
 {
 	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
+		assert(!xsurface->info->view_id);
 		xsurface->ever_grabbed_focus = true;
 		if (xsurface->surface && xsurface->surface->mapped) {
 			seat_focus_surface(xsurface->surface);

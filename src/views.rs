@@ -31,12 +31,15 @@ impl Views {
         let id = self.max_used_id;
         self.by_id.insert(id, View::new(id, spec));
         self.order.push(id);
+        if let ViewSpec::Xwayland(xid, _) = spec {
+            self.xwm.set_view_id(xid, id);
+        }
         return id;
     }
 
     pub fn remove(&mut self, id: ViewId) {
         if let Some(view) = self.by_id.get(&id) {
-            self.xwm.unstack(view.get_xid());
+            self.xwm.set_view_id(view.get_xid(), 0);
         }
         self.by_id.remove(&id);
         self.order.retain(|&i| i != id);
@@ -51,7 +54,7 @@ impl Views {
     }
 
     fn get_root_of(&self, id: ViewId) -> ViewId {
-        self.by_id.get(&id).map_or(0, View::get_root_id)
+        self.by_id.get(&id).map_or(0, |v| v.get_root_id(&self.xwm))
     }
 
     fn get_modal_dialog(&self, id: ViewId) -> Option<ViewId> {
@@ -61,11 +64,11 @@ impl Views {
                 return Some(id);
             }
             // Check child/sibling views (in reverse stacking order)
-            let root = view.get_root_id();
+            let root = view.get_root_id(&self.xwm);
             for &i in self.order.iter().rev().filter(|&&i| i != id && i != root) {
                 if let Some(v) = self.by_id.get(&i)
                     && v.get_state().mapped
-                    && v.get_root_id() == root
+                    && v.get_root_id(&self.xwm) == root
                     && v.is_modal_dialog()
                 {
                     return Some(i);
@@ -296,10 +299,10 @@ impl Views {
             && view.get_state().minimized != minimized
         {
             // Minimize/unminimize all related views together
-            let root = view.get_root_id();
+            let root = view.get_root_id(&self.xwm);
             let mut reset_grab = false;
             for (&i, v) in &mut self.by_id {
-                if v.get_root_id() == root {
+                if v.get_root_id(&self.xwm) == root {
                     ul |= v.set_minimized(minimized, &mut visibility_changed, &mut self.xwm);
                     reset_grab |= i == self.grabbed_id;
                 }
@@ -333,7 +336,7 @@ impl Views {
         };
         let mut ids_to_raise = Vec::new();
         // Raise root parent view first
-        let root = view.get_root_id();
+        let root = view.get_root_id(&self.xwm);
         ids_to_raise.push(root);
         // Then other sub-views (in current stacking order)
         for &i in &self.order {
@@ -538,5 +541,33 @@ impl Views {
 
     pub fn cycle_list_nth(&self, n: usize) -> ViewId {
         *self.cycle_list.get(n).unwrap_or(&0)
+    }
+
+    pub fn get_xwm(&self) -> &Xwm {
+        &self.xwm
+    }
+
+    pub fn add_xsurface(&mut self, xid: XId, xsurface: *mut XSurface) -> &XSurfaceInfo {
+        self.xwm.add(xid, xsurface)
+    }
+
+    pub fn remove_xsurface(&mut self, xid: XId) {
+        // remove view first
+        if let Some(surf) = self.xwm.get_info(xid) {
+            self.remove(surf.view_id)
+        }
+        self.xwm.remove(xid);
+    }
+
+    pub fn set_parent_xid(&mut self, xid: XId, parent_xid: XId) {
+        self.xwm.set_parent_xid(xid, parent_xid);
+    }
+
+    pub fn set_xsurface_serial(&mut self, xid: XId, serial: u64) {
+        self.xwm.set_serial(xid, serial);
+    }
+
+    pub fn set_xsurface_surface_id(&mut self, xid: XId, surface_id: u32) {
+        self.xwm.set_surface_id(xid, surface_id);
     }
 }

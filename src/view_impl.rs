@@ -9,7 +9,7 @@ pub trait ViewImpl {
     fn get_surface(&self) -> *mut WlrSurface;
     fn get_xid(&self) -> XId;
     fn get_parent(&self) -> ViewId;
-    fn get_root_id(&self) -> ViewId;
+    fn get_root_id(&self, xwm: &Xwm) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
     fn get_size_hints(&self) -> ViewSizeHints;
     fn get_surface_props(&self) -> Option<XSurfaceProps>;
@@ -65,8 +65,8 @@ impl ViewImpl for XView {
         0 // not currently needed
     }
 
-    fn get_root_id(&self) -> ViewId {
-        unsafe { xwayland_view_get_root_id(self.xsurface) }
+    fn get_root_id(&self, xwm: &Xwm) -> ViewId {
+        xwm.get_root_view_id(self.xid)
     }
 
     fn is_modal_dialog(&self) -> bool {
@@ -215,7 +215,7 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_get_parent(self.c_ptr) }
     }
 
-    fn get_root_id(&self) -> ViewId {
+    fn get_root_id(&self, _xwm: &Xwm) -> ViewId {
         unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
     }
 
