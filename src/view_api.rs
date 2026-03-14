@@ -33,11 +33,6 @@ pub extern "C" fn view_add_xdg(c_ptr: *mut CView) -> ViewId {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_add_xwayland(xid: XId, xsurface: *mut XSurface) -> ViewId {
-    views_mut().add(ViewSpec::Xwayland(xid, xsurface))
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_remove(id: ViewId) {
     views_mut().remove(id);
     unsafe { menu_on_view_destroy(id) };
@@ -437,6 +432,11 @@ pub extern "C" fn xsurface_get_for_serial(serial: u64) -> *mut XSurface {
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_get_for_surface_id(surface_id: u32) -> *mut XSurface {
     views().get_xwm().get_for_surface_id(surface_id)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_managed(xid: XId, managed: bool) {
+    views_mut().set_xsurface_managed(xid, managed);
 }
 
 // Called from xwayland_surface_destroy()
