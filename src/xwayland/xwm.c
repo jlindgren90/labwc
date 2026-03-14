@@ -138,7 +138,7 @@ static struct xwayland_surface *xwayland_surface_create(
 	xsurface_add(window_id, surface);
 
 	if (!surface->override_redirect) {
-		view_add_xwayland(window_id, surface);
+		xsurface_set_managed(window_id, true);
 		xwayland_surface_read_properties(surface);
 	}
 
@@ -873,8 +873,23 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 	if (xsurface->override_redirect == override_redirect) {
 		return;
 	}
+
+	// Unmap (compositor-side) and remap afterward
+	if (xsurface->surface && xsurface->surface->mapped) {
+		xsurface_unmap(xsurface->window_id, xsurface->surface);
+	}
+
 	xsurface->override_redirect = override_redirect;
-	xwayland_surface_on_set_override_redirect(xsurface);
+	xsurface_set_managed(xsurface->window_id, !override_redirect);
+
+	// Re-read properties after unmanaged surface becomes managed
+	if (!override_redirect) {
+		xwayland_surface_read_properties(xsurface);
+	}
+
+	if (xsurface->surface && xsurface->surface->mapped) {
+		xsurface_map(xsurface->window_id, xsurface->surface);
+	}
 }
 
 static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,

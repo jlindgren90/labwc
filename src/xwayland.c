@@ -137,27 +137,6 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 }
 
 void
-xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
-{
-	if (xsurface->surface && xsurface->surface->mapped) {
-		xsurface_unmap(xsurface->window_id, xsurface->surface);
-	}
-
-	if (xsurface->override_redirect) {
-		view_remove(xsurface->view_id);
-	} else {
-		assert(!xsurface->view_id);
-		view_add_xwayland(xsurface->window_id, xsurface);
-		// Re-read properties after unmanaged surface becomes managed
-		xwayland_surface_read_properties(xsurface);
-	}
-
-	if (xsurface->surface && xsurface->surface->mapped) {
-		xsurface_map(xsurface->window_id, xsurface->surface);
-	}
-}
-
-void
 xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
 {
 	view_clear_icon_surfaces(xsurface->view_id);
