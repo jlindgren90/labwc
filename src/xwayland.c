@@ -326,24 +326,15 @@ xwayland_surface_on_request_fullscreen(struct xwayland_surface *xsurface)
 }
 
 void
-xwayland_surface_on_set_title(struct xwayland_surface *xsurface)
+xwayland_surface_on_set_title(struct xwayland_surface *xsurface, const char *title)
 {
-	view_set_title(xsurface->view_id, xsurface->title);
+	view_set_title(xsurface->view_id, title);
 }
 
 void
-xwayland_surface_on_set_class(struct xwayland_surface *xsurface)
+xwayland_surface_on_set_app_id(struct xwayland_surface *xsurface, const char *app_id)
 {
-	/*
-	 * Use the WM_CLASS 'instance' (1st string) for the app_id. Per
-	 * ICCCM, this is usually "the trailing part of the name used to
-	 * invoke the program (argv[0] stripped of any directory names)".
-	 *
-	 * In most cases, the 'class' (2nd string) is the same as the
-	 * 'instance' except for being capitalized. We want lowercase
-	 * here since we use the app_id for icon lookups.
-	 */
-	view_set_app_id(xsurface->view_id, xsurface->instance);
+	view_set_app_id(xsurface->view_id, app_id);
 }
 
 void
@@ -371,15 +362,8 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 	} else {
 		assert(!xsurface->view_id);
 		xsurface->view_id = view_add(NULL, xsurface);
-		/*
-		 * If a surface is already associated, then we've
-		 * missed the various initial set_* events.
-		 */
-		if (xsurface->surface) {
-			xwayland_surface_on_set_title(xsurface);
-			xwayland_surface_on_set_class(xsurface);
-			xwayland_surface_on_set_icon(xsurface);
-		}
+		// Re-read properties after unmanaged surface becomes managed
+		xwayland_surface_read_properties(xsurface);
 	}
 
 	if (xsurface->surface && xsurface->surface->mapped) {
