@@ -706,6 +706,12 @@ seat_focus_surface_no_notify(struct wlr_surface *surface)
 	}
 }
 
+struct wlr_surface *
+seat_get_focused_surface(void)
+{
+	return g_seat.wlr_seat->keyboard_state.focused_surface;
+}
+
 void
 seat_focus_lock_surface(struct wlr_surface *surface)
 {

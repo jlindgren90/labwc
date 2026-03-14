@@ -137,19 +137,6 @@ xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 }
 
 void
-xwayland_surface_on_request_activate(struct xwayland_surface *xsurface)
-{
-	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
-		if (xsurface->surface && xsurface->surface->mapped) {
-			seat_focus_surface(xsurface->surface);
-		}
-	} else {
-		view_focus(xsurface->view_id, /* raise */ true);
-	}
-}
-
-void
 xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 {
 	if (xsurface->surface && xsurface->surface->mapped) {
@@ -213,63 +200,16 @@ out:
 }
 
 void
-xwayland_surface_on_focus_in(struct xwayland_surface *xsurface)
-{
-	struct wlr_surface *surface = xsurface->surface;
-
-	if (!surface || !surface->mapped) {
-		/*
-		 * It is rare but possible for the focus_in event to be
-		 * received before the map event. This has been seen
-		 * during CLion startup, when focus is initially offered
-		 * to the splash screen but accepted later by the main
-		 * window instead. (In this case, the focus transfer is
-		 * client-initiated but allowed by wlroots because the
-		 * same PID owns both windows.)
-		 */
-		return;
-	}
-
-	if (surface != g_seat.wlr_seat->keyboard_state.focused_surface) {
-		seat_focus_surface(surface);
-	}
-}
-
-static void
-map_unmanaged_surface(struct xwayland_surface *xsurface)
-{
-	assert(!xsurface->view_id);
-
-	if (xsurface->ever_grabbed_focus) {
-		seat_focus_surface(xsurface->surface);
-	}
-
-	xsurface_map_unmanaged(xsurface->window_id, xsurface->surface);
-}
-
-void
 xwayland_surface_on_map(struct xwayland_surface *xsurface)
 {
 	assert(xsurface->surface);
 
 	if (xsurface->override_redirect) {
-		map_unmanaged_surface(xsurface);
+		xsurface_map_unmanaged(xsurface->window_id, xsurface->surface);
 		return;
 	}
 
 	view_map(xsurface->view_id);
-}
-
-static void
-unmap_unmanaged_surface(struct xwayland_surface *xsurface)
-{
-	assert(!xsurface->view_id);
-
-	xsurface_unmap_unmanaged(xsurface->window_id);
-
-	if (g_seat.wlr_seat->keyboard_state.focused_surface == xsurface->surface) {
-		view_refocus_active();
-	}
 }
 
 void
@@ -278,23 +218,11 @@ xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 	assert(xsurface->surface);
 
 	if (xsurface->override_redirect) {
-		unmap_unmanaged_surface(xsurface);
+		xsurface_unmap_unmanaged(xsurface->window_id, xsurface->surface);
 		return;
 	}
 
 	view_unmap(xsurface->view_id);
-}
-
-void
-xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface)
-{
-	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
-		xsurface->ever_grabbed_focus = true;
-		if (xsurface->surface && xsurface->surface->mapped) {
-			seat_focus_surface(xsurface->surface);
-		}
-	}
 }
 
 void
