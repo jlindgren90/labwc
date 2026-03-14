@@ -144,8 +144,8 @@ impl ViewImpl for XView {
 
     fn focus(&self, focus_mode: ViewFocusMode) -> bool {
         // Set seat focus directly if input hint is set OR if surface
-        // already has server-side focus (which can happen before map).
-        // Server-side focus is updated later via set_active().
+        // already has server-side focus. Server-side focus is updated
+        // later via set_active() if needed.
         if focus_mode == VIEW_FOCUS_MODE_ALWAYS
             || unsafe { xwayland_surface_is_focused(self.xsurface) }
         {
