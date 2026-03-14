@@ -44,9 +44,6 @@ struct xwayland_surface {
 	struct wl_listener surface_commit;
 	struct wl_listener surface_map;
 	struct wl_listener surface_unmap;
-
-	/* for unmanaged surfaces */
-	bool ever_grabbed_focus;
 };
 
 struct xwayland_surface_configure_event {
@@ -120,14 +117,11 @@ void xwayland_on_ready(void);
 void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
 void xwayland_surface_on_map(struct xwayland_surface *xsurface);
 void xwayland_surface_on_unmap(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_activate(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	const struct xwayland_surface_configure_event *event);
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
 void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
-void xwayland_surface_on_focus_in(struct xwayland_surface *xsurface);
-void xwayland_surface_on_grab_focus(struct xwayland_surface *xsurface);
 
 #endif

@@ -287,11 +287,6 @@ pub extern "C" fn view_focus_topmost() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_refocus_active() {
-    views().refocus_active();
-}
-
-#[unsafe(no_mangle)]
 pub extern "C" fn view_set_inhibits_keybinds(id: ViewId, inhibits_keybinds: bool) {
     if let Some(view) = views_mut().get_view_mut(id) {
         view.set_inhibits_keybinds(inhibits_keybinds);
@@ -480,13 +475,19 @@ pub extern "C" fn xsurface_map_unmanaged(xid: XId, surface: *mut WlrSurface) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xsurface_unmap_unmanaged(xid: XId) {
-    let ul = views_mut().unmap_unmanaged(xid);
+pub extern "C" fn xsurface_unmap_unmanaged(xid: XId, surface: *mut WlrSurface) {
+    let ul = views_mut().unmap_unmanaged(xid, surface);
     do_update(ul);
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_move_unmanaged(xid: XId, x: i32, y: i32) {
     let ul = views().move_unmanaged(xid, x, y);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_focus(xid: XId, surface: *mut WlrSurface, raise: bool) {
+    let ul = views_mut().focus_xsurface(xid, surface, raise);
     do_update(ul);
 }

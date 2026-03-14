@@ -373,6 +373,7 @@ impl Views {
         return UpdateLevel::None;
     }
 
+    // No-op for unmapped views (which are raised and focused at map)
     pub fn focus(&mut self, id: ViewId, raise: bool, force_restack: bool) -> UpdateLevel {
         // Focus a modal dialog rather than its parent view
         let id_to_focus = self.get_modal_dialog(id).unwrap_or(id);
@@ -401,15 +402,6 @@ impl Views {
         unsafe { seat_focus_surface_no_notify(null_mut()) };
         self.set_active(0);
         return UpdateLevel::None;
-    }
-
-    // Called after closing XWayland override-redirect window. Updates
-    // compositor-side focus only. (Override-redirect windows are never
-    // properly "focused" in X11 terms, using keyboard grabs instead.)
-    pub fn refocus_active(&self) {
-        if let Some(active) = self.by_id.get(&self.active_id) {
-            active.refocus();
-        }
     }
 
     pub fn add_foreign_toplevel_client(&mut self, client: *mut WlResource) {
@@ -576,13 +568,42 @@ impl Views {
         return UpdateLevel::Cursor;
     }
 
-    pub fn unmap_unmanaged(&mut self, xid: XId) -> UpdateLevel {
+    pub fn unmap_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
         self.xwm.unmap_unmanaged(xid);
+        // Set seat focus back to the active view (server-side focus
+        // is expected to be returned automatically)
+        if surface == unsafe { seat_get_focused_surface() }
+            && let Some(active) = self.by_id.get(&self.active_id)
+        {
+            active.refocus();
+        }
         return UpdateLevel::Cursor;
     }
 
     pub fn move_unmanaged(&self, xid: XId, x: i32, y: i32) -> UpdateLevel {
         self.xwm.move_unmanaged(xid, x, y);
         return UpdateLevel::Cursor;
+    }
+
+    pub fn focus_xsurface(
+        &mut self,
+        xid: XId,
+        surface: *mut WlrSurface,
+        raise: bool,
+    ) -> UpdateLevel {
+        if let Some(info) = self.xwm.get_info(xid) {
+            if info.view_id == 0 {
+                self.xwm.focus_unmanaged(xid, surface);
+            } else {
+                // FIXME: when raise=true, this is actually "activate"
+                let id = info.view_id;
+                let (was_shown, mut ul) = self.minimize(id, false);
+                if !was_shown {
+                    ul |= self.focus(id, raise, /* force_restack */ false);
+                }
+                return ul;
+            }
+        }
+        return UpdateLevel::None;
     }
 }
