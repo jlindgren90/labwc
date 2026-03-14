@@ -37,7 +37,6 @@ struct xwayland_surface {
 	struct wlr_addon surface_addon;
 
 	XSurfaceProps props;
-	bool override_redirect;
 	bool has_net_wm_name;
 
 	struct wl_listener surface_commit;
