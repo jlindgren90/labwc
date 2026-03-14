@@ -122,6 +122,5 @@ void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
-void xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface);
 
 #endif
