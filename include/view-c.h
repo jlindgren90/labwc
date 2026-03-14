@@ -170,6 +170,7 @@ void top_layer_hide_on_output(Output *output);
 void xwayland_set_net_client_list(const XId *xids, unsigned num_xids);
 void xwayland_surface_activate(XSurface *xsurface); // allows NULL xsurface
 void xwayland_surface_close(XSurface *xsurface);
+void xwayland_surface_configure(XSurface *surface, Rect geom);
 void xwayland_surface_destroy(XSurface *xsurface);
 XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
 _Bool xwayland_surface_is_focused(XSurface *xsurface);

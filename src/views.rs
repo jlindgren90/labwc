@@ -602,6 +602,29 @@ impl Views {
         return UpdateLevel::Cursor;
     }
 
+    pub fn request_xsurface_configure(&mut self, xid: XId, geom: Rect) -> UpdateLevel {
+        if let Some(info) = self.xwm.get_info(xid) {
+            if info.view_id == 0 {
+                // Always allow unmanaged surface configure
+                unsafe { xwayland_surface_configure(info.xsurface, geom) };
+                return self.move_unmanaged(xid, geom.x, geom.y);
+            }
+            if let Some(view) = self.by_id.get_mut(&info.view_id) {
+                let state = view.get_state();
+                // Allow managed surface (view) configure only if floating
+                if state.floating() {
+                    let hints = view.get_size_hints();
+                    let mut adjusted = geom;
+                    adjust_size_for_hints(&hints, &mut adjusted.width, &mut adjusted.height);
+                    return view.move_resize(adjusted);
+                }
+                // If not floating, send back synthetic configure with existing geometry
+                unsafe { xwayland_surface_configure(info.xsurface, state.pending) };
+            }
+        }
+        return UpdateLevel::None;
+    }
+
     pub fn move_unmanaged(&self, xid: XId, x: i32, y: i32) -> UpdateLevel {
         self.xwm.move_unmanaged(xid, x, y);
         return UpdateLevel::Cursor;

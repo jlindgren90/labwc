@@ -4,7 +4,6 @@ use crate::bindings::*;
 use crate::lazy_static;
 use crate::util::*;
 use crate::view::*;
-use crate::view_geom::*;
 use crate::views::*;
 use std::ffi::c_char;
 use std::ptr::{null, null_mut};
@@ -47,14 +46,6 @@ pub extern "C" fn view_get_state(id: ViewId) -> *const ViewState {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_get_scene(id: ViewId) -> *const ViewScene {
     views().get_view(id).map_or(null(), |v| v.get_scene())
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn view_adjust_size(id: ViewId, width: &mut i32, height: &mut i32) {
-    if let Some(view) = views().get_view(id) {
-        let hints = view.get_size_hints();
-        adjust_size_for_hints(&hints, width, height);
-    }
 }
 
 #[unsafe(no_mangle)]
@@ -477,6 +468,12 @@ pub extern "C" fn xsurface_map(xid: XId, surface: *mut WlrSurface) {
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_unmap(xid: XId, surface: *mut WlrSurface) {
     let ul = views_mut().unmap_xsurface(xid, surface);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_request_configure(xid: XId, geom: Rect) {
+    let ul = views_mut().request_xsurface_configure(xid, geom);
     do_update(ul);
 }
 
