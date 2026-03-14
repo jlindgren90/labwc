@@ -104,39 +104,6 @@ xwayland_view_configure(struct xwayland_surface *xsurface,
 }
 
 void
-xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
-		const struct xwayland_surface_configure_event *event)
-{
-	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
-		xwayland_surface_configure(xsurface, event->geom);
-		xsurface_move_unmanaged(xsurface->window_id,
-			event->geom.x, event->geom.y);
-		return;
-	}
-
-	const ViewState *view_st = view_get_state(xsurface->view_id);
-	if (!view_st) {
-		return;
-	}
-
-	if (view_is_floating(view_st)) {
-		/* Honor client configure requests for floating views */
-		struct wlr_box box = event->geom;
-		view_adjust_size(xsurface->view_id, &box.width, &box.height);
-		view_move_resize(xsurface->view_id, box);
-	} else {
-		/*
-		 * Do not allow clients to request geometry other than
-		 * what we computed for maximized/fullscreen/tiled
-		 * views. Ignore the client request and send back a
-		 * ConfigureNotify event with the computed geometry.
-		 */
-		xwayland_surface_configure(xsurface, view_st->pending);
-	}
-}
-
-void
 xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
 {
 	view_clear_icon_surfaces(xsurface->view_id);

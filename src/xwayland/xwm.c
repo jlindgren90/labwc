@@ -855,17 +855,16 @@ static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
 		return;
 	}
 
-	struct xwayland_surface_configure_event wlr_event = {
-		.geom.x = mask & XCB_CONFIG_WINDOW_X ? ev->x : surface->props.geom.x,
-		.geom.y = mask & XCB_CONFIG_WINDOW_Y ? ev->y : surface->props.geom.y,
-		.geom.width = mask & XCB_CONFIG_WINDOW_WIDTH
+	struct wlr_box geom = {
+		.x = mask & XCB_CONFIG_WINDOW_X ? ev->x : surface->props.geom.x,
+		.y = mask & XCB_CONFIG_WINDOW_Y ? ev->y : surface->props.geom.y,
+		.width = mask & XCB_CONFIG_WINDOW_WIDTH
 			? ev->width : surface->props.geom.width,
-		.geom.height = mask & XCB_CONFIG_WINDOW_HEIGHT
+		.height = mask & XCB_CONFIG_WINDOW_HEIGHT
 			? ev->height : surface->props.geom.height,
-		.mask = mask,
 	};
 
-	xwayland_surface_on_request_configure(surface, &wlr_event);
+	xsurface_request_configure(surface->window_id, geom);
 }
 
 static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
