@@ -48,11 +48,6 @@ struct xwayland_surface {
 	unsigned long view_id;
 };
 
-struct xwayland_surface_configure_event {
-	struct wlr_box geom;
-	uint16_t mask; // xcb_config_window_t
-};
-
 void xwayland_set_cursor(const uint8_t *pixels, uint32_t stride,
 	uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
 
@@ -117,8 +112,6 @@ bool xwayland_surface_fetch_icon(
 void xwayland_on_ready(void);
 
 void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
-	const struct xwayland_surface_configure_event *event);
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
 void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
