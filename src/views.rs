@@ -553,6 +553,14 @@ impl Views {
         self.xwm.add(xid, xsurface);
     }
 
+    pub fn set_xsurface_managed(&mut self, xid: XId, managed: bool) {
+        if managed {
+            self.add(ViewSpec::Xwayland(xid, self.xwm.get_xsurface(xid)));
+        } else if let Some(id) = self.xwm.get_view_id(xid) {
+            self.remove(id)
+        }
+    }
+
     pub fn remove_xsurface(&mut self, xid: XId) {
         // remove view first
         if let Some(id) = self.xwm.get_view_id(xid) {
