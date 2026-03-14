@@ -573,12 +573,18 @@ impl Views {
         self.xwm.set_surface_id(xid, surface_id);
     }
 
-    pub fn map_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
+    pub fn map_xsurface(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
+        if let Some(id) = self.xwm.get_view_id(xid) {
+            return self.map(id);
+        }
         self.xwm.map_unmanaged(xid, surface);
         return UpdateLevel::Cursor;
     }
 
-    pub fn unmap_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
+    pub fn unmap_xsurface(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
+        if let Some(id) = self.xwm.get_view_id(xid) {
+            return self.unmap(id);
+        }
         self.xwm.unmap_unmanaged(xid);
         // Set seat focus back to the active view (server-side focus
         // is expected to be returned automatically)

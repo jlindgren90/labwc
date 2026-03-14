@@ -140,7 +140,7 @@ void
 xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 {
 	if (xsurface->surface && xsurface->surface->mapped) {
-		xwayland_surface_on_unmap(xsurface);
+		xsurface_unmap(xsurface->window_id, xsurface->surface);
 	}
 
 	if (xsurface->override_redirect) {
@@ -153,7 +153,7 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 	}
 
 	if (xsurface->surface && xsurface->surface->mapped) {
-		xwayland_surface_on_map(xsurface);
+		xsurface_map(xsurface->window_id, xsurface->surface);
 	}
 }
 
@@ -197,32 +197,6 @@ xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
 out:
 	view_update_icon(xsurface->view_id);
 	xcb_ewmh_get_wm_icon_reply_wipe(&icon_reply);
-}
-
-void
-xwayland_surface_on_map(struct xwayland_surface *xsurface)
-{
-	assert(xsurface->surface);
-
-	if (xsurface->override_redirect) {
-		xsurface_map_unmanaged(xsurface->window_id, xsurface->surface);
-		return;
-	}
-
-	view_map(xsurface->view_id);
-}
-
-void
-xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
-{
-	assert(xsurface->surface);
-
-	if (xsurface->override_redirect) {
-		xsurface_unmap_unmanaged(xsurface->window_id, xsurface->surface);
-		return;
-	}
-
-	view_unmap(xsurface->view_id);
 }
 
 void

@@ -118,8 +118,6 @@ bool xwayland_surface_fetch_icon(
 void xwayland_on_ready(void);
 
 void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
-void xwayland_surface_on_map(struct xwayland_surface *xsurface);
-void xwayland_surface_on_unmap(struct xwayland_surface *xsurface);
 void xwayland_surface_on_request_configure(struct xwayland_surface *xsurface,
 	const struct xwayland_surface_configure_event *event);
 void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);

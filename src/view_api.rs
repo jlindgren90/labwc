@@ -462,14 +462,14 @@ pub extern "C" fn xsurface_set_surface_id(xid: XId, surface_id: u32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xsurface_map_unmanaged(xid: XId, surface: *mut WlrSurface) {
-    let ul = views_mut().map_unmanaged(xid, surface);
+pub extern "C" fn xsurface_map(xid: XId, surface: *mut WlrSurface) {
+    let ul = views_mut().map_xsurface(xid, surface);
     do_update(ul);
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xsurface_unmap_unmanaged(xid: XId, surface: *mut WlrSurface) {
-    let ul = views_mut().unmap_unmanaged(xid, surface);
+pub extern "C" fn xsurface_unmap(xid: XId, surface: *mut WlrSurface) {
+    let ul = views_mut().unmap_xsurface(xid, surface);
     do_update(ul);
 }
 
