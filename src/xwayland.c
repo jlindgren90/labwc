@@ -1044,6 +1044,13 @@ xwayland_view_create(struct server *server,
 
 	if (xsurface->surface) {
 		handle_associate(&xwayland_view->associate, NULL);
+		/*
+		 * If a surface is already associated, then we've
+		 * missed the various initial set_* events as well.
+		 */
+		handle_set_title(&view->set_title, NULL);
+		handle_set_class(&xwayland_view->set_class, NULL);
+		handle_set_icon(&xwayland_view->set_icon, NULL);
 	}
 	if (mapped) {
 		handle_map(&xwayland_view->base.mappable.map, NULL);
