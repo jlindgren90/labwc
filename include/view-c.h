@@ -19,18 +19,11 @@ typedef enum view_axis {
 	VIEW_AXIS_BOTH = 0x3,
 } ViewAxis;
 
-// Indicates whether a view wants keyboard focus. Likely and Unlikely
-// apply to XWayland views using ICCCM's "Globally Active" input model.
-// The client voluntarily decides whether to take focus or not, while
-// a heuristic is used to determine whether to show the view in Alt-Tab,
-// taskbars, etc.
-//
-typedef enum view_focus_mode {
-	VIEW_FOCUS_MODE_NEVER = 0,
-	VIEW_FOCUS_MODE_ALWAYS,
-	VIEW_FOCUS_MODE_LIKELY,
-	VIEW_FOCUS_MODE_UNLIKELY,
-} ViewFocusMode;
+typedef enum XFocusReason {
+	XFOCUS_REASON_ACTIVATE,
+	XFOCUS_REASON_FOCUS_IN,
+	XFOCUS_REASON_GRAB,
+} XFocusReason;
 
 // Basic size hints (subset of XSizeHints from X11)
 typedef struct view_size_hints {
@@ -65,7 +58,7 @@ typedef struct ViewState {
 	const char *title;
 	_Bool mapped;
 	_Bool ever_mapped;
-	ViewFocusMode focus_mode;
+	_Bool wants_focus;
 	_Bool active;
 	_Bool ssd_enabled;
 	_Bool fullscreen;
@@ -159,14 +152,14 @@ Border ssd_get_margin(const ViewState *view_st);
 void top_layer_show_all(void);
 void top_layer_hide_on_output(Output *output);
 
+void xwayland_focus_window(XId window_id); // use PointerRoot (1) for "none"
+void xwayland_offer_focus(XId window_id);
+void xwayland_set_active_window(XId window_id); // allows None (0)
 void xwayland_set_net_client_list(const XId *xids, unsigned num_xids);
-void xwayland_surface_activate(XSurface *xsurface); // allows NULL xsurface
 void xwayland_surface_close(XSurface *xsurface);
 void xwayland_surface_configure(XSurface *surface, Rect geom);
 void xwayland_surface_destroy(XSurface *xsurface);
 XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
-_Bool xwayland_surface_is_focused(XSurface *xsurface);
-void xwayland_surface_offer_focus(XSurface *xsurface);
 void xwayland_surface_publish_state(XSurface *xsurface, const ViewState *state);
 void xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id);
 void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);

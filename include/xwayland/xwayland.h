@@ -75,20 +75,6 @@ struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 	struct wlr_surface *surface);
 
 /**
- * Offer focus by sending WM_TAKE_FOCUS to a client window supporting it.
- * The client may accept or ignore the offer. If it accepts, the surface will
- * emit the focus_in signal notifying the compositor that it has received focus.
- *
- * This is a more compatible method of giving focus to windows using the
- * Globally Active input model (see xwayland_icccm_input_model()) than
- * calling xwayland_surface_activate() unconditionally, since there is no
- * reliable way to know in advance whether these windows want to be focused.
- */
-void xwayland_surface_offer_focus(struct xwayland_surface *xsurface);
-
-bool xwayland_surface_is_focused(struct xwayland_surface *xsurface);
-
-/**
  * Sets the _NET_WORKAREA root window property. The compositor should set
  * one workarea per virtual desktop. This indicates the usable geometry
  * (relative to the virtual desktop viewport) that is not covered by
