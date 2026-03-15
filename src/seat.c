@@ -687,7 +687,7 @@ seat_focus_surface(struct wlr_surface *surface)
 		/*is_lock_surface*/ false);
 }
 
-bool
+void
 seat_focus_surface_no_notify(struct wlr_surface *surface)
 {
 	if (g_seat.wlr_seat->keyboard_state.focused_surface != surface) {
@@ -695,8 +695,6 @@ seat_focus_surface_no_notify(struct wlr_surface *surface)
 		seat_focus_surface(surface);
 		no_focus_notify = false;
 	}
-
-	return g_seat.wlr_seat->keyboard_state.focused_surface == surface;
 }
 
 void

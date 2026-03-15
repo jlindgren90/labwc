@@ -572,7 +572,8 @@ impl View {
     pub fn focus(&self) -> bool {
         if self.state.mapped {
             if self.state.focus_mode == VIEW_FOCUS_MODE_ALWAYS {
-                return self.v.focus();
+                unsafe { seat_focus_surface_no_notify(self.v.get_surface()) };
+                return true;
             } else if self.state.focus_mode == VIEW_FOCUS_MODE_UNLIKELY
                 || self.state.focus_mode == VIEW_FOCUS_MODE_LIKELY
             {
@@ -583,7 +584,7 @@ impl View {
     }
 
     pub fn refocus(&self) {
-        self.v.focus();
+        unsafe { seat_focus_surface_no_notify(self.v.get_surface()) };
     }
 
     pub fn set_inhibits_keybinds(&mut self, inhibits_keybinds: bool) {
