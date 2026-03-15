@@ -147,8 +147,8 @@ impl Views {
                 active_xid = view.get_xid();
             }
             if active_xid == 0 {
-                // clear xwayland focus if xdg-shell view is active
-                unsafe { xwayland_surface_activate(null_mut()) };
+                // clear xwayland focus if xdg-shell view (or none) active
+                self.xwm.clear_focus();
             }
         }
     }
@@ -384,7 +384,7 @@ impl Views {
             UpdateLevel::None
         };
         if let Some(view) = self.by_id.get_mut(&id_to_focus)
-            && view.focus()
+            && view.focus(&mut self.xwm)
         {
             self.set_active(id_to_focus);
         }
@@ -636,12 +636,21 @@ impl Views {
         &mut self,
         xid: XId,
         surface: *mut WlrSurface,
-        raise: bool,
+        reason: XFocusReason,
     ) -> UpdateLevel {
         if let Some(id) = self.xwm.get_view_id(xid) {
-            return self.unminimize_and_focus(id, raise);
+            if reason == XFOCUS_REASON_ACTIVATE {
+                return self.unminimize_and_focus(id, /* raise */ true);
+            } else if reason == XFOCUS_REASON_FOCUS_IN {
+                // Surface has already been focused server-side
+                // (not unminimizing or raising in this case)
+                self.xwm.set_focused(xid);
+                return self.focus(id, /* raise */ false, /* force_restack */ false);
+            }
+        } else {
+            // Let unmanaged surface take focus for any reason
+            self.xwm.focus_unmanaged(xid, surface);
         }
-        self.xwm.focus_unmanaged(xid, surface);
         return UpdateLevel::None;
     }
 }
