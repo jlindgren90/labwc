@@ -227,7 +227,7 @@ void seat_finish(void);
 void seat_reconfigure(void);
 void seat_force_focus_surface(struct wlr_surface *surface);
 void seat_focus_surface(struct wlr_surface *surface);
-bool seat_focus_surface_no_notify(struct wlr_surface *surface);
+void seat_focus_surface_no_notify(struct wlr_surface *surface);
 
 void seat_pointer_end_grab(struct wlr_surface *surface);
 

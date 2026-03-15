@@ -5,6 +5,7 @@ use crate::rect::*;
 use std::ptr::null_mut;
 
 pub trait ViewImpl {
+    fn get_surface(&self) -> *mut WlrSurface;
     fn get_parent(&self) -> ViewId;
     fn get_root_id(&self) -> ViewId;
     fn is_modal_dialog(&self) -> bool;
@@ -17,7 +18,6 @@ pub trait ViewImpl {
     fn set_minimized(&self, minimized: bool);
     fn configure(&self, geom: Rect, commit_move: *mut bool);
     fn get_focus_mode(&self) -> ViewFocusMode;
-    fn focus(&self) -> bool;
     fn offer_focus(&self);
     fn close(&self);
 
@@ -42,13 +42,13 @@ impl XView {
     pub fn new(c_ptr: *mut CView) -> Self {
         Self { c_ptr }
     }
-
-    fn get_surface(&self) -> *mut WlrSurface {
-        unsafe { xwayland_view_get_surface(self.c_ptr) }
-    }
 }
 
 impl ViewImpl for XView {
+    fn get_surface(&self) -> *mut WlrSurface {
+        unsafe { xwayland_view_get_surface(self.c_ptr) }
+    }
+
     fn get_parent(&self) -> ViewId {
         0 // not currently needed
     }
@@ -99,10 +99,6 @@ impl ViewImpl for XView {
         unsafe { xwayland_view_get_focus_mode(self.c_ptr) }
     }
 
-    fn focus(&self) -> bool {
-        unsafe { seat_focus_surface_no_notify(self.get_surface()) }
-    }
-
     fn offer_focus(&self) {
         unsafe { xwayland_view_offer_focus(self.c_ptr) };
     }
@@ -149,10 +145,6 @@ impl XdgView {
         }
     }
 
-    fn get_surface(&self) -> *mut WlrSurface {
-        unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
-    }
-
     fn hide_fullscreen_bg(&mut self) {
         if !self.fullscreen_bg.is_null() {
             unsafe { view_fullscreen_bg_hide(self.fullscreen_bg) };
@@ -161,6 +153,10 @@ impl XdgView {
 }
 
 impl ViewImpl for XdgView {
+    fn get_surface(&self) -> *mut WlrSurface {
+        unsafe { xdg_toplevel_view_get_surface(self.c_ptr) }
+    }
+
     fn get_parent(&self) -> ViewId {
         unsafe { xdg_toplevel_view_get_parent(self.c_ptr) }
     }
@@ -212,10 +208,6 @@ impl ViewImpl for XdgView {
 
     fn get_focus_mode(&self) -> ViewFocusMode {
         VIEW_FOCUS_MODE_ALWAYS
-    }
-
-    fn focus(&self) -> bool {
-        unsafe { seat_focus_surface_no_notify(self.get_surface()) }
     }
 
     fn offer_focus(&self) {

@@ -369,9 +369,8 @@ impl Views {
                 return self.focus(i, /* raise */ false, /* force_restack */ false);
             }
         }
-        if unsafe { seat_focus_surface_no_notify(null_mut()) } {
-            self.set_active(0);
-        }
+        unsafe { seat_focus_surface_no_notify(null_mut()) };
+        self.set_active(0);
         return UpdateLevel::None;
     }
 
