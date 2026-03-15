@@ -47,9 +47,7 @@ impl ViewState {
     }
 
     pub fn focusable(&self) -> bool {
-        self.mapped
-            && (self.focus_mode == VIEW_FOCUS_MODE_ALWAYS
-                || self.focus_mode == VIEW_FOCUS_MODE_LIKELY)
+        self.mapped && self.wants_focus
     }
 
     pub fn floating(&self) -> bool {
@@ -213,7 +211,7 @@ impl View {
         }
         self.state.mapped = true;
         self.state.ever_mapped = true;
-        self.state.focus_mode = self.v.get_focus_mode();
+        self.state.wants_focus = self.v.wants_focus();
         if !self.state.minimized {
             unsafe { view_scene_tree_set_visible(self.scene.scene_tree, true) };
             *was_shown = true;
@@ -589,7 +587,7 @@ impl View {
     // Returns true if focus was (immediately) changed
     pub fn focus(&self) -> bool {
         if self.state.mapped {
-            self.v.focus(self.state.focus_mode)
+            self.v.focus()
         } else {
             false
         }

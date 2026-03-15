@@ -21,8 +21,8 @@ pub trait ViewImpl {
     fn set_minimized(&self, state: &ViewState, xwm: &mut Xwm);
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool);
     fn raise(&self, xwm: &mut Xwm);
-    fn get_focus_mode(&self) -> ViewFocusMode;
-    fn focus(&self, focus_mode: ViewFocusMode) -> bool;
+    fn wants_focus(&self) -> bool;
+    fn focus(&self) -> bool;
     fn close(&self);
 
     // scene-tree helpers
@@ -87,7 +87,7 @@ impl ViewImpl for XView {
 
     fn set_active(&self, state: &ViewState) {
         if state.active {
-            unsafe { xwayland_surface_activate(self.xsurface) };
+            unsafe { xwayland_set_active_window(self.xid) };
         }
         unsafe { xwayland_surface_publish_state(self.xsurface, state) };
     }
@@ -118,39 +118,42 @@ impl ViewImpl for XView {
         xwm.raise(self.xid, self.xsurface);
     }
 
-    fn get_focus_mode(&self) -> ViewFocusMode {
+    fn wants_focus(&self) -> bool {
         let props = unsafe { xwayland_surface_get_props(self.xsurface) };
         if !props.no_input_hint {
             // Input hint set in WM_HINTS -> WM sets input focus.
             // Assuming this case also if WM_HINTS is missing altogether.
-            return VIEW_FOCUS_MODE_ALWAYS;
+            return true;
         }
         if props.supports_take_focus {
             // WM_TAKE_FOCUS set in WM_PROTOCOLS -> client sets focus.
             // Guessing whether it wants focus based on window type.
-            if props.is_normal || props.is_dialog {
-                return VIEW_FOCUS_MODE_LIKELY;
-            } else {
-                return VIEW_FOCUS_MODE_UNLIKELY;
-            }
+            return props.is_normal || props.is_dialog;
         }
         // client doesn't want input focus at all
-        return VIEW_FOCUS_MODE_NEVER;
+        return false;
     }
 
-    fn focus(&self, focus_mode: ViewFocusMode) -> bool {
-        // Set seat focus directly if input hint is set OR if surface
-        // already has server-side focus. Server-side focus is updated
-        // later via set_active() if needed.
-        if focus_mode == VIEW_FOCUS_MODE_ALWAYS
-            || unsafe { xwayland_surface_is_focused(self.xsurface) }
-        {
+    fn focus(&self) -> bool {
+        if unsafe { xwayland_window_is_focused(self.xid) } {
+            // Already focused on server side, just update seat focus
             unsafe { seat_focus_surface_no_notify(self.get_surface()) };
             return true;
-        } else if focus_mode == VIEW_FOCUS_MODE_UNLIKELY || focus_mode == VIEW_FOCUS_MODE_LIKELY {
-            unsafe { xwayland_surface_offer_focus(self.xsurface) };
         }
-        return false;
+        let props = unsafe { xwayland_surface_get_props(self.xsurface) };
+        let input_hint = !props.no_input_hint; // avoid double-negative
+        if props.supports_take_focus {
+            // Client takes focus actively (offer even if no input hint)
+            unsafe { xwayland_offer_focus(self.xid) };
+        } else if input_hint {
+            // Client accepts focus passively
+            unsafe { xwayland_focus_window(self.xid) };
+        }
+        if input_hint {
+            // Update seat focus immediately if input hint is set
+            unsafe { seat_focus_surface_no_notify(self.get_surface()) };
+        }
+        return input_hint;
     }
 
     fn close(&self) {
@@ -268,11 +271,11 @@ impl ViewImpl for XdgView {
         // not supported
     }
 
-    fn get_focus_mode(&self) -> ViewFocusMode {
-        VIEW_FOCUS_MODE_ALWAYS
+    fn wants_focus(&self) -> bool {
+        true
     }
 
-    fn focus(&self, _focus_mode: ViewFocusMode) -> bool {
+    fn focus(&self) -> bool {
         unsafe { seat_focus_surface_no_notify(self.get_surface()) };
         return true;
     }

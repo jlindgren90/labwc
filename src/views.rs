@@ -147,8 +147,9 @@ impl Views {
                 active_xid = view.get_xid();
             }
             if active_xid == 0 {
-                // clear xwayland focus if xdg-shell view is active
-                unsafe { xwayland_surface_activate(null_mut()) };
+                // clear xwayland focus if xdg-shell view (or none) active
+                unsafe { xwayland_focus_window(1) }; // PointerRoot
+                unsafe { xwayland_set_active_window(0) }; // None
             }
         }
     }
