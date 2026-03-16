@@ -25,6 +25,21 @@ typedef enum XFocusReason {
 	XFOCUS_REASON_GRAB,
 } XFocusReason;
 
+typedef enum XStateAction {
+	XSTATE_ACTION_REMOVE = 0, // _NET_WM_STATE_REMOVE
+	XSTATE_ACTION_ADD = 1,	  // _NET_WM_STATE_ADD
+	XSTATE_ACTION_TOGGLE = 2, // _NET_WM_STATE_TOGGLE
+} XStateAction;
+
+typedef enum XStateFlag {
+	XSTATE_FLAG_MODAL = 0x1,
+	XSTATE_FLAG_FULLSCREEN = 0x2,
+	XSTATE_FLAG_MAXIMIZED_H = 0x4,
+	XSTATE_FLAG_MAXIMIZED_V = 0x8,
+	XSTATE_FLAG_MINIMIZED = 0x10,
+	XSTATE_FLAG_ALWAYS_ON_TOP = 0x20,
+} XStateFlag;
+
 // Basic size hints (subset of XSizeHints from X11)
 typedef struct view_size_hints {
 	int min_width;
@@ -168,7 +183,7 @@ void xwayland_surface_close(XSurface *xsurface);
 void xwayland_surface_configure(XSurface *surface, Rect geom);
 void xwayland_surface_destroy(XSurface *xsurface);
 XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
-void xwayland_surface_publish_state(XSurface *xsurface, const ViewState *state);
+void xwayland_surface_publish_state(XId window_id, const ViewState *state);
 void xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id);
 void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);
 
