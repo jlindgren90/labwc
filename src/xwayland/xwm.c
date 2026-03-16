@@ -250,7 +250,7 @@ xsurface_set_net_wm_state(struct xwayland_surface *xsurface, const ViewState *st
 
 	uint32_t property[13];
 	size_t i = 0;
-	if (xsurface->props.is_modal) {
+	if (state->modal) {
 		property[i++] = xwm->atoms[NET_WM_STATE_MODAL];
 	}
 	if (state->fullscreen) {
@@ -531,42 +531,30 @@ read_surface_strut_partial(struct lab_xwm *xwm,
 	view_set_strut_partial(xsurface->view_id, &strut_partial);
 }
 
-static void read_surface_net_wm_state(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface,
-		xcb_get_property_reply_t *reply) {
-	if (xsurface->surface && xsurface->surface->mapped) {
-		// ignore direct _NET_WM_STATE updates after map
-		return;
-	}
-
-	xsurface->props.is_modal = false;
-
-	bool fullscreen = false;
-	enum view_axis maximized = VIEW_AXIS_NONE;
-	bool minimized = false;
-	bool always_on_top = false;
+static void
+read_surface_net_wm_state(struct lab_xwm *xwm, xcb_window_t window_id,
+		xcb_get_property_reply_t *reply)
+{
+	XSurfaceInitialState state = {0};
 
 	xcb_atom_t *atom = xcb_get_property_value(reply);
 	for (uint32_t i = 0; i < reply->value_len; i++) {
 		if (atom[i] == xwm->atoms[NET_WM_STATE_MODAL]) {
-			xsurface->props.is_modal = true;
+			state.modal = true;
 		} else if (atom[i] == xwm->atoms[NET_WM_STATE_FULLSCREEN]) {
-			fullscreen = true;
+			state.fullscreen = true;
 		} else if (atom[i] == xwm->atoms[NET_WM_STATE_MAXIMIZED_VERT]) {
-			maximized |= VIEW_AXIS_VERTICAL;
+			state.maximized |= VIEW_AXIS_VERTICAL;
 		} else if (atom[i] == xwm->atoms[NET_WM_STATE_MAXIMIZED_HORZ]) {
-			maximized |= VIEW_AXIS_HORIZONTAL;
+			state.maximized |= VIEW_AXIS_HORIZONTAL;
 		} else if (atom[i] == xwm->atoms[NET_WM_STATE_HIDDEN]) {
-			minimized = true;
+			state.minimized = true;
 		} else if (atom[i] == xwm->atoms[NET_WM_STATE_ABOVE]) {
-			always_on_top = true;
+			state.always_on_top = true;
 		}
 	}
 
-	view_fullscreen(xsurface->view_id, fullscreen, /* output */ NULL);
-	view_maximize(xsurface->view_id, maximized);
-	view_minimize(xsurface->view_id, minimized);
-	view_set_always_on_top(xsurface->view_id, always_on_top);
+	xsurface_set_initial_state(window_id, state);
 }
 
 char *lab_xwm_get_atom_name(struct lab_xwm *xwm, xcb_atom_t atom) {
@@ -603,7 +591,7 @@ static void read_surface_property(struct lab_xwm *xwm,
 	} else if (property == xwm->atoms[WM_PROTOCOLS]) {
 		read_surface_protocols(xwm, xsurface, reply);
 	} else if (property == xwm->atoms[NET_WM_STATE]) {
-		read_surface_net_wm_state(xwm, xsurface, reply);
+		read_surface_net_wm_state(xwm, xsurface->window_id, reply);
 	} else if (property == xwm->atoms[WM_HINTS]) {
 		read_surface_hints(xwm, xsurface, reply);
 	} else if (property == xwm->atoms[WM_NORMAL_HINTS]) {

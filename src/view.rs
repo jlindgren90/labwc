@@ -126,10 +126,6 @@ impl View {
         self.v.get_root_id(xwm)
     }
 
-    pub fn is_modal_dialog(&self) -> bool {
-        self.v.is_modal_dialog()
-    }
-
     pub fn get_size_hints(&self) -> ViewSizeHints {
         self.v.get_size_hints()
     }
@@ -156,6 +152,10 @@ impl View {
                 toplevel.send_done();
             }
         }
+    }
+
+    pub fn set_modal(&mut self, modal: bool) {
+        self.state.modal = modal;
     }
 
     pub fn set_strut_partial(&mut self, strut_partial: Option<&ViewStrutPartial>) -> UpdateLevel {
@@ -212,6 +212,9 @@ impl View {
         self.state.mapped = true;
         self.state.ever_mapped = true;
         self.state.wants_focus = self.v.wants_focus();
+        if let Some(modal) = self.v.get_modal() {
+            self.state.modal = modal;
+        }
         if !self.state.minimized {
             unsafe { view_scene_tree_set_visible(self.scene.scene_tree, true) };
             *was_shown = true;
