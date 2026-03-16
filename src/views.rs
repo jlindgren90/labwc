@@ -4,6 +4,7 @@ use crate::bindings::*;
 use crate::view::*;
 use crate::view_geom::*;
 use crate::view_grab::*;
+use crate::xwm::*;
 use std::collections::{BTreeMap, HashSet};
 use std::ptr::null_mut;
 
@@ -15,15 +16,13 @@ pub struct Views {
     // raised, with minimized and always-on-top views interspersed
     order: Vec<ViewId>,
     active_id: ViewId,
-    // xwayland server-side stacking order, back-to-front, with
-    // minimized views first and always-on-top views last
-    x_stacking: Vec<XId>,
     foreign_toplevel_clients: Vec<*mut WlResource>,
     grabbed_id: ViewId, // set at mouse button press
     moving_id: ViewId,  // set once cursor actually moves
     resizing_id: ViewId,
     grab: ViewGrab,
     cycle_list: Vec<ViewId>, // TODO: move elsewhere?
+    xwm: Xwm,
 }
 
 impl Views {
@@ -37,8 +36,7 @@ impl Views {
 
     pub fn remove(&mut self, id: ViewId) {
         if let Some(view) = self.by_id.get(&id) {
-            let xid = view.get_xid();
-            self.x_stacking.retain(|&x| x != xid);
+            self.xwm.unstack(view.get_xid());
         }
         self.by_id.remove(&id);
         self.order.retain(|&i| i != id);
@@ -302,7 +300,7 @@ impl Views {
             let mut reset_grab = false;
             for (&i, v) in &mut self.by_id {
                 if v.get_root_id() == root {
-                    ul |= v.set_minimized(minimized, &mut visibility_changed, &mut self.x_stacking);
+                    ul |= v.set_minimized(minimized, &mut visibility_changed, &mut self.xwm);
                     reset_grab |= i == self.grabbed_id;
                 }
             }
@@ -348,14 +346,14 @@ impl Views {
             ids_to_raise.push(id);
         }
         for v in ids_to_raise.iter().filter_map(|i| self.by_id.get(i)) {
-            v.raise(&mut self.x_stacking);
+            v.raise(&mut self.xwm);
         }
         self.order.retain(|i| !ids_to_raise.contains(i));
         self.order.append(&mut ids_to_raise);
         // Keep always-on-top views on top by raising again
         for v in self.order.iter().filter_map(|i| self.by_id.get(i)) {
             if v.get_state().always_on_top {
-                v.raise(&mut self.x_stacking);
+                v.raise(&mut self.xwm);
             }
         }
         self.update_top_layer_visibility();
