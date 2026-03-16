@@ -728,7 +728,7 @@ xwayland_surface_read_properties(struct xwayland_surface *xsurface)
 		xcb_get_property_reply_t *reply =
 			xcb_get_property_reply(xwm->xcb_conn, cookies[i], NULL);
 		if (reply == NULL) {
-			wlr_log(WLR_ERROR, "Failed to get window property");
+			wlr_log(WLR_INFO, "Failed to get window property");
 			continue;
 		}
 		read_surface_property(xwm, xsurface, props[i], reply);
@@ -929,7 +929,7 @@ static void lab_xwm_handle_property_notify(struct lab_xwm *xwm,
 	xcb_get_property_reply_t *reply =
 		xcb_get_property_reply(xwm->xcb_conn, cookie, NULL);
 	if (reply == NULL) {
-		wlr_log(WLR_ERROR, "Failed to get window property");
+		wlr_log(WLR_INFO, "Failed to get window property");
 		return;
 	}
 
@@ -1260,14 +1260,14 @@ static void lab_xwm_handle_xcb_error(struct lab_xwm *xwm, xcb_value_error_t *ev)
 		goto log_raw;
 	}
 
-	wlr_log(WLR_ERROR, "xcb error: op %s (%s), code %s (%s), sequence %"PRIu16", value %"PRIu32,
+	wlr_log(WLR_INFO, "xcb error: op %s (%s), code %s (%s), sequence %"PRIu16", value %"PRIu32,
 		major_name, minor_name ? minor_name : "no minor",
 		error_name, extension ? extension : "no extension",
 		ev->sequence, ev->bad_value);
 
 	return;
 log_raw:
-	wlr_log(WLR_ERROR,
+	wlr_log(WLR_INFO,
 		"xcb error: op %"PRIu8":%"PRIu16", code %"PRIu8", sequence %"PRIu16", value %"PRIu32,
 		ev->major_opcode, ev->minor_opcode, ev->error_code,
 		ev->sequence, ev->bad_value);
