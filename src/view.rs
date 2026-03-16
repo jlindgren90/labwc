@@ -7,6 +7,7 @@ use crate::ssd::*;
 use crate::util::*;
 use crate::view_geom::*;
 use crate::view_impl::*;
+use crate::xwm::*;
 use std::cmp::max;
 use std::ffi::CString;
 use std::ops::BitOrAssign;
@@ -284,11 +285,11 @@ impl View {
         &mut self,
         minimized: bool,
         visibility_changed: &mut bool,
-        x_stacking: &mut Vec<XId>,
+        xwm: &mut Xwm,
     ) -> UpdateLevel {
         if self.state.minimized != minimized {
             self.state.minimized = minimized;
-            self.v.set_minimized(&self.state, x_stacking);
+            self.v.set_minimized(&self.state, xwm);
             self.send_foreign_toplevel_state();
             if self.state.mapped {
                 unsafe { view_scene_tree_set_visible(self.scene.scene_tree, !minimized) };
@@ -577,10 +578,10 @@ impl View {
         }
     }
 
-    pub fn raise(&self, x_stacking: &mut Vec<XId>) {
+    pub fn raise(&self, xwm: &mut Xwm) {
         unsafe { view_scene_tree_raise(self.scene.scene_tree) };
         if self.state.visible() {
-            self.v.raise(x_stacking);
+            self.v.raise(xwm);
         }
     }
 
