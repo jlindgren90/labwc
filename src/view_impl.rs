@@ -50,6 +50,12 @@ impl XView {
             xsurface: xsurface,
         }
     }
+
+    fn publish_state_if_mapped(&self, state: &ViewState) {
+        if state.mapped {
+            unsafe { xwayland_surface_publish_state(self.xid, state) };
+        }
+    }
 }
 
 impl ViewImpl for XView {
@@ -82,22 +88,22 @@ impl ViewImpl for XView {
     }
 
     fn notify_mapped(&self, state: &ViewState) {
-        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
+        self.publish_state_if_mapped(state);
     }
 
     fn set_active(&self, state: &ViewState) {
         if state.active {
             unsafe { xwayland_set_active_window(self.xid) };
         }
-        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
+        self.publish_state_if_mapped(state);
     }
 
     fn set_fullscreen(&mut self, state: &ViewState) {
-        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
+        self.publish_state_if_mapped(state);
     }
 
     fn set_maximized(&self, state: &ViewState) {
-        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
+        self.publish_state_if_mapped(state);
     }
 
     fn notify_tiled(&self) {
@@ -105,11 +111,11 @@ impl ViewImpl for XView {
     }
 
     fn set_minimized(&self, state: &ViewState, xwm: &mut Xwm) {
-        unsafe { xwayland_surface_publish_state(self.xsurface, state) };
         if state.minimized {
             // restack minimized view to bottom
             xwm.lower(self.xid, self.xsurface);
         }
+        self.publish_state_if_mapped(state);
     }
 
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool) {
