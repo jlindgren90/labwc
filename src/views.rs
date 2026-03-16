@@ -618,6 +618,46 @@ impl Views {
         return UpdateLevel::Cursor;
     }
 
+    pub fn change_xsurface_state(
+        &mut self,
+        xid: XId,
+        action: XStateAction,
+        flags: XStateFlag,
+    ) -> UpdateLevel {
+        let mut ul = UpdateLevel::None;
+        if let Some(id) = self.xwm.get_view_id(xid) {
+            if let Some(view) = self.by_id.get_mut(&id) {
+                let mut state_flags = view.get_state().to_xstate_flags();
+                // Apply requested bitwise operator
+                match action {
+                    XSTATE_ACTION_REMOVE => state_flags &= !flags,
+                    XSTATE_ACTION_ADD => state_flags |= flags,
+                    XSTATE_ACTION_TOGGLE => state_flags ^= flags,
+                    _ => return ul, // invalid
+                }
+                let modal = (state_flags & XSTATE_FLAG_MODAL) != 0;
+                let fullscreen = (state_flags & XSTATE_FLAG_FULLSCREEN) != 0;
+                let maximized = xstate_flags_maximized_axis(state_flags);
+                let minimized = (state_flags & XSTATE_FLAG_MINIMIZED) != 0;
+                let always_on_top = (state_flags & XSTATE_FLAG_ALWAYS_ON_TOP) != 0;
+                // Apply updated flags back to view
+                view.set_modal(modal);
+                ul |= self.fullscreen(id, fullscreen, /* output */ null_mut());
+                ul |= self.maximize(id, maximized);
+                ul |= self.minimize(id, minimized).1;
+                ul |= self.set_always_on_top(id, always_on_top);
+            }
+            // Normally we wait until map to update _NET_WM_STATE, but should
+            // also update it for _NET_WM_STATE client message before map.
+            if let Some(view) = self.by_id.get_mut(&id)
+                && !view.get_state().mapped
+            {
+                unsafe { xwayland_surface_publish_state(xid, view.get_state()) };
+            }
+        }
+        return ul;
+    }
+
     pub fn request_xsurface_configure(&mut self, xid: XId, geom: Rect) -> UpdateLevel {
         let xsurface = self.xwm.get_xsurface(xid);
         if let Some(id) = self.xwm.get_view_id(xid)

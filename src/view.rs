@@ -53,6 +53,40 @@ impl ViewState {
     pub fn floating(&self) -> bool {
         !self.fullscreen && self.maximized == VIEW_AXIS_NONE && self.tiled == LAB_EDGE_NONE
     }
+
+    pub fn to_xstate_flags(&self) -> XStateFlag {
+        let mut flags = 0;
+        if self.modal {
+            flags |= XSTATE_FLAG_MODAL;
+        }
+        if self.fullscreen {
+            flags |= XSTATE_FLAG_FULLSCREEN;
+        }
+        if (self.maximized & VIEW_AXIS_HORIZONTAL) != 0 {
+            flags |= XSTATE_FLAG_MAXIMIZED_H;
+        }
+        if (self.maximized & VIEW_AXIS_VERTICAL) != 0 {
+            flags |= XSTATE_FLAG_MAXIMIZED_V;
+        }
+        if self.minimized {
+            flags |= XSTATE_FLAG_MINIMIZED;
+        }
+        if self.always_on_top {
+            flags |= XSTATE_FLAG_ALWAYS_ON_TOP;
+        }
+        return flags;
+    }
+}
+
+pub fn xstate_flags_maximized_axis(flags: XStateFlag) -> ViewAxis {
+    let mut axis = VIEW_AXIS_NONE;
+    if (flags & XSTATE_FLAG_MAXIMIZED_H) != 0 {
+        axis |= VIEW_AXIS_HORIZONTAL;
+    }
+    if (flags & XSTATE_FLAG_MAXIMIZED_V) != 0 {
+        axis |= VIEW_AXIS_VERTICAL;
+    }
+    return axis;
 }
 
 impl From<&ViewState> for ForeignToplevelState {

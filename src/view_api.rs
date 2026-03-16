@@ -470,6 +470,12 @@ pub extern "C" fn xsurface_unmap(xid: XId, surface: *mut WlrSurface) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn xsurface_change_state(xid: XId, action: XStateAction, flags: XStateFlag) {
+    let ul = views_mut().change_xsurface_state(xid, action, flags);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn xsurface_request_configure(xid: XId, geom: Rect) {
     let ul = views_mut().request_xsurface_configure(xid, geom);
     do_update(ul);
