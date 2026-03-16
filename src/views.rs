@@ -60,7 +60,7 @@ impl Views {
     fn get_modal_dialog(&self, id: ViewId) -> Option<ViewId> {
         if let Some(view) = self.by_id.get(&id) {
             // Check if view itself is a modal dialog
-            if view.get_state().mapped && view.is_modal_dialog() {
+            if view.get_state().mapped && view.get_state().modal {
                 return Some(id);
             }
             // Check child/sibling views (in reverse stacking order)
@@ -68,8 +68,8 @@ impl Views {
             for &i in self.order.iter().rev().filter(|&&i| i != id && i != root) {
                 if let Some(v) = self.by_id.get(&i)
                     && v.get_state().mapped
+                    && v.get_state().modal
                     && v.get_root_id(&self.xwm) == root
-                    && v.is_modal_dialog()
                 {
                     return Some(i);
                 }
@@ -579,6 +579,20 @@ impl Views {
 
     pub fn set_xsurface_surface_id(&mut self, xid: XId, surface_id: u32) {
         self.xwm.set_surface_id(xid, surface_id);
+    }
+
+    pub fn set_xsurface_initial_state(&mut self, xid: XId, state: XSurfaceInitialState) {
+        if let Some(id) = self.xwm.get_view_id(xid)
+            && let Some(view) = self.by_id.get_mut(&id)
+            && !view.get_state().mapped
+        {
+            view.set_modal(state.modal);
+            // all UpdateLevels should be None before map, so ignoring
+            _ = self.fullscreen(id, state.fullscreen, /* output */ null_mut());
+            _ = self.maximize(id, state.maximized);
+            _ = self.minimize(id, state.minimized);
+            _ = self.set_always_on_top(id, state.always_on_top);
+        }
     }
 
     pub fn map_xsurface(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {

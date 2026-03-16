@@ -453,6 +453,11 @@ pub extern "C" fn xsurface_set_surface_id(xid: XId, surface_id: u32) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_initial_state(xid: XId, state: XSurfaceInitialState) {
+    views_mut().set_xsurface_initial_state(xid, state);
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn xsurface_map(xid: XId, surface: *mut WlrSurface) {
     let ul = views_mut().map_xsurface(xid, surface);
     do_update(ul);

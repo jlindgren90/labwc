@@ -10,7 +10,7 @@ pub trait ViewImpl {
     fn get_xid(&self) -> XId;
     fn get_parent(&self) -> ViewId;
     fn get_root_id(&self, xwm: &Xwm) -> ViewId;
-    fn is_modal_dialog(&self) -> bool;
+    fn get_modal(&self) -> Option<bool>;
     fn get_size_hints(&self) -> ViewSizeHints;
     fn get_surface_props(&self) -> Option<XSurfaceProps>;
     fn notify_mapped(&self, state: &ViewState);
@@ -69,8 +69,8 @@ impl ViewImpl for XView {
         xwm.get_root_view_id(self.xid)
     }
 
-    fn is_modal_dialog(&self) -> bool {
-        unsafe { xwayland_surface_get_props(self.xsurface).is_modal }
+    fn get_modal(&self) -> Option<bool> {
+        None // not supported (modal state is set explicitly)
     }
 
     fn get_size_hints(&self) -> ViewSizeHints {
@@ -212,8 +212,8 @@ impl ViewImpl for XdgView {
         unsafe { xdg_toplevel_view_get_root_id(self.c_ptr) }
     }
 
-    fn is_modal_dialog(&self) -> bool {
-        unsafe { xdg_toplevel_view_is_modal_dialog(self.c_ptr) }
+    fn get_modal(&self) -> Option<bool> {
+        Some(unsafe { xdg_toplevel_view_is_modal_dialog(self.c_ptr) })
     }
 
     fn get_size_hints(&self) -> ViewSizeHints {

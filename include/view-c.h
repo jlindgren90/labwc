@@ -59,6 +59,7 @@ typedef struct ViewState {
 	_Bool mapped;
 	_Bool ever_mapped;
 	_Bool wants_focus;
+	_Bool modal;
 	_Bool active;
 	_Bool ssd_enabled;
 	_Bool fullscreen;
@@ -78,13 +79,20 @@ typedef struct ViewScene {
 	WlrSceneTree *surface_tree; // child of scene_tree
 } ViewScene;
 
+typedef struct XSurfaceInitialState {
+	_Bool modal;
+	_Bool fullscreen;
+	ViewAxis maximized;
+	_Bool minimized;
+	_Bool always_on_top;
+} XSurfaceInitialState;
+
 typedef struct XSurfaceProps {
 	Rect geom;
 	ViewSizeHints size_hints;
 	_Bool position_hint;
 	_Bool is_normal;
 	_Bool is_dialog;
-	_Bool is_modal;
 	_Bool supports_delete;
 	_Bool supports_take_focus;
 	_Bool no_input_hint;
