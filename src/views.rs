@@ -6,7 +6,9 @@ use crate::view_geom::*;
 use crate::view_grab::*;
 use crate::xwm::*;
 use std::collections::{BTreeMap, HashSet};
+use std::ffi::{CString, c_char};
 use std::ptr::null_mut;
+use std::slice;
 
 #[derive(Default)]
 pub struct Views {
@@ -592,6 +594,28 @@ impl Views {
             _ = self.maximize(id, state.maximized);
             _ = self.minimize(id, state.minimized);
             _ = self.set_always_on_top(id, state.always_on_top);
+        }
+    }
+
+    pub fn set_xsurface_string_prop(
+        &mut self,
+        xid: XId,
+        prop: XStringProp,
+        str: *const c_char,
+        len: usize,
+    ) {
+        if let Some(id) = self.xwm.get_view_id(xid)
+            && let Some(view) = self.by_id.get_mut(&id)
+        {
+            // SAFETY: requires valid C string (no internal NUL)
+            let slice = unsafe { slice::from_raw_parts(str as *const u8, len) };
+            let string = CString::new(slice).unwrap();
+            match prop {
+                XSTRING_PROP_INSTANCE => view.set_app_id(string),
+                XSTRING_PROP_WM_NAME => view.set_title(string, /* preferred */ false),
+                XSTRING_PROP_NET_NAME => view.set_title(string, /* preferred */ true),
+                _ => return, // invalid
+            }
         }
     }
 

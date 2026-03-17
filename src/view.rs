@@ -104,6 +104,7 @@ impl From<&ViewState> for ForeignToplevelState {
 struct ViewData {
     app_id: CString,
     title: CString,
+    has_preferred_title: bool, // e.g. _NET_WM_NAME vs. WM_NAME
     ssd: Ssd,
     strut_partial: Option<ViewStrutPartial>,
     foreign_toplevels: Vec<ForeignToplevel>,
@@ -176,7 +177,11 @@ impl View {
         }
     }
 
-    pub fn set_title(&mut self, title: CString) {
+    pub fn set_title(&mut self, title: CString, preferred: bool) {
+        if self.d.has_preferred_title && !preferred {
+            return;
+        }
+        self.d.has_preferred_title = preferred;
         if self.d.title != title {
             self.d.title = title;
             self.state.title = self.d.title.as_ptr(); // for C interop
