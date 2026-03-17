@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
 use crate::bindings::*;
+use crate::rect::*;
 use crate::view::*;
 use crate::view_geom::*;
 use crate::view_grab::*;
@@ -31,11 +32,13 @@ impl Views {
     pub fn add(&mut self, spec: ViewSpec) -> ViewId {
         self.max_used_id += 1;
         let id = self.max_used_id;
-        self.by_id.insert(id, View::new(id, spec));
-        self.order.push(id);
+        let mut view = View::new(id, spec);
         if let ViewSpec::Xwayland(xid, _) = spec {
             self.xwm.set_view_id(xid, id);
+            view.set_pending_geom(self.xwm.get_server_geom(xid));
         }
+        self.by_id.insert(id, view);
+        self.order.push(id);
         return id;
     }
 
@@ -593,6 +596,10 @@ impl Views {
         self.xwm.set_surface_id(xid, surface_id);
     }
 
+    pub fn set_xsurface_server_geom(&mut self, xid: XId, geom: Rect) -> UpdateLevel {
+        self.xwm.set_server_geom(xid, geom)
+    }
+
     pub fn set_xsurface_initial_state(&mut self, xid: XId, state: XSurfaceInitialState) {
         if let Some(id) = self.xwm.get_view_id(xid)
             && let Some(view) = self.by_id.get_mut(&id)
@@ -633,15 +640,14 @@ impl Views {
         if let Some(id) = self.xwm.get_view_id(xid) {
             return self.map(id);
         }
-        self.xwm.map_unmanaged(xid, surface);
-        return UpdateLevel::Cursor;
+        return self.xwm.map_unmanaged(xid, surface);
     }
 
     pub fn unmap_xsurface(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
         if let Some(id) = self.xwm.get_view_id(xid) {
             return self.unmap(id);
         }
-        self.xwm.unmap_unmanaged(xid);
+        let ul = self.xwm.unmap_unmanaged(xid);
         // Set seat focus back to the active view (server-side focus
         // is expected to be returned automatically)
         if surface == unsafe { seat_get_focused_surface() }
@@ -649,7 +655,7 @@ impl Views {
         {
             active.refocus();
         }
-        return UpdateLevel::Cursor;
+        return ul;
     }
 
     pub fn change_xsurface_state(
@@ -692,8 +698,12 @@ impl Views {
         return ul;
     }
 
-    pub fn request_xsurface_configure(&mut self, xid: XId, geom: Rect) -> UpdateLevel {
-        let xsurface = self.xwm.get_xsurface(xid);
+    pub fn request_xsurface_configure(
+        &mut self,
+        xid: XId,
+        geom: Rect,
+        flags: RectUpdateFlag,
+    ) -> UpdateLevel {
         if let Some(id) = self.xwm.get_view_id(xid)
             && let Some(view) = self.by_id.get_mut(&id)
         {
@@ -701,23 +711,19 @@ impl Views {
             // Allow managed surface (view) configure only if floating
             if state.floating() {
                 let hints = view.get_size_hints();
-                let mut adjusted = geom;
-                adjust_size_for_hints(&hints, &mut adjusted.width, &mut adjusted.height);
-                return view.move_resize(adjusted);
+                let mut updated = rect_update_by_flags(state.pending, geom, flags);
+                adjust_size_for_hints(&hints, &mut updated.width, &mut updated.height);
+                return view.move_resize(updated);
             }
             // If not floating, send back synthetic configure with existing geometry
             unsafe { xwayland_synthesize_configure(xid, state.pending) };
         } else {
             // Always allow unmanaged surface configure
-            unsafe { xwayland_surface_configure(xsurface, geom) };
-            return self.move_unmanaged(xid, geom.x, geom.y);
+            let current = self.xwm.get_server_geom(xid);
+            let updated = rect_update_by_flags(current, geom, flags);
+            unsafe { xwayland_configure_window(xid, updated) };
         }
         return UpdateLevel::None;
-    }
-
-    pub fn move_unmanaged(&self, xid: XId, x: i32, y: i32) -> UpdateLevel {
-        self.xwm.move_unmanaged(xid, x, y);
-        return UpdateLevel::Cursor;
     }
 
     pub fn focus_xsurface(&mut self, xid: XId, reason: XFocusReason) -> UpdateLevel {

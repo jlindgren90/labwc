@@ -17,6 +17,14 @@ typedef struct {
 } Rect;
 #endif
 
+// Compatible subset of xcb_config_window_t
+typedef enum RectUpdateFlag {
+	RECT_UPDATE_X = 1,
+	RECT_UPDATE_Y = 2,
+	RECT_UPDATE_WIDTH = 4,
+	RECT_UPDATE_HEIGHT = 8,
+} RectUpdateFlag;
+
 // Unique (never re-used) ID for each view. 0 means none/invalid.
 typedef unsigned long ViewId;
 

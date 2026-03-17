@@ -102,12 +102,6 @@ struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 	return xsurface;
 }
 
-struct wlr_box
-xwayland_surface_get_geom(struct xwayland_surface *xsurface)
-{
-	return xsurface->geom;
-}
-
 struct wlr_surface *
 xwayland_surface_get_surface(struct xwayland_surface *xsurface)
 {
@@ -137,12 +131,13 @@ static struct xwayland_surface *xwayland_surface_create(
 		XCB_CW_EVENT_MASK, values);
 
 	surface->window_id = window_id;
-	surface->geom.x = x;
-	surface->geom.y = y;
-	surface->geom.width = width;
-	surface->geom.height = height;
-
 	xsurface_add(window_id, surface);
+	xsurface_set_server_geom(window_id, (struct wlr_box){
+		.x = x,
+		.y = y,
+		.width = width,
+		.height = height,
+	});
 
 	if (!override_redirect) {
 		xsurface_set_managed(window_id, true);
@@ -746,15 +741,10 @@ static void lab_xwm_handle_destroy_notify(struct lab_xwm *xwm,
 	lab_xwm_handle_selection_destroy_notify(xwm, ev);
 }
 
-static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
-		xcb_configure_request_event_t *ev) {
-	struct xwayland_surface *surface = xsurface_lookup(ev->window);
-	if (surface == NULL) {
-		return;
-	}
-
-	// TODO: handle ev->{parent,sibling}?
-
+static void
+lab_xwm_handle_configure_request(struct lab_xwm *xwm,
+		xcb_configure_request_event_t *ev)
+{
 	uint16_t mask = ev->value_mask;
 	uint16_t geo_mask = XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
 		XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT;
@@ -763,20 +753,20 @@ static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
 	}
 
 	struct wlr_box geom = {
-		.x = mask & XCB_CONFIG_WINDOW_X ? ev->x : surface->geom.x,
-		.y = mask & XCB_CONFIG_WINDOW_Y ? ev->y : surface->geom.y,
-		.width = mask & XCB_CONFIG_WINDOW_WIDTH
-			? ev->width : surface->geom.width,
-		.height = mask & XCB_CONFIG_WINDOW_HEIGHT
-			? ev->height : surface->geom.height,
+		.x = ev->x,
+		.y = ev->y,
+		.width = ev->width,
+		.height = ev->height,
 	};
 
-	xsurface_request_configure(surface->window_id, geom);
+	xsurface_request_configure(ev->window, geom, mask & geo_mask);
 }
 
-static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
-		bool override_redirect) {
-	if (IS_UNMANAGED(xsurface) == override_redirect) {
+static void
+lab_xwm_update_override_redirect(xcb_window_t window_id, bool override_redirect)
+{
+	struct xwayland_surface *xsurface = xsurface_lookup(window_id);
+	if (!xsurface || IS_UNMANAGED(xsurface) == override_redirect) {
 		return;
 	}
 
@@ -799,30 +789,13 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 
 static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,
 		xcb_configure_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
-	if (!xsurface) {
-		return;
-	}
-
-	bool geometry_changed =
-		(xsurface->geom.x != ev->x
-		|| xsurface->geom.y != ev->y
-		|| xsurface->geom.width != ev->width
-		|| xsurface->geom.height != ev->height);
-
-	if (geometry_changed) {
-		xsurface->geom.x = ev->x;
-		xsurface->geom.y = ev->y;
-		xsurface->geom.width = ev->width;
-		xsurface->geom.height = ev->height;
-	}
-
-	lab_xwm_update_override_redirect(xsurface, ev->override_redirect);
-
-	if (geometry_changed && IS_UNMANAGED(xsurface)) {
-		xsurface_move_unmanaged(xsurface->window_id,
-			xsurface->geom.x, xsurface->geom.y);
-	}
+	xsurface_set_server_geom(ev->window, (struct wlr_box){
+		.x = ev->x,
+		.y = ev->y,
+		.width = ev->width,
+		.height = ev->height,
+	});
+	lab_xwm_update_override_redirect(ev->window, ev->override_redirect);
 }
 
 static void
@@ -876,12 +849,7 @@ lab_xwm_handle_map_request(struct lab_xwm *xwm, xcb_map_request_event_t *ev)
 
 static void lab_xwm_handle_map_notify(struct lab_xwm *xwm,
 		xcb_map_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
-	if (!xsurface) {
-		return;
-	}
-
-	lab_xwm_update_override_redirect(xsurface, ev->override_redirect);
+	lab_xwm_update_override_redirect(ev->window, ev->override_redirect);
 }
 
 static void lab_xwm_handle_unmap_notify(struct lab_xwm *xwm,
@@ -1333,16 +1301,18 @@ static void handle_shell_v1_destroy(struct wl_listener *listener,
 }
 
 void
-xwayland_surface_configure(struct xwayland_surface *xsurface, struct wlr_box geom)
+xwayland_configure_window(xcb_window_t window_id, struct wlr_box geom)
 {
-	xsurface->geom = geom;
-
 	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
+		return;
+	}
+
 	uint32_t mask = XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
 		XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT |
 		XCB_CONFIG_WINDOW_BORDER_WIDTH;
 	uint32_t values[] = {geom.x, geom.y, geom.width, geom.height, 0};
-	xcb_configure_window(xwm->xcb_conn, xsurface->window_id, mask, values);
+	xcb_configure_window(xwm->xcb_conn, window_id, mask, values);
 	xcb_flush(xwm->xcb_conn);
 }
 
