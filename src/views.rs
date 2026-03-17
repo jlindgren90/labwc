@@ -706,7 +706,7 @@ impl Views {
                 return view.move_resize(adjusted);
             }
             // If not floating, send back synthetic configure with existing geometry
-            unsafe { xwayland_surface_configure(xsurface, state.pending) };
+            unsafe { xwayland_synthesize_configure(xid, state.pending) };
         } else {
             // Always allow unmanaged surface configure
             unsafe { xwayland_surface_configure(xsurface, geom) };
