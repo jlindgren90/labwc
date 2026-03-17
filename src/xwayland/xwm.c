@@ -412,43 +412,40 @@ static void read_surface_hints(struct lab_xwm *xwm,
 	}
 }
 
-static void read_surface_normal_hints(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface,
-		xcb_get_property_reply_t *reply) {
+static void
+read_surface_normal_hints(struct lab_xwm *xwm, xcb_window_t window_id,
+		xcb_get_property_reply_t *reply)
+{
 	if (reply->type != xwm->atoms[WM_SIZE_HINTS] && reply->type != XCB_ATOM_NONE) {
 		wlr_log(WLR_DEBUG, "Invalid WM_NORMAL_HINTS property type");
-		return;
-	}
-
-	xsurface->props.position_hint = false;
-	xsurface->props.size_hints = (struct view_size_hints){0};
-
-	if (reply->value_len == 0) {
 		return;
 	}
 
 	xcb_size_hints_t size_hints = {0};
 	xcb_icccm_get_wm_size_hints_from_reply(&size_hints, reply);
 
-	if ((size_hints.flags & (XCB_ICCCM_SIZE_HINT_US_POSITION
-			| XCB_ICCCM_SIZE_HINT_P_POSITION)) != 0) {
-		xsurface->props.position_hint = true;
-	}
+	ViewSizeHints hints = {0};
+
+	hints.position_hint = (size_hints.flags
+		& (XCB_ICCCM_SIZE_HINT_US_POSITION
+			| XCB_ICCCM_SIZE_HINT_P_POSITION)) != 0;
 
 	if ((size_hints.flags & XCB_ICCCM_SIZE_HINT_P_MIN_SIZE) != 0) {
-		xsurface->props.size_hints.min_width = size_hints.min_width;
-		xsurface->props.size_hints.min_height = size_hints.min_height;
+		hints.min_width = size_hints.min_width;
+		hints.min_height = size_hints.min_height;
 	}
 
 	if ((size_hints.flags & XCB_ICCCM_SIZE_HINT_P_RESIZE_INC) != 0) {
-		xsurface->props.size_hints.width_inc = size_hints.width_inc;
-		xsurface->props.size_hints.height_inc = size_hints.height_inc;
+		hints.width_inc = size_hints.width_inc;
+		hints.height_inc = size_hints.height_inc;
 	}
 
 	if ((size_hints.flags & XCB_ICCCM_SIZE_HINT_BASE_SIZE) != 0) {
-		xsurface->props.size_hints.base_width = size_hints.base_width;
-		xsurface->props.size_hints.base_height = size_hints.base_height;
+		hints.base_width = size_hints.base_width;
+		hints.base_height = size_hints.base_height;
 	}
+
+	xsurface_set_size_hints(window_id, &hints);
 }
 
 #define MWM_HINTS_FLAGS_FIELD 0
@@ -573,7 +570,7 @@ static void read_surface_property(struct lab_xwm *xwm,
 	} else if (property == xwm->atoms[WM_HINTS]) {
 		read_surface_hints(xwm, xsurface, reply);
 	} else if (property == xwm->atoms[WM_NORMAL_HINTS]) {
-		read_surface_normal_hints(xwm, xsurface, reply);
+		read_surface_normal_hints(xwm, xsurface->window_id, reply);
 	} else if (property == xwm->atoms[MOTIF_WM_HINTS]) {
 		read_surface_motif_hints(xwm, xsurface, reply);
 	} else if (property == xwm->atoms[NET_WM_STRUT_PARTIAL]) {

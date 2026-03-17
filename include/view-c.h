@@ -54,6 +54,7 @@ typedef struct view_size_hints {
 	int height_inc;
 	int base_width;
 	int base_height;
+	_Bool position_hint;
 } ViewSizeHints;
 
 // Compatible with xcb_ewmh_wm_strut_partial_t
@@ -110,8 +111,6 @@ typedef struct XSurfaceInitialState {
 
 typedef struct XSurfaceProps {
 	Rect geom;
-	ViewSizeHints size_hints;
-	_Bool position_hint;
 	_Bool is_normal;
 	_Bool is_dialog;
 	_Bool supports_delete;

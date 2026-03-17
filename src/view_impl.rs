@@ -12,6 +12,7 @@ pub trait ViewImpl {
     fn get_root_id(&self, xwm: &Xwm) -> ViewId;
     fn get_modal(&self) -> Option<bool>;
     fn get_size_hints(&self) -> ViewSizeHints;
+    fn set_size_hints(&mut self, hints: &ViewSizeHints);
     fn get_surface_props(&self) -> Option<XSurfaceProps>;
     fn notify_mapped(&self, state: &ViewState);
     fn set_active(&self, state: &ViewState);
@@ -38,9 +39,11 @@ pub trait ViewImpl {
     ) -> (i32, i32);
 }
 
+#[derive(Default)]
 pub struct XView {
     xid: XId,
     xsurface: *mut XSurface,
+    size_hints: ViewSizeHints,
 }
 
 impl XView {
@@ -48,6 +51,7 @@ impl XView {
         Self {
             xid: xid,
             xsurface: xsurface,
+            ..Self::default()
         }
     }
 
@@ -80,7 +84,11 @@ impl ViewImpl for XView {
     }
 
     fn get_size_hints(&self) -> ViewSizeHints {
-        unsafe { xwayland_surface_get_props(self.xsurface).size_hints }
+        self.size_hints
+    }
+
+    fn set_size_hints(&mut self, hints: &ViewSizeHints) {
+        self.size_hints = *hints;
     }
 
     fn get_surface_props(&self) -> Option<XSurfaceProps> {
@@ -224,6 +232,10 @@ impl ViewImpl for XdgView {
 
     fn get_size_hints(&self) -> ViewSizeHints {
         unsafe { xdg_toplevel_view_get_size_hints(self.c_ptr) }
+    }
+
+    fn set_size_hints(&mut self, _hints: &ViewSizeHints) {
+        // not supported
     }
 
     fn get_surface_props(&self) -> Option<XSurfaceProps> {
