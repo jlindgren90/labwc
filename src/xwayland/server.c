@@ -24,6 +24,7 @@
 #define XWAYLAND_PATH "/usr/bin/Xwayland"
 
 struct xwayland_server g_xserver;
+struct lab_xwm g_xwm;
 
 static void safe_close(int fd) {
 	if (fd >= 0) {
@@ -237,12 +238,12 @@ static int xserver_handle_ready(int fd, uint32_t mask, void *data) {
 	server->ready = true;
 
 	assert(server->wm_fd[0] >= 0);
-	server->xwm = lab_xwm_create(server, server->wm_fd[0]);
+	bool xwm_created = lab_xwm_create(server->wm_fd[0]);
 	// lab_xwm_create takes ownership of wm_fd[0] under all circumstances
 	server->wm_fd[0] = -1;
 
-	if (server->xwm) {
-		lab_xwm_set_seat(server->xwm, server->seat);
+	if (xwm_created) {
+		lab_xwm_set_seat(server->seat);
 		xwayland_on_ready();
 	}
 
@@ -379,7 +380,7 @@ xwayland_server_destroy(void)
 	server_finish_display(server);
 
 	xwayland_shell_v1_destroy(server->shell_v1);
-	lab_xwm_destroy(server->xwm);
+	lab_xwm_destroy();
 
 	*server = (struct xwayland_server){0};
 }

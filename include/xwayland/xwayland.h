@@ -31,7 +31,6 @@ struct xwayland_server;
  */
 struct xwayland_surface {
 	xcb_window_t window_id;
-	struct lab_xwm *xwm;
 
 	struct wlr_surface *surface;
 	struct wlr_addon surface_addon;

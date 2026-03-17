@@ -54,7 +54,7 @@ void lab_xwm_selection_transfer_destroy(
 	lab_xwm_selection_transfer_close_wl_client_fd(transfer);
 
 	if (transfer->incoming_window) {
-		struct lab_xwm *xwm = transfer->selection->xwm;
+		struct lab_xwm *xwm = &g_xwm;
 		xcb_destroy_window(xwm->xcb_conn, transfer->incoming_window);
 		xcb_flush(xwm->xcb_conn);
 	}
@@ -180,7 +180,6 @@ int lab_xwm_handle_selection_event(struct lab_xwm *xwm,
 void lab_xwm_selection_init(struct lab_xwm_selection *selection,
 		struct lab_xwm *xwm, xcb_atom_t atom) {
 	*selection = (struct lab_xwm_selection){
-		.xwm = xwm,
 		.atom = atom,
 		.window = xcb_generate_id(xwm->xcb_conn),
 	};
@@ -263,24 +262,24 @@ void lab_xwm_selection_finish(struct lab_xwm_selection *selection) {
 		lab_xwm_selection_transfer_destroy(incoming);
 	}
 
-	xcb_destroy_window(selection->xwm->xcb_conn, selection->window);
+	xcb_destroy_window(g_xwm.xcb_conn, selection->window);
 }
 
 static void lab_xwm_selection_set_owner(struct lab_xwm_selection *selection,
 		bool set) {
 	if (set) {
-		xcb_set_selection_owner(selection->xwm->xcb_conn,
+		xcb_set_selection_owner(g_xwm.xcb_conn,
 			selection->window,
 			selection->atom,
 			XCB_TIME_CURRENT_TIME);
-		xcb_flush(selection->xwm->xcb_conn);
+		xcb_flush(g_xwm.xcb_conn);
 	} else {
 		if (selection->owner == selection->window) {
-			xcb_set_selection_owner(selection->xwm->xcb_conn,
+			xcb_set_selection_owner(g_xwm.xcb_conn,
 				XCB_WINDOW_NONE,
 				selection->atom,
 				selection->timestamp);
-			xcb_flush(selection->xwm->xcb_conn);
+			xcb_flush(g_xwm.xcb_conn);
 		}
 	}
 }
@@ -322,7 +321,8 @@ static void seat_handle_start_drag(struct wl_listener *listener, void *data) {
 	lab_xwm_seat_handle_start_drag(xwm, drag);
 }
 
-void lab_xwm_set_seat(struct lab_xwm *xwm, struct wlr_seat *seat) {
+void lab_xwm_set_seat(struct wlr_seat *seat) {
+	struct lab_xwm *xwm = &g_xwm;
 	if (xwm->seat != NULL) {
 		wl_list_remove(&xwm->seat_set_selection.link);
 		wl_list_remove(&xwm->seat_set_primary_selection.link);

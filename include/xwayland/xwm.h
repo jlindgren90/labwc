@@ -82,7 +82,6 @@ enum atom_name {
 };
 
 struct lab_xwm {
-	struct xwayland_server *server;
 	struct wl_event_source *event_source;
 	struct wlr_seat *seat;
 
@@ -120,10 +119,12 @@ struct lab_xwm {
 	struct wl_listener seat_drag_source_destroy;
 };
 
-// lab_xwm_create takes ownership of wm_fd and will close it under all circumstances.
-struct lab_xwm *lab_xwm_create(struct xwayland_server *server, int wm_fd);
+extern struct lab_xwm g_xwm;
 
-void lab_xwm_destroy(struct lab_xwm *xwm);
+// lab_xwm_create takes ownership of wm_fd and will close it under all circumstances.
+bool lab_xwm_create(int wm_fd);
+
+void lab_xwm_destroy(void);
 
 void lab_xwm_set_cursor(struct lab_xwm *xwm, const uint8_t *pixels, uint32_t stride,
 	uint32_t width, uint32_t height, int32_t hotspot_x, int32_t hotspot_y);
@@ -133,7 +134,7 @@ int lab_xwm_handle_selection_client_message(struct lab_xwm *xwm,
 	xcb_client_message_event_t *ev);
 void lab_xwm_seat_unlink_drag_handlers(struct lab_xwm *xwm);
 
-void lab_xwm_set_seat(struct lab_xwm *xwm, struct wlr_seat *seat);
+void lab_xwm_set_seat(struct wlr_seat *seat);
 
 char *lab_xwm_get_atom_name(struct lab_xwm *xwm, xcb_atom_t atom);
 bool lab_xwm_atoms_contains(struct lab_xwm *xwm, xcb_atom_t *atoms,

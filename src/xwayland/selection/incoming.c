@@ -26,7 +26,7 @@ lab_xwm_selection_transfer_create_incoming(struct lab_xwm_selection *selection) 
 
 	wl_list_insert(&selection->incoming, &transfer->link);
 
-	struct lab_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 	transfer->incoming_window = xcb_generate_id(xwm->xcb_conn);
 	xcb_create_window(
 		xwm->xcb_conn,
@@ -62,7 +62,7 @@ lab_xwm_selection_find_incoming_transfer_by_window(
 
 static bool lab_xwm_selection_transfer_get_incoming_selection_property(
 		struct lab_xwm_selection_transfer *transfer, bool delete) {
-	struct lab_xwm *xwm = transfer->selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(
 		xwm->xcb_conn,
@@ -88,7 +88,7 @@ static bool lab_xwm_selection_transfer_get_incoming_selection_property(
 
 static void lab_xwm_notify_ready_for_next_incr_chunk(
 		struct lab_xwm_selection_transfer *transfer) {
-	struct lab_xwm *xwm = transfer->selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 	assert(transfer->incr);
 
 	wlr_log(WLR_DEBUG, "deleting property");
@@ -152,8 +152,8 @@ static void lab_xwm_write_selection_property_to_wl_client(
 		// Wrote out part of the property to the Wayland client, but the client was
 		// unable to accept all of it. Schedule an event to asynchronously complete
 		// the transfer.
-		struct wl_event_loop *loop = wl_display_get_event_loop(
-			transfer->selection->xwm->server->wl_display);
+		struct wl_event_loop *loop =
+			wl_display_get_event_loop(g_xserver.wl_display);
 		transfer->event_source = wl_event_loop_add_fd(loop,
 			transfer->wl_client_fd, WL_EVENT_WRITABLE,
 			write_selection_property_to_wl_client, transfer);
@@ -182,7 +182,7 @@ void lab_xwm_get_incr_chunk(struct lab_xwm_selection_transfer *transfer) {
 
 static void lab_xwm_selection_transfer_get_data(
 		struct lab_xwm_selection_transfer *transfer) {
-	struct lab_xwm *xwm = transfer->selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	if (!lab_xwm_selection_transfer_get_incoming_selection_property(transfer, true)) {
 		return;
@@ -201,7 +201,7 @@ static void lab_xwm_selection_transfer_get_data(
 static void source_send(struct lab_xwm_selection *selection,
 		struct wl_array *mime_types, struct wl_array *mime_types_atoms,
 		const char *requested_mime_type, int fd) {
-	struct lab_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	xcb_atom_t *atoms = mime_types_atoms->data;
 	bool found = false;
@@ -326,7 +326,7 @@ static const struct wlr_primary_selection_source_impl
 
 static bool source_get_targets(struct lab_xwm_selection *selection,
 		struct wl_array *mime_types, struct wl_array *mime_types_atoms) {
-	struct lab_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(xwm->xcb_conn,
 		1, // delete
@@ -403,7 +403,7 @@ static bool source_get_targets(struct lab_xwm_selection *selection,
 
 static void lab_xwm_selection_get_targets(struct lab_xwm_selection *selection) {
 	// set the wayland selection to the X11 selection
-	struct lab_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	if (selection == &xwm->clipboard_selection) {
 		struct x11_data_source *source = calloc(1, sizeof(*source));
@@ -419,7 +419,7 @@ static void lab_xwm_selection_get_targets(struct lab_xwm_selection *selection) {
 			&source->mime_types_atoms);
 		if (ok) {
 			wlr_seat_request_set_selection(xwm->seat, NULL, &source->base,
-				wl_display_next_serial(xwm->server->wl_display));
+				wl_display_next_serial(g_xserver.wl_display));
 		} else {
 			wlr_data_source_destroy(&source->base);
 		}
@@ -438,7 +438,7 @@ static void lab_xwm_selection_get_targets(struct lab_xwm_selection *selection) {
 			&source->mime_types_atoms);
 		if (ok) {
 			wlr_seat_set_primary_selection(xwm->seat, &source->base,
-				wl_display_next_serial(xwm->server->wl_display));
+				wl_display_next_serial(g_xserver.wl_display));
 		} else {
 			wlr_primary_selection_source_destroy(&source->base);
 		}
@@ -491,10 +491,10 @@ int lab_xwm_handle_xfixes_selection_notify(struct lab_xwm *xwm,
 			// A real X client selection went away, not our proxy selection
 			if (selection == &xwm->clipboard_selection) {
 				wlr_seat_request_set_selection(xwm->seat, NULL, NULL,
-					wl_display_next_serial(xwm->server->wl_display));
+					wl_display_next_serial(g_xserver.wl_display));
 			} else if (selection == &xwm->primary_selection) {
 				wlr_seat_request_set_primary_selection(xwm->seat, NULL, NULL,
-					wl_display_next_serial(xwm->server->wl_display));
+					wl_display_next_serial(g_xserver.wl_display));
 			} else if (selection == &xwm->dnd_selection) {
 				// TODO: DND
 			} else {
