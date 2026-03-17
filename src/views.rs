@@ -597,6 +597,14 @@ impl Views {
         }
     }
 
+    pub fn set_xsurface_size_hints(&mut self, xid: XId, hints: &ViewSizeHints) {
+        if let Some(id) = self.xwm.get_view_id(xid)
+            && let Some(view) = self.by_id.get_mut(&id)
+        {
+            view.set_size_hints(hints);
+        }
+    }
+
     pub fn set_xsurface_string_prop(
         &mut self,
         xid: XId,

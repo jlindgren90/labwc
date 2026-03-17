@@ -165,6 +165,10 @@ impl View {
         self.v.get_size_hints()
     }
 
+    pub fn set_size_hints(&mut self, hints: &ViewSizeHints) {
+        self.v.set_size_hints(hints);
+    }
+
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
@@ -226,17 +230,13 @@ impl View {
                 geom.height = FALLBACK_HEIGHT;
             }
             // Also set initial output at this point
-            if props.position_hint {
+            let position_hint = self.v.get_size_hints().position_hint;
+            if position_hint {
                 self.state.output = nearest_output_to_geom(geom)
             } else {
                 self.state.output = unsafe { output_nearest_to_cursor() };
             }
-            compute_default_geom(
-                &*self.state,
-                &mut geom,
-                Rect::default(),
-                props.position_hint,
-            );
+            compute_default_geom(&*self.state, &mut geom, Rect::default(), position_hint);
             return Some(geom);
         }
         return None;
