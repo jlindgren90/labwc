@@ -1347,9 +1347,6 @@ static void handle_shell_v1_destroy(struct wl_listener *listener,
 void
 xwayland_surface_configure(struct xwayland_surface *xsurface, struct wlr_box geom)
 {
-	int old_w = xsurface->geom.width;
-	int old_h = xsurface->geom.height;
-
 	xsurface->geom = geom;
 
 	struct lab_xwm *xwm = &g_xwm;
@@ -1358,29 +1355,30 @@ xwayland_surface_configure(struct xwayland_surface *xsurface, struct wlr_box geo
 		XCB_CONFIG_WINDOW_BORDER_WIDTH;
 	uint32_t values[] = {geom.x, geom.y, geom.width, geom.height, 0};
 	xcb_configure_window(xwm->xcb_conn, xsurface->window_id, mask, values);
+	xcb_flush(xwm->xcb_conn);
+}
 
-	// If the window size did not change, then we cannot rely on
-	// the X server to generate a ConfigureNotify event. Instead,
-	// we are supposed to send a synthetic event. See ICCCM part
-	// 4.1.5. But we ignore override-redirect windows as ICCCM does
-	// not apply to them.
-	if (geom.width == old_w && geom.height == old_h && !IS_UNMANAGED(xsurface)) {
-		xcb_configure_notify_event_t configure_notify = {
-			.response_type = XCB_CONFIGURE_NOTIFY,
-			.event = xsurface->window_id,
-			.window = xsurface->window_id,
-			.x = geom.x,
-			.y = geom.y,
-			.width = geom.width,
-			.height = geom.height,
-		};
-
-		lab_xwm_send_event_with_size(xwm->xcb_conn, 0, xsurface->window_id,
-			XCB_EVENT_MASK_STRUCTURE_NOTIFY,
-			&configure_notify,
-			sizeof(configure_notify));
+void
+xwayland_synthesize_configure(xcb_window_t window_id, struct wlr_box geom)
+{
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
+		return;
 	}
 
+	xcb_configure_notify_event_t configure_notify = {
+		.response_type = XCB_CONFIGURE_NOTIFY,
+		.event = window_id,
+		.window = window_id,
+		.x = geom.x,
+		.y = geom.y,
+		.width = geom.width,
+		.height = geom.height,
+	};
+
+	lab_xwm_send_event_with_size(xwm->xcb_conn, 0, window_id,
+		XCB_EVENT_MASK_STRUCTURE_NOTIFY, &configure_notify,
+		sizeof(configure_notify));
 	xcb_flush(xwm->xcb_conn);
 }
 
