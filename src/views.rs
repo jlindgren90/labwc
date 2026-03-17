@@ -155,12 +155,22 @@ impl Views {
         }
     }
 
-    pub fn commit_geom(&mut self, id: ViewId, width: i32, height: i32) -> UpdateLevel {
+    pub fn commit_geom(
+        &mut self,
+        id: ViewId,
+        width: i32,
+        height: i32,
+        only_if_changed: bool,
+    ) -> UpdateLevel {
         let mut resize_edges = LAB_EDGE_NONE;
         if id == self.resizing_id {
             resize_edges = self.grab.get_resize_edges();
         }
         if let Some(view) = self.by_id.get_mut(&id) {
+            let current = view.get_state().current;
+            if only_if_changed && width == current.width && height == current.height {
+                return UpdateLevel::None;
+            }
             return view.commit_geom(width, height, resize_edges);
         } else {
             return UpdateLevel::None;
@@ -597,22 +607,6 @@ impl Views {
         }
     }
 
-    pub fn set_xsurface_size_hints(&mut self, xid: XId, hints: &ViewSizeHints) {
-        if let Some(id) = self.xwm.get_view_id(xid)
-            && let Some(view) = self.by_id.get_mut(&id)
-        {
-            view.set_size_hints(hints);
-        }
-    }
-
-    pub fn set_xsurface_bool_prop(&mut self, xid: XId, prop: XBoolProp, val: bool) {
-        if let Some(id) = self.xwm.get_view_id(xid)
-            && let Some(view) = self.by_id.get_mut(&id)
-        {
-            view.set_bool_prop(prop, val);
-        }
-    }
-
     pub fn set_xsurface_string_prop(
         &mut self,
         xid: XId,
@@ -692,7 +686,7 @@ impl Views {
             if let Some(view) = self.by_id.get_mut(&id)
                 && !view.get_state().mapped
             {
-                unsafe { xwayland_surface_publish_state(xid, view.get_state()) };
+                unsafe { xwayland_publish_window_state(xid, view.get_state()) };
             }
         }
         return ul;
@@ -726,12 +720,7 @@ impl Views {
         return UpdateLevel::Cursor;
     }
 
-    pub fn focus_xsurface(
-        &mut self,
-        xid: XId,
-        surface: *mut WlrSurface,
-        reason: XFocusReason,
-    ) -> UpdateLevel {
+    pub fn focus_xsurface(&mut self, xid: XId, reason: XFocusReason) -> UpdateLevel {
         if let Some(id) = self.xwm.get_view_id(xid) {
             if reason == XFOCUS_REASON_ACTIVATE {
                 return self.unminimize_and_focus(id, /* raise */ true);
@@ -743,7 +732,7 @@ impl Views {
             }
         } else {
             // Let unmanaged surface take focus for any reason
-            self.xwm.focus_unmanaged(xid, surface);
+            self.xwm.focus_unmanaged(xid);
         }
         return UpdateLevel::None;
     }

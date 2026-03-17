@@ -16,6 +16,7 @@
 #include <xcb/composite.h>
 #include <xcb/render.h>
 #include <xcb/xfixes.h>
+#include "labwc.h"
 #include "view.h"
 #include "xwayland/server.h"
 #include "xwayland/shell.h"
@@ -89,6 +90,8 @@ static const char *const atom_map[ATOM_LAST] = {
 
 static const struct wlr_addon_interface surface_addon_impl;
 
+static void read_window_properties(struct lab_xwm *xwm, xcb_window_t window_id);
+
 struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 		struct wlr_surface *surface) {
 	struct wlr_addon *addon = wlr_addon_find(&surface->addons, NULL, &surface_addon_impl);
@@ -103,6 +106,12 @@ struct wlr_box
 xwayland_surface_get_geom(struct xwayland_surface *xsurface)
 {
 	return xsurface->geom;
+}
+
+struct wlr_surface *
+xwayland_surface_get_surface(struct xwayland_surface *xsurface)
+{
+	return xsurface->surface;
 }
 
 void
@@ -138,7 +147,7 @@ static struct xwayland_surface *xwayland_surface_create(
 
 	if (!override_redirect) {
 		xsurface_set_managed(window_id, true);
-		xwayland_surface_read_properties(surface);
+		read_window_properties(xwm, window_id);
 	}
 
 	return surface;
@@ -337,9 +346,10 @@ read_string_prop(struct lab_xwm *xwm, xcb_window_t window_id,
 	}
 }
 
-static void read_surface_parent(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface,
-		xcb_get_property_reply_t *reply) {
+static void
+read_window_parent(struct lab_xwm *xwm, xcb_window_t window_id,
+		xcb_get_property_reply_t *reply)
+{
 	if (reply->type != XCB_ATOM_WINDOW && reply->type != XCB_ATOM_NONE) {
 		wlr_log(WLR_DEBUG, "Invalid WM_TRANSIENT_FOR property type");
 		return;
@@ -347,14 +357,14 @@ static void read_surface_parent(struct lab_xwm *xwm,
 
 	xcb_window_t *xid = xcb_get_property_value(reply);
 	if (reply->type != XCB_ATOM_NONE && xid != NULL) {
-		xsurface_set_parent_xid(xsurface->window_id, *xid);
+		xsurface_set_parent_xid(window_id, *xid);
 	} else {
-		xsurface_set_parent_xid(xsurface->window_id, XCB_NONE);
+		xsurface_set_parent_xid(window_id, XCB_NONE);
 	}
 }
 
 static void
-read_surface_window_type(struct lab_xwm *xwm, xcb_window_t window_id,
+read_window_type(struct lab_xwm *xwm, xcb_window_t window_id,
 		xcb_get_property_reply_t *reply)
 {
 	if (reply->type != XCB_ATOM_ATOM && reply->type != XCB_ATOM_NONE) {
@@ -375,7 +385,7 @@ read_surface_window_type(struct lab_xwm *xwm, xcb_window_t window_id,
 }
 
 static void
-read_surface_protocols(struct lab_xwm *xwm, xcb_window_t window_id,
+read_wm_protocols(struct lab_xwm *xwm, xcb_window_t window_id,
 		xcb_get_property_reply_t *reply)
 {
 	if (reply->type != XCB_ATOM_ATOM && reply->type != XCB_ATOM_NONE) {
@@ -393,7 +403,7 @@ read_surface_protocols(struct lab_xwm *xwm, xcb_window_t window_id,
 }
 
 static void
-read_surface_hints(struct lab_xwm *xwm, xcb_window_t window_id,
+read_wm_hints(struct lab_xwm *xwm, xcb_window_t window_id,
 		xcb_get_property_reply_t *reply)
 {
 	// According to the docs, reply->type == xwm->atoms[WM_HINTS]
@@ -419,7 +429,7 @@ read_surface_hints(struct lab_xwm *xwm, xcb_window_t window_id,
 }
 
 static void
-read_surface_normal_hints(struct lab_xwm *xwm, xcb_window_t window_id,
+read_wm_normal_hints(struct lab_xwm *xwm, xcb_window_t window_id,
 		xcb_get_property_reply_t *reply)
 {
 	if (reply->type != xwm->atoms[WM_SIZE_HINTS] && reply->type != XCB_ATOM_NONE) {
@@ -463,11 +473,12 @@ read_surface_normal_hints(struct lab_xwm *xwm, xcb_window_t window_id,
 #define MWM_DECOR_BORDER (1 << 1)
 #define MWM_DECOR_TITLE (1 << 3)
 
-static void read_surface_motif_hints(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface,
-		xcb_get_property_reply_t *reply) {
+static void
+read_motif_hints(struct lab_xwm *xwm, xcb_window_t window_id,
+		xcb_get_property_reply_t *reply)
+{
 	if (reply->value_len == 0) {
-		view_enable_ssd(xsurface->view_id, true);
+		view_enable_ssd(xsurface_get_view_id(window_id), true);
 		return;
 	}
 
@@ -488,17 +499,16 @@ static void read_surface_motif_hints(struct lab_xwm *xwm,
 				decorated = false;
 			}
 		}
-		view_enable_ssd(xsurface->view_id, decorated);
+		view_enable_ssd(xsurface_get_view_id(window_id), decorated);
 	}
 }
 
 static void
-read_surface_strut_partial(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface,
+read_strut_partial(struct lab_xwm *xwm, xcb_window_t window_id,
 		xcb_get_property_reply_t *reply)
 {
 	if (reply->type == XCB_ATOM_NONE) {
-		view_set_strut_partial(xsurface->view_id, NULL);
+		view_set_strut_partial(xsurface_get_view_id(window_id), NULL);
 		return;
 	}
 
@@ -511,11 +521,11 @@ read_surface_strut_partial(struct lab_xwm *xwm,
 
 	xcb_ewmh_wm_strut_partial_t strut_partial = {0};
 	xcb_ewmh_get_wm_strut_partial_from_reply(&strut_partial, reply);
-	view_set_strut_partial(xsurface->view_id, &strut_partial);
+	view_set_strut_partial(xsurface_get_view_id(window_id), &strut_partial);
 }
 
 static void
-read_surface_net_wm_state(struct lab_xwm *xwm, xcb_window_t window_id,
+read_net_wm_state(struct lab_xwm *xwm, xcb_window_t window_id,
 		xcb_get_property_reply_t *reply)
 {
 	XSurfaceInitialState state = {0};
@@ -555,36 +565,37 @@ char *lab_xwm_get_atom_name(struct lab_xwm *xwm, xcb_atom_t atom) {
 	return name;
 }
 
-static void read_surface_property(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface, xcb_atom_t property,
-		xcb_get_property_reply_t *reply) {
+static void
+read_window_property(struct lab_xwm *xwm, xcb_window_t window_id,
+		xcb_atom_t property, xcb_get_property_reply_t *reply)
+{
 	if (property == XCB_ATOM_WM_CLASS || property == XCB_ATOM_WM_NAME
 			|| property == xwm->atoms[NET_WM_NAME]) {
-		read_string_prop(xwm, xsurface->window_id, property, reply);
+		read_string_prop(xwm, window_id, property, reply);
 	} else if (property == XCB_ATOM_WM_TRANSIENT_FOR) {
-		read_surface_parent(xwm, xsurface, reply);
+		read_window_parent(xwm, window_id, reply);
 	} else if (property == xwm->atoms[NET_WM_PID]) {
 		// intentionally ignored
 	} else if (property == xwm->atoms[NET_WM_WINDOW_TYPE]) {
-		read_surface_window_type(xwm, xsurface->window_id, reply);
+		read_window_type(xwm, window_id, reply);
 	} else if (property == xwm->atoms[NET_WM_ICON]) {
-		xwayland_surface_on_set_icon(xsurface);
+		xwayland_on_set_window_icon(window_id);
 	} else if (property == xwm->atoms[WM_PROTOCOLS]) {
-		read_surface_protocols(xwm, xsurface->window_id, reply);
+		read_wm_protocols(xwm, window_id, reply);
 	} else if (property == xwm->atoms[NET_WM_STATE]) {
-		read_surface_net_wm_state(xwm, xsurface->window_id, reply);
+		read_net_wm_state(xwm, window_id, reply);
 	} else if (property == xwm->atoms[WM_HINTS]) {
-		read_surface_hints(xwm, xsurface->window_id, reply);
+		read_wm_hints(xwm, window_id, reply);
 	} else if (property == xwm->atoms[WM_NORMAL_HINTS]) {
-		read_surface_normal_hints(xwm, xsurface->window_id, reply);
+		read_wm_normal_hints(xwm, window_id, reply);
 	} else if (property == xwm->atoms[MOTIF_WM_HINTS]) {
-		read_surface_motif_hints(xwm, xsurface, reply);
+		read_motif_hints(xwm, window_id, reply);
 	} else if (property == xwm->atoms[NET_WM_STRUT_PARTIAL]) {
-		read_surface_strut_partial(xwm, xsurface, reply);
+		read_strut_partial(xwm, window_id, reply);
 	} else if (wlr_log_get_verbosity() >= WLR_DEBUG) {
 		char *prop_name = lab_xwm_get_atom_name(xwm, property);
 		wlr_log(WLR_DEBUG, "unhandled X11 property %" PRIu32 " (%s) for window %" PRIu32,
-			property, prop_name ? prop_name : "(null)", xsurface->window_id);
+			property, prop_name ? prop_name : "(null)", window_id);
 		free(prop_name);
 	}
 }
@@ -593,8 +604,14 @@ static void xwayland_surface_handle_commit(struct wl_listener *listener, void *d
 	struct xwayland_surface *xsurface = wl_container_of(listener, xsurface, surface_commit);
 	if (wlr_surface_has_buffer(xsurface->surface)) {
 		wlr_surface_map(xsurface->surface);
+		// To reduce visual glitches during move/resize, only update
+		// geometry when size has actually changed. (Geometry for
+		// move without resize is updated outside commit handler.)
+		view_commit_geom(xsurface->view_id,
+			xsurface->surface->current.width,
+			xsurface->surface->current.height,
+			/* only_if_changed */ true);
 	}
-	xwayland_surface_on_commit(xsurface);
 }
 
 static void xwayland_surface_handle_map(struct wl_listener *listener, void *data) {
@@ -617,14 +634,17 @@ static const struct wlr_addon_interface surface_addon_impl = {
 	.destroy = xwayland_surface_handle_addon_destroy,
 };
 
-bool xwayland_surface_fetch_icon(
-		const struct xwayland_surface *xsurface,
-		xcb_ewmh_get_wm_icon_reply_t *icon_reply) {
-	struct lab_xwm *xwm = xsurface->xwm;
+bool
+xwayland_fetch_window_icon(xcb_window_t window_id,
+		xcb_ewmh_get_wm_icon_reply_t *icon_reply)
+{
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return false;
+	}
 
 	xcb_get_property_cookie_t cookie = xcb_get_property(xwm->xcb_conn, 0,
-		xsurface->window_id, xwm->atoms[NET_WM_ICON], XCB_ATOM_CARDINAL,
-		0, UINT32_MAX);
+		window_id, xwm->atoms[NET_WM_ICON], XCB_ATOM_CARDINAL, 0, UINT32_MAX);
 	xcb_get_property_reply_t *reply =
 		xcb_get_property_reply(xwm->xcb_conn, cookie, NULL);
 	if (!reply) {
@@ -669,11 +689,9 @@ static void xwayland_surface_associate(struct lab_xwm *xwm,
 	wl_signal_add(&surface->events.unmap, &xsurface->surface_unmap);
 }
 
-void
-xwayland_surface_read_properties(struct xwayland_surface *xsurface)
+static void
+read_window_properties(struct lab_xwm *xwm, xcb_window_t window_id)
 {
-	struct lab_xwm *xwm = xsurface->xwm;
-
 	const xcb_atom_t props[] = {
 		XCB_ATOM_WM_CLASS,
 		XCB_ATOM_WM_NAME,
@@ -691,7 +709,7 @@ xwayland_surface_read_properties(struct xwayland_surface *xsurface)
 
 	xcb_get_property_cookie_t cookies[sizeof(props) / sizeof(props[0])] = {0};
 	for (size_t i = 0; i < sizeof(props) / sizeof(props[0]); i++) {
-		cookies[i] = get_property(xwm, xsurface->window_id, props[i]);
+		cookies[i] = get_property(xwm, window_id, props[i]);
 	}
 
 	for (size_t i = 0; i < sizeof(props) / sizeof(props[0]); i++) {
@@ -701,7 +719,7 @@ xwayland_surface_read_properties(struct xwayland_surface *xsurface)
 			wlr_log(WLR_INFO, "Failed to get window property");
 			continue;
 		}
-		read_surface_property(xwm, xsurface, props[i], reply);
+		read_window_property(xwm, window_id, props[i], reply);
 		free(reply);
 	}
 }
@@ -772,7 +790,7 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 
 	// Re-read properties after unmanaged surface becomes managed
 	if (!override_redirect) {
-		xwayland_surface_read_properties(xsurface);
+		read_window_properties(xsurface->xwm, xsurface->window_id);
 	}
 
 	if (xsurface->surface && xsurface->surface->mapped) {
@@ -824,17 +842,18 @@ xsurface_set_wm_state(struct lab_xwm *xwm, xcb_window_t window_id,
 }
 
 void
-xwayland_surface_stack_above(struct xwayland_surface *xsurface,
-		xcb_window_t sibling)
+xwayland_stack_above(xcb_window_t window_id, xcb_window_t sibling)
 {
-	struct lab_xwm *xwm = xsurface->xwm;
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return;
+	}
+
 	uint32_t values[2];
 	size_t idx = 0;
 	uint32_t flags = XCB_CONFIG_WINDOW_STACK_MODE;
 
-	assert(!IS_UNMANAGED(xsurface));
-
-	if (sibling == xsurface->window_id) {
+	if (window_id == sibling) {
 		return;
 	}
 
@@ -846,17 +865,13 @@ xwayland_surface_stack_above(struct xwayland_surface *xsurface,
 		values[idx++] = XCB_STACK_MODE_BELOW;
 	}
 
-	xcb_configure_window(xwm->xcb_conn, xsurface->window_id, flags, values);
+	xcb_configure_window(xwm->xcb_conn, window_id, flags, values);
 	xcb_flush(xwm->xcb_conn);
 }
 
-static void lab_xwm_handle_map_request(struct lab_xwm *xwm,
-		xcb_map_request_event_t *ev) {
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
-	if (!xsurface) {
-		return;
-	}
-
+static void
+lab_xwm_handle_map_request(struct lab_xwm *xwm, xcb_map_request_event_t *ev)
+{
 	xcb_map_window(xwm->xcb_conn, ev->window);
 }
 
@@ -891,12 +906,7 @@ static void lab_xwm_handle_unmap_notify(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_property_notify(struct lab_xwm *xwm,
 		xcb_property_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
-	if (xsurface == NULL) {
-		return;
-	}
-
-	xcb_get_property_cookie_t cookie = get_property(xwm, xsurface->window_id, ev->atom);
+	xcb_get_property_cookie_t cookie = get_property(xwm, ev->window, ev->atom);
 	xcb_get_property_reply_t *reply =
 		xcb_get_property_reply(xwm->xcb_conn, cookie, NULL);
 	if (reply == NULL) {
@@ -904,7 +914,7 @@ static void lab_xwm_handle_property_notify(struct lab_xwm *xwm,
 		return;
 	}
 
-	read_surface_property(xwm, xsurface, ev->atom, reply);
+	read_window_property(xwm, ev->window, ev->atom, reply);
 	free(reply);
 }
 
@@ -963,40 +973,40 @@ static void lab_xwm_handle_surface_serial_message(struct lab_xwm *xwm,
 #define _NET_WM_MOVERESIZE_MOVE 8  // movement only
 #define _NET_WM_MOVERESIZE_CANCEL 11  // cancel operation
 
-static enum wlr_edges net_wm_edges_to_wlr(uint32_t net_wm_edges) {
+static enum lab_edge
+net_wm_edges_to_lab(uint32_t net_wm_edges)
+{
 	switch(net_wm_edges) {
 	case _NET_WM_MOVERESIZE_SIZE_TOPLEFT:
-		return WLR_EDGE_TOP | WLR_EDGE_LEFT;
+		return LAB_EDGES_TOP_LEFT;
 	case _NET_WM_MOVERESIZE_SIZE_TOP:
-		return WLR_EDGE_TOP;
+		return LAB_EDGE_TOP;
 	case _NET_WM_MOVERESIZE_SIZE_TOPRIGHT:
-		return WLR_EDGE_TOP | WLR_EDGE_RIGHT;
+		return LAB_EDGES_TOP_RIGHT;
 	case _NET_WM_MOVERESIZE_SIZE_RIGHT:
-		return WLR_EDGE_RIGHT;
+		return LAB_EDGE_RIGHT;
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOMRIGHT:
-		return WLR_EDGE_BOTTOM | WLR_EDGE_RIGHT;
+		return LAB_EDGES_BOTTOM_RIGHT;
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOM:
-		return WLR_EDGE_BOTTOM;
+		return LAB_EDGE_BOTTOM;
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT:
-		return WLR_EDGE_BOTTOM | WLR_EDGE_LEFT;
+		return LAB_EDGES_BOTTOM_LEFT;
 	case _NET_WM_MOVERESIZE_SIZE_LEFT:
-		return WLR_EDGE_LEFT;
+		return LAB_EDGE_LEFT;
 	default:
-		return WLR_EDGE_NONE;
+		return LAB_EDGE_NONE;
 	}
 }
 
-static void lab_xwm_handle_net_wm_moveresize_message(struct lab_xwm *xwm,
-		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
-	if (!xsurface) {
-		return;
-	}
-
+static void
+lab_xwm_handle_net_wm_moveresize_message(struct lab_xwm *xwm,
+		xcb_client_message_event_t *ev)
+{
 	int detail = ev->data.data32[2];
 	switch (detail) {
 	case _NET_WM_MOVERESIZE_MOVE:
-		xwayland_surface_on_request_move(xsurface);
+		interactive_begin(xsurface_get_view_id(ev->window),
+			LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
 		break;
 	case _NET_WM_MOVERESIZE_SIZE_TOPLEFT:
 	case _NET_WM_MOVERESIZE_SIZE_TOP:
@@ -1006,7 +1016,8 @@ static void lab_xwm_handle_net_wm_moveresize_message(struct lab_xwm *xwm,
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOM:
 	case _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT:
 	case _NET_WM_MOVERESIZE_SIZE_LEFT:
-		xwayland_surface_on_request_resize(xsurface, net_wm_edges_to_wlr(detail));
+		interactive_begin(xsurface_get_view_id(ev->window),
+			LAB_INPUT_STATE_RESIZE, net_wm_edges_to_lab(detail));
 		break;
 	case _NET_WM_MOVERESIZE_CANCEL:
 		// handled by the compositor
@@ -1052,30 +1063,19 @@ static void lab_xwm_handle_net_wm_state_message(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *surface = xsurface_lookup(ev->window);
-	if (surface == NULL) {
-		return;
-	}
-	xsurface_focus(surface->window_id, surface->surface,
-		XFOCUS_REASON_ACTIVATE);
+	xsurface_focus(ev->window, XFOCUS_REASON_ACTIVATE);
 }
 
 static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *surface = xsurface_lookup(ev->window);
-	if (surface) {
-		view_close(surface->view_id);
-	}
+	view_close(xsurface_get_view_id(ev->window));
 }
 
-static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
-		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
+static void
+lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
+		xcb_client_message_event_t *ev)
+{
 	uint32_t detail = ev->data.data32[0];
-
-	if (xsurface == NULL) {
-		return;
-	}
 
 	bool minimize;
 	if (detail == XCB_ICCCM_WM_STATE_ICONIC) {
@@ -1087,7 +1087,7 @@ static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
 		return;
 	}
 
-	view_minimize(xsurface->view_id, minimize);
+	view_minimize(xsurface_get_view_id(ev->window), minimize);
 }
 
 static void lab_xwm_handle_client_message(struct lab_xwm *xwm,
@@ -1135,12 +1135,8 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	// Do not interfere with keyboard grabs, but notify the
 	// compositor. Note that many legitimate X11 applications use
 	// keyboard grabs to "steal" focus for e.g. popup menus.
-	struct xwayland_surface *xsurface = xsurface_lookup(ev->event);
 	if (ev->mode == XCB_NOTIFY_MODE_GRAB) {
-		if (xsurface) {
-			xsurface_focus(xsurface->window_id, xsurface->surface,
-				XFOCUS_REASON_GRAB);
-		}
+		xsurface_focus(ev->event, XFOCUS_REASON_GRAB);
 		return;
 	}
 	if (ev->mode == XCB_NOTIFY_MODE_UNGRAB) {
@@ -1155,10 +1151,7 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 		return;
 	}
 
-	if (xsurface) {
-		xsurface_focus(xsurface->window_id, xsurface->surface,
-			XFOCUS_REASON_FOCUS_IN);
-	}
+	xsurface_focus(ev->event, XFOCUS_REASON_FOCUS_IN);
 }
 
 static void lab_xwm_handle_xcb_error(struct lab_xwm *xwm, xcb_value_error_t *ev) {
@@ -1637,7 +1630,7 @@ xwayland_set_cursor(const uint8_t *pixels, uint32_t stride, uint32_t width,
 }
 
 struct lab_xwm *
-lab_xwm_create(struct xwayland_server *server, int wm_fd)
+lab_xwm_create(struct xwayland_server *xserver, int wm_fd)
 {
 	struct lab_xwm *xwm = calloc(1, sizeof(*xwm));
 	if (xwm == NULL) {
@@ -1645,7 +1638,7 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 		return NULL;
 	}
 
-	xwm->server = server;
+	xwm->server = xserver;
 	wl_list_init(&xwm->seat_drag_source_destroy.link);
 
 	// xcb_connect_to_fd takes ownership of the FD regardless of success/failure
@@ -1670,7 +1663,7 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 	xwm->screen = screen_iterator.data;
 
 	struct wl_event_loop *event_loop =
-		wl_display_get_event_loop(server->wl_display);
+		wl_display_get_event_loop(xserver->wl_display);
 	xwm->event_source = wl_event_loop_add_fd(event_loop, wm_fd,
 		WL_EVENT_READABLE, x11_event_handler, xwm);
 	wl_event_source_check(xwm->event_source);
@@ -1722,17 +1715,17 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 	lab_xwm_selection_init(&xwm->dnd_selection, xwm, xwm->atoms[DND_SELECTION]);
 
 	xwm->compositor_new_surface.notify = handle_compositor_new_surface;
-	wl_signal_add(&server->compositor->events.new_surface,
+	wl_signal_add(&xserver->compositor->events.new_surface,
 		&xwm->compositor_new_surface);
 	xwm->compositor_destroy.notify = handle_compositor_destroy;
-	wl_signal_add(&server->compositor->events.destroy,
+	wl_signal_add(&xserver->compositor->events.destroy,
 		&xwm->compositor_destroy);
 
 	xwm->shell_v1_new_surface.notify = handle_shell_v1_new_surface;
-	wl_signal_add(&server->shell_v1->events.new_surface,
+	wl_signal_add(&xserver->shell_v1->events.new_surface,
 		&xwm->shell_v1_new_surface);
 	xwm->shell_v1_destroy.notify = handle_shell_v1_destroy;
-	wl_signal_add(&server->shell_v1->events.destroy,
+	wl_signal_add(&xserver->shell_v1->events.destroy,
 		&xwm->shell_v1_destroy);
 
 	lab_xwm_create_wm_window(xwm);
@@ -1743,7 +1736,7 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 }
 
 void
-xwayland_surface_publish_state(xcb_window_t window_id, const ViewState *state)
+xwayland_publish_window_state(xcb_window_t window_id, const ViewState *state)
 {
 	struct lab_xwm *xwm = g_xserver.xwm;
 	if (!xwm || !xwm->xcb_conn) {

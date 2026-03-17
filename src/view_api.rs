@@ -144,8 +144,8 @@ pub extern "C" fn view_commit_move(id: ViewId, x: i32, y: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32) {
-    let ul = views_mut().commit_geom(id, width, height);
+pub extern "C" fn view_commit_geom(id: ViewId, width: i32, height: i32, only_if_changed: bool) {
+    let ul = views_mut().commit_geom(id, width, height, only_if_changed);
     do_update(ul);
 }
 
@@ -404,6 +404,11 @@ pub extern "C" fn xsurface_add(xid: XId, xsurface: *mut XSurface) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn xsurface_get_view_id(xid: XId) -> ViewId {
+    views().get_xwm().get_view_id(xid).unwrap_or(0)
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn xsurface_lookup(xid: XId) -> *mut XSurface {
     views().get_xwm().get_xsurface(xid)
 }
@@ -459,12 +464,18 @@ pub extern "C" fn xsurface_set_initial_state(xid: XId, state: XSurfaceInitialSta
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_set_size_hints(xid: XId, hints: &ViewSizeHints) {
-    views_mut().set_xsurface_size_hints(xid, hints);
+    let id = xsurface_get_view_id(xid);
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.set_size_hints(hints);
+    }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_set_bool_prop(xid: XId, prop: XBoolProp, val: bool) {
-    views_mut().set_xsurface_bool_prop(xid, prop, val);
+    let id = xsurface_get_view_id(xid);
+    if let Some(view) = views_mut().get_view_mut(id) {
+        view.set_bool_prop(prop, val);
+    }
 }
 
 // Note: len must be exact (no early NUL in str)
@@ -509,7 +520,7 @@ pub extern "C" fn xsurface_move_unmanaged(xid: XId, x: i32, y: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xsurface_focus(xid: XId, surface: *mut WlrSurface, reason: XFocusReason) {
-    let ul = views_mut().focus_xsurface(xid, surface, reason);
+pub extern "C" fn xsurface_focus(xid: XId, reason: XFocusReason) {
+    let ul = views_mut().focus_xsurface(xid, reason);
     do_update(ul);
 }

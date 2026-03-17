@@ -63,14 +63,14 @@ impl XView {
 
     fn publish_state_if_mapped(&self, state: &ViewState) {
         if state.mapped {
-            unsafe { xwayland_surface_publish_state(self.xid, state) };
+            unsafe { xwayland_publish_window_state(self.xid, state) };
         }
     }
 }
 
 impl ViewImpl for XView {
     fn get_surface(&self) -> *mut WlrSurface {
-        unsafe { xwayland_view_get_surface(self.xsurface) }
+        unsafe { xwayland_surface_get_surface(self.xsurface) }
     }
 
     fn get_xid(&self) -> XId {
@@ -137,7 +137,7 @@ impl ViewImpl for XView {
     fn set_minimized(&self, state: &ViewState, xwm: &mut Xwm) {
         if state.minimized {
             // restack minimized view to bottom
-            xwm.lower(self.xid, self.xsurface);
+            xwm.lower(self.xid);
         }
         self.publish_state_if_mapped(state);
     }
@@ -149,7 +149,7 @@ impl ViewImpl for XView {
     }
 
     fn raise(&self, xwm: &mut Xwm) {
-        xwm.raise(self.xid, self.xsurface);
+        xwm.raise(self.xid);
     }
 
     fn wants_focus(&self) -> bool {
