@@ -30,7 +30,6 @@ struct xwayland_server {
 
 	struct wl_listener client_destroy;
 
-	struct lab_xwm *xwm;
 	struct xwayland_shell_v1 *shell_v1;
 
 	struct wlr_compositor *compositor;

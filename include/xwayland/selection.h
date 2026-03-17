@@ -14,6 +14,7 @@
 
 struct wlr_primary_selection_source;
 
+struct lab_xwm;
 struct lab_xwm_selection;
 
 struct wlr_drag;
@@ -42,8 +43,6 @@ struct lab_xwm_selection_transfer {
 };
 
 struct lab_xwm_selection {
-	struct lab_xwm *xwm;
-
 	xcb_atom_t atom;
 	xcb_window_t window;
 	xcb_window_t owner;

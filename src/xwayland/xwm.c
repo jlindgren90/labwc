@@ -136,7 +136,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	xcb_change_window_attributes(xwm->xcb_conn, window_id,
 		XCB_CW_EVENT_MASK, values);
 
-	surface->xwm = xwm;
 	surface->window_id = window_id;
 	surface->geom.x = x;
 	surface->geom.y = y;
@@ -196,8 +195,8 @@ lab_xwm_send_wm_message(struct lab_xwm *xwm, xcb_window_t window_id,
 void
 xwayland_set_net_client_list(const xcb_window_t *xids, unsigned num_xids)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -209,8 +208,8 @@ xwayland_set_net_client_list(const xcb_window_t *xids, unsigned num_xids)
 void
 xwayland_focus_window(xcb_window_t window_id)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -222,8 +221,8 @@ xwayland_focus_window(xcb_window_t window_id)
 void
 xwayland_offer_focus(xcb_window_t window_id)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -239,8 +238,8 @@ xwayland_offer_focus(xcb_window_t window_id)
 void
 xwayland_set_active_window(xcb_window_t window_id)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -306,11 +305,11 @@ xwayland_surface_destroy(struct xwayland_surface *xsurface)
 	xwayland_surface_dissociate(xsurface);
 	xsurface_on_destroy(xsurface->window_id);
 
-	if (xsurface == xsurface->xwm->drag_focus) {
-		lab_xwm_set_drag_focus(xsurface->xwm, NULL);
+	if (xsurface == g_xwm.drag_focus) {
+		lab_xwm_set_drag_focus(&g_xwm, NULL);
 	}
-	if (xsurface == xsurface->xwm->drop_focus) {
-		xsurface->xwm->drop_focus = NULL;
+	if (xsurface == g_xwm.drop_focus) {
+		g_xwm.drop_focus = NULL;
 	}
 
 	free(xsurface);
@@ -638,8 +637,8 @@ bool
 xwayland_fetch_window_icon(xcb_window_t window_id,
 		xcb_ewmh_get_wm_icon_reply_t *icon_reply)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return false;
 	}
 
@@ -790,7 +789,7 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 
 	// Re-read properties after unmanaged surface becomes managed
 	if (!override_redirect) {
-		read_window_properties(xsurface->xwm, xsurface->window_id);
+		read_window_properties(&g_xwm, xsurface->window_id);
 	}
 
 	if (xsurface->surface && xsurface->surface->mapped) {
@@ -844,8 +843,8 @@ xsurface_set_wm_state(struct lab_xwm *xwm, xcb_window_t window_id,
 void
 xwayland_stack_above(xcb_window_t window_id, xcb_window_t sibling)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -930,7 +929,7 @@ static void lab_xwm_handle_surface_id_message(struct lab_xwm *xwm,
 	/* Check if we got notified after wayland surface create event */
 	uint32_t id = ev->data.data32[0];
 	struct wl_resource *resource =
-		wl_client_get_object(xwm->server->client, id);
+		wl_client_get_object(g_xserver.client, id);
 	if (resource) {
 		struct wlr_surface *surface = wlr_surface_from_resource(resource);
 		xwayland_surface_associate(xwm, xsurface, surface);
@@ -954,7 +953,7 @@ static void lab_xwm_handle_surface_serial_message(struct lab_xwm *xwm,
 	uint64_t serial = ((uint64_t)serial_hi << 32) | serial_lo;
 
 	struct wlr_surface *surface = xwayland_shell_v1_surface_from_serial(
-		xwm->server->shell_v1, serial);
+		g_xserver.shell_v1, serial);
 	if (surface != NULL) {
 		xwayland_surface_associate(xwm, xsurface, surface);
 	} else {
@@ -1267,7 +1266,7 @@ static int x11_event_handler(int fd, uint32_t mask, void *data) {
 	struct lab_xwm *xwm = data;
 
 	if ((mask & WL_EVENT_HANGUP) || (mask & WL_EVENT_ERROR)) {
-		lab_xwm_destroy(xwm);
+		lab_xwm_destroy();
 		return 0;
 	}
 
@@ -1286,7 +1285,7 @@ static void handle_compositor_new_surface(struct wl_listener *listener,
 	struct wlr_surface *surface = data;
 
 	struct wl_client *client = wl_resource_get_client(surface->resource);
-	if (client != xwm->server->client) {
+	if (client != g_xserver.client) {
 		return;
 	}
 
@@ -1341,7 +1340,7 @@ xwayland_surface_configure(struct xwayland_surface *xsurface, struct wlr_box geo
 
 	xsurface->geom = geom;
 
-	struct lab_xwm *xwm = xsurface->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 	uint32_t mask = XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y |
 		XCB_CONFIG_WINDOW_WIDTH | XCB_CONFIG_WINDOW_HEIGHT |
 		XCB_CONFIG_WINDOW_BORDER_WIDTH;
@@ -1376,8 +1375,8 @@ xwayland_surface_configure(struct xwayland_surface *xsurface, struct wlr_box geo
 void
 xwayland_delete_window(xcb_window_t window_id)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -1391,8 +1390,8 @@ xwayland_delete_window(xcb_window_t window_id)
 void
 xwayland_kill_window(xcb_window_t window_id)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -1400,8 +1399,11 @@ xwayland_kill_window(xcb_window_t window_id)
 	xcb_flush(xwm->xcb_conn);
 }
 
-void lab_xwm_destroy(struct lab_xwm *xwm) {
-	if (!xwm) {
+void
+lab_xwm_destroy(void)
+{
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -1415,17 +1417,17 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 		if (xwm->seat->selection_source &&
 				lab_data_source_is_xwayland(xwm->seat->selection_source)) {
 			wlr_seat_set_selection(xwm->seat, NULL,
-				wl_display_next_serial(xwm->server->wl_display));
+				wl_display_next_serial(g_xserver.wl_display));
 		}
 
 		if (xwm->seat->primary_selection_source &&
 				lab_primary_selection_source_is_xwayland(
 					xwm->seat->primary_selection_source)) {
 			wlr_seat_set_primary_selection(xwm->seat, NULL,
-				wl_display_next_serial(xwm->server->wl_display));
+				wl_display_next_serial(g_xserver.wl_display));
 		}
 
-		lab_xwm_set_seat(xwm, NULL);
+		lab_xwm_set_seat(NULL);
 	}
 
 	if (xwm->cursor) {
@@ -1447,8 +1449,7 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 	wl_list_remove(&xwm->shell_v1_destroy.link);
 	xcb_disconnect(xwm->xcb_conn);
 
-	xwm->server->xwm = NULL;
-	free(xwm);
+	*xwm = (struct lab_xwm){0};
 }
 
 static void lab_xwm_get_resources(struct lab_xwm *xwm) {
@@ -1586,8 +1587,8 @@ void
 xwayland_set_cursor(const uint8_t *pixels, uint32_t stride, uint32_t width,
 		uint32_t height, int32_t hotspot_x, int32_t hotspot_y)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -1629,16 +1630,13 @@ xwayland_set_cursor(const uint8_t *pixels, uint32_t stride, uint32_t width,
 	xcb_flush(xwm->xcb_conn);
 }
 
-struct lab_xwm *
-lab_xwm_create(struct xwayland_server *xserver, int wm_fd)
+bool
+lab_xwm_create(int wm_fd)
 {
-	struct lab_xwm *xwm = calloc(1, sizeof(*xwm));
-	if (xwm == NULL) {
-		close(wm_fd);
-		return NULL;
-	}
+	struct xwayland_server *xserver = &g_xserver;
+	struct lab_xwm *xwm = &g_xwm;
+	assert(!xwm->xcb_conn);
 
-	xwm->server = xserver;
 	wl_list_init(&xwm->seat_drag_source_destroy.link);
 
 	// xcb_connect_to_fd takes ownership of the FD regardless of success/failure
@@ -1648,14 +1646,14 @@ lab_xwm_create(struct xwayland_server *xserver, int wm_fd)
 	if (rc) {
 		wlr_log(WLR_ERROR, "xcb connect failed: %d", rc);
 		xcb_disconnect(xwm->xcb_conn);
-		free(xwm);
-		return NULL;
+		*xwm = (struct lab_xwm){0};
+		return false;
 	}
 
 	if (xcb_errors_context_new(xwm->xcb_conn, &xwm->errors_context)) {
 		wlr_log(WLR_ERROR, "Could not allocate error context");
-		lab_xwm_destroy(xwm);
-		return NULL;
+		lab_xwm_destroy();
+		return false;
 	}
 
 	xcb_screen_iterator_t screen_iterator =
@@ -1732,14 +1730,14 @@ lab_xwm_create(struct xwayland_server *xserver, int wm_fd)
 
 	xcb_flush(xwm->xcb_conn);
 
-	return xwm;
+	return true;
 }
 
 void
 xwayland_publish_window_state(xcb_window_t window_id, const ViewState *state)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
@@ -1765,8 +1763,8 @@ bool lab_xwm_atoms_contains(struct lab_xwm *xwm, xcb_atom_t *atoms,
 void
 xwayland_set_workareas(const struct wlr_box *workareas, size_t num_workareas)
 {
-	struct lab_xwm *xwm = g_xserver.xwm;
-	if (!xwm || !xwm->xcb_conn) {
+	struct lab_xwm *xwm = &g_xwm;
+	if (!xwm->xcb_conn) {
 		return;
 	}
 
