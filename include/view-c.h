@@ -190,5 +190,6 @@ void xwayland_surface_destroy(XSurface *xsurface);
 Rect xwayland_surface_get_geom(XSurface *xsurface);
 WlrSurface *xwayland_surface_get_surface(XSurface *xsurface);
 void xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id);
+void xwayland_synthesize_configure(XId window_id, Rect geom);
 
 #endif // LABWC_VIEW_C_H
