@@ -25,6 +25,12 @@ typedef enum XFocusReason {
 	XFOCUS_REASON_GRAB,
 } XFocusReason;
 
+typedef enum XStringProp {
+	XSTRING_PROP_INSTANCE, // "instance" of WM_CLASS
+	XSTRING_PROP_WM_NAME,  // WM_NAME from ICCCM (old)
+	XSTRING_PROP_NET_NAME, // _NET_WM_NAME from EWMH (new)
+} XStringProp;
+
 typedef enum XStateAction {
 	XSTATE_ACTION_REMOVE = 0, // _NET_WM_STATE_REMOVE
 	XSTATE_ACTION_ADD = 1,	  // _NET_WM_STATE_ADD

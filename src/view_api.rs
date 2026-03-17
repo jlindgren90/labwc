@@ -58,7 +58,7 @@ pub extern "C" fn view_set_app_id(id: ViewId, app_id: *const c_char) {
 #[unsafe(no_mangle)]
 pub extern "C" fn view_set_title(id: ViewId, title: *const c_char) {
     if let Some(view) = views_mut().get_view_mut(id) {
-        view.set_title(cstring(title));
+        view.set_title(cstring(title), /* preferred */ true);
     }
 }
 
@@ -455,6 +455,17 @@ pub extern "C" fn xsurface_set_surface_id(xid: XId, surface_id: u32) {
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_set_initial_state(xid: XId, state: XSurfaceInitialState) {
     views_mut().set_xsurface_initial_state(xid, state);
+}
+
+// Note: len must be exact (no early NUL in str)
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_string_prop(
+    xid: XId,
+    prop: XStringProp,
+    str: *const c_char,
+    len: usize,
+) {
+    views_mut().set_xsurface_string_prop(xid, prop, str, len);
 }
 
 #[unsafe(no_mangle)]
