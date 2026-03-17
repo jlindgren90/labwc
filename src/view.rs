@@ -169,6 +169,10 @@ impl View {
         self.v.set_size_hints(hints);
     }
 
+    pub fn set_bool_prop(&mut self, prop: XBoolProp, val: bool) {
+        self.v.set_bool_prop(prop, val);
+    }
+
     pub fn set_app_id(&mut self, app_id: CString) {
         if self.d.app_id != app_id {
             self.d.app_id = app_id;
@@ -216,14 +220,13 @@ impl View {
     fn get_initial_floating_geom(&mut self, enforce_min: bool) -> Option<Rect> {
         if !self.state.ever_mapped
             && self.state.floating()
-            && let Some(props) = self.v.get_surface_props()
+            && let Some(mut geom) = self.v.get_surface_geom()
         {
             // Surface geometry from wlroots is unreliable due to race
             // between outgoing Configure and incoming ConfigureNotify,
             // so prefer pending geometry if valid.
-            let mut geom = self.state.pending;
-            if rect_empty(geom) {
-                geom = props.geom;
+            if !rect_empty(self.state.pending) {
+                geom = self.state.pending;
             }
             if enforce_min && (geom.width < MIN_WIDTH || geom.height < MIN_HEIGHT) {
                 geom.width = FALLBACK_WIDTH;

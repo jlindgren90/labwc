@@ -276,8 +276,8 @@ static void seat_handle_drag_motion(struct wl_listener *listener, void *data) {
 	}
 
 	lab_xwm_dnd_send_position(xwm, event->time,
-		surface->props.geom.x + (int16_t)event->sx,
-		surface->props.geom.y + (int16_t)event->sy);
+		surface->geom.x + (int16_t)event->sx,
+		surface->geom.y + (int16_t)event->sy);
 }
 
 static void seat_handle_drag_drop(struct wl_listener *listener, void *data) {
