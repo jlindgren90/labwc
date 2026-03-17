@@ -457,6 +457,11 @@ pub extern "C" fn xsurface_set_initial_state(xid: XId, state: XSurfaceInitialSta
     views_mut().set_xsurface_initial_state(xid, state);
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_size_hints(xid: XId, hints: &ViewSizeHints) {
+    views_mut().set_xsurface_size_hints(xid, hints);
+}
+
 // Note: len must be exact (no early NUL in str)
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_set_string_prop(
