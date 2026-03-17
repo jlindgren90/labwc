@@ -42,7 +42,7 @@ static void lab_xwm_selection_send_notify(struct lab_xwm *xwm,
 
 static int lab_xwm_selection_flush_source_data(
 		struct lab_xwm_selection_transfer *transfer) {
-	xcb_change_property(transfer->selection->xwm->xcb_conn,
+	xcb_change_property(g_xwm.xcb_conn,
 		XCB_PROP_MODE_REPLACE,
 		transfer->request.requestor,
 		transfer->request.property,
@@ -50,7 +50,7 @@ static int lab_xwm_selection_flush_source_data(
 		8, // format
 		transfer->source_data.size,
 		transfer->source_data.data);
-	xcb_flush(transfer->selection->xwm->xcb_conn);
+	xcb_flush(g_xwm.xcb_conn);
 	transfer->property_set = true;
 	size_t length = transfer->source_data.size;
 	transfer->source_data.size = 0;
@@ -73,7 +73,7 @@ void lab_xwm_selection_transfer_destroy_outgoing(
 
 static int lab_xwm_data_source_read(int fd, uint32_t mask, void *data) {
 	struct lab_xwm_selection_transfer *transfer = data;
-	struct lab_xwm *xwm = transfer->selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	void *p;
 	size_t current = transfer->source_data.size;
@@ -186,23 +186,21 @@ void lab_xwm_send_incr_chunk(struct lab_xwm_selection_transfer *transfer) {
 
 static void lab_xwm_selection_source_send(struct lab_xwm_selection *selection,
 		const char *mime_type, int32_t fd) {
-	if (selection == &selection->xwm->clipboard_selection) {
-		struct wlr_data_source *source =
-			selection->xwm->seat->selection_source;
+	if (selection == &g_xwm.clipboard_selection) {
+		struct wlr_data_source *source = g_xwm.seat->selection_source;
 		if (source != NULL) {
 			wlr_data_source_send(source, mime_type, fd);
 			return;
 		}
-	} else if (selection == &selection->xwm->primary_selection) {
+	} else if (selection == &g_xwm.primary_selection) {
 		struct wlr_primary_selection_source *source =
-			selection->xwm->seat->primary_selection_source;
+			g_xwm.seat->primary_selection_source;
 		if (source != NULL) {
 			wlr_primary_selection_source_send(source, mime_type, fd);
 			return;
 		}
-	} else if (selection == &selection->xwm->dnd_selection) {
-		struct wlr_data_source *source =
-			selection->xwm->seat->drag_source;
+	} else if (selection == &g_xwm.dnd_selection) {
+		struct wlr_data_source *source = g_xwm.seat->drag_source;
 		if (source != NULL) {
 			wlr_data_source_send(source, mime_type, fd);
 			return;
@@ -214,9 +212,8 @@ static void lab_xwm_selection_source_send(struct lab_xwm_selection *selection,
 
 static void lab_xwm_selection_transfer_start_outgoing(
 		struct lab_xwm_selection_transfer *transfer) {
-	struct lab_xwm *xwm = transfer->selection->xwm;
 	struct wl_event_loop *loop =
-		wl_display_get_event_loop(xwm->server->wl_display);
+		wl_display_get_event_loop(g_xserver.wl_display);
 	wlr_log(WLR_DEBUG, "Starting transfer %p", transfer);
 	transfer->event_source = wl_event_loop_add_fd(loop, transfer->wl_client_fd,
 		WL_EVENT_READABLE, lab_xwm_data_source_read, transfer);
@@ -224,21 +221,19 @@ static void lab_xwm_selection_transfer_start_outgoing(
 
 static struct wl_array *lab_xwm_selection_source_get_mime_types(
 		struct lab_xwm_selection *selection) {
-	if (selection == &selection->xwm->clipboard_selection) {
-		struct wlr_data_source *source =
-			selection->xwm->seat->selection_source;
+	if (selection == &g_xwm.clipboard_selection) {
+		struct wlr_data_source *source = g_xwm.seat->selection_source;
 		if (source != NULL) {
 			return &source->mime_types;
 		}
-	} else if (selection == &selection->xwm->primary_selection) {
+	} else if (selection == &g_xwm.primary_selection) {
 		struct wlr_primary_selection_source *source =
-			selection->xwm->seat->primary_selection_source;
+			g_xwm.seat->primary_selection_source;
 		if (source != NULL) {
 			return &source->mime_types;
 		}
-	} else if (selection == &selection->xwm->dnd_selection) {
-		struct wlr_data_source *source =
-			selection->xwm->seat->drag_source;
+	} else if (selection == &g_xwm.dnd_selection) {
+		struct wlr_data_source *source = g_xwm.seat->drag_source;
 		if (source != NULL) {
 			return &source->mime_types;
 		}
@@ -312,7 +307,7 @@ static bool lab_xwm_selection_send_data(struct lab_xwm_selection *selection,
 	wl_list_for_each_safe(outgoing, tmp, &selection->outgoing, link) {
 		if (transfer->request.requestor == outgoing->request.requestor) {
 			wlr_log(WLR_DEBUG, "Destroying stale transfer %p", outgoing);
-			lab_xwm_selection_send_notify(selection->xwm, &outgoing->request, false);
+			lab_xwm_selection_send_notify(&g_xwm, &outgoing->request, false);
 			lab_xwm_selection_transfer_destroy_outgoing(outgoing);
 		} else {
 			wlr_log(WLR_DEBUG, "Transfer %p still running", outgoing);
@@ -328,14 +323,14 @@ static bool lab_xwm_selection_send_data(struct lab_xwm_selection *selection,
 
 static void lab_xwm_selection_send_targets(struct lab_xwm_selection *selection,
 		xcb_selection_request_event_t *req) {
-	struct lab_xwm *xwm = selection->xwm;
+	struct lab_xwm *xwm = &g_xwm;
 
 	struct wl_array *mime_types =
 		lab_xwm_selection_source_get_mime_types(selection);
 	if (mime_types == NULL) {
 		wlr_log(WLR_ERROR, "not sending selection targets: "
 			"no selection source available");
-		lab_xwm_selection_send_notify(selection->xwm, req, false);
+		lab_xwm_selection_send_notify(xwm, req, false);
 		return;
 	}
 
@@ -360,12 +355,12 @@ static void lab_xwm_selection_send_targets(struct lab_xwm_selection *selection,
 		32, // format
 		n, targets);
 
-	lab_xwm_selection_send_notify(selection->xwm, req, true);
+	lab_xwm_selection_send_notify(xwm, req, true);
 }
 
 static void lab_xwm_selection_send_timestamp(struct lab_xwm_selection *selection,
 		xcb_selection_request_event_t *req) {
-	xcb_change_property(selection->xwm->xcb_conn,
+	xcb_change_property(g_xwm.xcb_conn,
 		XCB_PROP_MODE_REPLACE,
 		req->requestor,
 		req->property,
@@ -373,7 +368,7 @@ static void lab_xwm_selection_send_timestamp(struct lab_xwm_selection *selection
 		32, // format
 		1, &selection->timestamp);
 
-	lab_xwm_selection_send_notify(selection->xwm, req, true);
+	lab_xwm_selection_send_notify(&g_xwm, req, true);
 }
 
 void lab_xwm_handle_selection_request(struct lab_xwm *xwm,
@@ -421,7 +416,7 @@ void lab_xwm_handle_selection_request(struct lab_xwm *xwm,
 	} else if (req->target == xwm->atoms[TIMESTAMP]) {
 		lab_xwm_selection_send_timestamp(selection, req);
 	} else if (req->target == xwm->atoms[DELETE]) {
-		lab_xwm_selection_send_notify(selection->xwm, req, true);
+		lab_xwm_selection_send_notify(&g_xwm, req, true);
 	} else {
 		// Send data
 		char *mime_type = lab_xwm_mime_type_from_atom(xwm, req->target);

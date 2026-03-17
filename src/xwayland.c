@@ -14,7 +14,6 @@
 #include "config/session.h"
 #include "labwc.h"
 #include "output.h"
-#include "xwayland/server.h"
 #include "xwayland/xwayland.h"
 #include "xwayland/xwm.h"
 
@@ -189,14 +188,6 @@ output_adjust_usable_area_for_strut_partial(struct output *output,
 void
 xwayland_update_workarea(void)
 {
-	/*
-	 * Do nothing if called during destroy or before xwayland is ready.
-	 * This function will be called again from the ready signal handler.
-	 */
-	if (!g_xserver.xwm) {
-		return;
-	}
-
 	struct wlr_box lb;
 	wlr_output_layout_get_box(server.output_layout, NULL, &lb);
 
