@@ -137,18 +137,18 @@ impl Xwm {
         self.focused = 0;
     }
 
-    pub fn raise(&mut self, xid: XId, xsurface: *mut XSurface) {
+    pub fn raise(&mut self, xid: XId) {
         if let Some(&prev) = self.stacking.last()
             && prev != xid
         {
-            unsafe { xwayland_surface_stack_above(xsurface, prev) };
+            unsafe { xwayland_stack_above(xid, prev) };
         }
         self.stacking.retain(|&x| x != xid);
         self.stacking.push(xid);
     }
 
-    pub fn lower(&mut self, xid: XId, xsurface: *mut XSurface) {
-        unsafe { xwayland_surface_stack_above(xsurface, 0) }; // None
+    pub fn lower(&mut self, xid: XId) {
+        unsafe { xwayland_stack_above(xid, 0) }; // None
         self.stacking.retain(|&x| x != xid);
         self.stacking.insert(0, xid);
     }
@@ -184,11 +184,12 @@ impl Xwm {
         }
     }
 
-    pub fn focus_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) {
+    pub fn focus_unmanaged(&mut self, xid: XId) {
         if let Some(surf) = self.surfaces.get_mut(&xid) {
             surf.unmanaged_focused = true;
             // Set seat focus now if already mapped, otherwise wait
             if !surf.unmanaged_node.is_null() {
+                let surface = unsafe { xwayland_surface_get_surface(surf.xsurface) };
                 unsafe { seat_focus_surface_no_notify(surface) };
             }
         }
