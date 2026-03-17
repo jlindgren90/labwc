@@ -218,16 +218,8 @@ impl View {
     }
 
     fn get_initial_floating_geom(&mut self, enforce_min: bool) -> Option<Rect> {
-        if !self.state.ever_mapped
-            && self.state.floating()
-            && let Some(mut geom) = self.v.get_surface_geom()
-        {
-            // Surface geometry from wlroots is unreliable due to race
-            // between outgoing Configure and incoming ConfigureNotify,
-            // so prefer pending geometry if valid.
-            if !rect_empty(self.state.pending) {
-                geom = self.state.pending;
-            }
+        if !self.state.ever_mapped && self.state.floating() && !rect_empty(self.state.pending) {
+            let mut geom = self.state.pending;
             if enforce_min && (geom.width < MIN_WIDTH || geom.height < MIN_HEIGHT) {
                 geom.width = FALLBACK_WIDTH;
                 geom.height = FALLBACK_HEIGHT;

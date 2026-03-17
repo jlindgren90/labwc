@@ -17,10 +17,10 @@
 #include "xwayland/xwayland.h"
 
 void
-xwayland_view_configure(struct xwayland_surface *xsurface,
-		struct wlr_box current, struct wlr_box geo, bool *commit_move)
+xwayland_view_configure(xcb_window_t window_id, struct wlr_box current,
+		struct wlr_box geo, bool *commit_move)
 {
-	xwayland_surface_configure(xsurface, geo);
+	xwayland_configure_window(window_id, geo);
 
 	/*
 	 * For unknown reasons, XWayland surfaces that are completely

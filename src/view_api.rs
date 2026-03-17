@@ -458,6 +458,12 @@ pub extern "C" fn xsurface_set_surface_id(xid: XId, surface_id: u32) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_server_geom(xid: XId, geom: Rect) {
+    let ul = views_mut().set_xsurface_server_geom(xid, geom);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn xsurface_set_initial_state(xid: XId, state: XSurfaceInitialState) {
     views_mut().set_xsurface_initial_state(xid, state);
 }
@@ -508,14 +514,8 @@ pub extern "C" fn xsurface_change_state(xid: XId, action: XStateAction, flags: X
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xsurface_request_configure(xid: XId, geom: Rect) {
-    let ul = views_mut().request_xsurface_configure(xid, geom);
-    do_update(ul);
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn xsurface_move_unmanaged(xid: XId, x: i32, y: i32) {
-    let ul = views().move_unmanaged(xid, x, y);
+pub extern "C" fn xsurface_request_configure(xid: XId, geom: Rect, flags: RectUpdateFlag) {
+    let ul = views_mut().request_xsurface_configure(xid, geom, flags);
     do_update(ul);
 }
 

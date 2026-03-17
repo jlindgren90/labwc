@@ -14,7 +14,6 @@ pub trait ViewImpl {
     fn get_size_hints(&self) -> ViewSizeHints;
     fn set_size_hints(&mut self, hints: &ViewSizeHints);
     fn set_bool_prop(&mut self, prop: XBoolProp, val: bool);
-    fn get_surface_geom(&self) -> Option<Rect>;
     fn notify_mapped(&self, state: &ViewState);
     fn set_active(&self, state: &ViewState);
     fn set_fullscreen(&mut self, state: &ViewState);
@@ -107,10 +106,6 @@ impl ViewImpl for XView {
         };
     }
 
-    fn get_surface_geom(&self) -> Option<Rect> {
-        Some(unsafe { xwayland_surface_get_geom(self.xsurface) })
-    }
-
     fn notify_mapped(&self, state: &ViewState) {
         self.publish_state_if_mapped(state);
     }
@@ -143,9 +138,7 @@ impl ViewImpl for XView {
     }
 
     fn configure(&self, current: Rect, geom: Rect, commit_move: *mut bool) {
-        unsafe {
-            xwayland_view_configure(self.xsurface, current, geom, commit_move);
-        }
+        unsafe { xwayland_view_configure(self.xid, current, geom, commit_move) };
     }
 
     fn raise(&self, xwm: &mut Xwm) {
@@ -259,10 +252,6 @@ impl ViewImpl for XdgView {
 
     fn set_bool_prop(&mut self, _prop: XBoolProp, _val: bool) {
         // not supported
-    }
-
-    fn get_surface_geom(&self) -> Option<Rect> {
-        None // not supported
     }
 
     fn notify_mapped(&self, _state: &ViewState) {
