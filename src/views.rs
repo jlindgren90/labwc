@@ -605,6 +605,14 @@ impl Views {
         }
     }
 
+    pub fn set_xsurface_bool_prop(&mut self, xid: XId, prop: XBoolProp, val: bool) {
+        if let Some(id) = self.xwm.get_view_id(xid)
+            && let Some(view) = self.by_id.get_mut(&id)
+        {
+            view.set_bool_prop(prop, val);
+        }
+    }
+
     pub fn set_xsurface_string_prop(
         &mut self,
         xid: XId,

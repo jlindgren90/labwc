@@ -25,6 +25,13 @@ typedef enum XFocusReason {
 	XFOCUS_REASON_GRAB,
 } XFocusReason;
 
+typedef enum XBoolProp {
+	XBOOL_PROP_INPUT_HINT,
+	XBOOL_PROP_NORMAL_OR_DIALOG,
+	XBOOL_PROP_SUPPORTS_DELETE,
+	XBOOL_PROP_SUPPORTS_TAKE_FOCUS,
+} XBoolProp;
+
 typedef enum XStringProp {
 	XSTRING_PROP_INSTANCE, // "instance" of WM_CLASS
 	XSTRING_PROP_WM_NAME,  // WM_NAME from ICCCM (old)
@@ -109,15 +116,6 @@ typedef struct XSurfaceInitialState {
 	_Bool always_on_top;
 } XSurfaceInitialState;
 
-typedef struct XSurfaceProps {
-	Rect geom;
-	_Bool is_normal;
-	_Bool is_dialog;
-	_Bool supports_delete;
-	_Bool supports_take_focus;
-	_Bool no_input_hint;
-} XSurfaceProps;
-
 WlrSceneTree *view_scene_tree_create(ViewId id);
 void view_scene_tree_destroy(WlrSceneTree *scene_tree);
 void view_scene_tree_move(WlrSceneTree *scene_tree, int x, int y);
@@ -180,14 +178,15 @@ Border ssd_get_margin(const ViewState *view_st);
 void top_layer_show_all(void);
 void top_layer_hide_on_output(Output *output);
 
+void xwayland_delete_window(XId window_id);
 void xwayland_focus_window(XId window_id); // use PointerRoot (1) for "none"
+void xwayland_kill_window(XId window_id);
 void xwayland_offer_focus(XId window_id);
 void xwayland_set_active_window(XId window_id); // allows None (0)
 void xwayland_set_net_client_list(const XId *xids, unsigned num_xids);
-void xwayland_surface_close(XSurface *xsurface);
 void xwayland_surface_configure(XSurface *surface, Rect geom);
 void xwayland_surface_destroy(XSurface *xsurface);
-XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
+Rect xwayland_surface_get_geom(XSurface *xsurface);
 void xwayland_surface_publish_state(XId window_id, const ViewState *state);
 void xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id);
 void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);

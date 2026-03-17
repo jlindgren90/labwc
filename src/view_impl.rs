@@ -13,7 +13,8 @@ pub trait ViewImpl {
     fn get_modal(&self) -> Option<bool>;
     fn get_size_hints(&self) -> ViewSizeHints;
     fn set_size_hints(&mut self, hints: &ViewSizeHints);
-    fn get_surface_props(&self) -> Option<XSurfaceProps>;
+    fn set_bool_prop(&mut self, prop: XBoolProp, val: bool);
+    fn get_surface_geom(&self) -> Option<Rect>;
     fn notify_mapped(&self, state: &ViewState);
     fn set_active(&self, state: &ViewState);
     fn set_fullscreen(&mut self, state: &ViewState);
@@ -44,6 +45,10 @@ pub struct XView {
     xid: XId,
     xsurface: *mut XSurface,
     size_hints: ViewSizeHints,
+    input_hint: bool,
+    normal_or_dialog: bool,
+    supports_delete: bool,
+    supports_take_focus: bool,
 }
 
 impl XView {
@@ -51,6 +56,7 @@ impl XView {
         Self {
             xid: xid,
             xsurface: xsurface,
+            input_hint: true, // assumed set by default
             ..Self::default()
         }
     }
@@ -91,8 +97,18 @@ impl ViewImpl for XView {
         self.size_hints = *hints;
     }
 
-    fn get_surface_props(&self) -> Option<XSurfaceProps> {
-        Some(unsafe { xwayland_surface_get_props(self.xsurface) })
+    fn set_bool_prop(&mut self, prop: XBoolProp, val: bool) {
+        match prop {
+            XBOOL_PROP_INPUT_HINT => self.input_hint = val,
+            XBOOL_PROP_NORMAL_OR_DIALOG => self.normal_or_dialog = val,
+            XBOOL_PROP_SUPPORTS_DELETE => self.supports_delete = val,
+            XBOOL_PROP_SUPPORTS_TAKE_FOCUS => self.supports_take_focus = val,
+            _ => return, // invalid
+        };
+    }
+
+    fn get_surface_geom(&self) -> Option<Rect> {
+        Some(unsafe { xwayland_surface_get_geom(self.xsurface) })
     }
 
     fn notify_mapped(&self, state: &ViewState) {
@@ -137,23 +153,22 @@ impl ViewImpl for XView {
     }
 
     fn wants_focus(&self) -> bool {
-        let props = unsafe { xwayland_surface_get_props(self.xsurface) };
-        if !props.no_input_hint {
+        if self.input_hint {
             // Input hint set in WM_HINTS -> WM sets input focus.
             // Assuming this case also if WM_HINTS is missing altogether.
             return true;
         }
-        if props.supports_take_focus {
+        if self.supports_take_focus {
             // WM_TAKE_FOCUS set in WM_PROTOCOLS -> client sets focus.
             // Guessing whether it wants focus based on window type.
-            return props.is_normal || props.is_dialog;
+            return self.normal_or_dialog;
         }
         // client doesn't want input focus at all
         return false;
     }
 
     fn focus(&self, xwm: &mut Xwm) -> bool {
-        if xwm.focus(self.xid, self.xsurface) {
+        if xwm.focus(self.xid, self.input_hint, self.supports_take_focus) {
             unsafe { seat_focus_surface_no_notify(self.get_surface()) };
             return true;
         }
@@ -161,7 +176,11 @@ impl ViewImpl for XView {
     }
 
     fn close(&self) {
-        unsafe { xwayland_surface_close(self.xsurface) };
+        if self.supports_delete {
+            unsafe { xwayland_delete_window(self.xid) };
+        } else {
+            unsafe { xwayland_kill_window(self.xid) };
+        }
     }
 
     fn create_scene(&self, scene: &mut ViewScene, id: ViewId) {
@@ -238,7 +257,11 @@ impl ViewImpl for XdgView {
         // not supported
     }
 
-    fn get_surface_props(&self) -> Option<XSurfaceProps> {
+    fn set_bool_prop(&mut self, _prop: XBoolProp, _val: bool) {
+        // not supported
+    }
+
+    fn get_surface_geom(&self) -> Option<Rect> {
         None // not supported
     }
 
