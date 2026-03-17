@@ -36,7 +36,7 @@ struct xwayland_surface {
 	struct wlr_surface *surface;
 	struct wlr_addon surface_addon;
 
-	XSurfaceProps props;
+	struct wlr_box geom;
 
 	struct wl_listener surface_commit;
 	struct wl_listener surface_map;

@@ -115,13 +115,12 @@ impl Xwm {
         self.focused = focused;
     }
 
-    pub fn focus(&mut self, xid: XId, xsurface: *mut XSurface) -> bool {
+    pub fn focus(&mut self, xid: XId, input_hint: bool, supports_take_focus: bool) -> bool {
         if self.focused == xid {
             return true; // already focused
         }
-        let props = unsafe { xwayland_surface_get_props(xsurface) };
-        if props.no_input_hint {
-            if props.supports_take_focus {
+        if !input_hint {
+            if supports_take_focus {
                 // "offer" focus via WM_TAKE_FOCUS client message
                 unsafe { xwayland_offer_focus(xid) };
             }
@@ -159,8 +158,8 @@ impl Xwm {
             if surf.unmanaged_node.is_null() {
                 surf.unmanaged_node = unsafe { xwayland_create_unmanaged_node(surface) };
             }
-            let props = unsafe { xwayland_surface_get_props(surf.xsurface) };
-            unsafe { wlr_scene_node_set_position(surf.unmanaged_node, props.geom.x, props.geom.y) };
+            let geom = unsafe { xwayland_surface_get_geom(surf.xsurface) };
+            unsafe { wlr_scene_node_set_position(surf.unmanaged_node, geom.x, geom.y) };
             // Set seat focus at map if previously focused
             if surf.unmanaged_focused {
                 unsafe { seat_focus_surface_no_notify(surface) };

@@ -462,6 +462,11 @@ pub extern "C" fn xsurface_set_size_hints(xid: XId, hints: &ViewSizeHints) {
     views_mut().set_xsurface_size_hints(xid, hints);
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_bool_prop(xid: XId, prop: XBoolProp, val: bool) {
+    views_mut().set_xsurface_bool_prop(xid, prop, val);
+}
+
 // Note: len must be exact (no early NUL in str)
 #[unsafe(no_mangle)]
 pub extern "C" fn xsurface_set_string_prop(
