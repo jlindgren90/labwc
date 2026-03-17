@@ -6,9 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <wlr/types/wlr_cursor.h>
 #include <wlr/types/wlr_data_device.h>
 #include <wlr/util/log.h>
 #include <xcb/xfixes.h>
+#include "labwc.h"
 #include "xwayland/xwm.h"
 #include "xwayland/selection.h"
 
@@ -275,9 +277,8 @@ static void seat_handle_drag_motion(struct wl_listener *listener, void *data) {
 		return; // No xwayland surface focused
 	}
 
-	lab_xwm_dnd_send_position(xwm, event->time,
-		surface->geom.x + (int16_t)event->sx,
-		surface->geom.y + (int16_t)event->sy);
+	// FIXME: bypassing several layers to get absolute (root) x/y coordinates
+	lab_xwm_dnd_send_position(xwm, event->time, g_seat.cursor->x, g_seat.cursor->y);
 }
 
 static void seat_handle_drag_drop(struct wl_listener *listener, void *data) {
