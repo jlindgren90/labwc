@@ -18,67 +18,6 @@
 #include "xwayland/xwayland.h"
 #include "xwayland/xwm.h"
 
-struct wlr_surface *
-xwayland_view_get_surface(struct xwayland_surface *xsurface)
-{
-	return xsurface->surface;
-}
-
-void
-xwayland_surface_on_commit(struct xwayland_surface *xsurface)
-{
-	const ViewState *view_st = view_get_state(xsurface->view_id);
-	if (!view_st || !xsurface->surface || !xsurface->surface->mapped) {
-		return;
-	}
-
-	/* Must receive commit signal before accessing surface->current* */
-	struct wlr_surface_state *state = &xsurface->surface->current;
-
-	/*
-	 * If there is a pending move/resize, wait until the surface
-	 * size changes to update geometry. The hope is to update both
-	 * the position and the size of the view at the same time,
-	 * reducing visual glitches.
-	 */
-	if (view_st->current.width != state->width
-			|| view_st->current.height != state->height) {
-		view_commit_geom(xsurface->view_id, state->width, state->height);
-	}
-}
-
-void
-xwayland_surface_on_request_move(struct xwayland_surface *xsurface)
-{
-	/*
-	 * This event is raised when a client would like to begin an interactive
-	 * move, typically because the user clicked on their client-side
-	 * decorations. Note that a more sophisticated compositor should check
-	 * the provided serial against a list of button press serials sent to
-	 * this client, to prevent the client from requesting this whenever they
-	 * want.
-	 *
-	 * Note: interactive_begin() checks that view == server.grabbed_view.
-	 */
-	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_MOVE, LAB_EDGE_NONE);
-}
-
-void
-xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges)
-{
-	/*
-	 * This event is raised when a client would like to begin an interactive
-	 * resize, typically because the user clicked on their client-side
-	 * decorations. Note that a more sophisticated compositor should check
-	 * the provided serial against a list of button press serials sent to
-	 * this client, to prevent the client from requesting this whenever they
-	 * want.
-	 *
-	 * Note: interactive_begin() checks that view == server.grabbed_view.
-	 */
-	interactive_begin(xsurface->view_id, LAB_INPUT_STATE_RESIZE, edges);
-}
-
 void
 xwayland_view_configure(struct xwayland_surface *xsurface,
 		struct wlr_box current, struct wlr_box geo, bool *commit_move)
@@ -104,12 +43,16 @@ xwayland_view_configure(struct xwayland_surface *xsurface,
 }
 
 void
-xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
+xwayland_on_set_window_icon(xcb_window_t window_id)
 {
-	view_clear_icon_surfaces(xsurface->view_id);
+	ViewId view_id = xsurface_get_view_id(window_id);
+	if (!view_id) {
+		return;
+	}
+	view_clear_icon_surfaces(view_id);
 
 	xcb_ewmh_get_wm_icon_reply_t icon_reply = {0};
-	if (!xwayland_surface_fetch_icon(xsurface, &icon_reply)) {
+	if (!xwayland_fetch_window_icon(window_id, &icon_reply)) {
 		wlr_log(WLR_INFO, "Invalid x11 icon");
 		goto out;
 	}
@@ -137,11 +80,11 @@ xwayland_surface_on_set_icon(struct xwayland_surface *xsurface)
 		}
 
 		cairo_surface_mark_dirty(surface);
-		view_add_icon_surface(xsurface->view_id, surface);
+		view_add_icon_surface(view_id, surface);
 	}
 
 out:
-	view_update_icon(xsurface->view_id);
+	view_update_icon(view_id);
 	xcb_ewmh_get_wm_icon_reply_wipe(&icon_reply);
 }
 

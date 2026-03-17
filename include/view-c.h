@@ -140,7 +140,6 @@ void xdg_toplevel_view_notify_tiled(CView *view);
 void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
 void xdg_toplevel_view_close(CView *view);
 
-WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
 
@@ -182,13 +181,14 @@ void xwayland_delete_window(XId window_id);
 void xwayland_focus_window(XId window_id); // use PointerRoot (1) for "none"
 void xwayland_kill_window(XId window_id);
 void xwayland_offer_focus(XId window_id);
+void xwayland_publish_window_state(XId window_id, const ViewState *state);
 void xwayland_set_active_window(XId window_id); // allows None (0)
 void xwayland_set_net_client_list(const XId *xids, unsigned num_xids);
+void xwayland_stack_above(XId window_id, XId sibling);
 void xwayland_surface_configure(XSurface *surface, Rect geom);
 void xwayland_surface_destroy(XSurface *xsurface);
 Rect xwayland_surface_get_geom(XSurface *xsurface);
-void xwayland_surface_publish_state(XId window_id, const ViewState *state);
+WlrSurface *xwayland_surface_get_surface(XSurface *xsurface);
 void xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id);
-void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);
 
 #endif // LABWC_VIEW_C_H

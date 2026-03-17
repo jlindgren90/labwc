@@ -164,7 +164,8 @@ handle_commit(struct wl_listener *listener, void *data)
 	}
 
 	if (update_required) {
-		view_commit_geom(view->id, size.width, size.height);
+		view_commit_geom(view->id, size.width, size.height,
+			/* only_if_changed */ false);
 
 		/*
 		 * Some views (e.g., terminals that scale as multiples of rows

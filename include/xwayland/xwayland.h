@@ -50,20 +50,8 @@ struct xwayland_surface {
 void xwayland_set_cursor(struct wlr_buffer *buffer,
 	int32_t hotspot_x, int32_t hotspot_y);
 
-void xwayland_surface_read_properties(struct xwayland_surface *xsurface);
-
-/**
- * Restack surface above sibling.
- * If sibling is None, then the surface is moved to the bottom
- * of the stack.
- */
-void xwayland_surface_stack_above(struct xwayland_surface *surface,
-	xcb_window_t sibling);
-
 void xwayland_surface_configure(struct xwayland_surface *surface,
 	struct wlr_box geom);
-
-void xwayland_surface_close(struct xwayland_surface *surface);
 
 /**
  * Get a struct xwayland_surface from a struct wlr_surface.
@@ -89,16 +77,12 @@ void xwayland_set_workareas(const struct wlr_box *workareas, size_t num_workarea
  * Returns true on success. The caller is responsible for freeing the reply
  * using xcb_ewmh_get_wm_icon_reply_wipe().
  */
-bool xwayland_surface_fetch_icon(
-	const struct xwayland_surface *xsurface,
+bool xwayland_fetch_window_icon(xcb_window_t window_id,
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
 
 /* listeners (external) */
 void xwayland_on_ready(void);
 
-void xwayland_surface_on_commit(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_move(struct xwayland_surface *xsurface);
-void xwayland_surface_on_request_resize(struct xwayland_surface *xsurface, uint32_t edges);
-void xwayland_surface_on_set_icon(struct xwayland_surface *xsurface);
+void xwayland_on_set_window_icon(xcb_window_t window_id);
 
 #endif
