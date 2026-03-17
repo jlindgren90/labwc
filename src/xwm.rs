@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-only
 //
 use crate::bindings::*;
+use crate::view::*;
 use std::collections::HashMap;
 use std::ptr::null_mut;
 
@@ -11,6 +12,8 @@ struct XSurfaceData {
     surface_id: u32,
     view_id: ViewId,
     parent_xid: XId,
+    // last geometry from server (lags behind WM-initiated configure)
+    server_geom: Rect,
     unmanaged_node: *mut WlrSceneNode,
     unmanaged_focused: bool,
 }
@@ -110,6 +113,25 @@ impl Xwm {
         return surf.view_id;
     }
 
+    pub fn get_server_geom(&self, xid: XId) -> Rect {
+        if let Some(surf) = self.surfaces.get(&xid) {
+            surf.server_geom
+        } else {
+            Rect::default()
+        }
+    }
+
+    pub fn set_server_geom(&mut self, xid: XId, geom: Rect) -> UpdateLevel {
+        if let Some(surf) = self.surfaces.get_mut(&xid) {
+            surf.server_geom = geom;
+            if !surf.unmanaged_node.is_null() {
+                unsafe { wlr_scene_node_set_position(surf.unmanaged_node, geom.x, geom.y) };
+                return UpdateLevel::Cursor;
+            }
+        }
+        return UpdateLevel::None;
+    }
+
     // For use when server-side focus has already changed
     pub fn set_focused(&mut self, focused: XId) {
         self.focused = focused;
@@ -153,35 +175,31 @@ impl Xwm {
         self.stacking.insert(0, xid);
     }
 
-    pub fn map_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) {
+    pub fn map_unmanaged(&mut self, xid: XId, surface: *mut WlrSurface) -> UpdateLevel {
         if let Some(surf) = self.surfaces.get_mut(&xid) {
             if surf.unmanaged_node.is_null() {
                 surf.unmanaged_node = unsafe { xwayland_create_unmanaged_node(surface) };
             }
-            let geom = unsafe { xwayland_surface_get_geom(surf.xsurface) };
+            let geom = surf.server_geom;
             unsafe { wlr_scene_node_set_position(surf.unmanaged_node, geom.x, geom.y) };
             // Set seat focus at map if previously focused
             if surf.unmanaged_focused {
                 unsafe { seat_focus_surface_no_notify(surface) };
             }
+            return UpdateLevel::Cursor;
         }
+        return UpdateLevel::None;
     }
 
-    pub fn unmap_unmanaged(&mut self, xid: XId) {
+    pub fn unmap_unmanaged(&mut self, xid: XId) -> UpdateLevel {
         if let Some(surf) = self.surfaces.get_mut(&xid)
             && !surf.unmanaged_node.is_null()
         {
             unsafe { wlr_scene_node_destroy(surf.unmanaged_node) };
             surf.unmanaged_node = null_mut();
+            return UpdateLevel::Cursor;
         }
-    }
-
-    pub fn move_unmanaged(&self, xid: XId, x: i32, y: i32) {
-        if let Some(surf) = self.surfaces.get(&xid)
-            && !surf.unmanaged_node.is_null()
-        {
-            unsafe { wlr_scene_node_set_position(surf.unmanaged_node, x, y) };
-        }
+        return UpdateLevel::None;
     }
 
     pub fn focus_unmanaged(&mut self, xid: XId) {

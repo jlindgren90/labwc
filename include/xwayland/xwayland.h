@@ -36,8 +36,6 @@ struct xwayland_surface {
 	struct wlr_surface *surface;
 	struct wlr_addon surface_addon;
 
-	struct wlr_box geom;
-
 	struct wl_listener surface_commit;
 	struct wl_listener surface_map;
 	struct wl_listener surface_unmap;
@@ -48,9 +46,6 @@ struct xwayland_surface {
 
 void xwayland_set_cursor(struct wlr_buffer *buffer,
 	int32_t hotspot_x, int32_t hotspot_y);
-
-void xwayland_surface_configure(struct xwayland_surface *surface,
-	struct wlr_box geom);
 
 /**
  * Get a struct xwayland_surface from a struct wlr_surface.

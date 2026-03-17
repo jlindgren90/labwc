@@ -74,3 +74,21 @@ pub extern "C" fn rect_fit_within(width: i32, height: i32, bound: Rect) -> Rect 
     }
     return rect_center(w, h, bound);
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn rect_update_by_flags(orig: Rect, update: Rect, flags: RectUpdateFlag) -> Rect {
+    let mut rect = orig;
+    if (flags & RECT_UPDATE_X) != 0 {
+        rect.x = update.x;
+    }
+    if (flags & RECT_UPDATE_Y) != 0 {
+        rect.y = update.y;
+    }
+    if (flags & RECT_UPDATE_WIDTH) != 0 {
+        rect.width = update.width;
+    }
+    if (flags & RECT_UPDATE_HEIGHT) != 0 {
+        rect.height = update.height;
+    }
+    return rect;
+}
