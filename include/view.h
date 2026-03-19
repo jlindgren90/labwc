@@ -356,7 +356,7 @@ bool view_matches_query(struct view *view, struct view_query *query);
  * @criteria: Criteria to match against.
  * Example:
  *	struct view *view;
- *	for_each_view(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
+ *	for_each_view(view, &server.views, LAB_VIEW_CRITERIA_NONE) {
  *		printf("%s\n", view_get_string_prop(view, "app_id"));
  *	}
  */
@@ -372,7 +372,7 @@ bool view_matches_query(struct view *view, struct view_query *query);
  * @criteria: Criteria to match against.
  * Example:
  *	struct view *view;
- *	for_each_view_reverse(view, &g_server.views, LAB_VIEW_CRITERIA_NONE) {
+ *	for_each_view_reverse(view, &server.views, LAB_VIEW_CRITERIA_NONE) {
  *		printf("%s\n", view_get_string_prop(view, "app_id"));
  *	}
  */
