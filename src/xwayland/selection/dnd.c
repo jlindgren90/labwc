@@ -42,21 +42,21 @@ static enum wl_data_device_manager_dnd_action
 
 static void lab_xwm_dnd_send_event(struct lab_xwm *xwm, xcb_atom_t type,
 		xcb_client_message_data_t *data) {
-	struct xwayland_surface *dest = xwm->drag_focus;
-	assert(dest != NULL);
+	xcb_window_t dest = xwm->drag_focus;
+	assert(dest != XCB_NONE);
 
 	xcb_client_message_event_t event = {
 		.response_type = XCB_CLIENT_MESSAGE,
 		.format = 32,
 		.sequence = 0,
-		.window = dest->window_id,
+		.window = dest,
 		.type = type,
 		.data = *data,
 	};
 
 	lab_xwm_send_event_with_size(xwm->xcb_conn,
 		0, // propagate
-		dest->window_id,
+		dest,
 		XCB_EVENT_MASK_NO_EVENT,
 		&event,
 		sizeof(event));
@@ -125,10 +125,8 @@ static void lab_xwm_dnd_send_position(struct lab_xwm *xwm, uint32_t time, int16_
 }
 
 static void lab_xwm_dnd_send_drop(struct lab_xwm *xwm, uint32_t time) {
-	struct wlr_drag *drag = xwm->drag;
-	assert(drag != NULL);
-	struct xwayland_surface *dest = xwm->drag_focus;
-	assert(dest != NULL);
+	assert(xwm->drag != NULL);
+	assert(xwm->drag_focus != XCB_NONE);
 
 	xcb_client_message_data_t data = { 0 };
 	data.data32[0] = xwm->dnd_selection.window;
@@ -138,10 +136,8 @@ static void lab_xwm_dnd_send_drop(struct lab_xwm *xwm, uint32_t time) {
 }
 
 static void lab_xwm_dnd_send_leave(struct lab_xwm *xwm) {
-	struct wlr_drag *drag = xwm->drag;
-	assert(drag != NULL);
-	struct xwayland_surface *dest = xwm->drag_focus;
-	assert(dest != NULL);
+	assert(xwm->drag != NULL);
+	assert(xwm->drag_focus != XCB_NONE);
 
 	xcb_client_message_data_t data = { 0 };
 	data.data32[0] = xwm->dnd_selection.window;
@@ -181,8 +177,7 @@ int lab_xwm_handle_selection_client_message(struct lab_xwm *xwm,
 		bool accepted = data->data32[1] & 1;
 		xcb_atom_t action_atom = data->data32[4];
 
-		if (xwm->drag_focus == NULL ||
-				target_window != xwm->drag_focus->window_id) {
+		if (xwm->drag_focus == XCB_NONE || target_window != xwm->drag_focus) {
 			wlr_log(WLR_DEBUG, "ignoring XdndStatus client message because "
 				"it doesn't match the current drag focus window ID");
 			return 1;
@@ -217,8 +212,7 @@ int lab_xwm_handle_selection_client_message(struct lab_xwm *xwm,
 		bool performed = data->data32[1] & 1;
 		xcb_atom_t action_atom = data->data32[2];
 
-		if (xwm->drop_focus == NULL ||
-				target_window != xwm->drop_focus->window_id) {
+		if (xwm->drop_focus == XCB_NONE || target_window != xwm->drop_focus) {
 			wlr_log(WLR_DEBUG, "ignoring XdndFinished client message because "
 				"it doesn't match the finished drop focus window ID");
 			return 1;
@@ -237,13 +231,13 @@ int lab_xwm_handle_selection_client_message(struct lab_xwm *xwm,
 }
 
 void
-lab_xwm_set_drag_focus(struct lab_xwm *xwm, struct xwayland_surface *focus)
+lab_xwm_set_drag_focus(struct lab_xwm *xwm, xcb_window_t focus)
 {
 	if (focus == xwm->drag_focus) {
 		return;
 	}
 
-	if (xwm->drag_focus != NULL) {
+	if (xwm->drag_focus != XCB_NONE) {
 		wlr_data_source_dnd_action(xwm->drag->source,
 			WL_DATA_DEVICE_MANAGER_DND_ACTION_NONE);
 		lab_xwm_dnd_send_leave(xwm);
@@ -251,7 +245,7 @@ lab_xwm_set_drag_focus(struct lab_xwm *xwm, struct xwayland_surface *focus)
 
 	xwm->drag_focus = focus;
 
-	if (xwm->drag_focus != NULL) {
+	if (xwm->drag_focus != XCB_NONE) {
 		lab_xwm_dnd_send_enter(xwm);
 	}
 }
@@ -265,15 +259,14 @@ static void seat_handle_drag_focus(struct wl_listener *listener, void *data) {
 		focus = xwayland_surface_try_from_wlr_surface(drag->focus);
 	}
 
-	lab_xwm_set_drag_focus(xwm, focus);
+	lab_xwm_set_drag_focus(xwm, focus ? focus->window_id : XCB_NONE);
 }
 
 static void seat_handle_drag_motion(struct wl_listener *listener, void *data) {
 	struct lab_xwm *xwm = wl_container_of(listener, xwm, seat_drag_motion);
 	struct wlr_drag_motion_event *event = data;
-	struct xwayland_surface *surface = xwm->drag_focus;
 
-	if (surface == NULL) {
+	if (xwm->drag_focus == XCB_NONE) {
 		return; // No xwayland surface focused
 	}
 
@@ -285,7 +278,7 @@ static void seat_handle_drag_drop(struct wl_listener *listener, void *data) {
 	struct lab_xwm *xwm = wl_container_of(listener, xwm, seat_drag_drop);
 	struct wlr_drag_drop_event *event = data;
 
-	if (xwm->drag_focus == NULL) {
+	if (xwm->drag_focus == XCB_NONE) {
 		return; // No xwayland surface focused
 	}
 
@@ -301,7 +294,7 @@ static void seat_handle_drag_destroy(struct wl_listener *listener, void *data) {
 
 	// Don't reset drag focus yet because the target will read the drag source
 	// right after
-	if (xwm->drag_focus != NULL && !xwm->drag->source->accepted) {
+	if (xwm->drag_focus != XCB_NONE && !xwm->drag->source->accepted) {
 		wlr_log(WLR_DEBUG, "Wayland drag cancelled over an Xwayland window");
 		lab_xwm_dnd_send_leave(xwm);
 	}
@@ -320,16 +313,16 @@ static void seat_handle_drag_source_destroy(struct wl_listener *listener,
 
 	wl_list_remove(&xwm->seat_drag_source_destroy.link);
 	wl_list_init(&xwm->seat_drag_source_destroy.link);
-	xwm->drag_focus = NULL;
-	xwm->drop_focus = NULL;
+	xwm->drag_focus = XCB_NONE;
+	xwm->drop_focus = XCB_NONE;
 }
 
 void
 lab_xwm_seat_handle_start_drag(struct lab_xwm *xwm, struct wlr_drag *drag)
 {
 	xwm->drag = drag;
-	xwm->drag_focus = NULL;
-	xwm->drop_focus = NULL;
+	xwm->drag_focus = XCB_NONE;
+	xwm->drop_focus = XCB_NONE;
 
 	if (drag != NULL) {
 		wl_signal_add(&drag->events.focus, &xwm->seat_drag_focus);

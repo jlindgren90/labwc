@@ -90,7 +90,7 @@ bool lab_data_source_is_xwayland(struct wlr_data_source *wlr_source);
 bool lab_primary_selection_source_is_xwayland(
 	struct wlr_primary_selection_source *wlr_source);
 
-void lab_xwm_set_drag_focus(struct lab_xwm *xwm, struct xwayland_surface *focus);
+void lab_xwm_set_drag_focus(struct lab_xwm *xwm, xcb_window_t focus);
 void lab_xwm_seat_handle_start_drag(struct lab_xwm *xwm, struct wlr_drag *drag);
 
 void lab_xwm_selection_init(struct lab_xwm_selection *selection,
