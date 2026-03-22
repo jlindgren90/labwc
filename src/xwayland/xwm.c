@@ -300,11 +300,11 @@ xwayland_surface_destroy(struct xwayland_surface *xsurface)
 	xwayland_surface_dissociate(xsurface);
 	xsurface_on_destroy(xsurface->window_id);
 
-	if (xsurface == g_xwm.drag_focus) {
-		lab_xwm_set_drag_focus(&g_xwm, NULL);
+	if (xsurface->window_id == g_xwm.drag_focus) {
+		lab_xwm_set_drag_focus(&g_xwm, XCB_NONE);
 	}
-	if (xsurface == g_xwm.drop_focus) {
-		g_xwm.drop_focus = NULL;
+	if (xsurface->window_id == g_xwm.drop_focus) {
+		g_xwm.drop_focus = XCB_NONE;
 	}
 
 	free(xsurface);
