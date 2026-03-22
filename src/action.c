@@ -754,8 +754,8 @@ show_menu(struct view *view, struct cursor_context *ctx,
 		return;
 	}
 
-	int x = server.seat.cursor->x;
-	int y = server.seat.cursor->y;
+	int x = g_seat.cursor->x;
+	int y = g_seat.cursor->y;
 
 	/* The client menu needs an active client */
 	bool is_client_menu = !strcasecmp(menu_name, "client-menu");
@@ -784,7 +784,7 @@ show_menu(struct view *view, struct cursor_context *ctx,
 	 */
 	if (pos_x && pos_y) {
 		struct output *output = output_nearest_to(
-			server.seat.cursor->x, server.seat.cursor->y);
+			g_seat.cursor->x, g_seat.cursor->y);
 		struct wlr_box usable = output_usable_area_in_layout_coords(output);
 
 		if (!strcasecmp(pos_x, "center")) {
@@ -1077,7 +1077,7 @@ warp_cursor(struct view *view, const char *to, const char *x, const char *y)
 			target_area.y + target_area.height + offset_y;
 	}
 
-	wlr_cursor_warp(server.seat.cursor, NULL, goto_x, goto_y);
+	wlr_cursor_warp(g_seat.cursor, NULL, goto_x, goto_y);
 	cursor_update_focus();
 }
 
@@ -1248,7 +1248,7 @@ run_action(struct view *view, struct action *action,
 		}
 		break;
 	case ACTION_TYPE_UNFOCUS:
-		seat_focus_surface(&server.seat, NULL);
+		seat_focus_surface(NULL);
 		break;
 	case ACTION_TYPE_ICONIFY:
 		if (view) {
@@ -1262,7 +1262,7 @@ run_action(struct view *view, struct action *action,
 			 * set by button press handling. For keybind-triggered
 			 * Move, set it now from current cursor position.
 			 */
-			if (view != server.seat.pressed.ctx.view) {
+			if (view != g_seat.pressed.ctx.view) {
 				interactive_set_grab_context(ctx);
 			}
 			interactive_begin(view, LAB_INPUT_STATE_MOVE,
@@ -1293,7 +1293,7 @@ run_action(struct view *view, struct action *action,
 			 * set by button press handling. For keybind-triggered
 			 * Resize, set it now from current cursor position.
 			 */
-			if (view != server.seat.pressed.ctx.view) {
+			if (view != g_seat.pressed.ctx.view) {
 				interactive_set_grab_context(ctx);
 			}
 			interactive_begin(view, LAB_INPUT_STATE_RESIZE,
@@ -1568,14 +1568,14 @@ run_action(struct view *view, struct action *action,
 		}
 		break;
 	case ACTION_TYPE_ENABLE_SCROLL_WHEEL_EMULATION:
-		server.seat.cursor_scroll_wheel_emulation = true;
+		g_seat.cursor_scroll_wheel_emulation = true;
 		break;
 	case ACTION_TYPE_DISABLE_SCROLL_WHEEL_EMULATION:
-		server.seat.cursor_scroll_wheel_emulation = false;
+		g_seat.cursor_scroll_wheel_emulation = false;
 		break;
 	case ACTION_TYPE_TOGGLE_SCROLL_WHEEL_EMULATION:
-		server.seat.cursor_scroll_wheel_emulation =
-			!server.seat.cursor_scroll_wheel_emulation;
+		g_seat.cursor_scroll_wheel_emulation =
+			!g_seat.cursor_scroll_wheel_emulation;
 		break;
 	case ACTION_TYPE_ENABLE_TABLET_MOUSE_EMULATION:
 		rc.tablet.force_mouse_emulation = true;
@@ -1603,7 +1603,7 @@ run_action(struct view *view, struct action *action,
 		break;
 	}
 	case ACTION_TYPE_HIDE_CURSOR:
-		cursor_set_visible(&server.seat, false);
+		cursor_set_visible(false);
 		break;
 	case ACTION_TYPE_INVALID:
 		wlr_log(WLR_ERROR, "Not executing unknown action");
