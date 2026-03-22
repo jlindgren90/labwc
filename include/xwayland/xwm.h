@@ -96,8 +96,8 @@ struct lab_xwm {
 	struct lab_xwm_selection dnd_selection;
 
 	struct wlr_drag *drag;
-	struct xwayland_surface *drag_focus;
-	struct xwayland_surface *drop_focus;
+	xcb_window_t drag_focus;
+	xcb_window_t drop_focus;
 
 	const xcb_query_extension_reply_t *xfixes;
 	uint32_t xfixes_major_version;
