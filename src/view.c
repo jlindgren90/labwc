@@ -474,10 +474,10 @@ view_set_activated(struct view *view, bool activated)
 		if (!activated) {
 			/* Store configured keyboard layout per view */
 			view->keyboard_layout =
-				server.seat.keyboard_group->keyboard.modifiers.group;
+				g_seat.keyboard_group->keyboard.modifiers.group;
 		} else {
 			/* Switch to previously stored keyboard layout */
-			keyboard_update_layout(&server.seat, view->keyboard_layout);
+			keyboard_update_layout(view->keyboard_layout);
 		}
 	}
 	output_set_has_fullscreen_view(view->output, view->fullscreen);
@@ -643,13 +643,12 @@ view_compute_near_cursor_position(struct view *view, struct wlr_box *geom)
 	}
 
 	struct border margin = ssd_thickness(view);
-	struct seat *seat = &server.seat;
 
 	int total_width = geom->width + margin.left + margin.right;
 	int total_height = geom->height + margin.top + margin.bottom;
 
-	int x = (int)seat->cursor->x - (total_width / 2);
-	int y = (int)seat->cursor->y - (total_height / 2);
+	int x = (int)g_seat.cursor->x - (total_width / 2);
+	int y = (int)g_seat.cursor->y - (total_height / 2);
 
 	/*
 	 * Order of MIN/MAX is significant here (so that the top-left
