@@ -35,6 +35,7 @@ impl BitOrAssign for UpdateLevel {
     }
 }
 
+#[derive(Clone, Copy)]
 pub enum ViewSpec {
     Xdg(*mut CView),
     Xwayland(XId, *mut XSurface),
@@ -123,8 +124,8 @@ impl View {
         self.v.get_parent()
     }
 
-    pub fn get_root_id(&self) -> ViewId {
-        self.v.get_root_id()
+    pub fn get_root_id(&self, xwm: &Xwm) -> ViewId {
+        self.v.get_root_id(xwm)
     }
 
     pub fn is_modal_dialog(&self) -> bool {

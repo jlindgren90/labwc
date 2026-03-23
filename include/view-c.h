@@ -122,7 +122,6 @@ void xdg_toplevel_view_configure(CView *view, Rect geom, _Bool *commit_move);
 void xdg_toplevel_view_close(CView *view);
 
 WlrSurface *xwayland_view_get_surface(XSurface *xsurface);
-ViewId xwayland_view_get_root_id(XSurface *xsurface);
 void xwayland_view_configure(XSurface *xsurface, Rect current, Rect geom,
 	_Bool *commit_move);
 
@@ -160,10 +159,12 @@ void top_layer_hide_on_output(Output *output);
 void xwayland_set_net_client_list(const XId *xids, unsigned num_xids);
 void xwayland_surface_activate(XSurface *xsurface); // allows NULL xsurface
 void xwayland_surface_close(XSurface *xsurface);
+void xwayland_surface_destroy(XSurface *xsurface);
 XSurfaceProps xwayland_surface_get_props(XSurface *xsurface);
 _Bool xwayland_surface_is_focused(XSurface *xsurface);
 void xwayland_surface_offer_focus(XSurface *xsurface);
 void xwayland_surface_publish_state(XSurface *xsurface, const ViewState *state);
+void xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id);
 void xwayland_surface_stack_above(XSurface *xsurface, XId sibling);
 
 #endif // LABWC_VIEW_C_H

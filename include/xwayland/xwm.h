@@ -100,10 +100,6 @@ struct lab_xwm {
 	struct xwayland_surface *focus_surface;
 	struct xwayland_surface *offered_focus;
 
-	// Surfaces in creation order
-	struct wl_list surfaces; // xwayland_surface.link
-	struct wl_list unpaired_surfaces; // xwayland_surface.unpaired_link
-
 	struct wlr_drag *drag;
 	struct xwayland_surface *drag_focus;
 	struct xwayland_surface *drop_focus;

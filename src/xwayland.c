@@ -23,17 +23,6 @@ xwayland_view_get_surface(struct xwayland_surface *xsurface)
 	return xsurface->surface;
 }
 
-static struct xwayland_surface *
-top_parent_of(struct xwayland_surface *xsurface)
-{
-	struct xwayland_surface *s = xsurface;
-	struct xwayland_surface *parent;
-	while ((parent = xwayland_surface_get_parent(s))) {
-		s = parent;
-	}
-	return s;
-}
-
 void
 xwayland_surface_on_commit(struct xwayland_surface *xsurface)
 {
@@ -171,10 +160,9 @@ xwayland_surface_on_set_override_redirect(struct xwayland_surface *xsurface)
 
 	if (xsurface->override_redirect) {
 		view_remove(xsurface->view_id);
-		xsurface->view_id = 0;
 	} else {
 		assert(!xsurface->view_id);
-		xsurface->view_id = view_add_xwayland(xsurface->window_id, xsurface);
+		view_add_xwayland(xsurface->window_id, xsurface);
 		// Re-read properties after unmanaged surface becomes managed
 		xwayland_surface_read_properties(xsurface);
 	}
@@ -308,20 +296,6 @@ xwayland_surface_on_unmap(struct xwayland_surface *xsurface)
 	}
 
 	view_unmap(xsurface->view_id);
-}
-
-ViewId
-xwayland_view_get_root_id(struct xwayland_surface *xsurface)
-{
-	struct xwayland_surface *root = top_parent_of(xsurface);
-
-	/*
-	 * The case of root->data == NULL is unlikely, but has been reported
-	 * when starting XWayland games (for example 'Fall Guys'). It is
-	 * believed to be caused by setting override-redirect on the root
-	 * xwayland_surface making it not be associated with a view anymore.
-	 */
-	return (root && root->view_id) ? root->view_id : xsurface->view_id;
 }
 
 void
