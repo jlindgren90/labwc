@@ -420,3 +420,52 @@ pub extern "C" fn cycle_list_len() -> usize {
 pub extern "C" fn cycle_list_nth(n: usize) -> ViewId {
     views().cycle_list_nth(n)
 }
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_add(xid: XId, xsurface: *mut XSurface) {
+    views_mut().add_xsurface(xid, xsurface);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_lookup(xid: XId) -> *mut XSurface {
+    views().get_xwm().get_xsurface(xid)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_get_for_serial(serial: u64) -> *mut XSurface {
+    views().get_xwm().get_for_serial(serial)
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_get_for_surface_id(surface_id: u32) -> *mut XSurface {
+    views().get_xwm().get_for_surface_id(surface_id)
+}
+
+// Called from xwayland_surface_destroy()
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_on_destroy(xid: XId) {
+    views_mut().remove_xsurface(xid);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_destroy_all() {
+    let xsurfaces = views().get_xwm().get_all();
+    for xsurface in xsurfaces {
+        unsafe { xwayland_surface_destroy(xsurface) };
+    }
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_parent_xid(xid: XId, parent_xid: XId) {
+    views_mut().set_parent_xid(xid, parent_xid);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_serial(xid: XId, serial: u64) {
+    views_mut().set_xsurface_serial(xid, serial);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn xsurface_set_surface_id(xid: XId, surface_id: u32) {
+    views_mut().set_xsurface_surface_id(xid, surface_id);
+}

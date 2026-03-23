@@ -97,28 +97,16 @@ struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 	return xsurface;
 }
 
-// TODO: replace this with hash table?
-static struct xwayland_surface *lookup_surface(struct lab_xwm *xwm,
-		xcb_window_t window_id) {
-	struct xwayland_surface *surface;
-	wl_list_for_each(surface, &xwm->surfaces, link) {
-		if (surface->window_id == window_id) {
-			return surface;
-		}
-	}
-	return NULL;
-}
-
-struct xwayland_surface *
-xwayland_surface_get_parent(struct xwayland_surface *surface)
-{
-	return lookup_surface(surface->xwm, surface->parent);
-}
-
 XSurfaceProps
 xwayland_surface_get_props(struct xwayland_surface *xsurface)
 {
 	return xsurface->props;
+}
+
+void
+xwayland_surface_set_view_id(XSurface *xsurface, ViewId view_id)
+{
+	xsurface->view_id = view_id;
 }
 
 static struct xwayland_surface *xwayland_surface_create(
@@ -144,12 +132,11 @@ static struct xwayland_surface *xwayland_surface_create(
 	surface->props.geom.width = width;
 	surface->props.geom.height = height;
 	surface->override_redirect = override_redirect;
-	wl_list_init(&surface->unpaired_link);
 
-	wl_list_insert(&xwm->surfaces, &surface->link);
+	xsurface_add(window_id, surface);
 
 	if (!surface->override_redirect) {
-		surface->view_id = view_add_xwayland(surface->window_id, surface);
+		view_add_xwayland(window_id, surface);
 		xwayland_surface_read_properties(surface);
 	}
 
@@ -374,24 +361,13 @@ static void xwayland_surface_dissociate(struct xwayland_surface *xsurface) {
 		wlr_addon_finish(&xsurface->surface_addon);
 		xsurface->surface = NULL;
 	}
-
-	// Make sure we're not on the unpaired surface list or we
-	// could be assigned a surface during surface creation that
-	// was mapped before this unmap request.
-	wl_list_remove(&xsurface->unpaired_link);
-	wl_list_init(&xsurface->unpaired_link);
-	xsurface->surface_id = 0;
-	xsurface->serial = 0;
 }
 
-static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
+void
+xwayland_surface_destroy(struct xwayland_surface *xsurface)
+{
 	xwayland_surface_dissociate(xsurface);
-
-	if (xsurface->override_redirect) {
-		assert(!xsurface->view_id);
-	} else {
-		view_remove(xsurface->view_id);
-	}
+	xsurface_on_destroy(xsurface->window_id);
 
 	if (xsurface == xsurface->xwm->drag_focus) {
 		lab_xwm_set_drag_focus(xsurface->xwm, NULL);
@@ -406,9 +382,6 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	if (xsurface == xsurface->xwm->offered_focus) {
 		xsurface->xwm->offered_focus = NULL;
 	}
-
-	wl_list_remove(&xsurface->link);
-	wl_list_remove(&xsurface->unpaired_link);
 
 	free(xsurface);
 }
@@ -472,9 +445,9 @@ static void read_surface_parent(struct lab_xwm *xwm,
 
 	xcb_window_t *xid = xcb_get_property_value(reply);
 	if (reply->type != XCB_ATOM_NONE && xid != NULL) {
-		xsurface->parent = *xid;
+		xsurface_set_parent_xid(xsurface->window_id, *xid);
 	} else {
-		xsurface->parent = XCB_NONE;
+		xsurface_set_parent_xid(xsurface->window_id, XCB_NONE);
 	}
 }
 
@@ -787,9 +760,8 @@ static void xwayland_surface_associate(struct lab_xwm *xwm,
 		struct xwayland_surface *xsurface, struct wlr_surface *surface) {
 	assert(xsurface->surface == NULL);
 
-	wl_list_remove(&xsurface->unpaired_link);
-	wl_list_init(&xsurface->unpaired_link);
-	xsurface->surface_id = 0;
+	xsurface_set_serial(xsurface->window_id, 0);
+	xsurface_set_surface_id(xsurface->window_id, 0);
 
 	xsurface->surface = surface;
 	wlr_addon_init(&xsurface->surface_addon, &surface->addons, NULL, &surface_addon_impl);
@@ -857,7 +829,7 @@ static void lab_xwm_handle_create_notify(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_destroy_notify(struct lab_xwm *xwm,
 		xcb_destroy_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (xsurface == NULL) {
 		return;
 	}
@@ -867,7 +839,7 @@ static void lab_xwm_handle_destroy_notify(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_configure_request(struct lab_xwm *xwm,
 		xcb_configure_request_event_t *ev) {
-	struct xwayland_surface *surface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *surface = xsurface_lookup(ev->window);
 	if (surface == NULL) {
 		return;
 	}
@@ -905,7 +877,7 @@ static void lab_xwm_update_override_redirect(struct xwayland_surface *xsurface,
 
 static void lab_xwm_handle_configure_notify(struct lab_xwm *xwm,
 		xcb_configure_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (!xsurface) {
 		return;
 	}
@@ -974,7 +946,7 @@ xwayland_surface_stack_above(struct xwayland_surface *xsurface,
 
 static void lab_xwm_handle_map_request(struct lab_xwm *xwm,
 		xcb_map_request_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (!xsurface) {
 		return;
 	}
@@ -984,7 +956,7 @@ static void lab_xwm_handle_map_request(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_map_notify(struct lab_xwm *xwm,
 		xcb_map_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (!xsurface) {
 		return;
 	}
@@ -994,7 +966,7 @@ static void lab_xwm_handle_map_notify(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_unmap_notify(struct lab_xwm *xwm,
 		xcb_unmap_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (xsurface == NULL) {
 		return;
 	}
@@ -1012,7 +984,7 @@ static void lab_xwm_handle_unmap_notify(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_property_notify(struct lab_xwm *xwm,
 		xcb_property_notify_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (xsurface == NULL) {
 		return;
 	}
@@ -1031,7 +1003,7 @@ static void lab_xwm_handle_property_notify(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_surface_id_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (xsurface == NULL) {
 		wlr_log(WLR_DEBUG,
 			"client message WL_SURFACE_ID but no new window %u ?",
@@ -1046,38 +1018,30 @@ static void lab_xwm_handle_surface_id_message(struct lab_xwm *xwm,
 		struct wlr_surface *surface = wlr_surface_from_resource(resource);
 		xwayland_surface_associate(xwm, xsurface, surface);
 	} else {
-		xsurface->surface_id = id;
-		wl_list_remove(&xsurface->unpaired_link);
-		wl_list_insert(&xwm->unpaired_surfaces, &xsurface->unpaired_link);
+		xsurface_set_surface_id(xsurface->window_id, id);
 	}
 }
 
 static void lab_xwm_handle_surface_serial_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (xsurface == NULL) {
 		wlr_log(WLR_DEBUG,
 			"Received client message WL_SURFACE_SERIAL but no X11 window %u",
 			ev->window);
 		return;
 	}
-	if (xsurface->serial != 0) {
-		wlr_log(WLR_DEBUG, "Received multiple client messages WL_SURFACE_SERIAL "
-			"for the same X11 window %u", ev->window);
-		return;
-	}
 
 	uint32_t serial_lo = ev->data.data32[0];
 	uint32_t serial_hi = ev->data.data32[1];
-	xsurface->serial = ((uint64_t)serial_hi << 32) | serial_lo;
+	uint64_t serial = ((uint64_t)serial_hi << 32) | serial_lo;
 
 	struct wlr_surface *surface = xwayland_shell_v1_surface_from_serial(
-		xwm->server->shell_v1, xsurface->serial);
+		xwm->server->shell_v1, serial);
 	if (surface != NULL) {
 		xwayland_surface_associate(xwm, xsurface, surface);
 	} else {
-		wl_list_remove(&xsurface->unpaired_link);
-		wl_list_insert(&xwm->unpaired_surfaces, &xsurface->unpaired_link);
+		xsurface_set_serial(xsurface->window_id, serial);
 	}
 }
 
@@ -1117,7 +1081,7 @@ static enum wlr_edges net_wm_edges_to_wlr(uint32_t net_wm_edges) {
 
 static void lab_xwm_handle_net_wm_moveresize_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	if (!xsurface) {
 		return;
 	}
@@ -1173,7 +1137,7 @@ static bool update_state(int action, bool *state) {
 static void lab_xwm_handle_net_wm_state_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *client_message) {
 	struct xwayland_surface *xsurface =
-		lookup_surface(xwm, client_message->window);
+		xsurface_lookup(client_message->window);
 	if (!xsurface) {
 		return;
 	}
@@ -1229,7 +1193,7 @@ static void lab_xwm_handle_net_wm_state_message(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *surface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *surface = xsurface_lookup(ev->window);
 	if (surface == NULL) {
 		return;
 	}
@@ -1238,7 +1202,7 @@ static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *surface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *surface = xsurface_lookup(ev->window);
 	if (surface) {
 		view_close(surface->view_id);
 	}
@@ -1246,7 +1210,7 @@ static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
 
 static void lab_xwm_handle_wm_change_state_message(struct lab_xwm *xwm,
 		xcb_client_message_event_t *ev) {
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->window);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->window);
 	uint32_t detail = ev->data.data32[0];
 
 	if (xsurface == NULL) {
@@ -1311,7 +1275,7 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	// Do not interfere with keyboard grabs, but notify the
 	// compositor. Note that many legitimate X11 applications use
 	// keyboard grabs to "steal" focus for e.g. popup menus.
-	struct xwayland_surface *xsurface = lookup_surface(xwm, ev->event);
+	struct xwayland_surface *xsurface = xsurface_lookup(ev->event);
 	if (ev->mode == XCB_NOTIFY_MODE_GRAB) {
 		if (xsurface) {
 			xwayland_surface_on_grab_focus(xsurface);
@@ -1475,13 +1439,11 @@ static void handle_compositor_new_surface(struct wl_listener *listener,
 	wlr_log(WLR_DEBUG, "New xwayland surface: %p", surface);
 
 	uint32_t surface_id = wl_resource_get_id(surface->resource);
-	struct xwayland_surface *xsurface;
-	wl_list_for_each(xsurface, &xwm->unpaired_surfaces, unpaired_link) {
-		if (xsurface->surface_id == surface_id) {
-			xwayland_surface_associate(xwm, xsurface, surface);
-			xcb_flush(xwm->xcb_conn);
-			return;
-		}
+	struct xwayland_surface *xsurface =
+		xsurface_get_for_surface_id(surface_id);
+	if (xsurface) {
+		xwayland_surface_associate(xwm, xsurface, surface);
+		xcb_flush(xwm->xcb_conn);
 	}
 }
 
@@ -1500,12 +1462,10 @@ static void handle_shell_v1_new_surface(struct wl_listener *listener,
 	struct lab_xwm *xwm = wl_container_of(listener, xwm, shell_v1_new_surface);
 	struct xwayland_surface_v1 *shell_surface = data;
 
-	struct xwayland_surface *xsurface;
-	wl_list_for_each(xsurface, &xwm->unpaired_surfaces, unpaired_link) {
-		if (xsurface->serial == shell_surface->serial) {
-			xwayland_surface_associate(xwm, xsurface, shell_surface->surface);
-			return;
-		}
+	struct xwayland_surface *xsurface =
+		xsurface_get_for_serial(shell_surface->serial);
+	if (xsurface) {
+		xwayland_surface_associate(xwm, xsurface, shell_surface->surface);
 	}
 }
 
@@ -1613,13 +1573,7 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 	if (xwm->errors_context) {
 		xcb_errors_context_free(xwm->errors_context);
 	}
-	struct xwayland_surface *xsurface, *tmp;
-	wl_list_for_each_safe(xsurface, tmp, &xwm->surfaces, link) {
-		xwayland_surface_destroy(xsurface);
-	}
-	wl_list_for_each_safe(xsurface, tmp, &xwm->unpaired_surfaces, unpaired_link) {
-		xwayland_surface_destroy(xsurface);
-	}
+	xsurface_destroy_all();
 	wl_list_remove(&xwm->compositor_new_surface.link);
 	wl_list_remove(&xwm->compositor_destroy.link);
 	wl_list_remove(&xwm->shell_v1_new_surface.link);
@@ -1818,8 +1772,6 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 	}
 
 	xwm->server = server;
-	wl_list_init(&xwm->surfaces);
-	wl_list_init(&xwm->unpaired_surfaces);
 	wl_list_init(&xwm->seat_drag_source_destroy.link);
 
 	// xcb_connect_to_fd takes ownership of the FD regardless of success/failure

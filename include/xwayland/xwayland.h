@@ -32,19 +32,12 @@ struct xwayland_server;
 struct xwayland_surface {
 	xcb_window_t window_id;
 	struct lab_xwm *xwm;
-	uint32_t surface_id;
-	uint64_t serial;
-
-	struct wl_list link;
-	struct wl_list unpaired_link;
 
 	struct wlr_surface *surface;
 	struct wlr_addon surface_addon;
 
 	XSurfaceProps props;
 	bool override_redirect;
-
-	xcb_window_t parent;
 	bool has_net_wm_name;
 
 	struct wl_listener surface_commit;
@@ -90,9 +83,6 @@ void xwayland_surface_close(struct xwayland_surface *surface);
  */
 struct xwayland_surface *xwayland_surface_try_from_wlr_surface(
 	struct wlr_surface *surface);
-
-struct xwayland_surface *xwayland_surface_get_parent(
-	struct xwayland_surface *surface);
 
 /**
  * Offer focus by sending WM_TAKE_FOCUS to a client window supporting it.
