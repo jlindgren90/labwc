@@ -10,9 +10,6 @@
 
 struct view;
 
-void view_impl_map(struct view *view);
-void view_impl_unmap(struct view *view);
-
 /*
  * Updates view geometry at commit based on current position/size,
  * pending move/resize, and committed surface size. The computed

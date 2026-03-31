@@ -20,6 +20,7 @@ endforeach
 bindings = [
   custom_target(
     input: [
+      'common/edge.h',
       'rs-bindings.h',
       'rs-types.h',
       'view-c.h',
