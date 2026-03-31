@@ -11,10 +11,10 @@ pub struct Views {
 }
 
 impl Views {
-    pub fn add(&mut self, c_ptr: *mut CView) -> ViewId {
+    pub fn add(&mut self, c_ptr: *mut CView, is_xwayland: bool) -> ViewId {
         self.max_used_id += 1;
         let id = self.max_used_id;
-        self.by_id.insert(id, View::new(c_ptr));
+        self.by_id.insert(id, View::new(c_ptr, is_xwayland));
         return id;
     }
 
