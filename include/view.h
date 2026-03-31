@@ -19,11 +19,6 @@
 #define LAB_MIN_VIEW_WIDTH 100
 #define LAB_MIN_VIEW_HEIGHT 60
 
-enum view_layer {
-	VIEW_LAYER_NORMAL = 0,
-	VIEW_LAYER_ALWAYS_ON_TOP,
-};
-
 struct wlr_surface;
 
 struct view {
@@ -33,8 +28,6 @@ struct view {
 
 	struct wlr_scene_tree *scene_tree;
 	struct wlr_scene_tree *content_tree; /* may be NULL for unmapped view */
-
-	enum view_layer layer;
 
 	/* used by xdg-shell views */
 	uint32_t pending_configure_serial;
@@ -93,9 +86,6 @@ struct view *view_from_wlr_surface(struct wlr_surface *surface);
 bool view_inhibits_actions(struct view *view, struct wl_list *actions);
 
 void view_toggle_maximize(struct view *view, enum view_axis axis);
-
-void view_set_layer(struct view *view, enum view_layer layer);
-void view_toggle_always_on_top(struct view *view);
 
 void view_toggle_fullscreen(struct view *view);
 

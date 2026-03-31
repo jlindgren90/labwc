@@ -468,11 +468,7 @@ server_init(void)
 	wlr_color_representation_manager_v1_create_with_renderer(
 		server.wl_display, 1, server.renderer);
 
-	server.view_trees[VIEW_LAYER_NORMAL] =
-		lab_wlr_scene_tree_create(&server.scene->tree);
-	server.view_trees[VIEW_LAYER_ALWAYS_ON_TOP] =
-		lab_wlr_scene_tree_create(&server.scene->tree);
-
+	server.view_tree = lab_wlr_scene_tree_create(&server.scene->tree);
 	// Creating/setting this is harmless when xwayland support is built-in
 	// but xwayland could not be successfully started.
 	server.unmanaged_tree = lab_wlr_scene_tree_create(&server.scene->tree);

@@ -82,6 +82,23 @@ pub extern "C" fn view_unmap_common(id: ViewId) {
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn view_set_always_on_top(id: ViewId, always_on_top: bool) {
+    let ul = views_mut().set_always_on_top(id, always_on_top);
+    do_update(ul);
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn view_toggle_always_on_top(id: ViewId) {
+    let always_on_top;
+    if let Some(view) = views().get_view(id) {
+        always_on_top = view.get_state().always_on_top;
+    } else {
+        return;
+    }
+    view_set_always_on_top(id, !always_on_top);
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn view_get_active() -> *mut CView {
     views().get_active()
 }
@@ -236,7 +253,7 @@ pub extern "C" fn view_minimize(id: ViewId, minimized: bool) {
 
 #[unsafe(no_mangle)]
 pub extern "C" fn view_raise(id: ViewId) {
-    let ul = views_mut().raise(id);
+    let ul = views_mut().raise(id, /* force_restack */ false);
     do_update(ul);
 }
 
@@ -245,7 +262,7 @@ pub extern "C" fn view_focus(id: ViewId, raise: bool) {
     // Unminimizing also focuses (and raises) the view
     let (was_shown, mut ul) = views_mut().minimize(id, false);
     if !was_shown {
-        ul |= views_mut().focus(id, raise);
+        ul |= views_mut().focus(id, raise, /* force_restack */ false);
     }
     do_update(ul);
 }
