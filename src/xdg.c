@@ -680,8 +680,7 @@ handle_new_xdg_toplevel(struct wl_listener *listener, void *data)
 
 	view->xdg_surface = xdg_surface;
 
-	view->scene_tree = lab_wlr_scene_tree_create(
-		server.view_trees[VIEW_LAYER_NORMAL]);
+	view->scene_tree = lab_wlr_scene_tree_create(server.view_tree);
 	wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 
 	view->content_tree = wlr_scene_subsurface_tree_create(
