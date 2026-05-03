@@ -113,7 +113,6 @@ struct lab_xwm {
 	xcb_connection_t *xcb_conn;
 	xcb_screen_t *screen;
 	xcb_window_t window;
-	xcb_window_t no_focus_window;
 	xcb_render_pictformat_t render_format_id;
 	xcb_cursor_t cursor;
 

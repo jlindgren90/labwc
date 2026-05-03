@@ -400,7 +400,7 @@ static void lab_xwm_set_focused_window(struct lab_xwm *xwm,
 		xsurface_set_net_wm_state(xsurface);
 		lab_xwm_set_net_active_window(xwm, xsurface->window_id);
 	} else {
-		lab_xwm_set_net_active_window(xwm, xwm->no_focus_window);
+		lab_xwm_set_net_active_window(xwm, XCB_WINDOW_NONE);
 	}
 }
 
@@ -1911,9 +1911,6 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 	if (xwm->cursor) {
 		xcb_free_cursor(xwm->xcb_conn, xwm->cursor);
 	}
-	if (xwm->no_focus_window) {
-		xcb_destroy_window(xwm->xcb_conn, xwm->no_focus_window);
-	}
 	if (xwm->window) {
 		xcb_destroy_window(xwm->xcb_conn, xwm->window);
 	}
@@ -2062,31 +2059,6 @@ static void lab_xwm_create_wm_window(struct lab_xwm *xwm) {
 		xwm->window,
 		xwm->atoms[NET_WM_CM_S0],
 		XCB_CURRENT_TIME);
-}
-
-static void lab_xwm_create_no_focus_window(struct lab_xwm *xwm) {
-	xwm->no_focus_window = xcb_generate_id(xwm->xcb_conn);
-
-	uint32_t values[2] = {
-		1,
-		XCB_EVENT_MASK_KEY_PRESS |
-			XCB_EVENT_MASK_KEY_RELEASE |
-			XCB_EVENT_MASK_FOCUS_CHANGE
-	};
-	xcb_create_window(xwm->xcb_conn,
-		XCB_COPY_FROM_PARENT,
-		xwm->no_focus_window,
-		xwm->screen->root,
-		-100, -100,
-		1, 1,
-		0,
-		XCB_WINDOW_CLASS_COPY_FROM_PARENT,
-		XCB_COPY_FROM_PARENT,
-		XCB_CW_OVERRIDE_REDIRECT |
-			XCB_CW_EVENT_MASK,
-		values);
-
-	xcb_map_window(xwm->xcb_conn, xwm->no_focus_window);
 }
 
 static void lab_xwm_get_render_format(struct lab_xwm *xwm) {
@@ -2287,7 +2259,6 @@ struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
 		&xwm->shell_v1_destroy);
 
 	lab_xwm_create_wm_window(xwm);
-	lab_xwm_create_no_focus_window(xwm);
 
 	xcb_flush(xwm->xcb_conn);
 
