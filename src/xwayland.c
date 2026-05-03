@@ -498,6 +498,11 @@ handle_request_above(struct wl_listener *listener, void *data)
 		wl_container_of(listener, xwayland_view, request_above);
 	struct view *view = &xwayland_view->base;
 
+	if (window_rules_get_property(view, "allowAlwaysOnTop") != LAB_PROP_TRUE) {
+		wlr_log(WLR_INFO, "X11 client side always on top request rejected");
+		return;
+	}
+
 	view_set_layer(view, xwayland_view->xwayland_surface->above
 		? VIEW_LAYER_ALWAYS_ON_TOP : VIEW_LAYER_NORMAL);
 }
