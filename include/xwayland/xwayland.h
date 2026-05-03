@@ -120,10 +120,6 @@ struct xwayland_surface {
 	bool above;
 
 	struct {
-		struct wl_signal destroy;
-	} events;
-
-	struct {
 		char *wm_name, *net_wm_name;
 
 		struct wl_listener surface_commit;

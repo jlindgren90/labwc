@@ -150,8 +150,6 @@ struct lab_xwm {
 	struct wl_listener seat_drag_drop;
 	struct wl_listener seat_drag_destroy;
 	struct wl_listener seat_drag_source_destroy;
-	struct wl_listener drag_focus_destroy;
-	struct wl_listener drop_focus_destroy;
 };
 
 // lab_xwm_create takes ownership of wm_fd and will close it under all circumstances.

@@ -162,8 +162,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	wl_list_init(&surface->parent_link);
 	wl_list_init(&surface->unpaired_link);
 
-	wl_signal_init(&surface->events.destroy);
-
 	wl_list_insert(&xwm->surfaces, &surface->link);
 
 	xwayland_on_new_surface(surface);
@@ -455,9 +453,12 @@ static void xwayland_surface_destroy(struct xwayland_surface *xsurface) {
 	xwayland_surface_dissociate(xsurface);
 	xwayland_surface_on_destroy(xsurface);
 
-	wl_signal_emit_mutable(&xsurface->events.destroy, NULL);
-
-	assert(wl_list_empty(&xsurface->events.destroy.listener_list));
+	if (xsurface == xsurface->xwm->drag_focus) {
+		lab_xwm_set_drag_focus(xsurface->xwm, NULL);
+	}
+	if (xsurface == xsurface->xwm->drop_focus) {
+		xsurface->xwm->drop_focus = NULL;
+	}
 
 	if (xsurface == xsurface->xwm->focus_surface) {
 		lab_xwm_surface_activate(xsurface->xwm, NULL);
@@ -2045,8 +2046,6 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 	wl_list_init(&xwm->surfaces_in_stack_order);
 	wl_list_init(&xwm->unpaired_surfaces);
 	wl_list_init(&xwm->seat_drag_source_destroy.link);
-	wl_list_init(&xwm->drag_focus_destroy.link);
-	wl_list_init(&xwm->drop_focus_destroy.link);
 
 	// xcb_connect_to_fd takes ownership of the FD regardless of success/failure
 	xwm->xcb_conn = xcb_connect_to_fd(wm_fd, NULL);
