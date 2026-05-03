@@ -278,7 +278,7 @@ static void lab_xwm_send_wm_message(struct xwayland_surface *surface,
 		event_mask,
 		&event,
 		sizeof(event));
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 static void lab_xwm_set_net_client_list(struct lab_xwm *xwm) {
@@ -436,7 +436,7 @@ static void lab_xwm_surface_activate(struct lab_xwm *xwm,
 	}
 
 	lab_xwm_set_focused_window(xwm, xsurface);
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 static void xsurface_set_net_wm_state(struct xwayland_surface *xsurface) {
@@ -1215,7 +1215,7 @@ void xwayland_surface_restack(struct xwayland_surface *xsurface,
 
 	wl_list_insert(node, &xsurface->stack_link);
 	lab_xwm_set_net_client_list_stacking(xwm);
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 static void lab_xwm_handle_map_request(struct lab_xwm *xwm,
@@ -1734,7 +1734,7 @@ static int x11_event_handler(int fd, uint32_t mask, void *data) {
 	if (mask & WL_EVENT_READABLE) {
 		count = read_x11_events(xwm);
 		if (count) {
-			lab_xwm_schedule_flush(xwm);
+			xcb_flush(xwm->xcb_conn);
 		}
 	}
 
@@ -1766,7 +1766,7 @@ static void handle_compositor_new_surface(struct wl_listener *listener,
 	wl_list_for_each(xsurface, &xwm->unpaired_surfaces, unpaired_link) {
 		if (xsurface->surface_id == surface_id) {
 			xwayland_surface_associate(xwm, xsurface, surface);
-			lab_xwm_schedule_flush(xwm);
+			xcb_flush(xwm->xcb_conn);
 			return;
 		}
 	}
@@ -1855,7 +1855,7 @@ void xwayland_surface_configure(struct xwayland_surface *xsurface,
 			sizeof(configure_notify));
 	}
 
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 void xwayland_surface_close(struct xwayland_surface *xsurface) {
@@ -1876,7 +1876,7 @@ void xwayland_surface_close(struct xwayland_surface *xsurface) {
 		lab_xwm_send_wm_message(xsurface, &message_data, XCB_EVENT_MASK_NO_EVENT);
 	} else {
 		xcb_kill_client(xwm->xcb_conn, xsurface->window_id);
-		lab_xwm_schedule_flush(xwm);
+		xcb_flush(xwm->xcb_conn);
 	}
 }
 
@@ -2172,7 +2172,7 @@ void lab_xwm_set_cursor(struct lab_xwm *xwm, struct wlr_buffer *buffer,
 	uint32_t values[] = {xwm->cursor};
 	xcb_change_window_attributes(xwm->xcb_conn, xwm->screen->root,
 		XCB_CW_CURSOR, values);
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
@@ -2299,7 +2299,7 @@ void xwayland_surface_set_withdrawn(struct xwayland_surface *surface,
 	surface->withdrawn = withdrawn;
 	xsurface_set_wm_state(surface);
 	xsurface_set_net_wm_state(surface);
-	lab_xwm_schedule_flush(surface->xwm);
+	xcb_flush(surface->xwm->xcb_conn);
 }
 
 void xwayland_surface_set_minimized(struct xwayland_surface *surface,
@@ -2307,7 +2307,7 @@ void xwayland_surface_set_minimized(struct xwayland_surface *surface,
 	surface->minimized = minimized;
 	xsurface_set_wm_state(surface);
 	xsurface_set_net_wm_state(surface);
-	lab_xwm_schedule_flush(surface->xwm);
+	xcb_flush(surface->xwm->xcb_conn);
 }
 
 void xwayland_surface_set_maximized(struct xwayland_surface *surface,
@@ -2315,14 +2315,14 @@ void xwayland_surface_set_maximized(struct xwayland_surface *surface,
 	surface->maximized_horz = maximized_horz;
 	surface->maximized_vert = maximized_vert;
 	xsurface_set_net_wm_state(surface);
-	lab_xwm_schedule_flush(surface->xwm);
+	xcb_flush(surface->xwm->xcb_conn);
 }
 
 void xwayland_surface_set_fullscreen(struct xwayland_surface *surface,
 		bool fullscreen) {
 	surface->fullscreen = fullscreen;
 	xsurface_set_net_wm_state(surface);
-	lab_xwm_schedule_flush(surface->xwm);
+	xcb_flush(surface->xwm->xcb_conn);
 }
 
 bool lab_xwm_atoms_contains(struct lab_xwm *xwm, xcb_atom_t *atoms,
@@ -2404,28 +2404,4 @@ void xwayland_set_workareas(struct xwayland *xwayland,
 			xwm->screen->root, xwm->atoms[NET_WORKAREA],
 			XCB_ATOM_CARDINAL, 32, 4 * num_workareas, data);
 	free(data);
-}
-
-xcb_connection_t *xwayland_get_xwm_connection(
-	struct xwayland *xwayland) {
-	return xwayland->xwm ? xwayland->xwm->xcb_conn : NULL;
-}
-
-void lab_xwm_schedule_flush(struct lab_xwm *xwm) {
-	struct pollfd pollfd = {
-		.fd = xcb_get_file_descriptor(xwm->xcb_conn),
-		.events = POLLOUT,
-	};
-	if (poll(&pollfd, 1, 0) < 0) {
-		wlr_log(WLR_ERROR, "poll() failed");
-		return;
-	}
-
-	// If we can write immediately, do so
-	if (pollfd.revents & POLLOUT) {
-		xcb_flush(xwm->xcb_conn);
-		return;
-	}
-
-	wl_event_source_fd_update(xwm->event_source, WL_EVENT_READABLE | WL_EVENT_WRITABLE);
 }

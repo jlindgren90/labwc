@@ -324,14 +324,4 @@ bool xwayland_surface_fetch_icon(
 	const struct xwayland_surface *xsurface,
 	xcb_ewmh_get_wm_icon_reply_t *icon_reply);
 
-/**
- * Get the XCB connection of the XWM.
- *
- * The connection is only valid after xwayland.events.ready, and becomes
- * invalid on xwayland_server.events.destroy. In that case, NULL is
- * returned.
- */
-xcb_connection_t *xwayland_get_xwm_connection(
-	struct xwayland *xwayland);
-
 #endif

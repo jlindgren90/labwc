@@ -36,7 +36,7 @@ static void lab_xwm_selection_send_notify(struct lab_xwm *xwm,
 		XCB_EVENT_MASK_NO_EVENT,
 		&selection_notify,
 		sizeof(selection_notify));
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 static int lab_xwm_selection_flush_source_data(
@@ -49,7 +49,7 @@ static int lab_xwm_selection_flush_source_data(
 		8, // format
 		transfer->source_data.size,
 		transfer->source_data.data);
-	lab_xwm_schedule_flush(transfer->selection->xwm);
+	xcb_flush(transfer->selection->xwm->xcb_conn);
 	transfer->property_set = true;
 	size_t length = transfer->source_data.size;
 	transfer->source_data.size = 0;

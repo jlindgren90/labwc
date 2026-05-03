@@ -9,6 +9,4 @@ void xwayland_server_finish(void);
 
 void xwayland_update_workarea(void);
 
-void xwayland_flush(void);
-
 #endif /* LABWC_XWAYLAND_H */

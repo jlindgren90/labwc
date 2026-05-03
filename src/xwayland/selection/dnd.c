@@ -58,7 +58,7 @@ static void lab_xwm_dnd_send_event(struct lab_xwm *xwm, xcb_atom_t type,
 		XCB_EVENT_MASK_NO_EVENT,
 		&event,
 		sizeof(event));
-	lab_xwm_schedule_flush(xwm);
+	xcb_flush(xwm->xcb_conn);
 }
 
 static void lab_xwm_dnd_send_enter(struct lab_xwm *xwm) {
