@@ -854,6 +854,18 @@ handle_xwm_ready(struct wl_listener *listener, void *data)
 {
 	xwayland_set_seat(server.xwayland, g_seat.wlr_seat);
 	xwayland_update_workarea();
+
+	struct wlr_xcursor *xcursor;
+	xcursor = wlr_xcursor_manager_get_xcursor(
+		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
+	if (xcursor) {
+		struct wlr_xcursor_image *image = xcursor->images[0];
+		struct wlr_buffer *cursor_buffer = wlr_xcursor_image_get_buffer(image);
+		if (cursor_buffer) {
+			xwayland_set_cursor(server.xwayland, cursor_buffer,
+				image->hotspot_x, image->hotspot_y);
+		}
+	}
 }
 
 void
@@ -883,18 +895,6 @@ xwayland_server_init(struct wlr_compositor *compositor)
 	} else {
 		wlr_log(WLR_DEBUG, "xwayland is running on display %s",
 			server.xwayland->display_name);
-	}
-
-	struct wlr_xcursor *xcursor;
-	xcursor = wlr_xcursor_manager_get_xcursor(
-		g_seat.xcursor_manager, XCURSOR_DEFAULT, 1);
-	if (xcursor) {
-		struct wlr_xcursor_image *image = xcursor->images[0];
-		struct wlr_buffer *cursor_buffer = wlr_xcursor_image_get_buffer(image);
-		if (cursor_buffer) {
-			xwayland_set_cursor(server.xwayland, cursor_buffer,
-				image->hotspot_x, image->hotspot_y);
-		}
 	}
 }
 

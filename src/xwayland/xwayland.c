@@ -16,7 +16,6 @@
 #include "xwayland/server.h"
 #include "xwayland/shell.h"
 #include "xwayland/xwm.h"
-
 static void handle_server_destroy(struct wl_listener *listener, void *data) {
 	struct xwayland *xwayland =
 		wl_container_of(listener, xwayland, server_destroy);
@@ -45,11 +44,6 @@ static void xwayland_mark_ready(struct xwayland *xwayland) {
 
 	if (xwayland->seat) {
 		lab_xwm_set_seat(xwayland->xwm, xwayland->seat);
-	}
-
-	if (xwayland->cursor_buffer != NULL) {
-		lab_xwm_set_cursor(xwayland->xwm, xwayland->cursor_buffer,
-			xwayland->cursor_hotspot.x, xwayland->cursor_hotspot.y);
 	}
 
 	wl_signal_emit_mutable(&xwayland->events.ready, NULL);
@@ -87,7 +81,6 @@ void xwayland_destroy(struct xwayland *xwayland) {
 	wl_list_remove(&xwayland->server_start.link);
 	wl_list_remove(&xwayland->server_ready.link);
 	wl_list_remove(&xwayland->shell_destroy.link);
-	wlr_buffer_unlock(xwayland->cursor_buffer);
 
 	xwayland_set_seat(xwayland, NULL);
 	if (xwayland->own_server) {
@@ -176,11 +169,6 @@ void xwayland_set_cursor(struct xwayland *xwayland,
 		lab_xwm_set_cursor(xwayland->xwm, buffer, hotspot_x, hotspot_y);
 		return;
 	}
-
-	wlr_buffer_unlock(xwayland->cursor_buffer);
-	xwayland->cursor_buffer = wlr_buffer_lock(buffer);
-	xwayland->cursor_hotspot.x = hotspot_x;
-	xwayland->cursor_hotspot.y = hotspot_y;
 }
 
 static void xwayland_handle_seat_destroy(struct wl_listener *listener,
