@@ -146,13 +146,6 @@ static struct xwayland_surface *xwayland_surface_create(
 	return surface;
 }
 
-static void lab_xwm_set_net_active_window(struct lab_xwm *xwm,
-		xcb_window_t window) {
-	xcb_change_property(xwm->xcb_conn, XCB_PROP_MODE_REPLACE,
-			xwm->screen->root, xwm->atoms[NET_ACTIVE_WINDOW],
-			xwm->atoms[WINDOW], 32, 1, &window);
-}
-
 /*
  * Wrapper for xcb_send_event, which ensures that the event data is 32 byte big.
  */
@@ -171,22 +164,22 @@ xcb_void_cookie_t lab_xwm_send_event_with_size(xcb_connection_t *c,
 	}
 }
 
-static void lab_xwm_send_wm_message(struct xwayland_surface *surface,
-		xcb_client_message_data_t *data, uint32_t event_mask) {
-	struct lab_xwm *xwm = surface->xwm;
-
+static void
+lab_xwm_send_wm_message(struct lab_xwm *xwm, xcb_window_t window_id,
+		xcb_client_message_data_t *data, uint32_t event_mask)
+{
 	xcb_client_message_event_t event = {
 		.response_type = XCB_CLIENT_MESSAGE,
 		.format = 32,
 		.sequence = 0,
-		.window = surface->window_id,
+		.window = window_id,
 		.type = xwm->atoms[WM_PROTOCOLS],
 		.data = *data,
 	};
 
 	lab_xwm_send_event_with_size(xwm->xcb_conn,
 		0, // propagate
-		surface->window_id,
+		window_id,
 		event_mask,
 		&event,
 		sizeof(event));
@@ -206,112 +199,47 @@ xwayland_set_net_client_list(const xcb_window_t *xids, unsigned num_xids)
 			XCB_ATOM_WINDOW, 32, num_xids, xids);
 }
 
-// Gives input (keyboard) focus to a window.
-// Normally followed by lab_xwm_set_focused_window().
-static void lab_xwm_focus_window(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface) {
-
-	// We handle cases where focus_surface == xsurface because we
-	// want to be able to deny FocusIn events.
-	if (!xsurface) {
-		// XCB_POINTER_ROOT is described in xcb documentation but isn't
-		// actually defined in the headers. It's distinct from XCB_NONE
-		// (which disables keyboard input entirely and causes issues
-		// with keyboard grabs for e.g. popups).
-		xcb_set_input_focus_checked(xwm->xcb_conn,
-			XCB_INPUT_FOCUS_POINTER_ROOT,
-			1L /*XCB_POINTER_ROOT*/, XCB_CURRENT_TIME);
-		return;
-	}
-
-	if (IS_UNMANAGED(xsurface)) {
-		return;
-	}
-
-	xcb_client_message_data_t message_data = { 0 };
-	message_data.data32[0] = xwm->atoms[WM_TAKE_FOCUS];
-	message_data.data32[1] = XCB_TIME_CURRENT_TIME;
-
-	if (xsurface->props.no_input_hint) {
-		// if the surface doesn't allow the focus request, we will send him
-		// only the take focus event. It will get the focus by itself.
-		lab_xwm_send_wm_message(xsurface, &message_data, XCB_EVENT_MASK_NO_EVENT);
-	} else {
-		lab_xwm_send_wm_message(xsurface, &message_data, XCB_EVENT_MASK_SUBSTRUCTURE_REDIRECT);
-
-		xcb_void_cookie_t cookie = xcb_set_input_focus(xwm->xcb_conn,
-			XCB_INPUT_FOCUS_POINTER_ROOT, xsurface->window_id, XCB_CURRENT_TIME);
-		xwm->last_focus_seq = cookie.sequence;
-	}
-}
-
-// Updates _NET_ACTIVE_WINDOW when focus changes
-static void lab_xwm_set_focused_window(struct lab_xwm *xwm,
-		struct xwayland_surface *xsurface) {
-	struct xwayland_surface *unfocus_surface = xwm->focus_surface;
-
-	if (xsurface && IS_UNMANAGED(xsurface)) {
-		return;
-	}
-
-	xwm->focus_surface = xsurface;
-	// cancel any pending focus offer
-	xwm->offered_focus = xsurface;
-
-	if (xsurface == unfocus_surface) {
-		return;
-	}
-
-	if (xsurface) {
-		lab_xwm_set_net_active_window(xwm, xsurface->window_id);
-	} else {
-		lab_xwm_set_net_active_window(xwm, XCB_WINDOW_NONE);
-	}
-}
-
-void xwayland_surface_offer_focus(struct xwayland_surface *xsurface) {
-	if (!xsurface || IS_UNMANAGED(xsurface)) {
-		return;
-	}
-
-	struct lab_xwm *xwm = xsurface->xwm;
-	if (!xsurface->props.supports_take_focus) {
-		return;
-	}
-
-	xwm->offered_focus = xsurface;
-
-	xcb_client_message_data_t message_data = { 0 };
-	message_data.data32[0] = xwm->atoms[WM_TAKE_FOCUS];
-	message_data.data32[1] = XCB_TIME_CURRENT_TIME;
-	lab_xwm_send_wm_message(xsurface, &message_data, XCB_EVENT_MASK_NO_EVENT);
-
-	xcb_flush(xwm->xcb_conn);
-}
-
-bool
-xwayland_surface_is_focused(struct xwayland_surface *xsurface)
-{
-	return xsurface && xsurface == xsurface->xwm->focus_surface;
-}
-
 void
-xwayland_surface_activate(struct xwayland_surface *xsurface) // may be NULL
+xwayland_focus_window(xcb_window_t window_id)
 {
 	struct lab_xwm *xwm = g_xserver.xwm;
 	if (!xwm || !xwm->xcb_conn) {
 		return;
 	}
 
-	if (xsurface && IS_UNMANAGED(xsurface)) {
+	xcb_void_cookie_t cookie = xcb_set_input_focus(xwm->xcb_conn,
+		XCB_INPUT_FOCUS_POINTER_ROOT, window_id, XCB_CURRENT_TIME);
+	xwm->last_focus_seq = cookie.sequence;
+}
+
+void
+xwayland_offer_focus(xcb_window_t window_id)
+{
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
 		return;
 	}
 
-	if (xsurface != xwm->focus_surface && xsurface != xwm->offered_focus) {
-		lab_xwm_focus_window(xwm, xsurface);
+	xcb_client_message_data_t message_data = { 0 };
+	message_data.data32[0] = xwm->atoms[WM_TAKE_FOCUS];
+	message_data.data32[1] = XCB_TIME_CURRENT_TIME;
+	lab_xwm_send_wm_message(xwm, window_id, &message_data,
+		XCB_EVENT_MASK_NO_EVENT);
+
+	xcb_flush(xwm->xcb_conn);
+}
+
+void
+xwayland_set_active_window(xcb_window_t window_id)
+{
+	struct lab_xwm *xwm = g_xserver.xwm;
+	if (!xwm || !xwm->xcb_conn) {
+		return;
 	}
 
-	lab_xwm_set_focused_window(xwm, xsurface);
+	xcb_change_property(xwm->xcb_conn, XCB_PROP_MODE_REPLACE,
+		xwm->screen->root, xwm->atoms[NET_ACTIVE_WINDOW],
+		xwm->atoms[WINDOW], 32, 1, &window_id);
 	xcb_flush(xwm->xcb_conn);
 }
 
@@ -377,13 +305,6 @@ xwayland_surface_destroy(struct xwayland_surface *xsurface)
 	}
 	if (xsurface == xsurface->xwm->drop_focus) {
 		xsurface->xwm->drop_focus = NULL;
-	}
-
-	if (xsurface == xsurface->xwm->focus_surface) {
-		xwayland_surface_activate(NULL);
-	}
-	if (xsurface == xsurface->xwm->offered_focus) {
-		xsurface->xwm->offered_focus = NULL;
 	}
 
 	free(xsurface);
@@ -1214,7 +1135,8 @@ static void lab_xwm_handle_net_active_window_message(struct lab_xwm *xwm,
 	if (surface == NULL) {
 		return;
 	}
-	xsurface_focus(surface->window_id, surface->surface, /* raise */ true);
+	xsurface_focus(surface->window_id, surface->surface,
+		XFOCUS_REASON_ACTIVATE);
 }
 
 static void lab_xwm_handle_net_close_window_message(struct lab_xwm *xwm,
@@ -1294,9 +1216,9 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	// keyboard grabs to "steal" focus for e.g. popup menus.
 	struct xwayland_surface *xsurface = xsurface_lookup(ev->event);
 	if (ev->mode == XCB_NOTIFY_MODE_GRAB) {
-		if (xsurface && IS_UNMANAGED(xsurface)) {
+		if (xsurface) {
 			xsurface_focus(xsurface->window_id, xsurface->surface,
-				/* raise */ false);
+				XFOCUS_REASON_GRAB);
 		}
 		return;
 	}
@@ -1313,9 +1235,8 @@ static void lab_xwm_handle_focus_in(struct lab_xwm *xwm,
 	}
 
 	if (xsurface) {
-		lab_xwm_set_focused_window(xwm, xsurface);
 		xsurface_focus(xsurface->window_id, xsurface->surface,
-			/* raise */ false);
+			XFOCUS_REASON_FOCUS_IN);
 	}
 }
 
@@ -1555,7 +1476,8 @@ void xwayland_surface_close(struct xwayland_surface *xsurface) {
 		xcb_client_message_data_t message_data = {0};
 		message_data.data32[0] = xwm->atoms[WM_DELETE_WINDOW];
 		message_data.data32[1] = XCB_CURRENT_TIME;
-		lab_xwm_send_wm_message(xsurface, &message_data, XCB_EVENT_MASK_NO_EVENT);
+		lab_xwm_send_wm_message(xwm, xsurface->window_id, &message_data,
+			XCB_EVENT_MASK_NO_EVENT);
 	} else {
 		xcb_kill_client(xwm->xcb_conn, xsurface->window_id);
 		xcb_flush(xwm->xcb_conn);
@@ -1885,9 +1807,7 @@ lab_xwm_create(struct xwayland_server *server, int wm_fd)
 		sizeof(supported)/sizeof(*supported),
 		supported);
 
-	xcb_flush(xwm->xcb_conn);
-
-	lab_xwm_set_net_active_window(xwm, XCB_WINDOW_NONE);
+	xwayland_set_active_window(XCB_WINDOW_NONE); // calls xcb_flush()
 
 	lab_xwm_selection_init(&xwm->clipboard_selection, xwm, xwm->atoms[CLIPBOARD]);
 	lab_xwm_selection_init(&xwm->primary_selection, xwm, xwm->atoms[PRIMARY]);

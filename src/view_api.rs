@@ -477,7 +477,7 @@ pub extern "C" fn xsurface_move_unmanaged(xid: XId, x: i32, y: i32) {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn xsurface_focus(xid: XId, surface: *mut WlrSurface, raise: bool) {
-    let ul = views_mut().focus_xsurface(xid, surface, raise);
+pub extern "C" fn xsurface_focus(xid: XId, surface: *mut WlrSurface, reason: XFocusReason) {
+    let ul = views_mut().focus_xsurface(xid, surface, reason);
     do_update(ul);
 }

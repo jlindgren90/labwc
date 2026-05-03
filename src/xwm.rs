@@ -18,6 +18,7 @@ struct XSurfaceData {
 #[derive(Default)]
 pub struct Xwm {
     surfaces: HashMap<XId, XSurfaceData>,
+    focused: XId,
     // xwayland server-side stacking order, back-to-front, with
     // minimized views first and always-on-top views last
     stacking: Vec<XId>,
@@ -107,6 +108,34 @@ impl Xwm {
             surf = parent;
         }
         return surf.view_id;
+    }
+
+    // For use when server-side focus has already changed
+    pub fn set_focused(&mut self, focused: XId) {
+        self.focused = focused;
+    }
+
+    pub fn focus(&mut self, xid: XId, xsurface: *mut XSurface) -> bool {
+        if self.focused == xid {
+            return true; // already focused
+        }
+        let props = unsafe { xwayland_surface_get_props(xsurface) };
+        if props.no_input_hint {
+            if props.supports_take_focus {
+                // "offer" focus via WM_TAKE_FOCUS client message
+                unsafe { xwayland_offer_focus(xid) };
+            }
+            return false;
+        }
+        unsafe { xwayland_focus_window(xid) };
+        self.focused = xid;
+        return true;
+    }
+
+    pub fn clear_focus(&mut self) {
+        unsafe { xwayland_focus_window(1) }; // PointerRoot
+        unsafe { xwayland_set_active_window(0) }; // None
+        self.focused = 0;
     }
 
     pub fn raise(&mut self, xid: XId, xsurface: *mut XSurface) {

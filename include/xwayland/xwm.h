@@ -96,9 +96,6 @@ struct lab_xwm {
 	struct lab_xwm_selection primary_selection;
 	struct lab_xwm_selection dnd_selection;
 
-	struct xwayland_surface *focus_surface;
-	struct xwayland_surface *offered_focus;
-
 	struct wlr_drag *drag;
 	struct xwayland_surface *drag_focus;
 	struct xwayland_surface *drop_focus;
