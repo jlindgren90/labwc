@@ -82,8 +82,8 @@ void lab_xwm_handle_selection_notify(struct lab_xwm *xwm,
 	xcb_selection_notify_event_t *event);
 int lab_xwm_handle_xfixes_selection_notify(struct lab_xwm *xwm,
 	xcb_xfixes_selection_notify_event_t *event);
-bool data_source_is_xwayland(struct wlr_data_source *wlr_source);
-bool primary_selection_source_is_xwayland(
+bool lab_data_source_is_xwayland(struct wlr_data_source *wlr_source);
+bool lab_primary_selection_source_is_xwayland(
 	struct wlr_primary_selection_source *wlr_source);
 
 void lab_xwm_seat_handle_start_drag(struct lab_xwm *xwm, struct wlr_drag *drag);

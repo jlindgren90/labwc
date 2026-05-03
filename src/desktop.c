@@ -7,7 +7,6 @@
 #include <wlr/types/wlr_seat.h>
 #include <wlr/types/wlr_subcompositor.h>
 #include <wlr/types/wlr_xdg_shell.h>
-#include <wlr/xwayland.h>
 #include "common/scene-helpers.h"
 #include "dnd.h"
 #include "labwc.h"
@@ -15,6 +14,7 @@
 #include "node.h"
 #include "ssd.h"
 #include "view.h"
+#include "xwayland/xwayland.h"
 
 /* TODO: focus layer-shell surfaces also? */
 void
@@ -28,8 +28,8 @@ desktop_focus_view_or_surface(ViewId view_id,
 		// Give seat focus to an unmanaged surface when clicked.
 		// This just allows keyboard input to pass to XWayland;
 		// it doesn't necessarily change the X11 keyboard focus.
-		struct wlr_xwayland_surface *xsurface =
-			wlr_xwayland_surface_try_from_wlr_surface(surface);
+		struct xwayland_surface *xsurface =
+			xwayland_surface_try_from_wlr_surface(surface);
 		if (xsurface) {
 			seat_focus_surface(surface);
 		}

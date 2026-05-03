@@ -1,3 +1,5 @@
+#define _POSIX_C_SOURCE 200809L
+#include "xwayland/xwm.h"
 #include <assert.h>
 #include <drm_fourcc.h>
 #include <poll.h>
@@ -10,13 +12,13 @@
 #include <wlr/util/edges.h>
 #include <wlr/util/log.h>
 #include <wlr/xcursor.h>
-#include <wlr/xwayland/shell.h>
-#include <wlr/xwayland/xwayland.h>
 #include <xcb/composite.h>
 #include <xcb/render.h>
 #include <xcb/res.h>
 #include <xcb/xfixes.h>
-#include "xwayland/xwm.h"
+#include "xwayland/server.h"
+#include "xwayland/shell.h"
+#include "xwayland/xwayland.h"
 
 static const char *const atom_map[ATOM_LAST] = {
 	[WL_SURFACE_ID] = "WL_SURFACE_ID",
@@ -1515,8 +1517,6 @@ static void lab_xwm_handle_surface_serial_message(struct lab_xwm *xwm,
 #define _NET_WM_MOVERESIZE_SIZE_BOTTOMLEFT 6
 #define _NET_WM_MOVERESIZE_SIZE_LEFT 7
 #define _NET_WM_MOVERESIZE_MOVE 8  // movement only
-#define _NET_WM_MOVERESIZE_SIZE_KEYBOARD 9  // size via keyboard
-#define _NET_WM_MOVERESIZE_MOVE_KEYBOARD 10  // move via keyboard
 #define _NET_WM_MOVERESIZE_CANCEL 11  // cancel operation
 
 static enum wlr_edges net_wm_edges_to_wlr(uint32_t net_wm_edges) {
@@ -1818,9 +1818,9 @@ static void lab_xwm_handle_net_startup_info_message(struct lab_xwm *xwm,
 	}
 
 	if (id) {
-		struct xwayland_remove_startup_info_event data = { id, ev->window };
+		struct xwayland_remove_startup_info_event event = { id, ev->window };
 		wlr_log(WLR_DEBUG, "Got startup id: %s", id);
-		wl_signal_emit_mutable(&xwm->xwayland->events.remove_startup_info, &data);
+		wl_signal_emit_mutable(&xwm->xwayland->events.remove_startup_info, &event);
 		pending_startup_id_destroy(curr);
 	}
 }
@@ -2226,13 +2226,13 @@ void lab_xwm_destroy(struct lab_xwm *xwm) {
 
 	if (xwm->seat) {
 		if (xwm->seat->selection_source &&
-				data_source_is_xwayland(xwm->seat->selection_source)) {
+				lab_data_source_is_xwayland(xwm->seat->selection_source)) {
 			wlr_seat_set_selection(xwm->seat, NULL,
 				wl_display_next_serial(xwm->xwayland->wl_display));
 		}
 
 		if (xwm->seat->primary_selection_source &&
-				primary_selection_source_is_xwayland(
+				lab_primary_selection_source_is_xwayland(
 					xwm->seat->primary_selection_source)) {
 			wlr_seat_set_primary_selection(xwm->seat, NULL,
 				wl_display_next_serial(xwm->xwayland->wl_display));
@@ -2645,12 +2645,6 @@ struct lab_xwm *lab_xwm_create(struct xwayland *xwayland, int wm_fd) {
 		sizeof(supported)/sizeof(*supported),
 		supported);
 
-	if (xwm->xwayland->server->options.terminate_delay > 0 &&
-			xwm->xfixes_major_version >= 6) {
-		xcb_xfixes_set_client_disconnect_mode(xwm->xcb_conn,
-			XCB_XFIXES_CLIENT_DISCONNECT_FLAGS_TERMINATE);
-	}
-
 	xcb_flush(xwm->xcb_conn);
 
 	lab_xwm_set_net_active_window(xwm, XCB_WINDOW_NONE);
@@ -2876,7 +2870,7 @@ void xwayland_set_workareas(struct xwayland *xwayland,
 	free(data);
 }
 
-xcb_connection_t *xwayland_get_lab_xwm_connection(
+xcb_connection_t *xwayland_get_xwm_connection(
 	struct xwayland *xwayland) {
 	return xwayland->xwm ? xwayland->xwm->xcb_conn : NULL;
 }
