@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog]
 
 | Date       | All Changes   | wlroots version | lines-of-code |
 |------------|---------------|-----------------|---------------|
+| 2026-06-11 | [0.9.8]       | 0.19.3          | 29284         |
 | 2026-04-17 | [0.9.7]       | 0.19.2          | 29277         |
 | 2026-03-15 | [0.9.6]       | 0.19.2          | 29271         |
 | 2026-03-04 | [0.9.5]       | 0.19.2          | 29251         |
@@ -43,6 +44,7 @@ The format is based on [Keep a Changelog]
 | 2021-04-15 | [0.2.0]       | 0.13.0          | 5011          |
 | 2021-03-05 | [0.1.0]       | 0.12.0          | 4627          |
 
+[0.9.8]: NEWS.md#098---2026-06-11
 [0.9.7]: NEWS.md#097---2026-04-17
 [0.9.6]: NEWS.md#096---2026-03-15
 [0.9.5]: NEWS.md#095---2026-03-04
@@ -110,6 +112,16 @@ There are some regression warnings worth noting for the switch to wlroots 0.19:
 [wlroots-4878]: https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/4878
 [wlroots-5098]:https://gitlab.freedesktop.org/wlroots/wlroots/-/merge_requests/5098
 [gtk-8792]: https://gitlab.gnome.org/GNOME/gtk/-/merge_requests/8792
+
+## 0.9.8 - 2026-06-11
+
+[0.9.8-commits]
+
+### Fixed
+
+- Handle titles with no visible characters @Consolatis [#3631]
+- Save window position on initial placement to fix Raspberry Pi pygame SDL
+  XWayland window starting off-screen. @tokyo4j [#3433] [#3625] [#3616]
 
 ## 0.9.7 - 2026-04-17
 
@@ -2665,6 +2677,7 @@ Compile with wlroots 0.12.0 and wayland-server >=1.16
   ShowMenu
 
 [Keep a Changelog]: https://keepachangelog.com/en/1.0.0/
+[0.9.8-commits]: https://github.com/labwc/labwc/compare/0.9.7...0.9.8
 [0.9.7-commits]: https://github.com/labwc/labwc/compare/0.9.6...0.9.7
 [0.9.6-commits]: https://github.com/labwc/labwc/compare/0.9.5...0.9.6
 [0.9.5-commits]: https://github.com/labwc/labwc/compare/0.9.4...0.9.5
@@ -3205,6 +3218,7 @@ Compile with wlroots 0.12.0 and wayland-server >=1.16
 [#3428]: https://github.com/labwc/labwc/pull/3428
 [#3429]: https://github.com/labwc/labwc/pull/3429
 [#3430]: https://github.com/labwc/labwc/pull/3430
+[#3433]: https://github.com/labwc/labwc/pull/3433
 [#3440]: https://github.com/labwc/labwc/pull/3440
 [#3441]: https://github.com/labwc/labwc/pull/3441
 [#3443]: https://github.com/labwc/labwc/pull/3443
@@ -3212,3 +3226,6 @@ Compile with wlroots 0.12.0 and wayland-server >=1.16
 [#3490]: https://github.com/labwc/labwc/pull/3490
 [#3494]: https://github.com/labwc/labwc/pull/3494
 [#3511]: https://github.com/labwc/labwc/pull/3511
+[#3616]: https://github.com/labwc/labwc/pull/3616
+[#3625]: https://github.com/labwc/labwc/pull/3625
+[#3631]: https://github.com/labwc/labwc/pull/3631
