@@ -27,7 +27,6 @@
 #include "config/libinput.h"
 #include "config/mousebind.h"
 #include "cycle.h"
-#include "regions.h"
 #include "view.h"
 #include "window-rules.h"
 
@@ -173,8 +172,6 @@ fill_section(const char *content, enum lab_node_type *buttons, int *count,
 			type = LAB_NODE_BUTTON_MAXIMIZE;
 		} else if (!strcmp(identifier, "close")) {
 			type = LAB_NODE_BUTTON_CLOSE;
-		} else if (!strcmp(identifier, "shade")) {
-			type = LAB_NODE_BUTTON_SHADE;
 		} else {
 			wlr_log(WLR_ERROR, "invalid titleLayout identifier '%s'",
 				identifier);
@@ -383,55 +380,6 @@ fill_window_switcher_fields(xmlNode *node)
 	LAB_XML_FOR_EACH(node, child, key, content) {
 		if (!strcasecmp(key, "field")) {
 			fill_window_switcher_field(child);
-		}
-	}
-}
-
-static void
-fill_region(xmlNode *node)
-{
-	struct region *region = znew(*region);
-	wl_list_append(&rc.regions, &region->link);
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "name")) {
-			xstrdup_replace(region->name, content);
-		} else if (strstr("xywidtheight", key)
-				&& !strchr(content, '%')) {
-			wlr_log(WLR_ERROR, "Removing invalid region "
-				"'%s': %s='%s' misses a trailing %%",
-				region->name, key, content);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			zfree(region);
-			return;
-		} else if (!strcmp(key, "x")) {
-			region->percentage.x = atoi(content);
-		} else if (!strcmp(key, "y")) {
-			region->percentage.y = atoi(content);
-		} else if (!strcmp(key, "width")) {
-			region->percentage.width = atoi(content);
-		} else if (!strcmp(key, "height")) {
-			region->percentage.height = atoi(content);
-		} else {
-			wlr_log(WLR_ERROR, "Unexpected data in region "
-				"parser: %s=\"%s\"", key, content);
-		}
-	}
-}
-
-static void
-fill_regions(xmlNode *node)
-{
-	/* TODO: make sure <regions> is empty here */
-
-	xmlNode *child;
-	char *key, *content;
-	LAB_XML_FOR_EACH(node, child, key, content) {
-		if (!strcasecmp(key, "region")) {
-			fill_region(child);
 		}
 	}
 }
@@ -937,20 +885,6 @@ set_adaptive_sync_mode(const char *str, enum adaptive_sync_mode *variable)
 }
 
 static void
-set_tearing_mode(const char *str, enum tearing_mode *variable)
-{
-	if (!strcasecmp(str, "fullscreen")) {
-		*variable = LAB_TEARING_FULLSCREEN;
-	} else if (!strcasecmp(str, "fullscreenForced")) {
-		*variable = LAB_TEARING_FULLSCREEN_FORCED;
-	} else if (parse_bool(str, -1) == 1) {
-		*variable = LAB_TEARING_ENABLED;
-	} else {
-		*variable = LAB_TEARING_DISABLED;
-	}
-}
-
-static void
 set_hdr_mode(const char *str, enum render_bit_depth *variable)
 {
 	if (parse_bool(str, -1) == 1) {
@@ -980,8 +914,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		fill_mouse_context(node);
 	} else if (!strcasecmp(nodename, "device.libinput")) {
 		fill_libinput_category(node);
-	} else if (!strcasecmp(nodename, "regions")) {
-		fill_regions(node);
 	} else if (!strcasecmp(nodename, "fields.windowSwitcher")) {
 		fill_window_switcher_fields(node);
 	} else if (!strcasecmp(nodename, "windowRules")) {
@@ -1016,8 +948,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.gap = atoi(content);
 	} else if (!strcasecmp(nodename, "adaptiveSync.core")) {
 		set_adaptive_sync_mode(content, &rc.adaptive_sync);
-	} else if (!strcasecmp(nodename, "allowTearing.core")) {
-		set_tearing_mode(content, &rc.allow_tearing);
 	} else if (!strcasecmp(nodename, "Hdr.core")) {
 		set_hdr_mode(content, &rc.target_render_depth);
 	} else if (!strcasecmp(nodename, "autoEnableOutputs.core")) {
@@ -1124,18 +1054,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.snap_overlay_delay_outer = atoi(content);
 	} else if (!strcasecmp(nodename, "topMaximize.snapping")) {
 		set_bool(content, &rc.snap_top_maximize);
-	} else if (!strcasecmp(nodename, "notifyClient.snapping")) {
-		if (!strcasecmp(content, "always")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_ALWAYS;
-		} else if (!strcasecmp(content, "region")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_REGION;
-		} else if (!strcasecmp(content, "edge")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_EDGE;
-		} else if (!strcasecmp(content, "never")) {
-			rc.snap_tiling_events_mode = LAB_TILING_EVENTS_NEVER;
-		} else {
-			wlr_log(WLR_ERROR, "ignoring invalid value for notifyClient");
-		}
 
 	/*
 	 * <windowSwitcher preview="" outlines="">
@@ -1194,8 +1112,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		set_bool(content, &rc.window_switcher.preview);
 	} else if (!strcasecmp(nodename, "outlines.windowSwitcher")) {
 		set_bool(content, &rc.window_switcher.outlines);
-	} else if (!strcasecmp(nodename, "unshade.windowSwitcher")) {
-		set_bool(content, &rc.window_switcher.unshade);
 
 	/* Remove this long term - just a friendly warning for now */
 	} else if (strstr(nodename, "windowswitcher.core")) {
@@ -1243,18 +1159,6 @@ entry(xmlNode *node, char *nodename, char *content)
 		rc.menu_ignore_button_release_period = atoi(content);
 	} else if (!strcasecmp(nodename, "showIcons.menu")) {
 		set_bool(content, &rc.menu_show_icons);
-	} else if (!strcasecmp(nodename, "width.magnifier")) {
-		rc.mag_width = atoi(content);
-	} else if (!strcasecmp(nodename, "height.magnifier")) {
-		rc.mag_height = atoi(content);
-	} else if (!strcasecmp(nodename, "initScale.magnifier")) {
-		set_float(content, &rc.mag_scale);
-		rc.mag_scale = MAX(1.0, rc.mag_scale);
-	} else if (!strcasecmp(nodename, "increment.magnifier")) {
-		set_float(content, &rc.mag_increment);
-		rc.mag_increment = MAX(0, rc.mag_increment);
-	} else if (!strcasecmp(nodename, "useFilter.magnifier")) {
-		set_bool(content, &rc.mag_filter);
 	} else if (!strcasecmp(nodename, "privilegedInterfaces")) {
 		rc.allowed_interfaces = 0;
 	} else if (!strcasecmp(nodename, "allow.privilegedInterfaces")) {
@@ -1321,7 +1225,6 @@ rcxml_init(void)
 		wl_list_init(&rc.keybinds);
 		wl_list_init(&rc.mousebinds);
 		wl_list_init(&rc.libinput_categories);
-		wl_list_init(&rc.regions);
 		wl_list_init(&rc.window_switcher.osd.fields);
 		wl_list_init(&rc.window_rules);
 	}
@@ -1342,7 +1245,6 @@ rcxml_init(void)
 
 	rc.gap = 0;
 	rc.adaptive_sync = LAB_ADAPTIVE_SYNC_DISABLED;
-	rc.allow_tearing = LAB_TEARING_DISABLED;
 	rc.target_render_depth = LAB_RENDER_BIT_DEPTH_DEFAULT;
 	rc.auto_enable_outputs = true;
 	rc.reuse_output_mode = false;
@@ -1379,7 +1281,6 @@ rcxml_init(void)
 	rc.snap_overlay_delay_inner = 500;
 	rc.snap_overlay_delay_outer = 500;
 	rc.snap_top_maximize = true;
-	rc.snap_tiling_events_mode = LAB_TILING_EVENTS_ALWAYS;
 
 	rc.window_switcher.osd.show = true;
 	rc.window_switcher.osd.style = CYCLE_OSD_STYLE_CLASSIC;
@@ -1387,7 +1288,6 @@ rcxml_init(void)
 	rc.window_switcher.osd.thumbnail_label_format = xstrdup("%T");
 	rc.window_switcher.preview = true;
 	rc.window_switcher.outlines = true;
-	rc.window_switcher.unshade = true;
 	rc.window_switcher.order = WINDOW_SWITCHER_ORDER_FOCUS;
 
 	rc.resize_indicator = LAB_RESIZE_INDICATOR_NEVER;
@@ -1397,12 +1297,6 @@ rcxml_init(void)
 
 	rc.menu_ignore_button_release_period = 250;
 	rc.menu_show_icons = true;
-
-	rc.mag_width = 400;
-	rc.mag_height = 400;
-	rc.mag_scale = 2.0;
-	rc.mag_increment = 0.2;
-	rc.mag_filter = true;
 }
 
 static void
@@ -1706,25 +1600,6 @@ validate_actions(void)
 static void
 validate(void)
 {
-	/* Regions */
-	struct region *region, *region_tmp;
-	wl_list_for_each_safe(region, region_tmp, &rc.regions, link) {
-		struct wlr_box box = region->percentage;
-		bool invalid = !region->name
-			|| box.x < 0 || box.x > 100
-			|| box.y < 0 || box.y > 100
-			|| box.width <= 0 || box.width > 100
-			|| box.height <= 0 || box.height > 100;
-		if (invalid) {
-			wlr_log(WLR_ERROR,
-				"Removing invalid region '%s': %d%% x %d%% @ %d%%,%d%%",
-				region->name, box.width, box.height, box.x, box.y);
-			wl_list_remove(&region->link);
-			zfree(region->name);
-			free(region);
-		}
-	}
-
 	/* Window-rule criteria */
 	struct window_rule *rule, *rule_tmp;
 	wl_list_for_each_safe(rule, rule_tmp, &rc.window_rules, link) {
@@ -1844,8 +1719,6 @@ rcxml_finish(void)
 		zfree(l->name);
 		zfree(l);
 	}
-
-	regions_destroy(&rc.regions, /* check_active */ false);
 
 	clear_window_switcher_fields();
 

@@ -29,25 +29,10 @@ enum resize_indicator_mode {
 	LAB_RESIZE_INDICATOR_NON_PIXEL
 };
 
-enum tearing_mode {
-	LAB_TEARING_DISABLED = 0,
-	LAB_TEARING_ENABLED,
-	LAB_TEARING_FULLSCREEN,
-	LAB_TEARING_FULLSCREEN_FORCED,
-};
-
 enum render_bit_depth {
 	LAB_RENDER_BIT_DEPTH_DEFAULT = 0,
 	LAB_RENDER_BIT_DEPTH_8,
 	LAB_RENDER_BIT_DEPTH_10,
-};
-
-enum tiling_events_mode {
-	LAB_TILING_EVENTS_NEVER = 0,
-	LAB_TILING_EVENTS_REGION = 1 << 0,
-	LAB_TILING_EVENTS_EDGE = 1 << 1,
-	LAB_TILING_EVENTS_ALWAYS =
-		(LAB_TILING_EVENTS_REGION | LAB_TILING_EVENTS_EDGE),
 };
 
 struct buf;
@@ -74,7 +59,6 @@ struct rcxml {
 	bool hide_maximized_window_titlebar;
 	int gap;
 	enum adaptive_sync_mode adaptive_sync;
-	enum tearing_mode allow_tearing;
 	enum render_bit_depth target_render_depth;
 	bool auto_enable_outputs;
 	bool reuse_output_mode;
@@ -146,21 +130,16 @@ struct rcxml {
 	int snap_overlay_delay_inner;
 	int snap_overlay_delay_outer;
 	bool snap_top_maximize;
-	enum tiling_events_mode snap_tiling_events_mode;
 
 	enum resize_indicator_mode resize_indicator;
 	bool resize_draw_contents;
 	int resize_corner_range;
 	int resize_minimum_area;
 
-	/* Regions */
-	struct wl_list regions;  /* struct region.link */
-
 	/* Window Switcher */
 	struct {
 		bool preview;
 		bool outlines;
-		bool unshade;
 		enum window_switcher_order order;
 		struct {
 			bool show;
@@ -176,13 +155,6 @@ struct rcxml {
 	/* Menu */
 	unsigned int menu_ignore_button_release_period;
 	bool menu_show_icons;
-
-	/* Magnifier */
-	int mag_width;
-	int mag_height;
-	float mag_scale;
-	float mag_increment;
-	bool mag_filter;
 };
 
 /* defined in main.c */

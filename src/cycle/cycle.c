@@ -142,14 +142,9 @@ restore_preview_node(void)
 		if (!server.cycle.preview_was_enabled) {
 			wlr_scene_node_set_enabled(server.cycle.preview_node, false);
 		}
-		if (server.cycle.preview_was_shaded) {
-			struct view *view = node_view_from_node(server.cycle.preview_node);
-			view_set_shade(view, true);
-		}
 		server.cycle.preview_node = NULL;
 		server.cycle.preview_dummy = NULL;
 		server.cycle.preview_was_enabled = false;
-		server.cycle.preview_was_shaded = false;
 	}
 }
 
@@ -208,9 +203,6 @@ cycle_finish(bool switch_focus)
 	cursor_update_focus();
 
 	if (switch_focus && selected_view) {
-		if (rc.window_switcher.unshade) {
-			view_set_shade(selected_view, false);
-		}
 		desktop_focus_view(selected_view, /*raise*/ true);
 	}
 }
@@ -237,10 +229,6 @@ preview_selected_view(struct view *view)
 	/* Store node enabled / minimized state and force-enable if disabled */
 	cycle->preview_was_enabled = cycle->preview_node->enabled;
 	wlr_scene_node_set_enabled(cycle->preview_node, true);
-	if (rc.window_switcher.unshade && view->shaded) {
-		view_set_shade(view, false);
-		cycle->preview_was_shaded = true;
-	}
 
 	wlr_scene_node_reparent(cycle->preview_node,
 		server.cycle_preview_tree);
@@ -337,54 +325,6 @@ get_cycle_app_id(struct cycle_filter *filter)
 		return server.active_view->app_id;
 	}
 	return NULL;
-}
-
-static struct wl_list *prev(struct wl_list *elm) { return elm->prev; }
-static struct wl_list *next(struct wl_list *elm) { return elm->next; }
-
-void
-cycle_immediate(enum lab_cycle_dir direction, struct cycle_filter filter)
-{
-	if (wl_list_empty(&server.views)) {
-		return;
-	}
-
-	enum lab_view_criteria criteria = get_view_criteria(&filter);
-	uint64_t cycle_outputs = get_outputs_by_filter(filter.output);
-	const char *cycle_app_id = get_cycle_app_id(&filter);
-
-	struct wl_list *head = &server.views;
-	struct wl_list *(*iter)(struct wl_list *list);
-	iter = direction == LAB_CYCLE_DIR_FORWARD ? next : prev;
-
-	struct wl_list *from = (direction == LAB_CYCLE_DIR_FORWARD) && server.active_view
-		? &server.active_view->link : head;
-
-	for (struct wl_list *elm = iter(from); elm != head; elm = iter(elm)) {
-		struct view *view = wl_container_of(elm, view, link);
-		if (!view_matches_criteria(view, criteria)) {
-			continue;
-		}
-		if (filter.output != CYCLE_OUTPUT_ALL) {
-			if (!view->output || !(cycle_outputs & view->output->id_bit)) {
-				continue;
-			}
-		}
-		if (cycle_app_id && strcmp(view->app_id, cycle_app_id) != 0) {
-			continue;
-		}
-		if (server.active_view && direction == LAB_CYCLE_DIR_FORWARD) {
-			/*
-			 * When cycling forward, the current active view needs to be
-			 * sent to back to keep the same sequence and avoid getting
-			 * stuck in the 2 topmost views.
-			 */
-			view_move_to_back(server.active_view);
-		}
-		desktop_focus_view(view, true);
-		break;
-	}
-	cursor_update_focus();
 }
 
 /* Return false on failure */

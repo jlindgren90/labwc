@@ -11,9 +11,6 @@ struct overlay {
 
 	/* Represents currently shown or delayed overlay */
 	struct {
-		/* Region overlay */
-		struct region *region;
-
 		/* Snap-to-edge overlay */
 		enum lab_edge edge;
 		struct output *output;
