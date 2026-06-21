@@ -91,7 +91,7 @@ init_indicator(struct indicator_state *state)
 static void
 update_key_indicator_callback(void *data)
 {
-	struct seat *seat = data;
+	struct seat *seat = &g_seat;
 	uint32_t all_modifiers = keyboard_get_all_modifiers(seat);
 	float black[4] = {0, 0, 0, 1};
 	float white[4] = {1, 1, 1, 1};
@@ -160,7 +160,7 @@ key_state_indicator_update(struct seat *seat)
 		return;
 	}
 	wl_event_loop_add_idle(server.wl_event_loop,
-		update_key_indicator_callback, seat);
+		update_key_indicator_callback, NULL);
 }
 
 void
