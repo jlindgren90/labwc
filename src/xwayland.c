@@ -706,7 +706,6 @@ handle_map(struct wl_listener *listener, void *data)
 		view->content_tree = wlr_scene_subsurface_tree_create(
 			view->scene_tree, view->surface);
 		die_if_null(view->content_tree);
-		wlr_scene_subsurface_tree_create(&view->capture.scene->tree, view->surface);
 	}
 
 	if (!view->been_mapped) {

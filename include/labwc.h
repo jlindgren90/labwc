@@ -139,13 +139,6 @@ struct server {
 	struct wl_listener xdg_activation_request;
 	struct wl_listener xdg_activation_new_token;
 
-	struct {
-		struct wlr_ext_foreign_toplevel_image_capture_source_manager_v1 *manager;
-		struct {
-			struct wl_listener new_request;
-		} on;
-	} toplevel_capture;
-
 	/* front to back order */
 	struct wl_list views;
 	struct wl_list unmanaged_surfaces;
