@@ -4,7 +4,7 @@
 
 struct seat;
 
-void touch_init(struct seat *seat);
-void touch_finish(struct seat *seat);
+void touch_init(void);
+void touch_finish(void);
 
 #endif /* LABWC_TOUCH_H */

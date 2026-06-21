@@ -9,11 +9,11 @@ struct seat;
 
 /*
  * All keycodes in these functions are (Linux) libinput evdev scancodes which is
- * what 'wlr_keyboard' uses (e.g. 'seat->keyboard_group->keyboard->keycodes').
+ * what 'wlr_keyboard' uses (e.g. 'g_seat.keyboard_group->keyboard->keycodes').
  * Note: These keycodes are different to XKB scancodes by a value of 8.
  */
 
-void key_state_indicator_update(struct seat *seat);
+void key_state_indicator_update(void);
 void key_state_indicator_toggle(void);
 
 /**

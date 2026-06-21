@@ -4,15 +4,15 @@
 #include "input/keyboard.h"
 
 void
-input_handlers_init(struct seat *seat)
+input_handlers_init(void)
 {
-	cursor_init(seat);
-	keyboard_group_init(seat);
+	cursor_init();
+	keyboard_group_init();
 }
 
 void
-input_handlers_finish(struct seat *seat)
+input_handlers_finish(void)
 {
-	cursor_finish(seat);
-	keyboard_group_finish(seat);
+	cursor_finish();
+	keyboard_group_finish();
 }

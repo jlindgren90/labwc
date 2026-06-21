@@ -160,18 +160,18 @@ get_special(struct wlr_scene_node *node)
 	if (node == &server.xdg_popup_tree->node) {
 		return "server.xdg_popup_tree";
 	}
-	if (node == &server.seat.drag.icons->node) {
-		return "seat->drag.icons";
+	if (node == &g_seat.drag.icons->node) {
+		return "g_seat.drag.icons";
 	}
-	if (server.seat.overlay.rect
-			&& node == &server.seat.overlay.rect->tree->node) {
+	if (g_seat.overlay.rect
+			&& node == &g_seat.overlay.rect->tree->node) {
 		/* Created on-demand */
-		return "seat->overlay.rect";
+		return "g_seat.overlay.rect";
 	}
-	if (server.seat.input_method_relay->popup_tree
-			&& node == &server.seat.input_method_relay->popup_tree->node) {
+	if (g_seat.input_method_relay->popup_tree
+			&& node == &g_seat.input_method_relay->popup_tree->node) {
 		/* Created on-demand */
-		return "seat->im_relay->popup_tree";
+		return "g_seat.im_relay->popup_tree";
 	}
 	if (server.cycle.preview_outline
 			&& node == &server.cycle.preview_outline->tree->node) {
@@ -239,8 +239,8 @@ dump_tree(struct wlr_scene_node *node,
 				&& ssd_debug_is_root_node(last_view->ssd, node))
 			|| (IGNORE_CYCLE_PREVIEW_OUTLINE && server.cycle.preview_outline
 				&& node == &server.cycle.preview_outline->tree->node)
-			|| (IGNORE_SNAPPING_OVERLAY && server.seat.overlay.rect
-				&& node == &server.seat.overlay.rect->tree->node)) {
+			|| (IGNORE_SNAPPING_OVERLAY && g_seat.overlay.rect
+				&& node == &g_seat.overlay.rect->tree->node)) {
 		printf("%*c%s\n", pos + 4 + INDENT_SIZE, ' ', "<skipping children>");
 		return;
 	}

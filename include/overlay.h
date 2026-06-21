@@ -27,9 +27,9 @@ struct overlay {
  * Shows or updates an overlay when the grabbed window can be snapped to
  * a region or an output edge. Calls overlay_finish() otherwise.
  */
-void overlay_update(struct seat *seat);
+void overlay_update(void);
 
 /* Destroys the overlay if it exists */
-void overlay_finish(struct seat *seat);
+void overlay_finish(void);
 
 #endif

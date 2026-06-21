@@ -91,8 +91,7 @@ init_indicator(struct indicator_state *state)
 static void
 update_key_indicator_callback(void *data)
 {
-	struct seat *seat = &g_seat;
-	uint32_t all_modifiers = keyboard_get_all_modifiers(seat);
+	uint32_t all_modifiers = keyboard_get_all_modifiers();
 	float black[4] = {0, 0, 0, 1};
 	float white[4] = {1, 1, 1, 1};
 
@@ -154,7 +153,7 @@ update_key_indicator_callback(void *data)
 }
 
 void
-key_state_indicator_update(struct seat *seat)
+key_state_indicator_update(void)
 {
 	if (!show_debug_indicator) {
 		return;
